@@ -138,23 +138,28 @@ export default function AddRevenuePage() {
         <MainLayout>
             <div className="space-y-6">
                 {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 md:gap-4">
                         <Link href="/revenus">
                             <Button variant="outline" size="sm" className="p-2">
                                 <ArrowLeft className="w-5 h-5" />
                             </Button>
                         </Link>
                         <div>
-                            <h1 className="text-3xl font-bold text-gray-900">Nouvelle prestation</h1>
-                            <p className="text-gray-500">Enregistrer une nouvelle prestation et répartir les revenus</p>
+                            <h1 className="text-xl md:text-3xl font-bold text-gray-900">Nouvelle prestation</h1>
+                            <p className="text-sm md:text-base text-gray-500 hidden md:block">Enregistrer une nouvelle prestation et répartir les revenus</p>
                         </div>
                     </div>
-                    <div className="flex gap-3">
-                        <Button variant="outline" size="md">Annuler</Button>
-                        <Button variant="primary" size="md">
-                            <Save className="w-5 h-5" />
-                            Enregistrer
+                    <div className="flex gap-2 md:gap-3 w-full md:w-auto">
+                        <Link href="/revenus" className="flex-1 md:flex-none">
+                            <Button variant="outline" size="sm" className="w-full md:w-auto">
+                                <span className="hidden md:inline">Annuler</span>
+                                <span className="md:hidden">Annuler</span>
+                            </Button>
+                        </Link>
+                        <Button variant="primary" size="sm" className="flex-1 md:flex-none">
+                            <Save className="w-4 h-4 md:w-5 md:h-5" />
+                            <span className="hidden md:inline ml-2">Enregistrer</span>
                         </Button>
                     </div>
                 </div>

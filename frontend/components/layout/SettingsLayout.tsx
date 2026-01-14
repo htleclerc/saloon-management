@@ -54,7 +54,7 @@ export default function SettingsLayout({ children, title, description }: Setting
     const isActive = (path: string) => pathname === path || pathname.startsWith(path + "/");
     const activeItem = settingsMenuItems.find((item) => isActive(item.path)) || settingsMenuItems[0];
 
-    // Horizontal layout (tabs)
+    // Horizontal layout (tabs) - Only on Desktop if Horizontal theme is selected
     if (theme.submenuLayout === "horizontal" && !isMobile) {
         return (
             <MainLayout>
@@ -75,8 +75,8 @@ export default function SettingsLayout({ children, title, description }: Setting
                                         key={item.id}
                                         href={item.path}
                                         className={`flex items-center gap-2 px-4 py-3 border-b-2 whitespace-nowrap transition-all ${active
-                                                ? "border-purple-600 bg-purple-50 text-purple-700"
-                                                : "border-transparent hover:bg-gray-50 text-gray-600"
+                                            ? "border-purple-600 bg-purple-50 text-purple-700"
+                                            : "border-transparent hover:bg-gray-50 text-gray-600"
                                             }`}
                                     >
                                         <Icon className="w-4 h-4" />
@@ -92,7 +92,7 @@ export default function SettingsLayout({ children, title, description }: Setting
         );
     }
 
-    // Mobile dropdown
+    // Mobile dropdown - Forced on Mobile
     if (isMobile) {
         return (
             <MainLayout>

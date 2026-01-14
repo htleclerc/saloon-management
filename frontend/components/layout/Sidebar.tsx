@@ -34,11 +34,14 @@ const menuItems = [
     { name: "Settings", icon: Settings, path: "/settings" },
 ];
 
+import { useAuth } from "@/context/AuthProvider";
+
 export default function Sidebar() {
     const pathname = usePathname();
     const { theme, toggleSidebar, currentPalette } = useTheme();
     const { isMobile, isTablet } = useResponsive();
     const [mobileOpen, setMobileOpen] = useState(false);
+    const { hasPermission, demoLogin } = useAuth();
 
     // Dynamic gradient style based on color palette
     const sidebarGradient = {
@@ -98,6 +101,12 @@ export default function Sidebar() {
                         <nav>
                             <ul className="space-y-1">
                                 {menuItems.map((item) => {
+                                    // Permission checks for specific items
+                                    if (item.name === "Workers" && !hasPermission(['manager', 'admin'])) return null;
+                                    if (item.name === "Settings" && !hasPermission(['manager', 'admin'])) return null;
+                                    if (item.name === "Expenses" && !hasPermission(['manager', 'admin'])) return null;
+                                    if (item.name === "Revenus" && !hasPermission(['manager', 'admin'])) return null;
+
                                     const Icon = item.icon;
                                     const isActive = pathname === item.path ||
                                         (item.path !== "/" && pathname.startsWith(item.path));
@@ -150,6 +159,12 @@ export default function Sidebar() {
                 <nav>
                     <ul className="space-y-1">
                         {menuItems.map((item) => {
+                            // Permission checks for specific items
+                            if (item.name === "Workers" && !hasPermission(['manager', 'admin'])) return null;
+                            if (item.name === "Settings" && !hasPermission(['manager', 'admin'])) return null;
+                            if (item.name === "Expenses" && !hasPermission(['manager', 'admin'])) return null;
+                            if (item.name === "Revenus" && !hasPermission(['manager', 'admin'])) return null;
+
                             const Icon = item.icon;
                             const isActive = pathname === item.path ||
                                 (item.path !== "/" && pathname.startsWith(item.path));
@@ -171,8 +186,27 @@ export default function Sidebar() {
                         })}
                     </ul>
                 </nav>
+
+                {/* Demo Role Switcher */}
+                <div className={`mt-auto pt-4 border-t border-white/10 ${isCollapsed ? "hidden" : "block"}`}>
+                    <p className="text-xs text-white/50 mb-2 px-3 uppercase font-semibold">Demo Roles</p>
+                    <div className="flex gap-2 px-3">
+                        <button
+                            onClick={() => demoLogin('admin')}
+                            className="flex-1 text-xs bg-white/10 hover:bg-white/20 py-1.5 rounded text-white transition-colors"
+                        >
+                            Admin
+                        </button>
+                        <button
+                            onClick={() => demoLogin('worker')}
+                            className="flex-1 text-xs bg-white/10 hover:bg-white/20 py-1.5 rounded text-white transition-colors"
+                        >
+                            Worker
+                        </button>
+                    </div>
+                </div>
             </div>
-        </aside>
+        </aside >
     );
 }
 

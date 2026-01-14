@@ -16,6 +16,7 @@ interface AuthContextType {
     user: User | null;
     isAuthenticated: boolean;
     login: (user: User) => void;
+    demoLogin: (role: UserRole) => void;
     logout: () => void;
     updateUser: (updates: Partial<User>) => void;
     hasPermission: (requiredRole: UserRole | UserRole[]) => boolean;
@@ -69,6 +70,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(userData);
     };
 
+    const demoLogin = (role: UserRole) => {
+        if (role === 'admin') {
+            setUser(defaultUser);
+        } else if (role === 'worker') {
+            setUser({
+                id: "2",
+                name: "Demo Worker",
+                email: "worker@workshop.com",
+                role: "worker",
+                avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Felix"
+            });
+        }
+    };
+
     const logout = () => {
         setUser(null);
         localStorage.removeItem("workshop-user");
@@ -108,6 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 user,
                 isAuthenticated: !!user,
                 login,
+                demoLogin,
                 logout,
                 updateUser,
                 hasPermission,

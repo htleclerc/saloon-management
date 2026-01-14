@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import MainLayout from "@/components/layout/MainLayout";
 import { useTheme, useResponsive } from "@/context/ThemeProvider";
@@ -79,14 +79,25 @@ interface WorkersLayoutProps {
 
 export default function WorkersLayout({ children, title, description }: WorkersLayoutProps) {
     const pathname = usePathname();
+    const searchParams = useSearchParams();
     const { theme } = useTheme();
     const { isMobile } = useResponsive();
     const [submenuCollapsed, setSubmenuCollapsed] = useState(false);
     const [mobileDropdownOpen, setMobileDropdownOpen] = useState(false);
 
     const isActive = (item: typeof workersMenuItems[0]) => {
+        // Handle paths with query params (e.g., /workers?view=advanced)
+        if (item.path.includes("?")) {
+            const [itemPath, itemQuery] = item.path.split("?");
+            const params = new URLSearchParams(itemQuery);
+            const viewParam = params.get("view");
+            const currentView = searchParams.get("view");
+            return pathname === itemPath && currentView === viewParam;
+        }
+
         if (item.exact) {
-            return pathname === item.path;
+            // For exact match, also check that there's no view query param
+            return pathname === item.path && !searchParams.get("view");
         }
         return pathname === item.path || pathname.startsWith(item.path + "/");
     };
@@ -115,8 +126,8 @@ export default function WorkersLayout({ children, title, description }: WorkersL
                                         key={item.id}
                                         href={item.path}
                                         className={`flex items-center gap-2 px-4 py-3 border-b-2 whitespace-nowrap transition-all ${active
-                                                ? "border-purple-600 bg-purple-50 text-purple-700"
-                                                : "border-transparent hover:bg-gray-50 text-gray-600"
+                                            ? "border-purple-600 bg-purple-50 text-purple-700"
+                                            : "border-transparent hover:bg-gray-50 text-gray-600"
                                             }`}
                                     >
                                         <Icon className="w-4 h-4" />
