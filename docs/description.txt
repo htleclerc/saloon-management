@@ -1,0 +1,44 @@
+
+Fonctionnalités et Use Cases : 
+
+- Chaque tresseuse (braider) a un pourcentage individuel mais celui par défaut est de 50% et l'autre partie va pour le salon
+- On veut savoir ce que chaque braiser a fait par jour par semaine par mois et par an. Les métriques à savoir c'est le nombre de client et le cout de la tressse et le salaire du braider
+- Chaque braider doit avoir son espace personnel différent de celui du salon avec juste une seule page visible par elle seule et l'administrateur du salon.
+Dedans on verra ses prestations par jour par semaine par mois et par année. son revenu brut et son revenu net après déduction du part du salon. Sa note globale par les clients et les avis associés. 
+- L'administrateur doit avoir la possibilité d'activer ou pas les avis clients et commentaires et de les valider aussi avant de les publier
+- L'administrateur doit pouvoir ajouter modifier et supprimer un braider avec son nom prénom pseudo téléphone adresse pourcentage personnalisé. Les autres données du braider seront générés automatiquement par le système comme son revenu total brut et net ainsi que son taxe d'imposition à payer à l'état qui est de 20%, son score client, son nombre de clients tressées
+
+- L'administrateur  doit pouvoir ajouter modifier et supprimer un client manuellement. A savoir le nom prénom mail numéro de téléphone et adresse. Aucun champ n'est obligatoires, si non renseigné le pseudo du client sera généré automatiquement avec un id technique. Le mail et ou le téléphone seront des champs uniques et seront associés au meme id client
+- Le système aussi doit pouvoir créer un client de manière anonyme s'il n'est pas encore dans la base de données avec le minimum d'informations possible
+
+- L'administrateur doit pouvoir ajouter une dépense ou charge selon la catégorie. La catégorie peuvent être ajoutés par l'administrateur dans sa page de paramétrage et utilisé lors de l'ajout des dépenses et charges. 
+-On commencera par ces catégorie de dépense "Braiders Salary" Office "Rental Rental", "Relative Expenses, "Electricity", "IG & Facebook &google", "Google", "Office cleaning", "Internet", "TV", "Other expenses", "Beauty supply".
+- Le tableau de board soit permettre de détailler les dépenses par semaine par mois par jour et ainsi que le total annuel
+
+- On doit avoir un tableau de board claire et intuitif dans lequel on explore le total des dépenses par catégorie, de voir comment elles évoluent dans le temps, ou de repérer les jours où les dépenses sont particulièrement élevées ou faibles. Pareil pour les revenues ou le chiffre d'affaire
+
+UI/UX
+- Design claire et limpide avec des couleurs commun à un salon de coiffure mais pas trop flash
+- Pouvoir naviguer de manière simple et claire sur les braiders, les revenus et les charges de l'année jusqu'à la semaine et jours
+- Menu :
+  * Accueil : Tableau de boards avec résumés annuels, ajouter une prestation ou une charge ainsi qu'un braider, la liste des prestations du jour ainsi que la possibilité d'explorer plus.
+  * Braiders : La liste des braiders. On aura un resumé du mois en cours et de l'année en cours par braiders et la possibilité de modifier supprimer et cliquer pour aller dans la page de chaque braider pour voir le détail d'activité de chaque braider classés par semaine et par mois ainsi que le résumé total de l'année.
+  * Expenses : La liste des dépenses par catégorie par jour semaine mois et année avec un tableau de board intuitif
+  * Bilan : Pour présenter le bilan global de l'entreprise avec le revenue total brut les charges de salaire des dépenses les taxes à payer et le résultat net par mois et par année. 
+- Bouton et Pages supplémentaires
+  * Pages inscription et connexion (google facebook mail num téléphone pseudo)
+  * Bouton de déconnexion
+  * Bouton et page de paramétrage
+  * Pages ajout et détail des braiders
+  * Page détails expenses
+  * Page ou Fiche client avec son tableau de board
+- Role et Personas
+  * Role Braider : Elle a accès à sa page personnelle et son tableau de board avec ses informations personnelles. Elle peut ajouter un client, une dépense, et une prestation. Elle n'a pas accès aux données des autres braiders et aux données du salon en générale.
+  * Role Administrateur(admin) : L'administrateur a accès à toute l'application sauf attribuer un role admin. Il peut aussi être un braider et avoir son espace personnel braider réduit. Il peut switcher son role braider et admin sans se déconnecter et se reconnecter.
+  * Role Super Admin: Un seul compte qui a tous les droits et ne peut pas être braider. Il peut changer le role d'un admin en braider et vice versa.
+
+
+Autres specifications :  
+- Développer en mode SAS multi tenants donc on peut savoir plusieurs salons avec ses braiders et un salon peut appartenir à un seul compte qui a un Role Super Admin obligatoirement
+- Faire attention à la sécurité
+- Permettre de choisir la devise app multi devise
