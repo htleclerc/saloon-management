@@ -1,15 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
 import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { ArrowLeft, Save, Sparkles, Clock, Euro, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
 
 export default function EditServicePage() {
     const params = useParams();
+    const router = useRouter();
     const id = params.id as string;
 
     const [formData, setFormData] = useState({
@@ -26,11 +27,11 @@ export default function EditServicePage() {
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <Link href="/services">
+                        <button onClick={() => router.back()}>
                             <Button variant="outline" size="sm" className="p-2">
                                 <ArrowLeft className="w-5 h-5" />
                             </Button>
-                        </Link>
+                        </button>
                         <div>
                             <h1 className="text-3xl font-bold text-gray-900">Edit Service</h1>
                             <p className="text-gray-500">Modify service ID: #{id}</p>

@@ -45,6 +45,8 @@ interface ThemeContextType {
     updateTheme: (updates: Partial<ThemeSettings>) => void;
     toggleSidebar: () => void;
     currentPalette: ColorPalette;
+    mobileMenuOpen: boolean;
+    setMobileMenuOpen: (open: boolean) => void;
 }
 
 const defaultTheme: ThemeSettings = {
@@ -65,6 +67,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export function ThemeProvider({ children }: { children: ReactNode }) {
     const [theme, setTheme] = useState<ThemeSettings>(defaultTheme);
     const [mounted, setMounted] = useState(false);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     // Get current color palette
     const currentPalette = colorPalettes.find(p => p.id === theme.colorPaletteId) || colorPalettes[0];
@@ -133,7 +136,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
     // Always provide the context, even before mount (using default values)
     return (
-        <ThemeContext.Provider value={{ theme, updateTheme, toggleSidebar, currentPalette }}>
+        <ThemeContext.Provider value={{
+            theme,
+            updateTheme,
+            toggleSidebar,
+            currentPalette,
+            mobileMenuOpen,
+            setMobileMenuOpen
+        }}>
             {children}
         </ThemeContext.Provider>
     );

@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import WorkersLayout from "@/components/layout/WorkersLayout";
 import StatCard from "@/components/ui/StatCard";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import { Users, DollarSign, TrendingUp, Star, Plus, Eye, Edit, Filter, Download, FileText, LayoutGrid, Table, ChevronDown, Award, Calendar, Clock, Percent } from "lucide-react";
+import DateRangeFilter, { DateFilterValue } from "@/components/ui/DateRangeFilter";
+import { Users, DollarSign, TrendingUp, Star, Plus, Eye, Edit, Filter, Download, FileText, LayoutGrid, Table, ChevronDown, ChevronLeft, ChevronRight, Award, Calendar, Clock, Percent, Search } from "lucide-react";
 import { RequirePermission } from "@/context/AuthProvider";
 import {
     LineChart,
@@ -149,8 +150,65 @@ export default function WorkersPage() {
     const totalClients = workers.reduce((sum, w) => sum + w.clients, 0);
     const activeWorkers = workers.filter(w => w.status === "Active").length;
 
-    // Simple View Component
-    const SimpleView = () => (
+    // Simple View filtering state
+    const [simpleSearch, setSimpleSearch] = useState("");
+    const [simpleDateFilter, setSimpleDateFilter] = useState<DateFilterValue>({ year: new Date().getFullYear(), month: new Date().getMonth() + 1, week: null });
+    const [simpleCardsPage, setSimpleCardsPage] = useState(1);
+    const [simpleTablePage, setSimpleTablePage] = useState(1);
+    const simpleCardsPerPage = 8;
+    const simpleTablePerPage = 5;
+
+    const handleSimpleDateChange = useCallback((value: DateFilterValue) => {
+        setSimpleDateFilter(value);
+        setSimpleCardsPage(1);
+        setSimpleTablePage(1);
+    }, []);
+
+    // Filter workers for Simple View based on search
+    const simpleFilteredWorkers = workers.filter((worker) => {
+        if (simpleSearch && !worker.name.toLowerCase().includes(simpleSearch.toLowerCase())) {
+            return false;
+        }
+        return true;
+    });
+
+    // Pagination for Simple View cards
+    const totalSimpleCardsPages = Math.ceil(simpleFilteredWorkers.length / simpleCardsPerPage);
+    const paginatedSimpleCards = simpleFilteredWorkers.slice((simpleCardsPage - 1) * simpleCardsPerPage, simpleCardsPage * simpleCardsPerPage);
+
+    // Pagination for Simple View table
+    const totalSimpleTablePages = Math.ceil(simpleFilteredWorkers.length / simpleTablePerPage);
+    const paginatedSimpleTable = simpleFilteredWorkers.slice((simpleTablePage - 1) * simpleTablePerPage, simpleTablePage * simpleTablePerPage);
+
+    // Workers list filtering state (Advanced View)
+    const [WorkersDateFilter, setWorkersDateFilter] = useState<DateFilterValue>({ year: new Date().getFullYear(), month: new Date().getMonth() + 1, week: null });
+    const [WorkersSearch, setWorkersSearch] = useState("");
+    const [WorkersPage, setWorkersPage] = useState(1);
+    const WorkersPerPage = 5;
+
+    const handleWorkersDateChange = useCallback((value: DateFilterValue) => {
+        setWorkersDateFilter(value);
+        setWorkersPage(1); // Reset to first page when filter changes
+    }, []);
+
+    // Filter workers based on search (name match)
+    const filteredWorkers = workers.filter((worker) => {
+        if (WorkersSearch && !worker.name.toLowerCase().includes(WorkersSearch.toLowerCase())) {
+            return false;
+        }
+        // Apply status filter
+        if (statusFilter !== "All Status" && worker.status !== statusFilter) {
+            return false;
+        }
+        return true;
+    });
+
+    // Pagination for Workers list
+    const totalWorkersPages = Math.ceil(filteredWorkers.length / WorkersPerPage);
+    const paginatedWorkers = filteredWorkers.slice((WorkersPage - 1) * WorkersPerPage, WorkersPage * WorkersPerPage);
+
+    // Simple View JSX (using variable instead of component to prevent remounting)
+    const simpleView = (
         <div className="space-y-6">
             {/* Summary Stats */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -161,7 +219,7 @@ export default function WorkersPage() {
                     gradient="bg-gradient-to-br from-purple-600 to-purple-700"
                 />
                 <StatCard
-                    title="Total Revenue"
+                    title="Total Income"
                     value={`€${totalRevenue.toLocaleString()}`}
                     subtitle="All workers"
                     icon={DollarSign}
@@ -183,78 +241,163 @@ export default function WorkersPage() {
                 />
             </div>
 
-            {/* Workers Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {workers.map((worker) => (
-                    <Card key={worker.id} className="hover:shadow-xl transition-shadow">
-                        <div className="flex items-start justify-between mb-4">
-                            <div className="flex items-center gap-3">
-                                <div className={`w-12 h-12 bg-gradient-to-br ${worker.color} rounded-full flex items-center justify-center text-white font-bold text-lg`}>
-                                    {worker.avatar}
+            {/* Workers Cards Section with Filters */}
+            <Card className="p-4 md:p-6">
+                <div className="flex flex-col gap-4 mb-6">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                            <Users className="w-5 h-5 text-purple-600" />
+                            Workers ({simpleFilteredWorkers.length})
+                        </h3>
+                    </div>
+
+                    {/* Filters Row */}
+                    <div className="flex flex-col md:flex-row md:items-center gap-4">
+                        <DateRangeFilter onChange={handleSimpleDateChange} showWeekFilter={false} />
+
+                        <div className="relative w-full md:w-64 md:ml-auto">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Search workers..."
+                                value={simpleSearch}
+                                onChange={(e) => { setSimpleSearch(e.target.value); setSimpleCardsPage(1); setSimpleTablePage(1); }}
+                                className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-300"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Workers Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                    {paginatedSimpleCards.length > 0 ? (
+                        paginatedSimpleCards.map((worker) => (
+                            <div key={worker.id} className="p-3 md:p-5 border border-purple-100 rounded-lg md:rounded-xl hover:shadow-md transition-all bg-gradient-to-br from-purple-50/50 to-white hover:from-purple-50 hover:to-purple-50/30">
+                                <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-4">
+                                    <div className={`w-8 h-8 md:w-12 md:h-12 bg-gradient-to-br ${worker.color} rounded-full flex items-center justify-center text-white font-bold text-xs md:text-sm`}>
+                                        {worker.avatar}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className="font-semibold text-sm md:text-base text-gray-900 truncate">{worker.name}</h4>
+                                        <div className="flex items-center gap-2 md:mt-1">
+                                            <span className={`text-[10px] md:text-xs px-1.5 md:px-2 py-0.5 rounded-full ${worker.status === "Active" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"}`}>
+                                                {worker.status}
+                                            </span>
+                                            <div className="flex items-center gap-0.5 md:gap-1">
+                                                <Star className="w-2.5 h-2.5 md:w-3 md:h-3 text-yellow-500 fill-yellow-500" />
+                                                <span className="text-[10px] md:text-xs font-semibold">{worker.rating}</span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 className="font-semibold text-lg text-gray-900">{worker.name}</h3>
-                                    <span
-                                        className={`text-xs px-2 py-1 rounded-full ${worker.status === "Active"
-                                            ? "bg-green-100 text-green-700"
-                                            : "bg-gray-100 text-gray-700"
-                                            }`}
-                                    >
-                                        {worker.status}
-                                    </span>
+
+                                {/* Mobile: inline stats / Desktop: vertical stats */}
+                                <div className="flex md:hidden items-center justify-between text-xs mb-2 px-1">
+                                    <span className="text-gray-500">Share: <span className="font-semibold text-purple-600">{worker.sharingKey}%</span></span>
+                                    <span className="text-gray-500">Rev: <span className="font-semibold text-gray-900">{worker.totalRevenue}</span></span>
+                                </div>
+                                <div className="hidden md:block space-y-2 mb-4 px-1">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-500">Share:</span>
+                                        <span className="font-semibold text-purple-600">{worker.sharingKey}%</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-500">Revenue:</span>
+                                        <span className="font-semibold text-gray-900">{worker.totalRevenue}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-500">Clients:</span>
+                                        <span className="font-semibold text-gray-900">{worker.clients}</span>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-1 md:gap-2">
+                                    <Link href={`/workers/detail/${worker.id}`} className="flex-1">
+                                        <button className="w-full py-1 md:py-2 text-[10px] md:text-xs font-medium text-purple-600 bg-purple-50 rounded md:rounded-lg hover:bg-purple-100 transition flex items-center justify-center gap-0.5 md:gap-1">
+                                            <Eye className="w-2.5 h-2.5 md:w-3.5 md:h-3.5" /> View
+                                        </button>
+                                    </Link>
+                                    <RequirePermission role={['manager', 'admin']}>
+                                        <Link href={`/workers/edit/${worker.id}`} className="flex-1">
+                                            <button className="w-full py-1 md:py-2 text-[10px] md:text-xs font-medium text-pink-600 bg-pink-50 rounded md:rounded-lg hover:bg-pink-100 transition flex items-center justify-center gap-0.5 md:gap-1">
+                                                <Edit className="w-2.5 h-2.5 md:w-3.5 md:h-3.5" /> Edit
+                                            </button>
+                                        </Link>
+                                    </RequirePermission>
                                 </div>
                             </div>
+                        ))
+                    ) : (
+                        <div className="col-span-full text-center py-8 text-gray-500">
+                            No workers found matching your search
+                        </div>
+                    )}
+                </div>
+
+                {/* Cards Pagination */}
+                {totalSimpleCardsPages > 1 && (
+                    <div className="flex items-center justify-between px-2 pt-4 mt-4 border-t border-gray-100">
+                        <p className="text-sm text-gray-500">
+                            Showing {((simpleCardsPage - 1) * simpleCardsPerPage) + 1} to {Math.min(simpleCardsPage * simpleCardsPerPage, simpleFilteredWorkers.length)} of {simpleFilteredWorkers.length}
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setSimpleCardsPage(p => Math.max(1, p - 1))}
+                                disabled={simpleCardsPage === 1}
+                                className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                            </button>
                             <div className="flex items-center gap-1">
-                                <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                                <span className="text-sm font-semibold">{worker.rating}</span>
+                                {Array.from({ length: totalSimpleCardsPages }, (_, i) => i + 1).map((page) => (
+                                    <button
+                                        key={page}
+                                        onClick={() => setSimpleCardsPage(page)}
+                                        className={`w-8 h-8 rounded-lg text-sm font-medium transition ${simpleCardsPage === page ? "bg-purple-600 text-white" : "hover:bg-gray-100 text-gray-600"}`}
+                                    >
+                                        {page}
+                                    </button>
+                                ))}
                             </div>
+                            <button
+                                onClick={() => setSimpleCardsPage(p => Math.min(totalSimpleCardsPages, p + 1))}
+                                disabled={simpleCardsPage === totalSimpleCardsPages}
+                                className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                            >
+                                <ChevronRight className="w-4 h-4" />
+                            </button>
                         </div>
+                    </div>
+                )}
+            </Card>
 
-                        <div className="space-y-3 mb-4">
-                            <div className="flex justify-between">
-                                <span className="text-sm text-gray-600">Sharing Key:</span>
-                                <span className="font-semibold text-purple-600">{worker.sharingKey}%</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-sm text-gray-600">Total Revenue:</span>
-                                <span className="font-semibold text-gray-900">{worker.totalRevenue}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-sm text-gray-600">Total Salary:</span>
-                                <span className="font-semibold text-green-600">{worker.totalSalary}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-sm text-gray-600">Clients:</span>
-                                <span className="font-semibold text-gray-900">{worker.clients}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-sm text-gray-600">Services:</span>
-                                <span className="font-semibold text-gray-900">{worker.services}</span>
-                            </div>
-                        </div>
-
-                        <div className="flex gap-2">
-                            <Link href={`/workers/detail/${worker.id}`} className="flex-1">
-                                <Button variant="outline" size="sm" className="w-full">
-                                    <Eye className="w-4 h-4" />
-                                    View Details
-                                </Button>
-                            </Link>
-                            <RequirePermission role={['manager', 'admin']}>
-                                <Link href={`/workers/edit/${worker.id}`} className="flex-1">
-                                    <Button variant="primary" size="sm" className="w-full">
-                                        Edit
-                                    </Button>
-                                </Link>
-                            </RequirePermission>
-                        </div>
-                    </Card>
-                ))}
-            </div>
-
-            {/* Performance Table */}
+            {/* Performance Table with Filters */}
             <Card>
-                <h3 className="text-lg font-semibold mb-4">Performance Overview (This Month)</h3>
+                <div className="flex flex-col gap-4 p-4 border-b border-gray-100">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <h3 className="text-lg font-semibold text-gray-900">Performance Overview</h3>
+                        <div className="flex gap-2">
+                            <Button variant="outline" size="sm" className="gap-2"><Download className="w-4 h-4" />Export</Button>
+                        </div>
+                    </div>
+
+                    {/* Filters Row */}
+                    <div className="flex flex-col md:flex-row md:items-center gap-4">
+                        <DateRangeFilter onChange={handleSimpleDateChange} showWeekFilter={false} />
+
+                        <div className="relative w-full md:w-64 md:ml-auto">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Search workers..."
+                                value={simpleSearch}
+                                onChange={(e) => { setSimpleSearch(e.target.value); setSimpleCardsPage(1); setSimpleTablePage(1); }}
+                                className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-300"
+                            />
+                        </div>
+                    </div>
+                </div>
+
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead className="bg-gray-50">
@@ -266,66 +409,114 @@ export default function WorkersPage() {
                                 <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Salary</th>
                                 <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Clients</th>
                                 <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Rating</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Actions</th>
+                                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {workers.map((worker) => (
-                                <tr key={worker.id} className="hover:bg-gray-50 transition">
-                                    <td className="px-4 py-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-8 h-8 bg-gradient-to-br ${worker.color} rounded-full flex items-center justify-center text-white font-semibold text-sm`}>
-                                                {worker.avatar}
+                            {paginatedSimpleTable.length > 0 ? (
+                                paginatedSimpleTable.map((worker) => (
+                                    <tr key={worker.id} className="hover:bg-gray-50 transition">
+                                        <td className="px-4 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-8 h-8 bg-gradient-to-br ${worker.color} rounded-full flex items-center justify-center text-white font-semibold text-sm`}>
+                                                    {worker.avatar}
+                                                </div>
+                                                <span className="font-medium text-gray-900">{worker.name}</span>
                                             </div>
-                                            <span className="font-medium text-gray-900">{worker.name}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-4 py-4">
-                                        <span
-                                            className={`text-xs px-2 py-1 rounded-full ${worker.status === "Active"
-                                                ? "bg-green-100 text-green-700"
-                                                : "bg-gray-100 text-gray-700"
-                                                }`}
-                                        >
-                                            {worker.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-4 py-4 text-purple-600 font-semibold">{worker.sharingKey}%</td>
-                                    <td className="px-4 py-4 text-right font-semibold text-gray-900">{worker.totalRevenue}</td>
-                                    <td className="px-4 py-4 text-right font-semibold text-green-600">{worker.totalSalary}</td>
-                                    <td className="px-4 py-4 text-right font-medium text-gray-900">{worker.clients}</td>
-                                    <td className="px-4 py-4 text-right">
-                                        <div className="flex items-center justify-end gap-1">
-                                            <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                                            <span className="font-semibold">{worker.rating}</span>
-                                        </div>
-                                    </td>
-                                    <td className="px-4 py-4 text-right">
-                                        <Link href={`/workers/detail/${worker.id}`}>
-                                            <Button variant="outline" size="sm">
-                                                <Eye className="w-4 h-4" />
-                                            </Button>
-                                        </Link>
+                                        </td>
+                                        <td className="px-4 py-4">
+                                            <span className={`text-xs px-2 py-1 rounded-full ${worker.status === "Active" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"}`}>
+                                                {worker.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-4 text-purple-600 font-semibold">{worker.sharingKey}%</td>
+                                        <td className="px-4 py-4 text-right font-semibold text-gray-900">{worker.totalRevenue}</td>
+                                        <td className="px-4 py-4 text-right font-semibold text-green-600">{worker.totalSalary}</td>
+                                        <td className="px-4 py-4 text-right font-medium text-gray-900">{worker.clients}</td>
+                                        <td className="px-4 py-4 text-right">
+                                            <div className="flex items-center justify-end gap-1">
+                                                <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                                                <span className="font-semibold">{worker.rating}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-4">
+                                            <div className="flex items-center justify-center gap-2">
+                                                <Link href={`/workers/detail/${worker.id}`}>
+                                                    <button className="p-2 hover:bg-purple-50 rounded-lg transition text-purple-600">
+                                                        <Eye className="w-4 h-4" />
+                                                    </button>
+                                                </Link>
+                                                <RequirePermission role={['manager', 'admin']}>
+                                                    <Link href={`/workers/edit/${worker.id}`}>
+                                                        <button className="p-2 hover:bg-pink-50 rounded-lg transition text-pink-600">
+                                                            <Edit className="w-4 h-4" />
+                                                        </button>
+                                                    </Link>
+                                                </RequirePermission>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
+                                        No workers found matching your search
                                     </td>
                                 </tr>
-                            ))}
+                            )}
                         </tbody>
                     </table>
                 </div>
+
+                {/* Table Pagination */}
+                {totalSimpleTablePages > 1 && (
+                    <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+                        <p className="text-sm text-gray-500">
+                            Showing {((simpleTablePage - 1) * simpleTablePerPage) + 1} to {Math.min(simpleTablePage * simpleTablePerPage, simpleFilteredWorkers.length)} of {simpleFilteredWorkers.length}
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setSimpleTablePage(p => Math.max(1, p - 1))}
+                                disabled={simpleTablePage === 1}
+                                className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                            </button>
+                            <div className="flex items-center gap-1">
+                                {Array.from({ length: totalSimpleTablePages }, (_, i) => i + 1).map((page) => (
+                                    <button
+                                        key={page}
+                                        onClick={() => setSimpleTablePage(page)}
+                                        className={`w-8 h-8 rounded-lg text-sm font-medium transition ${simpleTablePage === page ? "bg-purple-600 text-white" : "hover:bg-gray-100 text-gray-600"}`}
+                                    >
+                                        {page}
+                                    </button>
+                                ))}
+                            </div>
+                            <button
+                                onClick={() => setSimpleTablePage(p => Math.min(totalSimpleTablePages, p + 1))}
+                                disabled={simpleTablePage === totalSimpleTablePages}
+                                className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                            >
+                                <ChevronRight className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+                )}
             </Card>
         </div>
     );
 
 
-    // Advanced View Component
-    const AdvancedView = () => (
+    // Advanced View JSX (using variable instead of component to prevent remounting)
+    const advancedView = (
         <div className="space-y-6">
             {/* Summary Stats - Colored Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-5 text-white shadow-lg">
                     <div className="flex items-center gap-3 mb-2">
                         <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center"><Users className="w-5 h-5" /></div>
-                        <span className="text-sm text-purple-100">Active Braiders</span>
+                        <span className="text-sm text-purple-100">Active Workers</span>
                     </div>
                     <p className="text-3xl font-bold">{activeWorkers}</p>
                     <p className="text-xs text-purple-200 mt-1">{activeWorkers} active this month</p>
@@ -333,7 +524,7 @@ export default function WorkersPage() {
                 <div className="bg-gradient-to-br from-pink-500 to-pink-600 rounded-2xl p-5 text-white shadow-lg">
                     <div className="flex items-center gap-3 mb-2">
                         <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center"><DollarSign className="w-5 h-5" /></div>
-                        <span className="text-sm text-pink-100">Total Revenue</span>
+                        <span className="text-sm text-pink-100">Total Income</span>
                     </div>
                     <p className="text-3xl font-bold">€{(totalRevenue).toLocaleString()}</p>
                     <p className="text-xs text-pink-200 mt-1">+18.5% from last month</p>
@@ -381,20 +572,38 @@ export default function WorkersPage() {
                 <Button variant="outline" size="sm">Reset</Button>
             </div>
 
-            {/* Braiders List Table */}
+            {/* Workers List Table */}
             <Card className="overflow-hidden">
-                <div className="flex items-center justify-between p-4 border-b border-gray-100">
-                    <h3 className="text-lg font-bold text-gray-900">Braiders List</h3>
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between p-4 border-b border-gray-100 gap-4">
+                    <h3 className="text-lg font-bold text-gray-900">Workers List</h3>
                     <div className="flex gap-2">
                         <Button variant="outline" size="sm" className="gap-2"><Download className="w-4 h-4" />Export</Button>
                         <Button variant="outline" size="sm" className="gap-2"><FileText className="w-4 h-4" />Print</Button>
                     </div>
                 </div>
+
+                {/* Filters Row: DateRangeFilter + Search */}
+                <div className="flex flex-col md:flex-row md:items-center gap-4 p-4 bg-gray-50 border-b border-gray-100">
+                    <DateRangeFilter onChange={handleWorkersDateChange} showWeekFilter={true} />
+
+                    {/* Search */}
+                    <div className="relative w-full md:w-64 md:ml-auto">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                            type="text"
+                            placeholder="Search by name..."
+                            value={WorkersSearch}
+                            onChange={(e) => { setWorkersSearch(e.target.value); setWorkersPage(1); }}
+                            className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-300"
+                        />
+                    </div>
+                </div>
+
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead className="bg-gray-50">
                             <tr>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Braider</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Worker</th>
                                 <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Share %</th>
                                 <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Month Revenue</th>
                                 <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Month Salary</th>
@@ -407,28 +616,72 @@ export default function WorkersPage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {workers.map((worker) => (
-                                <tr key={worker.id} className="hover:bg-gray-50 transition">
-                                    <td className="px-4 py-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-10 h-10 bg-gradient-to-br ${worker.color} rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-md`}>{worker.avatar}</div>
-                                            <div><p className="font-semibold text-gray-900">{worker.name}</p><p className="text-xs text-gray-500">ID: BR-00{worker.id}</p></div>
-                                        </div>
+                            {paginatedWorkers.length > 0 ? (
+                                paginatedWorkers.map((worker) => (
+                                    <tr key={worker.id} className="hover:bg-gray-50 transition">
+                                        <td className="px-4 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-10 h-10 bg-gradient-to-br ${worker.color} rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-md`}>{worker.avatar}</div>
+                                                <div><p className="font-semibold text-gray-900">{worker.name}</p><p className="text-xs text-gray-500">ID: BR-00{worker.id}</p></div>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-4 text-center"><span className={`px-3 py-1 rounded-full text-xs font-bold ${worker.sharingKey >= 65 ? "bg-purple-100 text-purple-700" : worker.sharingKey >= 55 ? "bg-pink-100 text-pink-700" : "bg-orange-100 text-orange-700"}`}>{worker.sharingKey}%</span></td>
+                                        <td className="px-4 py-4 text-right font-semibold text-gray-900">{worker.monthRevenue}</td>
+                                        <td className="px-4 py-4 text-right font-semibold text-pink-600">{worker.monthSalary}</td>
+                                        <td className="px-4 py-4 text-right font-semibold text-gray-900">{worker.yearRevenue}</td>
+                                        <td className="px-4 py-4 text-right font-semibold text-green-600">{worker.yearSalary}</td>
+                                        <td className="px-4 py-4 text-center"><span className="text-gray-900 font-medium">{worker.clients}</span><br /><span className="text-xs text-gray-500">clients</span></td>
+                                        <td className="px-4 py-4 text-center"><div className="flex items-center justify-center gap-1"><Star className="w-4 h-4 text-yellow-500 fill-yellow-500" /><span className="font-semibold text-gray-900">{worker.rating}</span></div></td>
+                                        <td className="px-4 py-4 text-center"><span className={`px-2 py-1 rounded-full text-xs font-medium ${worker.status === "Active" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>{worker.status}</span></td>
+                                        <td className="px-4 py-4"><div className="flex items-center justify-center gap-2"><Link href={`/workers/detail/${worker.id}`}><button className="p-2 hover:bg-purple-50 rounded-lg transition text-purple-600"><Eye className="w-4 h-4" /></button></Link><RequirePermission role={['manager', 'admin']}><Link href={`/workers/edit/${worker.id}`}><button className="p-2 hover:bg-pink-50 rounded-lg transition text-pink-600"><Edit className="w-4 h-4" /></button></Link></RequirePermission></div></td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={10} className="px-4 py-8 text-center text-gray-500">
+                                        No workers found matching your search criteria
                                     </td>
-                                    <td className="px-4 py-4 text-center"><span className={`px-3 py-1 rounded-full text-xs font-bold ${worker.sharingKey >= 65 ? "bg-purple-100 text-purple-700" : worker.sharingKey >= 55 ? "bg-pink-100 text-pink-700" : "bg-orange-100 text-orange-700"}`}>{worker.sharingKey}%</span></td>
-                                    <td className="px-4 py-4 text-right font-semibold text-gray-900">{worker.monthRevenue}</td>
-                                    <td className="px-4 py-4 text-right font-semibold text-pink-600">{worker.monthSalary}</td>
-                                    <td className="px-4 py-4 text-right font-semibold text-gray-900">{worker.yearRevenue}</td>
-                                    <td className="px-4 py-4 text-right font-semibold text-green-600">{worker.yearSalary}</td>
-                                    <td className="px-4 py-4 text-center"><span className="text-gray-900 font-medium">{worker.clients}</span><br /><span className="text-xs text-gray-500">clients</span></td>
-                                    <td className="px-4 py-4 text-center"><div className="flex items-center justify-center gap-1"><Star className="w-4 h-4 text-yellow-500 fill-yellow-500" /><span className="font-semibold text-gray-900">{worker.rating}</span></div></td>
-                                    <td className="px-4 py-4 text-center"><span className={`px-2 py-1 rounded-full text-xs font-medium ${worker.status === "Active" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>{worker.status}</span></td>
-                                    <td className="px-4 py-4"><div className="flex items-center justify-center gap-2"><Link href={`/workers/detail/${worker.id}`}><button className="p-2 hover:bg-purple-50 rounded-lg transition text-purple-600"><Eye className="w-4 h-4" /></button></Link><RequirePermission role={['manager', 'admin']}><Link href={`/workers/edit-advanced/${worker.id}`}><button className="p-2 hover:bg-pink-50 rounded-lg transition text-pink-600"><Edit className="w-4 h-4" /></button></Link></RequirePermission></div></td>
                                 </tr>
-                            ))}
+                            )}
                         </tbody>
                     </table>
                 </div>
+
+                {/* Pagination Controls */}
+                {totalWorkersPages > 1 && (
+                    <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+                        <p className="text-sm text-gray-500">
+                            Showing {((WorkersPage - 1) * WorkersPerPage) + 1} to {Math.min(WorkersPage * WorkersPerPage, filteredWorkers.length)} of {filteredWorkers.length} workers
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setWorkersPage(p => Math.max(1, p - 1))}
+                                disabled={WorkersPage === 1}
+                                className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                            </button>
+                            <div className="flex items-center gap-1">
+                                {Array.from({ length: totalWorkersPages }, (_, i) => i + 1).map((page) => (
+                                    <button
+                                        key={page}
+                                        onClick={() => setWorkersPage(page)}
+                                        className={`w-8 h-8 rounded-lg text-sm font-medium transition ${WorkersPage === page ? "bg-purple-600 text-white" : "hover:bg-gray-100 text-gray-600"}`}
+                                    >
+                                        {page}
+                                    </button>
+                                ))}
+                            </div>
+                            <button
+                                onClick={() => setWorkersPage(p => Math.min(totalWorkersPages, p + 1))}
+                                disabled={WorkersPage === totalWorkersPages}
+                                className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                            >
+                                <ChevronRight className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+                )}
             </Card>
 
             {/* Weekly Revenue Breakdown & Client Volume Trend */}
@@ -659,8 +912,8 @@ export default function WorkersPage() {
                     <table className="w-full text-sm">
                         <thead className="bg-gray-50">
                             <tr>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Braider</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Total Revenue</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Worker</th>
+                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Total Income</th>
                                 <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Total Salary</th>
                                 <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Salon Share</th>
                                 <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Total Clients</th>
@@ -726,7 +979,7 @@ export default function WorkersPage() {
                         </RequirePermission>
                     </div>
                 </div>
-                {viewMode === "simple" ? <SimpleView /> : <AdvancedView />}
+                {viewMode === "simple" ? simpleView : advancedView}
             </div>
         </WorkersLayout>
     );

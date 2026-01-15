@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -8,6 +9,7 @@ import { ArrowLeft, Save, Sparkles, Clock, Euro } from "lucide-react";
 import Link from "next/link";
 
 export default function AddServicePage() {
+    const router = useRouter();
     const [formData, setFormData] = useState({
         name: "",
         description: "",
@@ -21,11 +23,11 @@ export default function AddServicePage() {
             <div className="max-w-4xl mx-auto space-y-6">
                 {/* Header */}
                 <div className="flex items-center gap-4">
-                    <Link href="/services">
+                    <button onClick={() => router.back()}>
                         <Button variant="outline" size="sm" className="p-2">
                             <ArrowLeft className="w-5 h-5" />
                         </Button>
-                    </Link>
+                    </button>
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900">Add New Service</h1>
                         <p className="text-gray-500">Define a new service for your workshop</p>

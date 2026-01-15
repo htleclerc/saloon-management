@@ -131,7 +131,7 @@ export default function RevenuePage() {
                             <span className="bg-white/20 px-2 py-1 rounded text-xs">Total</span>
                         </div>
                         <div>
-                            <p className="text-sm opacity-90 mb-1">Total Revenue</p>
+                            <p className="text-sm opacity-90 mb-1">Total Income</p>
                             <h3 className="text-3xl font-bold">€45,892</h3>
                             <div className="flex items-center gap-1 mt-1 text-sm opacity-80">
                                 <ArrowUp className="w-3 h-3" />
@@ -602,13 +602,13 @@ export default function RevenuePage() {
                                     </div>
                                     <div className="text-right">
                                         <p className="font-bold text-gray-900">€{worker.revenue.toLocaleString()}</p>
-                                        <p className="text-xs text-gray-500">Total Revenue</p>
+                                        <p className="text-xs text-gray-500">Total Income</p>
                                     </div>
                                 </summary>
                                 <div className="mt-3 p-4 bg-white border border-gray-100 rounded-lg">
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                         <div className="p-3 bg-purple-50 rounded-lg">
-                                            <p className="text-xs text-gray-500 mb-1">Total Revenue</p>
+                                            <p className="text-xs text-gray-500 mb-1">Total Income</p>
                                             <p className="text-xl font-bold text-gray-900">€{worker.revenue.toLocaleString()}</p>
                                         </div>
                                         <div className="p-3 bg-pink-50 rounded-lg">

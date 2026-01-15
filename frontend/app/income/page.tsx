@@ -28,11 +28,11 @@ export default function RevenusPage() {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Revenus Management</h1>
-                        <p className="text-gray-500 mt-1">Track and manage all revenue streams</p>
+                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Income Management</h1>
+                        <p className="text-gray-500 mt-1">Track and manage all income streams</p>
                     </div>
                     <div className="flex flex-nowrap gap-2">
-                        <Link href="/revenus/advanced">
+                        <Link href="/income/advanced">
                             <Button variant="outline" size="sm" className="border-purple-200 text-purple-700 hover:bg-purple-50">
                                 <BarChart2 className="w-4 h-4 md:mr-2" />
                                 <span className="hidden md:inline">Vue Avancée</span>
@@ -42,10 +42,10 @@ export default function RevenusPage() {
                             <Download className="w-4 h-4 md:mr-2" />
                             <span className="hidden md:inline">Export</span>
                         </Button>
-                        <Link href="/revenus/add">
+                        <Link href="/income/add">
                             <Button variant="primary" size="sm">
                                 <Plus className="w-4 h-4 md:mr-2" />
-                                <span className="hidden md:inline">Add Revenue</span>
+                                <span className="hidden md:inline">Add Income</span>
                             </Button>
                         </Link>
                     </div>
@@ -54,7 +54,7 @@ export default function RevenusPage() {
                 {/* Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <Card gradient="bg-gradient-to-br from-purple-600 to-purple-700" className="text-white">
-                        <p className="text-sm opacity-90 mb-1">Total Revenue</p>
+                        <p className="text-sm opacity-90 mb-1">Total Income</p>
                         <h3 className="text-3xl font-bold">€{totalRevenue.toLocaleString()}</h3>
                         <p className="text-sm opacity-80 mt-1">All transactions</p>
                     </Card>
@@ -157,7 +157,7 @@ export default function RevenusPage() {
                                         </td>
                                         <td className="px-4 py-4 text-center">
                                             <div className="flex items-center justify-center gap-2">
-                                                <Link href={`/revenus/edit/${revenue.id}`}>
+                                                <Link href={`/income/edit/${revenue.id}`}>
                                                     <button className="text-purple-600 hover:text-purple-800 text-sm font-medium">Edit</button>
                                                 </Link>
                                                 <button className="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button>

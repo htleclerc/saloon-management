@@ -185,7 +185,7 @@ export default function Dashboard() {
           <div className="bg-gradient-to-r from-purple-600 to-purple-500 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden transition-transform hover:scale-[1.01]">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-purple-100 text-sm font-medium mb-1">Total Revenue</p>
+                <p className="text-purple-100 text-sm font-medium mb-1">Total Income</p>
                 <h3 className="text-2xl sm:text-3xl font-bold">€45,890</h3>
                 <p className="text-xs text-purple-100 mt-2 flex items-center gap-1">
                   <span className="bg-white/20 px-1.5 py-0.5 rounded text-white font-semibold">+12%</span> vs last month
@@ -250,7 +250,7 @@ export default function Dashboard() {
         <div>
           <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Link href="/revenus/add">
+            <Link href="/income/add">
               <button className="w-full h-full flex items-center justify-center gap-3 bg-purple-600 hover:bg-purple-700 text-white py-4 rounded-xl font-medium transition-all shadow-md hover:shadow-lg">
                 <Plus className="w-5 h-5" />
                 <span>Add Revenue</span>

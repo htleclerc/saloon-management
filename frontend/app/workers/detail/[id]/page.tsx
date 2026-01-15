@@ -1,11 +1,12 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
+import DateRangeFilter, { DateFilterValue } from "@/components/ui/DateRangeFilter";
 import {
     DollarSign,
     TrendingUp,
@@ -22,6 +23,8 @@ import {
     Percent,
     Eye,
     ChevronDown,
+    ChevronLeft,
+    ChevronRight,
     LayoutGrid,
     Table,
     MessageSquare,
@@ -29,6 +32,7 @@ import {
     Scissors,
     ThumbsUp,
     AlertCircle,
+    Search,
 } from "lucide-react";
 import {
     LineChart,
@@ -52,7 +56,7 @@ const workerData = {
     email: "orphelia@adorablebraids.com",
     phone: "+33 6 12 34 56 78",
     status: "Active",
-    role: "Braider",
+    role: "Worker",
     location: "Paris, France",
     joinDate: "March 2021",
     sharingKey: 70,
@@ -177,16 +181,40 @@ const revenueDataByYear: Record<string, { week: RevenueRow[]; month: RevenueRow[
 
 const availableYears = ["2024", "2023", "2022"];
 
-// Recent Revenue History
+// Revenue Transactions Data (for SimpleView table)
+const revenueTransactions = [
+    { id: 1, date: "2026-01-14", client: "Marie Dubois", service: "Box Braids", amount: 120, status: "Completed" },
+    { id: 2, date: "2026-01-14", client: "Sophie Laurent", service: "Senegalese Twists", amount: 95, status: "Completed" },
+    { id: 3, date: "2026-01-13", client: "Anna Martin", service: "Cornrows", amount: 85, status: "Completed" },
+    { id: 4, date: "2026-01-13", client: "Claire Petit", service: "Locs Maintenance", amount: 150, status: "Completed" },
+    { id: 5, date: "2026-01-12", client: "Julie Bernard", service: "Box Braids", amount: 130, status: "Completed" },
+    { id: 6, date: "2026-01-12", client: "Nadia Koné", service: "Twists", amount: 110, status: "Completed" },
+    { id: 7, date: "2026-01-11", client: "Camille Roche", service: "Cornrows", amount: 75, status: "Completed" },
+    { id: 8, date: "2026-01-11", client: "Lucie Moreau", service: "Knotless Braids", amount: 180, status: "Completed" },
+    { id: 9, date: "2026-01-10", client: "Emma Leroy", service: "Box Braids", amount: 125, status: "Completed" },
+    { id: 10, date: "2026-01-10", client: "Léa Dupont", service: "Twists", amount: 100, status: "Completed" },
+    { id: 11, date: "2026-01-09", client: "Chloé Martin", service: "Senegalese Twists", amount: 95, status: "Completed" },
+    { id: 12, date: "2026-01-09", client: "Manon Petit", service: "Locs Maintenance", amount: 160, status: "Completed" },
+    { id: 13, date: "2026-01-08", client: "Jade Bernard", service: "Box Braids", amount: 140, status: "Completed" },
+    { id: 14, date: "2026-01-08", client: "Louise Moreau", service: "Cornrows", amount: 80, status: "Completed" },
+    { id: 15, date: "2026-01-07", client: "Inès Roux", service: "Knotless Braids", amount: 175, status: "Completed" },
+    { id: 16, date: "2026-01-07", client: "Zoé Lefevre", service: "Twists", amount: 105, status: "Pending" },
+    { id: 17, date: "2026-01-06", client: "Lina Garcia", service: "Box Braids", amount: 135, status: "Completed" },
+    { id: 18, date: "2026-01-06", client: "Mia Thomas", service: "Senegalese Twists", amount: 98, status: "Completed" },
+    { id: 19, date: "2026-01-05", client: "Eva Robert", service: "Locs Maintenance", amount: 155, status: "Completed" },
+    { id: 20, date: "2026-01-05", client: "Léonie Durand", service: "Cornrows", amount: 78, status: "Completed" },
+];
+
+// Recent Revenue History (for display with formatted dates)
 const recentRevenueHistory = [
-    { id: 1, date: "14 Jan 2024", client: "Marie Dubois", service: "Box Braids", amount: "€120", status: "Completed" },
-    { id: 2, date: "13 Jan 2024", client: "Sophie Laurent", service: "Senegalese Twists", amount: "€95", status: "Completed" },
-    { id: 3, date: "12 Jan 2024", client: "Anna Martin", service: "Cornrows", amount: "€85", status: "Completed" },
-    { id: 4, date: "11 Jan 2024", client: "Claire Petit", service: "Locs Maintenance", amount: "€150", status: "Completed" },
-    { id: 5, date: "10 Jan 2024", client: "Julie Bernard", service: "Box Braids", amount: "€130", status: "Completed" },
-    { id: 6, date: "9 Jan 2024", client: "Nadia Koné", service: "Twists", amount: "€110", status: "Completed" },
-    { id: 7, date: "8 Jan 2024", client: "Camille Roche", service: "Cornrows", amount: "€75", status: "Completed" },
-    { id: 8, date: "7 Jan 2024", client: "Lucie Moreau", service: "Knotless Braids", amount: "€180", status: "Completed" },
+    { id: 1, date: "14 Jan 2026", client: "Marie Dubois", service: "Box Braids", amount: "€120", status: "Completed" },
+    { id: 2, date: "13 Jan 2026", client: "Sophie Laurent", service: "Senegalese Twists", amount: "€95", status: "Completed" },
+    { id: 3, date: "12 Jan 2026", client: "Anna Martin", service: "Cornrows", amount: "€85", status: "Completed" },
+    { id: 4, date: "11 Jan 2026", client: "Claire Petit", service: "Locs Maintenance", amount: "€150", status: "Completed" },
+    { id: 5, date: "10 Jan 2026", client: "Julie Bernard", service: "Box Braids", amount: "€130", status: "Completed" },
+    { id: 6, date: "9 Jan 2026", client: "Nadia Koné", service: "Twists", amount: "€110", status: "Completed" },
+    { id: 7, date: "8 Jan 2026", client: "Camille Roche", service: "Cornrows", amount: "€75", status: "Completed" },
+    { id: 8, date: "7 Jan 2026", client: "Lucie Moreau", service: "Knotless Braids", amount: "€180", status: "Completed" },
 ];
 
 // Recent Services
@@ -324,6 +352,33 @@ export default function WorkerDetailPage({ params }: { params: Promise<{ id: str
     const [revenuePage, setRevenuePage] = useState(1);
     const itemsPerPage = 5;
 
+    // SimpleView transactions table state
+    const [transactionDateFilter, setTransactionDateFilter] = useState<DateFilterValue>({ year: new Date().getFullYear(), month: new Date().getMonth() + 1, week: null });
+    const [transactionSearch, setTransactionSearch] = useState("");
+    const [transactionPage, setTransactionPage] = useState(1);
+    const transactionsPerPage = 10;
+
+    // Date filter change handler
+    const handleTransactionDateChange = useCallback((value: DateFilterValue) => {
+        setTransactionDateFilter(value);
+        setTransactionPage(1);
+    }, []);
+
+    // Filter transactions based on date filter and search
+    const filteredTransactions = revenueTransactions.filter((item) => {
+        const date = new Date(item.date);
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1;
+        if (year !== transactionDateFilter.year) return false;
+        if (transactionDateFilter.month !== null && month !== transactionDateFilter.month) return false;
+        if (transactionSearch && !item.client.toLowerCase().includes(transactionSearch.toLowerCase()) && !item.service.toLowerCase().includes(transactionSearch.toLowerCase())) return false;
+        return true;
+    });
+
+    // Pagination for transactions
+    const totalTransactionPages = Math.ceil(filteredTransactions.length / transactionsPerPage);
+    const paginatedTransactions = filteredTransactions.slice((transactionPage - 1) * transactionsPerPage, transactionPage * transactionsPerPage);
+
     // Get paginated revenue data based on year and period
     const currentRevenueData = revenueDataByYear[selectedYear][revenuePeriod];
     const totalPages = Math.ceil(currentRevenueData.length / itemsPerPage);
@@ -340,8 +395,8 @@ export default function WorkerDetailPage({ params }: { params: Promise<{ id: str
         setRevenuePage(1);
     };
 
-    // Simple View Component
-    const SimpleView = () => (
+    // Simple View JSX (using variable instead of component to prevent remounting)
+    const simpleView = (
         <div className="space-y-6">
             {/* Performance Overview Stats */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -375,193 +430,122 @@ export default function WorkerDetailPage({ params }: { params: Promise<{ id: str
                 </Card>
             </div>
 
-            {/* Revenue Table with Filter */}
-            <Card className="p-6">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
-                    <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                        <TrendingUp className="w-5 h-5 text-green-500" />
-                        Revenue Overview
-                    </h3>
-                    <div className="flex items-center gap-3">
-                        {/* Year Selector */}
-                        <select
-                            value={selectedYear}
-                            onChange={(e) => handleYearChange(e.target.value)}
-                            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-purple-100 text-purple-700 border-0 cursor-pointer focus:ring-2 focus:ring-purple-300"
-                        >
-                            {availableYears.map((year) => (
-                                <option key={year} value={year}>{year}</option>
-                            ))}
-                        </select>
-                        {/* Period Filter */}
-                        <div className="flex items-center bg-gray-100 rounded-lg p-1">
-                            <button
-                                onClick={() => handlePeriodChange("week")}
-                                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${revenuePeriod === "week"
-                                    ? "bg-white text-purple-700 shadow-sm"
-                                    : "text-gray-600 hover:text-gray-900"
-                                    }`}
-                            >
-                                Week
-                            </button>
-                            <button
-                                onClick={() => handlePeriodChange("month")}
-                                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${revenuePeriod === "month"
-                                    ? "bg-white text-purple-700 shadow-sm"
-                                    : "text-gray-600 hover:text-gray-900"
-                                    }`}
-                            >
-                                Month
-                            </button>
-                            <button
-                                onClick={() => handlePeriodChange("year")}
-                                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${revenuePeriod === "year"
-                                    ? "bg-white text-purple-700 shadow-sm"
-                                    : "text-gray-600 hover:text-gray-900"
-                                    }`}
-                            >
-                                Year
-                            </button>
+            {/* Revenue Transactions Table */}
+            <Card className="p-4 md:p-6">
+                <div className="flex flex-col gap-4 mb-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                        <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                            <DollarSign className="w-5 h-5 text-green-500" />
+                            Revenue Transactions
+                        </h3>
+                        <Link href={`/workers/revenus?workerId=${id}`}>
+                            <Button variant="outline" size="sm" className="text-xs">View Full History</Button>
+                        </Link>
+                    </div>
+
+                    {/* Filters Row: DateRangeFilter + Search on same line for desktop */}
+                    <div className="flex flex-col md:flex-row md:items-center gap-4">
+                        <DateRangeFilter onChange={handleTransactionDateChange} showWeekFilter={false} />
+
+                        {/* Search */}
+                        <div className="relative w-full md:w-64 md:ml-auto">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Search client or service..."
+                                value={transactionSearch}
+                                onChange={(e) => { setTransactionSearch(e.target.value); setTransactionPage(1); }}
+                                className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-300"
+                            />
                         </div>
                     </div>
                 </div>
+
+                {/* Table */}
                 <div className="overflow-x-auto">
                     <table className="w-full">
-                        <thead className="bg-gray-50">
+                        <thead className="bg-gray-50 border-b border-gray-100">
                             <tr>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Period</th>
-                                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Services</th>
-                                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Clients</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Revenue</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Salary (70%)</th>
-                                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Status</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Client</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Service</th>
+                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Amount</th>
+                                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Status</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {paginatedRevenueData.map((row) => (
-                                <tr key={row.id} className="hover:bg-gray-50 transition">
-                                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{row.period}</td>
-                                    <td className="px-4 py-3 text-sm text-center text-gray-600">{row.services}</td>
-                                    <td className="px-4 py-3 text-sm text-center text-gray-600">{row.clients}</td>
-                                    <td className="px-4 py-3 text-sm text-right font-semibold text-green-600">€{row.revenue.toLocaleString()}</td>
-                                    <td className="px-4 py-3 text-sm text-right font-semibold text-purple-600">€{row.salary.toLocaleString()}</td>
-                                    <td className="px-4 py-3 text-center">
-                                        <span className={`text-xs px-2 py-1 rounded-full ${row.status === "Completed" ? "bg-green-100 text-green-700" :
-                                            row.status === "In Progress" ? "bg-blue-100 text-blue-700" :
-                                                "bg-yellow-100 text-yellow-700"
-                                            }`}>
-                                            {row.status}
-                                        </span>
-                                    </td>
+                            {paginatedTransactions.length > 0 ? (
+                                paginatedTransactions.map((item) => (
+                                    <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                                        <td className="px-4 py-3 text-sm text-gray-600">{item.date}</td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-green-500 rounded-full flex items-center justify-center text-white font-bold text-xs">{item.client.charAt(0)}</div>
+                                                <span className="text-sm font-medium text-gray-900">{item.client}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-gray-600 hidden sm:table-cell">{item.service}</td>
+                                        <td className="px-4 py-3 text-sm text-right font-semibold text-green-600">€{item.amount}</td>
+                                        <td className="px-4 py-3 text-center hidden sm:table-cell">
+                                            <span className={`text-xs px-2 py-1 rounded-full ${item.status === "Completed" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>{item.status}</span>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={5} className="px-4 py-8 text-center text-gray-500">No transactions found for the selected period.</td>
                                 </tr>
-                            ))}
+                            )}
                         </tbody>
-                        <tfoot className="bg-purple-50 font-semibold">
-                            <tr>
-                                <td className="px-4 py-3 text-sm text-purple-900">Total</td>
-                                <td className="px-4 py-3 text-sm text-center text-purple-700">
-                                    {currentRevenueData.reduce((sum, r) => sum + r.services, 0)}
-                                </td>
-                                <td className="px-4 py-3 text-sm text-center text-purple-700">
-                                    {currentRevenueData.reduce((sum, r) => sum + r.clients, 0)}
-                                </td>
-                                <td className="px-4 py-3 text-sm text-right text-green-700">
-                                    €{currentRevenueData.reduce((sum, r) => sum + r.revenue, 0).toLocaleString()}
-                                </td>
-                                <td className="px-4 py-3 text-sm text-right text-purple-700">
-                                    €{currentRevenueData.reduce((sum, r) => sum + r.salary, 0).toLocaleString()}
-                                </td>
-                                <td className="px-4 py-3"></td>
-                            </tr>
-                        </tfoot>
+                        {filteredTransactions.length > 0 && (
+                            <tfoot className="bg-purple-50 font-semibold">
+                                <tr>
+                                    <td colSpan={3} className="px-4 py-3 text-sm text-purple-900">Total ({filteredTransactions.length} transactions)</td>
+                                    <td className="px-4 py-3 text-sm text-right text-green-700">€{filteredTransactions.reduce((sum, t) => sum + t.amount, 0).toLocaleString()}</td>
+                                    <td className="px-4 py-3 hidden sm:table-cell"></td>
+                                </tr>
+                            </tfoot>
+                        )}
                     </table>
                 </div>
+
                 {/* Pagination */}
-                {
-                    totalPages > 1 && (
-                        <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
-                            <p className="text-sm text-gray-500">
-                                Showing {(revenuePage - 1) * itemsPerPage + 1} to {Math.min(revenuePage * itemsPerPage, currentRevenueData.length)} of {currentRevenueData.length} entries
-                            </p>
-                            <div className="flex items-center gap-2">
+                {totalTransactionPages > 1 && (
+                    <div className="p-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+                        <p className="text-sm text-gray-500">
+                            Showing {(transactionPage - 1) * transactionsPerPage + 1} to {Math.min(transactionPage * transactionsPerPage, filteredTransactions.length)} of {filteredTransactions.length}
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setTransactionPage(p => Math.max(1, p - 1))}
+                                disabled={transactionPage === 1}
+                                className={`p-2 rounded-lg transition-colors ${transactionPage === 1 ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-purple-100 text-purple-700 hover:bg-purple-200"}`}
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                            </button>
+                            {[...Array(totalTransactionPages)].map((_, i) => (
                                 <button
-                                    onClick={() => setRevenuePage(p => Math.max(1, p - 1))}
-                                    disabled={revenuePage === 1}
-                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${revenuePage === 1 ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-purple-100 text-purple-700 hover:bg-purple-200"}`}
+                                    key={i}
+                                    onClick={() => setTransactionPage(i + 1)}
+                                    className={`w-8 h-8 text-sm font-medium rounded-lg transition-colors ${transactionPage === i + 1 ? "bg-purple-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
                                 >
-                                    Previous
+                                    {i + 1}
                                 </button>
-                                {[...Array(totalPages)].map((_, i) => (
-                                    <button
-                                        key={i}
-                                        onClick={() => setRevenuePage(i + 1)}
-                                        className={`w-8 h-8 text-xs font-medium rounded-md transition-all ${revenuePage === i + 1 ? "bg-purple-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
-                                    >
-                                        {i + 1}
-                                    </button>
-                                ))}
-                                <button
-                                    onClick={() => setRevenuePage(p => Math.min(totalPages, p + 1))}
-                                    disabled={revenuePage === totalPages}
-                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${revenuePage === totalPages ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-purple-100 text-purple-700 hover:bg-purple-200"}`}
-                                >
-                                    Next
-                                </button>
-                            </div>
+                            ))}
+                            <button
+                                onClick={() => setTransactionPage(p => Math.min(totalTransactionPages, p + 1))}
+                                disabled={transactionPage === totalTransactionPages}
+                                className={`p-2 rounded-lg transition-colors ${transactionPage === totalTransactionPages ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-purple-100 text-purple-700 hover:bg-purple-200"}`}
+                            >
+                                <ChevronRight className="w-4 h-4" />
+                            </button>
                         </div>
-                    )
-                }
-            </Card >
+                    </div>
+                )}
 
-            {/* Recent Revenue & Services */}
-            < div className="grid grid-cols-1 lg:grid-cols-2 gap-6" >
-                {/* Recent Revenue History */}
-                < Card className="p-6" >
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-bold text-gray-900 flex items-center gap-2"><DollarSign className="w-5 h-5 text-green-500" />Recent Revenue</h3>
-                        <Button variant="outline" size="sm" className="text-xs">View All</Button>
-                    </div>
-                    <div className="space-y-3">
-                        {recentRevenueHistory.slice(0, 5).map((item) => (
-                            <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-green-500 rounded-full flex items-center justify-center text-white font-bold text-sm">{item.client.charAt(0)}</div>
-                                    <div>
-                                        <p className="font-medium text-gray-900 text-sm">{item.client}</p>
-                                        <p className="text-xs text-gray-500">{item.service} • {item.date}</p>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <p className="font-bold text-green-600">{item.amount}</p>
-                                    <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">{item.status}</span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </Card >
-
-                {/* Recent Services */}
-                < Card className="p-6" >
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-bold text-gray-900 flex items-center gap-2"><Scissors className="w-5 h-5 text-purple-500" />Services Summary</h3>
-                        <Button variant="outline" size="sm" className="text-xs">View All</Button>
-                    </div>
-                    <div className="space-y-3">
-                        {recentServices.map((item) => (
-                            <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
-                                <div>
-                                    <p className="font-medium text-gray-900 text-sm">{item.service}</p>
-                                    <p className="text-xs text-gray-500">{item.count} performed • Last: {item.lastPerformed}</p>
-                                </div>
-                                <p className="font-bold text-purple-600">{item.revenue}</p>
-                            </div>
-                        ))}
-                    </div>
-                </Card >
-            </div >
-
-            {/* Activity History */}
-            < Card className="p-6" >
+                {/* Activity History */}
+            </Card>
+            <Card className="p-6">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="font-bold text-gray-900 flex items-center gap-2"><History className="w-5 h-5 text-blue-500" />Activity History</h3>
                     <Button variant="outline" size="sm" className="text-xs">View All</Button>
@@ -625,8 +609,8 @@ export default function WorkerDetailPage({ params }: { params: Promise<{ id: str
         </div >
     );
 
-    // Advanced View Component
-    const AdvancedView = () => (
+    // Advanced View JSX (using variable instead of component to prevent remounting)
+    const advancedView = (
         <div className="space-y-6">
             {/* Performance Overview Stats */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -643,6 +627,115 @@ export default function WorkerDetailPage({ params }: { params: Promise<{ id: str
                 <Button variant="primary" className="bg-gradient-to-r from-purple-500 to-purple-600"><Eye className="w-4 h-4 mr-2" />View Reports</Button>
                 <Button variant="primary" className="bg-gradient-to-r from-pink-500 to-pink-600"><BarChart3 className="w-4 h-4 mr-2" />Analytics</Button>
                 <Button variant="primary" className="bg-gradient-to-r from-orange-500 to-orange-600"><Calendar className="w-4 h-4 mr-2" />Schedule</Button>
+            </div>
+
+            {/* Revenue Table with Filter */}
+            <Card className="p-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
+                    <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                        <TrendingUp className="w-5 h-5 text-green-500" />
+                        Revenue Overview
+                    </h3>
+                    <div className="flex items-center gap-3">
+                        <select
+                            value={selectedYear}
+                            onChange={(e) => handleYearChange(e.target.value)}
+                            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-purple-100 text-purple-700 border-0 cursor-pointer focus:ring-2 focus:ring-purple-300"
+                        >
+                            {availableYears.map((year) => (
+                                <option key={year} value={year}>{year}</option>
+                            ))}
+                        </select>
+                        <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                            <button onClick={() => handlePeriodChange("week")} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${revenuePeriod === "week" ? "bg-white text-purple-700 shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>Week</button>
+                            <button onClick={() => handlePeriodChange("month")} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${revenuePeriod === "month" ? "bg-white text-purple-700 shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>Month</button>
+                            <button onClick={() => handlePeriodChange("year")} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${revenuePeriod === "year" ? "bg-white text-purple-700 shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>Year</button>
+                        </div>
+                    </div>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full">
+                        <thead className="bg-gray-50">
+                            <tr>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Period</th>
+                                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Services</th>
+                                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Clients</th>
+                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Revenue</th>
+                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Salary</th>
+                                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                            {paginatedRevenueData.map((row) => (
+                                <tr key={row.id} className="hover:bg-gray-50 transition">
+                                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{row.period}</td>
+                                    <td className="px-4 py-3 text-sm text-center text-gray-600">{row.services}</td>
+                                    <td className="px-4 py-3 text-sm text-center text-gray-600">{row.clients}</td>
+                                    <td className="px-4 py-3 text-sm text-right font-semibold text-green-600">€{row.revenue.toLocaleString()}</td>
+                                    <td className="px-4 py-3 text-sm text-right font-semibold text-purple-600">€{row.salary.toLocaleString()}</td>
+                                    <td className="px-4 py-3 text-center">
+                                        <span className={`text-xs px-2 py-1 rounded-full ${row.status === "Completed" ? "bg-green-100 text-green-700" : row.status === "In Progress" ? "bg-blue-100 text-blue-700" : "bg-yellow-100 text-yellow-700"}`}>{row.status}</span>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                        <tfoot className="bg-purple-50 font-semibold">
+                            <tr>
+                                <td className="px-4 py-3 text-sm text-purple-900">Total</td>
+                                <td className="px-4 py-3 text-sm text-center text-purple-700">{currentRevenueData.reduce((sum, r) => sum + r.services, 0)}</td>
+                                <td className="px-4 py-3 text-sm text-center text-purple-700">{currentRevenueData.reduce((sum, r) => sum + r.clients, 0)}</td>
+                                <td className="px-4 py-3 text-sm text-right text-green-700">€{currentRevenueData.reduce((sum, r) => sum + r.revenue, 0).toLocaleString()}</td>
+                                <td className="px-4 py-3 text-sm text-right text-purple-700">€{currentRevenueData.reduce((sum, r) => sum + r.salary, 0).toLocaleString()}</td>
+                                <td className="px-4 py-3"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                {totalPages > 1 && (
+                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+                        <p className="text-sm text-gray-500">Showing {(revenuePage - 1) * itemsPerPage + 1} to {Math.min(revenuePage * itemsPerPage, currentRevenueData.length)} of {currentRevenueData.length}</p>
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => setRevenuePage(p => Math.max(1, p - 1))} disabled={revenuePage === 1} className={`px-3 py-1.5 text-xs font-medium rounded-md ${revenuePage === 1 ? "bg-gray-100 text-gray-400" : "bg-purple-100 text-purple-700 hover:bg-purple-200"}`}>Previous</button>
+                            {[...Array(totalPages)].map((_, i) => (<button key={i} onClick={() => setRevenuePage(i + 1)} className={`w-8 h-8 text-xs font-medium rounded-md ${revenuePage === i + 1 ? "bg-purple-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>{i + 1}</button>))}
+                            <button onClick={() => setRevenuePage(p => Math.min(totalPages, p + 1))} disabled={revenuePage === totalPages} className={`px-3 py-1.5 text-xs font-medium rounded-md ${revenuePage === totalPages ? "bg-gray-100 text-gray-400" : "bg-purple-100 text-purple-700 hover:bg-purple-200"}`}>Next</button>
+                        </div>
+                    </div>
+                )}
+            </Card>
+
+            {/* Recent Revenue & Services */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-bold text-gray-900 flex items-center gap-2"><DollarSign className="w-5 h-5 text-green-500" />Recent Revenue</h3>
+                        <Link href={`/workers/revenus?workerId=${id}`}><Button variant="outline" size="sm" className="text-xs">View All</Button></Link>
+                    </div>
+                    <div className="space-y-3">
+                        {recentRevenueHistory.slice(0, 5).map((item) => (
+                            <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-green-500 rounded-full flex items-center justify-center text-white font-bold text-sm">{item.client.charAt(0)}</div>
+                                    <div><p className="font-medium text-gray-900 text-sm">{item.client}</p><p className="text-xs text-gray-500">{item.service} • {item.date}</p></div>
+                                </div>
+                                <div className="text-right"><p className="font-bold text-green-600">{item.amount}</p><span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">{item.status}</span></div>
+                            </div>
+                        ))}
+                    </div>
+                </Card>
+                <Card className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-bold text-gray-900 flex items-center gap-2"><Scissors className="w-5 h-5 text-purple-500" />Services Summary</h3>
+                        <Button variant="outline" size="sm" className="text-xs">View All</Button>
+                    </div>
+                    <div className="space-y-3">
+                        {recentServices.map((item) => (
+                            <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                                <div><p className="font-medium text-gray-900 text-sm">{item.service}</p><p className="text-xs text-gray-500">{item.count} performed • Last: {item.lastPerformed}</p></div>
+                                <p className="font-bold text-purple-600">{item.revenue}</p>
+                            </div>
+                        ))}
+                    </div>
+                </Card>
             </div>
 
             {/* Weekly Revenue & Client Volume */}
@@ -968,7 +1061,7 @@ export default function WorkerDetailPage({ params }: { params: Promise<{ id: str
                 </div>
 
                 {/* Conditional View Render */}
-                {viewMode === "simple" ? <SimpleView /> : <AdvancedView />}
+                {viewMode === "simple" ? simpleView : advancedView}
             </div>
         </MainLayout>
     );
