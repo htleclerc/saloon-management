@@ -4,7 +4,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Link from "next/link";
-import { Plus, Filter, Download, Calendar } from "lucide-react";
+import { Plus, Filter, Download, Calendar, BarChart2 } from "lucide-react";
 
 const revenues = [
     { id: 1, date: "2026-01-12", client: "Marie Dubois", service: "Box Braids", worker: "Orphelia", amount: 120, status: "Completed" },
@@ -26,27 +26,35 @@ export default function RevenusPage() {
         <MainLayout>
             <div className="space-y-6">
                 {/* Header */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">Revenus Management</h1>
-                        <p className="text-gray-500 mt-1">Track and manage all revenue streams</p>
+                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Income Management</h1>
+                        <p className="text-gray-500 mt-1">Track and manage all income streams</p>
                     </div>
-                    <div className="flex gap-3">
-                        <Button variant="outline" size="md">
-                            <Download className="w-5 h-5" />
-                            Export
+                    <div className="flex flex-nowrap gap-2">
+                        <Link href="/income/advanced">
+                            <Button variant="outline" size="sm" className="border-purple-200 text-purple-700 hover:bg-purple-50">
+                                <BarChart2 className="w-4 h-4 md:mr-2" />
+                                <span className="hidden md:inline">Vue Avancée</span>
+                            </Button>
+                        </Link>
+                        <Button variant="outline" size="sm">
+                            <Download className="w-4 h-4 md:mr-2" />
+                            <span className="hidden md:inline">Export</span>
                         </Button>
-                        <Button variant="primary" size="md">
-                            <Plus className="w-5 h-5" />
-                            Add Revenue
-                        </Button>
+                        <Link href="/income/add">
+                            <Button variant="primary" size="sm">
+                                <Plus className="w-4 h-4 md:mr-2" />
+                                <span className="hidden md:inline">Add Income</span>
+                            </Button>
+                        </Link>
                     </div>
                 </div>
 
                 {/* Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <Card gradient="bg-gradient-to-br from-purple-600 to-purple-700" className="text-white">
-                        <p className="text-sm opacity-90 mb-1">Total Revenue</p>
+                        <p className="text-sm opacity-90 mb-1">Total Income</p>
                         <h3 className="text-3xl font-bold">€{totalRevenue.toLocaleString()}</h3>
                         <p className="text-sm opacity-80 mt-1">All transactions</p>
                     </Card>
@@ -149,7 +157,7 @@ export default function RevenusPage() {
                                         </td>
                                         <td className="px-4 py-4 text-center">
                                             <div className="flex items-center justify-center gap-2">
-                                                <Link href={`/revenus/edit/${revenue.id}`}>
+                                                <Link href={`/income/edit/${revenue.id}`}>
                                                     <button className="text-purple-600 hover:text-purple-800 text-sm font-medium">Edit</button>
                                                 </Link>
                                                 <button className="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button>

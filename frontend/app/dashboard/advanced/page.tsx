@@ -122,11 +122,11 @@ export default function AdvancedDashboardPage() {
 
                     {/* Stats Row */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {/* Total Revenue */}
+                        {/* Total Income */}
                         <div className="bg-gradient-to-r from-purple-500 to-purple-400 rounded-2xl p-5 text-white shadow-lg relative overflow-hidden">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <p className="text-purple-100 text-sm font-medium mb-1">Total Revenue</p>
+                                    <p className="text-purple-100 text-sm font-medium mb-1">Total Income</p>
                                     <h3 className="text-3xl font-bold">€45,890</h3>
                                     <p className="text-xs text-purple-100 mt-2 flex items-center gap-1">
                                         <span className="bg-white/20 px-1.5 py-0.5 rounded text-white font-semibold">+12%</span> vs last year
@@ -351,7 +351,7 @@ export default function AdvancedDashboardPage() {
                     {/* Top Performing Workers */}
                     <div>
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="font-bold text-gray-900 text-lg">Top Performing Braiders</h3>
+                            <h3 className="font-bold text-gray-900 text-lg">Top Performing Workers</h3>
                             <button className="text-sm text-purple-600 font-medium flex items-center gap-1 hover:underline">View All Workers <Clock className="w-3 h-3" /></button>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

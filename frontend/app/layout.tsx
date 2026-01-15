@@ -29,7 +29,7 @@ const poppins = Poppins({
 
 export const metadata: Metadata = {
   title: "Workshop Manager",
-  description: "Manage your workshop, workers, and revenues",
+  description: "Manage your workshop, workers, and income",
 };
 
 export default function RootLayout({

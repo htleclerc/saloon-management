@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, Fragment } from "react";
-import { Bell, User, Search, Sun, Moon, Globe, ChevronDown, ChevronRight, Home } from "lucide-react";
+import { Bell, User, Search, Sun, Moon, Globe, ChevronDown, ChevronRight, Home, Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useTheme, useResponsive } from "@/context/ThemeProvider";
@@ -11,7 +11,7 @@ import NotificationsPanel, { Notification } from "./NotificationsPanel";
 
 export default function Header() {
     const pathname = usePathname();
-    const { theme, updateTheme } = useTheme();
+    const { theme, updateTheme, mobileMenuOpen, setMobileMenuOpen } = useTheme();
     const { user } = useAuth();
     const { t, language, setLanguage } = useTranslation();
     const { isMobile, isTablet } = useResponsive();
@@ -197,6 +197,17 @@ export default function Header() {
     return (
         <header className={`fixed top-0 ${getLeftPosition()} right-0 h-16 bg-white border-b border-gray-200 z-40 transition-all duration-300`}>
             <div className="h-full px-4 md:px-6 flex items-center justify-between gap-4">
+
+                {/* Mobile Menu Button */}
+                {isMobile && (
+                    <button
+                        onClick={() => setMobileMenuOpen(true)}
+                        className="p-2 -ml-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600"
+                        title="Navigation"
+                    >
+                        <Menu className="w-6 h-6" />
+                    </button>
+                )}
 
                 {/* Breadcrumbs (Left side) */}
                 <div className="hidden md:flex items-center gap-1.5 overflow-hidden">
