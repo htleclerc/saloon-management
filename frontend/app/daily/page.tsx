@@ -5,6 +5,8 @@ import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import StatCard from "@/components/ui/StatCard";
+import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
+import { useAuth } from "@/context/AuthProvider";
 import {
     Calendar,
     ChevronLeft,
@@ -14,7 +16,8 @@ import {
     Scissors,
     DollarSign,
     TrendingUp,
-    AlertCircle
+    AlertCircle,
+    CheckCircle
 } from "lucide-react";
 
 const appointments = [
@@ -24,8 +27,23 @@ const appointments = [
     { id: 4, time: "15:30", client: "Pierre Rousseau", service: "Locs", worker: "Worker 3", amount: "€150", status: "Scheduled" },
 ];
 
-export default function DailyOverviewPage() {
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+export default function DailyPage() {
+    const [selectedDate, setSelectedDate] = useState("2024-01-15");
+    const { getCardStyle } = useKpiCardStyle();
+    const { user, hasPermission, getWorkerId } = useAuth();
+
+    const workerId = getWorkerId();
+    const isWorker = user?.role === 'worker';
+
+    // Filter appointments by worker if user is a worker
+    const filteredAppointments = isWorker
+        ? appointments.filter(apt => apt.worker === user?.name || apt.worker === 'Orphelia') // Using name match for demo
+        : appointments;
+
+    // Filter workers list to show only current worker for workers
+    const availableWorkers = isWorker
+        ? ['Orphelia'] // Show only current worker in demo
+        : ['Orphelia', 'Worker 2', 'Worker 3'];
 
     return (
         <MainLayout>
@@ -53,32 +71,36 @@ export default function DailyOverviewPage() {
                 {/* Daily Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <StatCard
-                        title="Today's Revenue"
-                        value="€450"
-                        subtitle="85% of target"
+                        title="Today's Income"
+                        value="€1,245"
+                        subtitle="15 appointments"
                         icon={DollarSign}
-                        gradient="bg-gradient-to-br from-purple-600 to-purple-700"
+                        gradient=""
+                        style={getCardStyle(0)}
                     />
                     <StatCard
-                        title="Appointments"
-                        value="8"
-                        subtitle="3 completed"
-                        icon={Clock}
-                        gradient="bg-gradient-to-br from-pink-500 to-pink-600"
+                        title="Completed"
+                        value="12"
+                        subtitle="Out of 15"
+                        icon={CheckCircle}
+                        gradient=""
+                        style={getCardStyle(1)}
                     />
                     <StatCard
-                        title="New Clients"
+                        title="Pending"
                         value="2"
-                        subtitle="Today"
-                        icon={User}
-                        gradient="bg-gradient-to-br from-orange-500 to-orange-600"
+                        subtitle="Scheduled"
+                        icon={Clock}
+                        gradient=""
+                        style={getCardStyle(2)}
                     />
                     <StatCard
                         title="Avg. Ticket"
                         value="€56"
                         subtitle="+5% from yesterday"
                         icon={TrendingUp}
-                        gradient="bg-gradient-to-br from-teal-500 to-teal-600"
+                        gradient=""
+                        style={getCardStyle(3)}
                     />
                 </div>
 
@@ -105,8 +127,8 @@ export default function DailyOverviewPage() {
                                             <div className="text-right">
                                                 <p className="font-bold text-gray-900">{apt.amount}</p>
                                                 <span className={`text-xs px-2 py-1 rounded-full font-medium ${apt.status === 'Completed' ? 'bg-green-100 text-green-700' :
-                                                        apt.status === 'In Progress' ? 'bg-blue-100 text-blue-700' :
-                                                            'bg-orange-100 text-orange-700'
+                                                    apt.status === 'In Progress' ? 'bg-blue-100 text-blue-700' :
+                                                        'bg-orange-100 text-orange-700'
                                                     }`}>
                                                     {apt.status}
                                                 </span>
@@ -124,7 +146,7 @@ export default function DailyOverviewPage() {
                         <Card>
                             <h3 className="text-lg font-bold text-gray-900 mb-4">Worker Availability</h3>
                             <div className="space-y-4">
-                                {['Orphelia', 'Worker 2', 'Worker 3'].map((worker, i) => (
+                                {availableWorkers.map((worker, i) => (
                                     <div key={i} className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
                                             <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold text-xs">
@@ -132,7 +154,7 @@ export default function DailyOverviewPage() {
                                             </div>
                                             <span className="text-sm font-medium text-gray-700">{worker}</span>
                                         </div>
-                                        <span className={`w-3 h-3 rounded-full ${i === 2 ? 'bg-red-500' : 'bg-green-500'}`}></span>
+                                        <span className={`w - 3 h - 3 rounded - full ${i === 2 ? 'bg-red-500' : 'bg-green-500'} `}></span>
                                     </div>
                                 ))}
                             </div>

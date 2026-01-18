@@ -1,0 +1,447 @@
+// =============================================================================
+// Prisma Schema - Multi-Tenant SaaS
+// =============================================================================
+// Schema complet pour une application SaaS multi-tenant
+//
+// Stratégie : Pool (tenant_id column)
+// - Toutes les entités métier ont un champ tenantId
+// - Index composites pour les performances
+// - Audit logging intégré
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// TENANT MANAGEMENT
+// =============================================================================
+
+model Tenant {
+  id   String @id @default(cuid())
+  slug String @unique // URL-friendly identifier (e.g., "salon-paris")
+  name String
+
+  // Billing
+  plan               TenantPlan         @default(FREE)
+  stripeCustomerId   String?            @unique
+  subscriptionId     String?            @unique
+  subscriptionStatus SubscriptionStatus @default(TRIALING)
+  trialEndsAt        DateTime?
+
+  // Settings (JSON for flexibility)
+  settings Json @default("{\"timezone\": \"Europe/Paris\", \"locale\": \"fr\", \"currency\": \"EUR\"}")
+  branding Json @default("{\"primaryColor\": \"#3B82F6\"}")
+  features Json @default("{}")
+  limits   Json @default("{}")
+
+  // Timestamps
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  // Relations
+  memberships  TenantMembership[]
+  clients      Client[]
+  services     Service[]
+  appointments Appointment[]
+  invoices     Invoice[]
+  auditLogs    AuditLog[]
+
+  @@index([slug])
+  @@index([stripeCustomerId])
+  @@index([subscriptionStatus])
+  @@map("tenants")
+}
+
+enum TenantPlan {
+  FREE
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  UNPAID
+  PAUSED
+}
+
+// =============================================================================
+// USER & AUTHENTICATION
+// =============================================================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String
+  avatar        String?
+  passwordHash  String?
+
+  // OAuth accounts
+  accounts Account[]
+
+  // Sessions
+  sessions Session[]
+
+  // Tenant memberships (a user can belong to multiple tenants)
+  memberships TenantMembership[]
+
+  // Audit
+  auditLogs AuditLog[]
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// =============================================================================
+// TENANT MEMBERSHIP
+// =============================================================================
+
+model TenantMembership {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  role TenantRole @default(EMPLOYEE)
+
+  // Invitation flow
+  invitedBy  String?
+  invitedAt  DateTime  @default(now())
+  acceptedAt DateTime?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, tenantId])
+  @@index([tenantId])
+  @@index([userId])
+  @@map("tenant_memberships")
+}
+
+enum TenantRole {
+  OWNER
+  ADMIN
+  MANAGER
+  EMPLOYEE
+  VIEWER
+}
+
+// =============================================================================
+// BUSINESS ENTITIES (All have tenantId)
+// =============================================================================
+
+model Client {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Basic info
+  firstName String
+  lastName  String
+  email     String?
+  phone     String?
+
+  // Additional info
+  dateOfBirth DateTime?
+  gender      Gender?
+  notes       String?
+  tags        String[] // For categorization
+
+  // Preferences (JSON for flexibility)
+  preferences Json @default("{}")
+
+  // Marketing consent (GDPR)
+  marketingConsent Boolean   @default(false)
+  consentDate      DateTime?
+
+  // Relations
+  appointments Appointment[]
+
+  // Timestamps
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  // Composite indexes for tenant-scoped queries
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@index([tenantId, lastName])
+  @@index([tenantId, phone])
+  @@index([tenantId, createdAt])
+  @@map("clients")
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+model Service {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name        String
+  description String?
+  duration    Int     @default(60) // minutes
+  price       Decimal @db.Decimal(10, 2)
+  currency    String  @default("EUR")
+
+  // Categorization
+  category String?
+  color    String? // For calendar display
+
+  // Availability
+  isActive Boolean @default(true)
+  order    Int     @default(0) // For sorting
+
+  // Relations
+  appointments Appointment[]
+
+  // Timestamps
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+  @@index([tenantId, category])
+  @@map("services")
+}
+
+model Appointment {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Relations
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id])
+
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id])
+
+  // Time
+  startTime DateTime
+  endTime   DateTime
+
+  // Status
+  status AppointmentStatus @default(SCHEDULED)
+
+  // Details
+  notes      String?
+  totalPrice Decimal @db.Decimal(10, 2)
+  currency   String  @default("EUR")
+
+  // Reminders
+  reminderSent   Boolean   @default(false)
+  reminderSentAt DateTime?
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  cancelledAt DateTime?
+
+  @@index([tenantId])
+  @@index([tenantId, startTime])
+  @@index([tenantId, clientId])
+  @@index([tenantId, status])
+  @@index([tenantId, startTime, endTime])
+  @@map("appointments")
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+// =============================================================================
+// BILLING & INVOICES
+// =============================================================================
+
+model Invoice {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Invoice details
+  number    String // Invoice number (e.g., INV-2024-001)
+  status    InvoiceStatus @default(DRAFT)
+  issueDate DateTime      @default(now())
+  dueDate   DateTime
+
+  // Amounts
+  subtotal Decimal @db.Decimal(10, 2)
+  tax      Decimal @db.Decimal(10, 2)
+  total    Decimal @db.Decimal(10, 2)
+  currency String  @default("EUR")
+
+  // Payment
+  paidAt          DateTime?
+  paymentMethod   String?
+  stripeInvoiceId String?
+
+  // PDF
+  pdfUrl String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tenantId, number])
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, issueDate])
+  @@map("invoices")
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+  REFUNDED
+}
+
+// =============================================================================
+// AUDIT LOGGING
+// =============================================================================
+
+model AuditLog {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  // Action details
+  action     AuditAction
+  resource   String // e.g., "client", "appointment", "service"
+  resourceId String?
+
+  // Changes (JSON)
+  oldValue Json?
+  newValue Json?
+
+  // Request context
+  ipAddress String?
+  userAgent String?
+
+  // Timestamp
+  timestamp DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([tenantId, timestamp])
+  @@index([tenantId, action])
+  @@index([tenantId, resource])
+  @@index([tenantId, userId])
+  @@map("audit_logs")
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  EXPORT
+  IMPORT
+  INVITE
+  ROLE_CHANGE
+  SETTINGS_CHANGE
+}
+
+// =============================================================================
+// USAGE TRACKING (for limits)
+// =============================================================================
+
+model UsageRecord {
+  id       String @id @default(cuid())
+  tenantId String @unique
+
+  // Monthly counters (reset each month)
+  currentMonth        DateTime @default(now())
+  appointmentsCount   Int      @default(0)
+  apiCallsCount       Int      @default(0)
+  smsCount            Int      @default(0)
+  emailCount          Int      @default(0)
+
+  // Total counters
+  totalClients        Int      @default(0)
+  totalUsers          Int      @default(0)
+  storageUsedBytes    BigInt   @default(0)
+
+  // Timestamps
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@map("usage_records")
+}

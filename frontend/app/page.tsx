@@ -1,10 +1,13 @@
 "use client";
 
+import React, { useEffect } from "react";
 import Link from "next/link";
 import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { useTranslation } from "@/i18n";
+import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
+import { useAuth } from "@/context/AuthProvider";
 import {
   DollarSign,
   TrendingDown,
@@ -164,8 +167,55 @@ const recentUserActivity = [
   },
 ];
 
+import ClientDashboard from "@/components/dashboard/ClientDashboard";
+
 export default function Dashboard() {
   const { t } = useTranslation();
+  const { getCardStyle } = useKpiCardStyle();
+  const { user, hasPermission, canAddIncome, canAddExpenses, getWorkerId, isClient } = useAuth();
+
+  if (isClient) {
+    return (
+      <MainLayout>
+        <ClientDashboard />
+      </MainLayout>
+    );
+  }
+
+  const isWorker = user?.role === 'worker';
+  const workerName = user?.name || "Orphelia"; // Default for demo
+
+  // Filter Data for Workers
+  const filteredTopPerformers = isWorker
+    ? topPerformers.filter(p => p.name === workerName || p.name === "Isabelle") // Show themselves or a relevant subset
+    : topPerformers;
+
+  const filteredTodaysSessions = isWorker
+    ? todaysSessions.filter(s => s.worker === workerName)
+    : todaysSessions;
+
+  const filteredRecentActivities = isWorker
+    ? recentActivities.filter(a => a.worker === workerName)
+    : recentActivities;
+
+  // For charts and KPIs, in a real app we'd fetch worker-specific totals.
+  // In demo mode, we'll scale them down or use subsets.
+  const workerMonthlyRevenue = isWorker
+    ? monthlyRevenueData.map(d => ({ ...d, value: Math.round(d.value * 0.4) }))
+    : monthlyRevenueData;
+
+  const workerMonthlyExpenses = isWorker
+    ? monthlyExpensesData.map(d => ({ ...d, value: Math.round(d.value * 0.2) }))
+    : monthlyExpensesData;
+
+  const workerProfitData = isWorker
+    ? profitData.map(d => ({
+      ...d,
+      revenue: Math.round(d.revenue * 0.4),
+      expenses: Math.round(d.expenses * 0.2),
+      profit: Math.round(d.revenue * 0.4 - d.expenses * 0.2)
+    }))
+    : profitData;
 
   return (
     <MainLayout>
@@ -182,12 +232,15 @@ export default function Dashboard() {
         {/* --- Stats Gradient Cards --- */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Revenue */}
-          <div className="bg-gradient-to-r from-purple-600 to-purple-500 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden transition-transform hover:scale-[1.01]">
+          <div
+            className="rounded-2xl p-6 text-white shadow-lg relative overflow-hidden transition-transform hover:scale-[1.01]"
+            style={getCardStyle(0)}
+          >
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-purple-100 text-sm font-medium mb-1">Total Income</p>
-                <h3 className="text-2xl sm:text-3xl font-bold">€45,890</h3>
-                <p className="text-xs text-purple-100 mt-2 flex items-center gap-1">
+                <p className="text-white/80 text-sm font-medium mb-1">{isWorker ? "My Revenue" : "Total Income"}</p>
+                <h3 className="text-2xl sm:text-3xl font-bold">€{isWorker ? "18,356" : "45,890"}</h3>
+                <p className="text-xs text-white/70 mt-2 flex items-center gap-1">
                   <span className="bg-white/20 px-1.5 py-0.5 rounded text-white font-semibold">+12%</span> vs last month
                 </p>
               </div>
@@ -198,12 +251,15 @@ export default function Dashboard() {
           </div>
 
           {/* Expenses */}
-          <div className="bg-gradient-to-r from-pink-600 to-pink-500 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden transition-transform hover:scale-[1.01]">
+          <div
+            className="rounded-2xl p-6 text-white shadow-lg relative overflow-hidden transition-transform hover:scale-[1.01]"
+            style={getCardStyle(1)}
+          >
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-pink-100 text-sm font-medium mb-1">Total Expenses</p>
-                <h3 className="text-2xl sm:text-3xl font-bold">€28,450</h3>
-                <p className="text-xs text-pink-100 mt-2 flex items-center gap-1">
+                <p className="text-white/80 text-sm font-medium mb-1">{isWorker ? "My Contribution to Expenses" : "Total Expenses"}</p>
+                <h3 className="text-2xl sm:text-3xl font-bold">€{isWorker ? "5,690" : "28,450"}</h3>
+                <p className="text-xs text-white/70 mt-2 flex items-center gap-1">
                   <span className="bg-white/20 px-1.5 py-0.5 rounded text-white font-semibold">+2.5%</span> vs last month
                 </p>
               </div>
@@ -214,12 +270,15 @@ export default function Dashboard() {
           </div>
 
           {/* Net Profit */}
-          <div className="bg-gradient-to-r from-orange-500 to-orange-400 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden transition-transform hover:scale-[1.01]">
+          <div
+            className="rounded-2xl p-6 text-white shadow-lg relative overflow-hidden transition-transform hover:scale-[1.01]"
+            style={getCardStyle(2)}
+          >
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-orange-50 text-sm font-medium mb-1">Net Profit</p>
-                <h3 className="text-2xl sm:text-3xl font-bold">€17,440</h3>
-                <p className="text-xs text-orange-100 mt-2 flex items-center gap-1">
+                <p className="text-white/80 text-sm font-medium mb-1">{isWorker ? "My Profit Contribution" : "Net Profit"}</p>
+                <h3 className="text-2xl sm:text-3xl font-bold">€{isWorker ? "12,666" : "17,440"}</h3>
+                <p className="text-xs text-white/70 mt-2 flex items-center gap-1">
                   <span className="bg-white/20 px-1.5 py-0.5 rounded text-white font-semibold">+5.4%</span> vs last month
                 </p>
               </div>
@@ -230,12 +289,15 @@ export default function Dashboard() {
           </div>
 
           {/* Clients/Workers */}
-          <div className="bg-gradient-to-r from-teal-500 to-teal-400 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden transition-transform hover:scale-[1.01]">
+          <div
+            className="rounded-2xl p-6 text-white shadow-lg relative overflow-hidden transition-transform hover:scale-[1.01]"
+            style={getCardStyle(3)}
+          >
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-teal-50 text-sm font-medium mb-1">Total Clients</p>
-                <h3 className="text-2xl sm:text-3xl font-bold">287</h3>
-                <p className="text-xs text-teal-100 mt-2 flex items-center gap-1">
+                <p className="text-white/80 text-sm font-medium mb-1">{isWorker ? "My Total Clients" : "Total Clients"}</p>
+                <h3 className="text-2xl sm:text-3xl font-bold">{isWorker ? "114" : "287"}</h3>
+                <p className="text-xs text-white/70 mt-2 flex items-center gap-1">
                   <span className="bg-white/20 px-1.5 py-0.5 rounded text-white font-semibold">+8%</span> vs last month
                 </p>
               </div>
@@ -250,24 +312,30 @@ export default function Dashboard() {
         <div>
           <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Link href="/income/add">
-              <button className="w-full h-full flex items-center justify-center gap-3 bg-purple-600 hover:bg-purple-700 text-white py-4 rounded-xl font-medium transition-all shadow-md hover:shadow-lg">
-                <Plus className="w-5 h-5" />
-                <span>Add Revenue</span>
-              </button>
-            </Link>
-            <Link href="/expenses/add">
-              <button className="w-full h-full flex items-center justify-center gap-3 bg-pink-500 hover:bg-pink-600 text-white py-4 rounded-xl font-medium transition-all shadow-md hover:shadow-lg">
-                <Wallet className="w-5 h-5" />
-                <span>Add Expense</span>
-              </button>
-            </Link>
-            <Link href="/workers/add">
-              <button className="w-full h-full flex items-center justify-center gap-3 bg-orange-500 hover:bg-orange-600 text-white py-4 rounded-xl font-medium transition-all shadow-md hover:shadow-lg">
-                <Users className="w-5 h-5" />
-                <span>Add Worker</span>
-              </button>
-            </Link>
+            {canAddIncome() && (
+              <Link href="/income/add">
+                <button className="w-full h-full flex items-center justify-center gap-3 bg-purple-600 hover:bg-purple-700 text-white py-4 rounded-xl font-medium transition-all shadow-md hover:shadow-lg">
+                  <Plus className="w-5 h-5" />
+                  <span>Add Revenue</span>
+                </button>
+              </Link>
+            )}
+            {canAddExpenses() && (
+              <Link href="/expenses/add">
+                <button className="w-full h-full flex items-center justify-center gap-3 bg-pink-500 hover:bg-pink-600 text-white py-4 rounded-xl font-medium transition-all shadow-md hover:shadow-lg">
+                  <Wallet className="w-5 h-5" />
+                  <span>Add Expense</span>
+                </button>
+              </Link>
+            )}
+            {hasPermission(['manager', 'admin']) && (
+              <Link href="/workers/add">
+                <button className="w-full h-full flex items-center justify-center gap-3 bg-orange-500 hover:bg-orange-600 text-white py-4 rounded-xl font-medium transition-all shadow-md hover:shadow-lg">
+                  <Users className="w-5 h-5" />
+                  <span>Add Worker</span>
+                </button>
+              </Link>
+            )}
           </div>
         </div>
 
@@ -283,7 +351,7 @@ export default function Dashboard() {
               <span className="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-1 rounded">Yearly</span>
             </div>
             <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={monthlyRevenueData}>
+              <BarChart data={workerMonthlyRevenue}>
                 <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f3f4f6" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
@@ -303,7 +371,7 @@ export default function Dashboard() {
               <span className="bg-pink-100 text-pink-700 text-xs font-bold px-2 py-1 rounded">Yearly</span>
             </div>
             <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={monthlyExpensesData}>
+              <BarChart data={workerMonthlyExpenses}>
                 <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f3f4f6" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
@@ -326,7 +394,7 @@ export default function Dashboard() {
             </div>
           </div>
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={profitData}>
+            <LineChart data={workerProfitData}>
               <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f3f4f6" />
               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
               <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
@@ -352,13 +420,13 @@ export default function Dashboard() {
         {/* --- Top Performers Grid --- */}
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h3 className="font-bold text-gray-900 text-lg">Top Performing Team</h3>
+            <h3 className="font-bold text-gray-900 text-lg">{isWorker ? "My Performance" : "Top Performing Team"}</h3>
             <Link href="/workers" className="text-sm text-purple-600 font-medium flex items-center gap-1 hover:underline">
               View All Workers <ChevronRight className="w-4 h-4" />
             </Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {topPerformers.map((worker, idx) => (
+            {filteredTopPerformers.map((worker, idx) => (
               <Card key={worker.name} className={`p-4 flex flex-col gap-3 transition-all border ${idx === 0 ? "bg-purple-50/30 border-purple-100 hover:border-purple-200 hover:shadow-lg" :
                 idx === 1 ? "bg-pink-50/30 border-pink-100 hover:border-pink-200 hover:shadow-lg" :
                   idx === 2 ? "bg-orange-50/30 border-orange-100 hover:border-orange-200 hover:shadow-lg" :
@@ -397,7 +465,7 @@ export default function Dashboard() {
           {/* Today's Services */}
           <Card className="lg:col-span-2 p-6 bg-white hover:bg-gray-50/50 transition-colors">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="font-bold text-gray-900">Today's Services</h3>
+              <h3 className="font-bold text-gray-900">{isWorker ? "My Services Today" : "Today's Services"}</h3>
               <div className="flex gap-2">
                 <span className="bg-purple-100 text-purple-700 text-xs font-bold px-3 py-1 rounded-full">5 / 12 Completed</span>
               </div>
@@ -415,7 +483,7 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {todaysSessions.map((session, index) => (
+                  {filteredTodaysSessions.map((session, index) => (
                     <tr key={index} className={`transition-colors ${index % 5 === 0 ? "bg-purple-50/20 hover:bg-purple-50/40" :
                       index % 5 === 1 ? "bg-pink-50/20 hover:bg-pink-50/40" :
                         index % 5 === 2 ? "bg-orange-50/20 hover:bg-orange-50/40" :
@@ -446,46 +514,47 @@ export default function Dashboard() {
             </div>
           </Card>
 
-          {/* Expense Categories Pie */}
-          <Card className="p-6">
-            <h3 className="font-bold text-gray-900 mb-6">Cost Distribution</h3>
-            <div className="relative h-48 mb-4">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={expenseCategories}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={70}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {expenseCategories.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="text-center">
-                  <p className="text-xl font-bold text-gray-900">€23K</p>
-                  <p className="text-xs text-gray-500">Expenses</p>
+          {!isWorker && (
+            <Card className="p-6">
+              <h3 className="font-bold text-gray-900 mb-6">Cost Distribution</h3>
+              <div className="relative h-48 mb-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={expenseCategories}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={70}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {expenseCategories.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="text-center">
+                    <p className="text-xl font-bold text-gray-900">€23K</p>
+                    <p className="text-xs text-gray-500">Expenses</p>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="space-y-3">
-              {expenseCategories.map((cat) => (
-                <div key={cat.name} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color }}></div>
-                    <span className="text-gray-600">{cat.name}</span>
+              <div className="space-y-3">
+                {expenseCategories.map((cat) => (
+                  <div key={cat.name} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color }}></div>
+                      <span className="text-gray-600">{cat.name}</span>
+                    </div>
+                    <span className="font-bold text-gray-900">€{cat.value.toLocaleString()}</span>
                   </div>
-                  <span className="font-bold text-gray-900">€{cat.value.toLocaleString()}</span>
-                </div>
-              ))}
-            </div>
-          </Card>
+                ))}
+              </div>
+            </Card>
+          )}
         </div>
 
         {/* --- Bottom Section: Notifications & Activities --- */}
@@ -514,7 +583,7 @@ export default function Dashboard() {
               <h3 className="font-bold text-gray-900">Recent Activities</h3>
             </div>
             <div className="space-y-4">
-              {recentActivities.slice(0, 4).map((activity, idx) => (
+              {filteredRecentActivities.slice(0, 4).map((activity, idx) => (
                 <div key={activity.id} className={`flex items-center justify-between p-3 rounded-lg transition-colors border ${idx === 0 ? "bg-purple-50/80 border-purple-100 hover:bg-purple-100/80" :
                   idx === 1 ? "bg-pink-50/80 border-pink-100 hover:bg-pink-100/80" :
                     idx === 2 ? "bg-orange-50/80 border-orange-100 hover:bg-orange-100/80" :
@@ -539,113 +608,115 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* --- Monthly Forecast & Top 10 Revenue --- */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Monthly Forecast */}
-          <Card className="p-6">
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h3 className="font-bold text-gray-900">Monthly Forecast and Stats</h3>
-                <p className="text-xs text-gray-500">Based on last 4 years</p>
-              </div>
-              <div className="flex gap-2">
-                <button className="text-xs px-3 py-1 bg-gray-100 rounded-full text-gray-600 font-medium">Daily</button>
-                <button className="text-xs px-3 py-1 bg-white border border-gray-200 rounded-full text-gray-400">Weekly</button>
-                <button className="text-xs px-3 py-1 bg-white border border-gray-200 rounded-full text-gray-400">Monthly</button>
-              </div>
-            </div>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={monthlyForecastData}>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f3f4f6" />
-                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
-                <Bar dataKey="value1" stackId="a" fill="#8B5CF6" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="value2" stackId="a" fill="#EC4899" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="value3" stackId="a" fill="#F59E0B" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="value4" stackId="a" fill="#10B981" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
-
-          {/* Top 10 Revenue Generators */}
-          <Card className="p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="font-bold text-gray-900">Top 10 Revenue Generators</h3>
-              <button className="text-purple-600 text-sm font-medium hover:underline">View All</button>
-            </div>
-            <div className="space-y-4">
-              {topRevenueGenerators.map((item, idx) => (
-                <div key={idx} className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-700">{item.name}</span>
-                    <span className="text-sm font-bold text-gray-900">€{item.value.toLocaleString()}</span>
-                  </div>
-                  <div className="w-full bg-gray-100 rounded-full h-2">
-                    <div
-                      className="h-2 rounded-full transition-all"
-                      style={{
-                        width: `${(item.value / 15420) * 100}%`,
-                        backgroundColor: item.color
-                      }}
-                    />
-                  </div>
+        {!isWorker && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Monthly Forecast */}
+            <Card className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="font-bold text-gray-900">Monthly Forecast and Stats</h3>
+                  <p className="text-xs text-gray-500">Based on last 4 years</p>
                 </div>
-              ))}
-            </div>
-          </Card>
-        </div>
+                <div className="flex gap-2">
+                  <button className="text-xs px-3 py-1 bg-gray-100 rounded-full text-gray-600 font-medium">Daily</button>
+                  <button className="text-xs px-3 py-1 bg-white border border-gray-200 rounded-full text-gray-400">Weekly</button>
+                  <button className="text-xs px-3 py-1 bg-white border border-gray-200 rounded-full text-gray-400">Monthly</button>
+                </div>
+              </div>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={monthlyForecastData}>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f3f4f6" />
+                  <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
+                  <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
+                  <Bar dataKey="value1" stackId="a" fill="#8B5CF6" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="value2" stackId="a" fill="#EC4899" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="value3" stackId="a" fill="#F59E0B" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="value4" stackId="a" fill="#10B981" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
 
-        {/* --- Three Stats Cards Row --- */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="p-6 border-t-4 border-purple-500 bg-purple-50/10">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-sm text-gray-500 mb-1">Bookings</p>
-                <h2 className="text-4xl font-bold text-gray-900">847</h2>
-                <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
-                  <TrendingUp className="w-3 h-3" />
-                  +11% increase
-                </p>
+            {/* Top 10 Revenue Generators */}
+            <Card className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="font-bold text-gray-900">Top 10 Revenue Generators</h3>
+                <button className="text-purple-600 text-sm font-medium hover:underline">View All</button>
               </div>
-              <div className="bg-purple-100 p-3 rounded-lg">
-                <Calendar className="w-6 h-6 text-purple-600" />
+              <div className="space-y-4">
+                {topRevenueGenerators.map((item, idx) => (
+                  <div key={idx} className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-700">{item.name}</span>
+                      <span className="text-sm font-bold text-gray-900">€{item.value.toLocaleString()}</span>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-2">
+                      <div
+                        className="h-2 rounded-full transition-all"
+                        style={{
+                          width: `${(item.value / 15420) * 100}%`,
+                          backgroundColor: item.color
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-          </Card>
+            </Card>
+          </div>
+        )}
 
-          <Card className="p-6 border-t-4 border-pink-500 bg-pink-50/10">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-sm text-gray-500 mb-1">Members</p>
-                <h2 className="text-4xl font-bold text-gray-900">42</h2>
-                <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
-                  <TrendingUp className="w-3 h-3" />
-                  +3% increase
-                </p>
+        {!isWorker && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="p-6 border-t-4 border-purple-500 bg-purple-50/10">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Bookings</p>
+                  <h2 className="text-4xl font-bold text-gray-900">847</h2>
+                  <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                    <TrendingUp className="w-3 h-3" />
+                    +11% increase
+                  </p>
+                </div>
+                <div className="bg-purple-100 p-3 rounded-lg">
+                  <Calendar className="w-6 h-6 text-purple-600" />
+                </div>
               </div>
-              <div className="bg-pink-100 p-3 rounded-lg">
-                <Users className="w-6 h-6 text-pink-600" />
-              </div>
-            </div>
-          </Card>
+            </Card>
 
-          <Card className="p-6 border-t-4 border-orange-500 bg-orange-50/10">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-sm text-gray-500 mb-1">Occupancy Rate</p>
-                <h2 className="text-4xl font-bold text-gray-900">75%</h2>
-                <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
-                  <TrendingUp className="w-3 h-3" />
-                  +5% increase
-                </p>
+            <Card className="p-6 border-t-4 border-pink-500 bg-pink-50/10">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Members</p>
+                  <h2 className="text-4xl font-bold text-gray-900">42</h2>
+                  <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                    <TrendingUp className="w-3 h-3" />
+                    +3% increase
+                  </p>
+                </div>
+                <div className="bg-pink-100 p-3 rounded-lg">
+                  <Users className="w-6 h-6 text-pink-600" />
+                </div>
               </div>
-              <div className="bg-orange-100 p-3 rounded-lg">
-                <Briefcase className="w-6 h-6 text-orange-600" />
+            </Card>
+
+            <Card className="p-6 border-t-4 border-orange-500 bg-orange-50/10">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">Occupancy Rate</p>
+                  <h2 className="text-4xl font-bold text-gray-900">75%</h2>
+                  <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                    <TrendingUp className="w-3 h-3" />
+                    +5% increase
+                  </p>
+                </div>
+                <div className="bg-orange-100 p-3 rounded-lg">
+                  <Briefcase className="w-6 h-6 text-orange-600" />
+                </div>
               </div>
-            </div>
-          </Card>
-        </div>
+            </Card>
+          </div>
+        )}
 
         {/* --- Weekly Attendance & Recent User Activity --- */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

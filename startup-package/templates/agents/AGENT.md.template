@@ -1,0 +1,291 @@
+# AGENT.md - Instructions pour l'Agent de Développement
+
+> Ce fichier définit le contexte, les conventions et les bonnes pratiques pour ce projet.
+> L'agent DOIT lire ce fichier au début de chaque session.
+
+---
+
+## 📋 Informations Projet
+
+### Projet
+- **Nom** : {{PROJECT_NAME}}
+- **Type** : {{PROJECT_TYPE}} <!-- Web App / API / Mobile / CLI / Library -->
+- **Stack** : {{TECH_STACK}} <!-- Next.js 14 / TypeScript / Tailwind CSS -->
+- **Statut** : {{PROJECT_STATUS}} <!-- MVP / Beta / Production / Maintenance -->
+
+### Équipe
+- **Tech Lead** : {{TECH_LEAD}}
+- **Développeurs** : {{TEAM_SIZE}}
+- **Méthodologie** : {{METHODOLOGY}} <!-- Agile / Scrum / Kanban -->
+
+---
+
+## 📚 Documentation de Référence
+
+**TOUJOURS consulter ces fichiers avant de faire des modifications :**
+
+1. **[startup-package/README.md](startup-package/README.md)** - Vue d'ensemble des bonnes pratiques
+2. **[startup-package/docs/standards/ENTERPRISE_STANDARDS.md](startup-package/docs/standards/ENTERPRISE_STANDARDS.md)** - Standards enterprise
+3. **[startup-package/docs/devops/CI_CD_GUIDE.md](startup-package/docs/devops/CI_CD_GUIDE.md)** - CI/CD et déploiement
+
+### Documentation Spécifique au Projet
+- **[docs/adr/](docs/adr/)** - Décisions architecturales
+- **[docs/api/](docs/api/)** - Documentation API
+
+---
+
+## 🎯 Règles Impératives
+
+### TOUJOURS ✅
+1. Utiliser TypeScript strict mode (`strict: true`)
+2. Valider les inputs avec Zod
+3. Écrire des tests pour le nouveau code
+4. Utiliser `TodoWrite` pour les tâches complexes (> 3 étapes)
+5. Faire des commits atomiques avec messages conventionnels
+6. Respecter l'architecture existante
+7. Documenter les décisions importantes dans `docs/adr/`
+8. Lire le code existant avant de créer du nouveau
+9. Consulter startup-package/ pour les best practices
+
+### JAMAIS ❌
+1. Utiliser `any` en TypeScript
+2. Committer des secrets ou credentials
+3. Ignorer les erreurs TypeScript ou ESLint
+4. Modifier le code sans comprendre le contexte
+5. Créer des fichiers sans les rattacher à la structure existante
+6. Push sur main/master directement
+7. Supprimer du code sans comprendre son utilité
+8. Ignorer les tests qui échouent
+
+---
+
+## 🛠️ Conventions de Code
+
+### Nommage
+
+| Type | Convention | Exemple |
+|------|------------|---------|
+| Variables | camelCase | `userName`, `isActive` |
+| Constantes | UPPER_SNAKE | `API_URL`, `MAX_RETRIES` |
+| Classes/Types | PascalCase | `UserService`, `ApiResponse` |
+| Interfaces | PascalCase (I prefix optionnel) | `User`, `IUserRepository` |
+| Fichiers composants | PascalCase | `UserProfile.tsx` |
+| Fichiers utils | camelCase | `formatDate.ts` |
+| Fichiers tests | *.test.ts ou *.spec.ts | `UserService.test.ts` |
+| Hooks | useCamelCase | `useAuth.ts`, `useDebounce.ts` |
+
+### Structure des Composants React
+
+```tsx
+// 1. Imports (groupés par catégorie)
+import { useState, useEffect } from 'react';      // React
+import { useQuery } from '@tanstack/react-query'; // Librairies externes
+import { Button } from '@/components/ui';          // Composants internes
+import { formatDate } from '@/lib/utils';          // Utils
+import type { User } from '@/types';               // Types (toujours en dernier)
+
+// 2. Types/Interfaces locaux
+interface Props {
+  user: User;
+  onSave: (user: User) => void;
+}
+
+// 3. Composant (export nommé préféré)
+export function UserProfile({ user, onSave }: Props) {
+  // 3.1 Hooks (toujours en premier)
+  const [isEditing, setIsEditing] = useState(false);
+  const { data, isLoading } = useQuery(...);
+
+  // 3.2 Derived state / Memoization
+  const fullName = useMemo(() => `${user.firstName} ${user.lastName}`, [user]);
+
+  // 3.3 Effects
+  useEffect(() => { ... }, []);
+
+  // 3.4 Handlers
+  const handleSave = () => { ... };
+
+  // 3.5 Early returns (loading, error states)
+  if (isLoading) return <Skeleton />;
+
+  // 3.6 Render principal
+  return ( ... );
+}
+```
+
+### Git Commits (Conventional Commits)
+
+```
+type(scope): description
+
+Types:
+- feat:     Nouvelle fonctionnalité
+- fix:      Correction de bug
+- docs:     Documentation uniquement
+- style:    Formatage (pas de changement de code)
+- refactor: Refactoring (pas de nouvelle feature ni fix)
+- test:     Ajout ou modification de tests
+- chore:    Maintenance (deps, config, etc.)
+
+Exemples:
+- feat(auth): add password reset functionality
+- fix(api): handle null response from users endpoint
+- refactor(hooks): extract useDebounce from useSearch
+- docs(readme): update installation instructions
+```
+
+---
+
+## 🏗️ Architecture
+
+### Structure des Dossiers
+
+```
+{{PROJECT_STRUCTURE}}
+```
+
+### Règles de Dépendances
+
+```
+presentation → application → domain ← infrastructure
+                    ↓
+              domain NE DÉPEND DE RIEN
+```
+
+### Patterns Utilisés
+
+- **Repository Pattern** : Abstraction de l'accès aux données
+- **Use Case / Service** : Logique métier isolée
+- **DTO** : Transfer d'objets entre couches
+- **Dependency Injection** : Via constructeur ou Context
+
+---
+
+## 🔧 Commandes Disponibles
+
+```bash
+# Développement
+npm run dev          # Serveur de développement
+npm run build        # Build production
+npm run start        # Démarrer en production
+
+# Qualité
+npm run lint         # ESLint
+npm run lint:fix     # ESLint avec correction auto
+npm run type-check   # Vérification TypeScript
+npm run format       # Prettier
+
+# Tests
+npm run test         # Tests unitaires
+npm run test:watch   # Tests en mode watch
+npm run test:cov     # Tests avec couverture
+npm run test:e2e     # Tests E2E
+
+# Base de données (si applicable)
+npm run db:generate  # Générer client Prisma
+npm run db:migrate   # Appliquer migrations
+npm run db:seed      # Peupler la base
+npm run db:studio    # Interface Prisma Studio
+```
+
+---
+
+## 📝 Workflow de Développement
+
+### Pour une Nouvelle Feature
+
+```
+1. Créer une branche: git checkout -b feature/nom-feature
+2. Lire la documentation pertinente dans startup-package/
+3. Utiliser TodoWrite pour planifier les étapes
+4. Implémenter en suivant l'architecture
+5. Écrire les tests
+6. Vérifier: npm run lint && npm run type-check && npm run test
+7. Commit avec message conventionnel
+8. Créer une PR avec description détaillée
+```
+
+### Pour un Bug Fix
+
+```
+1. Créer une branche: git checkout -b fix/description-bug
+2. Reproduire le bug
+3. Écrire un test qui échoue (TDD)
+4. Corriger le bug
+5. Vérifier que le test passe
+6. Vérifier qu'aucune régression
+7. Commit: fix(scope): description
+8. PR
+```
+
+### Pour un Refactoring
+
+```
+1. S'assurer que tous les tests passent AVANT
+2. Créer une branche: git checkout -b refactor/description
+3. Faire des changements incrémentaux
+4. Tester après chaque modification
+5. Aucun changement de comportement
+6. Commit: refactor(scope): description
+```
+
+---
+
+## ⚠️ Points d'Attention Spécifiques
+
+### Sécurité
+- Voir [startup-package/docs/security/](startup-package/docs/security/)
+- Toujours valider les inputs utilisateur (Zod)
+- Ne jamais exposer de données sensibles dans les logs
+- Utiliser les variables d'environnement pour les secrets
+- Sanitizer les outputs (XSS)
+
+### Performance
+- Voir [startup-package/docs/05-PERFORMANCE.md](startup-package/docs/05-PERFORMANCE.md)
+- Lazy loading pour les composants lourds
+- Optimiser les images avec next/image
+- Utiliser React.memo pour les composants purs
+- Éviter les re-renders inutiles
+
+### Accessibilité
+- Attributs ARIA appropriés
+- Navigation clavier fonctionnelle
+- Contraste suffisant (WCAG AA)
+- Labels sur tous les inputs
+
+### Tests
+- Voir [startup-package/docs/06-TESTING.md](startup-package/docs/06-TESTING.md)
+- Tests unitaires pour la logique métier
+- Tests d'intégration pour les API
+- Tests E2E pour les parcours critiques
+- Coverage minimum: 80%
+
+---
+
+## 🔗 Liens Utiles
+
+### Startup Package
+- [README](startup-package/README.md)
+- [Standards Enterprise](startup-package/docs/standards/ENTERPRISE_STANDARDS.md)
+- [CI/CD](startup-package/docs/devops/CI_CD_GUIDE.md)
+- [Sécurité](startup-package/docs/security/)
+- [i18n](startup-package/docs/internationalization/I18N_GUIDE.md)
+
+### Projet
+- [Documentation API](docs/api/)
+- [ADRs](docs/adr/)
+- [Guides](docs/guides/)
+
+### Externes
+- {{EXTERNAL_LINKS}}
+
+---
+
+## 📌 Notes Spécifiques au Projet
+
+{{PROJECT_SPECIFIC_NOTES}}
+
+---
+
+**Dernière mise à jour** : {{DATE}}
+**Version** : {{VERSION}}

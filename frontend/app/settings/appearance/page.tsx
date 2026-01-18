@@ -6,6 +6,7 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { useTheme, DesignType, SubmenuLayout, FontSize, colorPalettes } from "@/context/ThemeProvider";
 import { useTranslation } from "@/i18n";
+import { useAuth } from "@/context/AuthProvider";
 import {
     Palette,
     Sun,
@@ -50,14 +51,30 @@ const submenuLayouts: { id: SubmenuLayout; name: string; description: string; ic
 export default function AppearanceSettingsPage() {
     const { theme, updateTheme } = useTheme();
     const { t } = useTranslation();
+    const { currentTenant, updateTenantColors } = useAuth();
     const [localTheme, setLocalTheme] = useState(theme);
+    const [customPrimaryColor, setCustomPrimaryColor] = useState<string>("");
+    const [customSecondaryColor, setCustomSecondaryColor] = useState<string>("");
+    const [useCustomOverride, setUseCustomOverride] = useState<boolean>(false);
 
     useEffect(() => {
         setLocalTheme(theme);
-    }, [theme]);
+        // Initialize custom colors from current tenant
+        if (currentTenant) {
+            setCustomPrimaryColor(currentTenant.customPrimaryColor || "");
+            setCustomSecondaryColor(currentTenant.customSecondaryColor || "");
+            setUseCustomOverride(currentTenant.useCustomColorOverride ?? false);
+        }
+    }, [theme, currentTenant]);
 
     const handleApply = () => {
         updateTheme(localTheme);
+        // Save custom colors to tenant only if override is enabled
+        if (useCustomOverride) {
+            updateTenantColors(customPrimaryColor || undefined, customSecondaryColor || undefined, useCustomOverride);
+        } else {
+            updateTenantColors(undefined, undefined, false);
+        }
     };
 
     const handleReset = () => {
@@ -132,6 +149,101 @@ export default function AppearanceSettingsPage() {
                             </button>
                         );
                     })}
+                </div>
+
+                {/* Custom Colors Section */}
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <h4 className="text-sm font-semibold text-gray-900">Custom Brand Colors</h4>
+                            <p className="text-xs text-gray-500 mt-0.5">Override default logo-based colors</p>
+                        </div>
+                    </div>
+
+                    {/* Override Checkbox */}
+                    <label className="flex items-center gap-2 mb-4 p-3 bg-gray-50 rounded-lg cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={useCustomOverride}
+                            onChange={(e) => setUseCustomOverride(e.target.checked)}
+                            className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+                        />
+                        <div>
+                            <p className="font-medium text-gray-900 text-sm">Override palette colors</p>
+                            <p className="text-xs text-gray-500">Use custom colors instead of selected palette</p>
+                        </div>
+                    </label>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        {/* Primary Color Picker */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">Primary Color</label>
+                            <div className="relative">
+                                <input
+                                    type="color"
+                                    value={customPrimaryColor || selectedPalette.primary}
+                                    onChange={(e) => setCustomPrimaryColor(e.target.value)}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                />
+                                <div className="h-10 rounded-lg border-2 border-gray-200 flex items-center gap-2 px-3 cursor-pointer hover:border-purple-300 transition">
+                                    <div
+                                        className="w-6 h-6 rounded border border-gray-300"
+                                        style={{ backgroundColor: customPrimaryColor || selectedPalette.primary }}
+                                    />
+                                    <span className="text-sm font-mono text-gray-600">
+                                        {customPrimaryColor || selectedPalette.primary}
+                                    </span>
+                                </div>
+                            </div>
+                            {customPrimaryColor && (
+                                <button
+                                    onClick={() => setCustomPrimaryColor("")}
+                                    className="text-xs text-purple-600 hover:text-purple-700"
+                                >
+                                    Reset to default
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Secondary Color Picker */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">Secondary Color</label>
+                            <div className="relative">
+                                <input
+                                    type="color"
+                                    value={customSecondaryColor || selectedPalette.secondary}
+                                    onChange={(e) => setCustomSecondaryColor(e.target.value)}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                />
+                                <div className="h-10 rounded-lg border-2 border-gray-200 flex items-center gap-2 px-3 cursor-pointer hover:border-purple-300 transition">
+                                    <div
+                                        className="w-6 h-6 rounded border border-gray-300"
+                                        style={{ backgroundColor: customSecondaryColor || selectedPalette.secondary }}
+                                    />
+                                    <span className="text-sm font-mono text-gray-600">
+                                        {customSecondaryColor || selectedPalette.secondary}
+                                    </span>
+                                </div>
+                            </div>
+                            {customSecondaryColor && (
+                                <button
+                                    onClick={() => setCustomSecondaryColor("")}
+                                    className="text-xs text-purple-600 hover:text-purple-700"
+                                >
+                                    Reset to default
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Preview */}
+                    <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                        <p className="text-xs text-gray-500 mb-2">Live Preview</p>
+                        <div
+                            className="h-12 rounded-lg shadow-sm"
+                            style={{ background: `linear-gradient(90deg, ${customPrimaryColor || selectedPalette.primary} 0%, ${customSecondaryColor || selectedPalette.secondary} 100%)` }}
+                        />
+                    </div>
                 </div>
             </Card>
 

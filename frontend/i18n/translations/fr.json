@@ -172,5 +172,83 @@
         "serverError": "Erreur serveur. Veuillez réessayer.",
         "notFound": "Non trouvé",
         "unauthorized": "Accès non autorisé"
+    },
+    "auth": {
+        "login": "Connexion",
+        "signup": "Inscription",
+        "welcomeBack": "Bon retour !",
+        "welcomeNew": "Créez votre compte",
+        "connectToAccess": "Connectez-vous pour accéder à votre salon",
+        "signupDesc": "Commencez gratuitement pendant 14 jours",
+        "googleLogin": "Continuer avec Google",
+        "facebookLogin": "Continuer avec Facebook",
+        "orWithEmail": "Ou avec email",
+        "emailOrPhone": "Email ou Téléphone",
+        "emailPlaceholder": "email@exemple.com ou +33 6 12 34 56 78",
+        "password": "Mot de passe",
+        "passwordPlaceholder": "••••••••",
+        "confirmPassword": "Confirmer le mot de passe",
+        "fullName": "Nom complet",
+        "fullNamePlaceholder": "Jean Dupont",
+        "rememberMe": "Se souvenir de moi",
+        "forgotPassword": "Mot de passe oublié ?",
+        "notRegistered": "Pas encore de compte ?",
+        "alreadyRegistered": "Déjà un compte ?",
+        "createAccount": "Créer un compte",
+        "loginNow": "Se connecter",
+        "secureSsl": "Sécurisé SSL",
+        "rgpd": "RGPD",
+        "freeTrial": "14 jours gratuits",
+        "demoMode": "Mode Démo",
+        "tryDemo": "Essayer la démo",
+        "termsAccept": "En créant un compte, vous acceptez nos",
+        "termsOfService": "Conditions d'utilisation",
+        "and": "et",
+        "privacyPolicy": "Politique de confidentialité",
+        "marketing": {
+            "title": "BraidHub",
+            "subtitle": "Gestion de Salon Pro",
+            "feature1": "Suivi en Temps Réel",
+            "feature1Desc": "Visualisez vos revenus, dépenses et performances instantanément avec des tableaux de bord intuitifs.",
+            "feature2": "Gestion Multi-Braiders",
+            "feature2Desc": "Gérez plusieurs tresseuses avec des espaces personnels et un suivi détaillé des performances.",
+            "feature3": "Sécurisé & Multi-Devises",
+            "feature3Desc": "Architecture SaaS sécurisée avec support multi-tenants et gestion de plusieurs devises.",
+            "testimonial": "BraidHub a transformé la gestion de mon salon. Je gagne 3h par jour et mes revenus ont augmenté de 40% grâce aux analyses détaillées."
+        }
+    },
+    "onboarding": {
+        "verify": {
+            "title": "Vérification",
+            "subtitle": "Entrez le code envoyé à",
+            "codePlaceholder": "000000",
+            "resend": "Renvoyer le code",
+            "resendIn": "Renvoyer dans",
+            "verify": "Vérifier",
+            "didntReceive": "Vous n'avez pas reçu le code ?"
+        },
+        "setup": {
+            "title": "Configuration de votre salon",
+            "step1": "Type de salon",
+            "step2": "Services",
+            "step3": "Équipe",
+            "step4": "Finalisation",
+            "salonType": "Quel type de salon gérez-vous ?",
+            "selectServices": "Sélectionnez vos services",
+            "addTeam": "Ajoutez votre équipe (optionnel)",
+            "review": "Vérifiez vos informations",
+            "complete": "Terminer la configuration",
+            "skip": "Passer cette étape",
+            "next": "Suivant",
+            "back": "Retour",
+            "salonTypes": {
+                "braids": "Salon de Tresses",
+                "hair": "Salon de Coiffure",
+                "nails": "Salon de Manucure",
+                "barber": "Barbershop",
+                "beauty": "Institut de Beauté",
+                "spa": "Spa & Bien-être"
+            }
+        }
     }
 }

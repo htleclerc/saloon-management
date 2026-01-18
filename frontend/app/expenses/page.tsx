@@ -1,11 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
+import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
 import Link from "next/link";
-import { Plus, Download } from "lucide-react";
+import { Plus, Download, FileText } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/export";
 
 const expenseCategories = [
     { name: "Office Rental", color: "bg-purple-500", amount: 2500, icon: "🏢" },
@@ -32,8 +35,29 @@ const chartData = expenseCategories.map(cat => ({
     amount: cat.amount,
 }));
 
+// Export columns configuration
+const expenseExportColumns: ExportColumn[] = [
+    { key: "id", header: "ID" },
+    { key: "date", header: "Date" },
+    { key: "category", header: "Category" },
+    { key: "description", header: "Description" },
+    { key: "salon", header: "Salon" },
+    { key: "amount", header: "Amount", formatter: (v) => `€${v}` },
+];
+
 export default function ExpensesPage() {
+    const [searchTerm, setSearchTerm] = useState("");
+    const [selectedCategory, setSelectedCategory] = useState("All Categories");
+    const { getCardStyle } = useKpiCardStyle();
     const totalExpenses = expenseCategories.reduce((sum, cat) => sum + cat.amount, 0);
+
+    const handleExportCSV = () => {
+        exportToCSV(recentExpenses, expenseExportColumns, "expenses");
+    };
+
+    const handleExportPDF = () => {
+        exportToPDF(recentExpenses, expenseExportColumns, "Expenses Report", "expenses");
+    };
 
     return (
         <MainLayout>
@@ -45,9 +69,13 @@ export default function ExpensesPage() {
                         <p className="text-gray-500 mt-1">Track and manage all business expenses</p>
                     </div>
                     <div className="flex gap-3">
-                        <Button variant="outline" size="md">
-                            <Download className="w-5 h-5" />
-                            Export
+                        <Button variant="outline" size="md" onClick={handleExportCSV}>
+                            <Download className="w-5 h-5 mr-1" />
+                            CSV
+                        </Button>
+                        <Button variant="outline" size="md" onClick={handleExportPDF}>
+                            <FileText className="w-5 h-5 mr-1" />
+                            PDF
                         </Button>
                         <Link href="/expenses/add">
                             <Button variant="primary" size="md">
@@ -60,22 +88,22 @@ export default function ExpensesPage() {
 
                 {/* Summary */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <Card gradient="bg-gradient-to-br from-purple-600 to-purple-700" className="text-white">
+                    <Card className="text-white" style={getCardStyle(0)}>
                         <p className="text-sm opacity-90 mb-1">Total Expenses</p>
                         <h3 className="text-3xl font-bold">€{totalExpenses.toLocaleString()}</h3>
                         <p className="text-sm opacity-80 mt-1">This month</p>
                     </Card>
-                    <Card gradient="bg-gradient-to-br from-pink-500 to-pink-600" className="text-white">
+                    <Card className="text-white" style={getCardStyle(1)}>
                         <p className="text-sm opacity-90 mb-1">Categories</p>
                         <h3 className="text-3xl font-bold">{expenseCategories.length}</h3>
                         <p className="text-sm opacity-80 mt-1">Active categories</p>
                     </Card>
-                    <Card gradient="bg-gradient-to-br from-orange-500 to-orange-600" className="text-white">
+                    <Card className="text-white" style={getCardStyle(2)}>
                         <p className="text-sm opacity-90 mb-1">Highest Category</p>
                         <h3 className="text-2xl font-bold">Office Rental</h3>
                         <p className="text-sm opacity-80 mt-1">€2,500</p>
                     </Card>
-                    <Card gradient="bg-gradient-to-br from-teal-500 to-teal-600" className="text-white">
+                    <Card className="text-white" style={getCardStyle(3)}>
                         <p className="text-sm opacity-90 mb-1">Average/Month</p>
                         <h3 className="text-3xl font-bold">€{Math.round(totalExpenses / 6).toLocaleString()}</h3>
                         <p className="text-sm opacity-80 mt-1">Last 6 months</p>

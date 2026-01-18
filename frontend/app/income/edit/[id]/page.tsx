@@ -7,7 +7,7 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { Save, X, Trash2 } from "lucide-react";
 
-export default function EditRevenuePage({ params }: { params: { id: string } }) {
+export default function EditIncomePage({ params }: { params: { id: string } }) {
     const router = useRouter();
     const [formData, setFormData] = useState({
         date: "2026-01-12",
@@ -25,16 +25,16 @@ export default function EditRevenuePage({ params }: { params: { id: string } }) 
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Updated revenue data:", formData);
-        alert("Revenue updated successfully!");
-        router.push("/revenus");
+        console.log("Updated income data:", formData);
+        alert("Income updated successfully!");
+        router.push("/income");
     };
 
     const handleDelete = () => {
-        if (confirm("Are you sure you want to delete this revenue record? This action cannot be undone.")) {
-            console.log("Deleting revenue:", params.id);
-            alert("Revenue record deleted!");
-            router.push("/revenus");
+        if (confirm("Are you sure you want to delete this income record? This action cannot be undone.")) {
+            console.log("Deleting income:", params.id);
+            alert("Income record deleted!");
+            router.push("/income");
         }
     };
 
@@ -48,8 +48,8 @@ export default function EditRevenuePage({ params }: { params: { id: string } }) 
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">Edit Revenue</h1>
-                        <p className="text-gray-500 mt-1">Modify an existing revenue transaction</p>
+                        <h1 className="text-3xl font-bold text-gray-900">Edit Income</h1>
+                        <p className="text-gray-500 mt-1">Modify an existing income transaction</p>
                     </div>
                     <div className="flex gap-3">
                         <Button variant="danger" size="md" onClick={handleDelete}>
@@ -66,7 +66,7 @@ export default function EditRevenuePage({ params }: { params: { id: string } }) 
                 {/* Form */}
                 <form onSubmit={handleSubmit}>
                     <Card>
-                        <h3 className="text-lg font-semibold mb-6">Revenue Information</h3>
+                        <h3 className="text-lg font-semibold mb-6">Income Information</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* Date */}
                             <div>
@@ -208,7 +208,7 @@ export default function EditRevenuePage({ params }: { params: { id: string } }) 
                         <div className="flex gap-4 mt-8">
                             <Button type="submit" variant="primary" size="lg" className="flex-1">
                                 <Save className="w-5 h-5" />
-                                Update Revenue
+                                Update Income
                             </Button>
                             <Button type="button" variant="outline" size="lg" onClick={() => router.back()}>
                                 <X className="w-5 h-5" />

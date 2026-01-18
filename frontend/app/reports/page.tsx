@@ -4,6 +4,8 @@ import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { Download, TrendingUp, TrendingDown, Calendar, Edit, ChevronDown, Lightbulb } from "lucide-react";
+import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
+import { useAuth, RequirePermission } from "@/context/AuthProvider";
 import {
     LineChart,
     Line,
@@ -137,6 +139,15 @@ const recommendations = [
 ];
 
 export default function ReportsPage() {
+    const { getCardStyle } = useKpiCardStyle();
+    const { user, hasPermission, getWorkerId } = useAuth();
+
+    const isWorker = user?.role === 'worker';
+
+    // Filter monthly breakdown to show only current worker's data for workers
+    const filteredMonthlyBreakdown = isWorker
+        ? monthlyBreakdown.slice(0, 1) // Demo: show only first entry for worker
+        : monthlyBreakdown;
     return (
         <MainLayout>
             <div className="space-y-6">
@@ -170,7 +181,7 @@ export default function ReportsPage() {
                 <div>
                     <h3 className="text-lg font-semibold mb-4">Annual Financial Overview</h3>
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                        <Card gradient="bg-gradient-to-br from-purple-600 to-purple-700" className="text-white">
+                        <Card gradient="" style={getCardStyle(0)} className="text-white">
                             <div className="flex items-center gap-2 mb-2">
                                 <span className="text-xl">💰</span>
                                 <p className="text-xs opacity-90">Total Revenue</p>
@@ -181,7 +192,7 @@ export default function ReportsPage() {
                                 <span className="text-xs">+12.5% vs last year</span>
                             </div>
                         </Card>
-                        <Card gradient="bg-gradient-to-br from-orange-500 to-orange-600" className="text-white">
+                        <Card gradient="" style={getCardStyle(1)} className="text-white">
                             <div className="flex items-center gap-2 mb-2">
                                 <span className="text-xl">📊</span>
                                 <p className="text-xs opacity-90">Total Expenses</p>
@@ -192,7 +203,7 @@ export default function ReportsPage() {
                                 <span className="text-xs">-3.2% vs last year</span>
                             </div>
                         </Card>
-                        <Card gradient="bg-gradient-to-br from-green-500 to-green-600" className="text-white">
+                        <Card gradient="" style={getCardStyle(2)} className="text-white">
                             <div className="flex items-center gap-2 mb-2">
                                 <span className="text-xl">📈</span>
                                 <p className="text-xs opacity-90">Net Profit</p>
@@ -203,7 +214,7 @@ export default function ReportsPage() {
                                 <span className="text-xs">+8.4% vs last year</span>
                             </div>
                         </Card>
-                        <Card gradient="bg-gradient-to-br from-red-500 to-red-600" className="text-white">
+                        <Card gradient="" style={getCardStyle(3)} className="text-white">
                             <div className="flex items-center gap-2 mb-2">
                                 <span className="text-xl">🧾</span>
                                 <p className="text-xs opacity-90">Tax Payments</p>
@@ -214,7 +225,7 @@ export default function ReportsPage() {
                                 <span className="text-xs">+2.1% vs last year</span>
                             </div>
                         </Card>
-                        <Card gradient="bg-gradient-to-br from-blue-500 to-blue-600" className="text-white">
+                        <Card gradient="" style={getCardStyle(4)} className="text-white">
                             <div className="flex items-center gap-2 mb-2">
                                 <span className="text-xl">💎</span>
                                 <p className="text-xs opacity-90">Savings</p>
@@ -246,7 +257,7 @@ export default function ReportsPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {monthlyBreakdown.map((row) => (
+                                {filteredMonthlyBreakdown.map((row) => (
                                     <tr key={row.id} className="hover:bg-gray-50 transition">
                                         <td className="px-4 py-4 text-sm text-gray-900">{row.date}</td>
                                         <td className="px-4 py-4">
@@ -271,11 +282,11 @@ export default function ReportsPage() {
                             <tfoot className="bg-gray-50 font-semibold">
                                 <tr>
                                     <td className="px-4 py-3 text-sm" colSpan={2}>Total</td>
-                                    <td className="px-4 py-3 text-right text-green-600">€{monthlyBreakdown.reduce((sum, r) => sum + r.revenue, 0).toLocaleString()}</td>
-                                    <td className="px-4 py-3 text-right text-red-600">€{monthlyBreakdown.reduce((sum, r) => sum + r.expense, 0).toLocaleString()}</td>
-                                    <td className="px-4 py-3 text-right text-green-600">€{monthlyBreakdown.reduce((sum, r) => sum + r.profit, 0).toLocaleString()}</td>
-                                    <td className="px-4 py-3 text-right text-orange-600">€{monthlyBreakdown.reduce((sum, r) => sum + r.tax, 0).toLocaleString()}</td>
-                                    <td className="px-4 py-3 text-right text-blue-600">€{monthlyBreakdown.reduce((sum, r) => sum + r.savings, 0).toLocaleString()}</td>
+                                    <td className="px-4 py-3 text-right text-green-600">€{filteredMonthlyBreakdown.reduce((sum, r) => sum + r.revenue, 0).toLocaleString()}</td>
+                                    <td className="px-4 py-3 text-right text-red-600">€{filteredMonthlyBreakdown.reduce((sum, r) => sum + r.expense, 0).toLocaleString()}</td>
+                                    <td className="px-4 py-3 text-right text-green-600">€{filteredMonthlyBreakdown.reduce((sum, r) => sum + r.profit, 0).toLocaleString()}</td>
+                                    <td className="px-4 py-3 text-right text-orange-600">€{filteredMonthlyBreakdown.reduce((sum, r) => sum + r.tax, 0).toLocaleString()}</td>
+                                    <td className="px-4 py-3 text-right text-blue-600">€{filteredMonthlyBreakdown.reduce((sum, r) => sum + r.savings, 0).toLocaleString()}</td>
                                     <td className="px-4 py-3"></td>
                                 </tr>
                             </tfoot>
@@ -394,21 +405,21 @@ export default function ReportsPage() {
 
                     {/* Tax Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                        <Card gradient="bg-gradient-to-br from-blue-500 to-blue-600" className="text-white">
+                        <Card gradient="" style={getCardStyle(0)} className="text-white">
                             <div className="flex items-center gap-2 mb-2">
                                 <span className="text-xl">📋</span>
                                 <p className="text-xs opacity-90">Income Tax</p>
                             </div>
                             <h3 className="text-2xl font-bold">€{taxSummary.incomeTax.toLocaleString()}</h3>
                         </Card>
-                        <Card gradient="bg-gradient-to-br from-pink-500 to-pink-600" className="text-white">
+                        <Card gradient="" style={getCardStyle(1)} className="text-white">
                             <div className="flex items-center gap-2 mb-2">
                                 <span className="text-xl">📊</span>
                                 <p className="text-xs opacity-90">Estimated Tax</p>
                             </div>
                             <h3 className="text-2xl font-bold">€{taxSummary.estimatedTax.toLocaleString()}</h3>
                         </Card>
-                        <Card gradient="bg-gradient-to-br from-green-500 to-green-600" className="text-white">
+                        <Card gradient="" style={getCardStyle(2)} className="text-white">
                             <div className="flex items-center gap-2 mb-2">
                                 <span className="text-xl">💵</span>
                                 <p className="text-xs opacity-90">Tax this Month</p>
@@ -538,7 +549,7 @@ export default function ReportsPage() {
                 </Card>
 
                 {/* Financial Recommendations */}
-                <Card gradient="bg-gradient-to-br from-purple-50 to-pink-50">
+                <Card gradient="" style={getCardStyle(0)}>
                     <div className="flex items-center gap-2 mb-4">
                         <Lightbulb className="w-5 h-5 text-purple-600" />
                         <h3 className="text-lg font-semibold">Financial Recommendations</h3>

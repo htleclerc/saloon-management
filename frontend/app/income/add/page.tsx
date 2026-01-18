@@ -6,7 +6,6 @@ import Link from "next/link";
 import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import StatCard from "@/components/ui/StatCard";
 import {
     ArrowLeft,
     Save,
@@ -27,6 +26,8 @@ import {
     User,
     Scissors
 } from "lucide-react";
+import { useAuth } from "@/context/AuthProvider";
+import { useEffect } from "react";
 
 // Mock data
 const clients = [
@@ -57,7 +58,8 @@ const products = [
     { id: 4, name: "Moisturizing Spray", price: 15 },
 ];
 
-export default function AddRevenuePage() {
+export default function AddIncomePage() {
+    const { isWorker, isAdmin, user, getWorkerId } = useAuth();
     const router = useRouter();
     // Client selection mode: 'existing' | 'anonymous' | 'new'
     const [clientMode, setClientMode] = useState<'existing' | 'anonymous' | 'new'>('existing');
@@ -72,57 +74,137 @@ export default function AddRevenuePage() {
     // Anonymous client note
     const [anonymousNote, setAnonymousNote] = useState("");
 
-    const [selectedService, setSelectedService] = useState<number | null>(1);
+    // Multi-service selection
+    const [selectedServices, setSelectedServices] = useState<number[]>([]);
+    const [isOtherService, setIsOtherService] = useState(false);
+    const [otherServiceDescription, setOtherServiceDescription] = useState("");
+
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [startTime, setStartTime] = useState("09:00");
     const [endTime, setEndTime] = useState("12:00");
-    const [baseAmount, setBaseAmount] = useState(120);
+    const [baseAmount, setBaseAmount] = useState(0);
     const [discount, setDiscount] = useState(0);
     const [tips, setTips] = useState(0);
     const [notes, setNotes] = useState("");
     const [paymentMethod, setPaymentMethod] = useState("card");
-
     // Worker sharing state
-    const [assignedWorkers, setAssignedWorkers] = useState([
-        { workerId: 1, percentage: 60 },
-    ]);
+    const [assignedWorkers, setAssignedWorkers] = useState<{ workerId: number, percentage: number }[]>([]);
+
+    // Set default worker based on exact role
+    useEffect(() => {
+        const exactRole = user?.role;
+        if (exactRole === 'worker') {
+            const wId = getWorkerId();
+            // In demo/mock mode, we might have string IDs like 'worker_demo_1'
+            // We map them to numeric 1 if necessary for the mock data compatibility
+            const numericId = wId && !isNaN(Number(wId)) ? Number(wId) : 1;
+            setAssignedWorkers([{ workerId: numericId, percentage: 100 }]);
+        } else if (exactRole === 'admin' || exactRole === 'owner' || exactRole === 'super_admin') {
+            // Default select first worker for admin
+            setAssignedWorkers([{ workerId: 1, percentage: 100 }]);
+        }
+    }, [user?.role, getWorkerId]);
 
     // Products used state
     const [usedProducts, setUsedProducts] = useState<{ productId: number; quantity: number }[]>([]);
 
+    // Toggle service selection
+    const toggleService = (serviceId: number) => {
+        setSelectedServices(prev => {
+            const newSelection = prev.includes(serviceId)
+                ? prev.filter(id => id !== serviceId)
+                : [...prev, serviceId];
+
+            // Auto-calculate base amount from selected services
+            const total = newSelection.reduce((sum, id) => {
+                const service = services.find(s => s.id === id);
+                return sum + (service?.price || 0);
+            }, 0);
+            setBaseAmount(total);
+
+            return newSelection;
+        });
+    };
+
+    // Handle 'Other' service toggle
+    const toggleOtherService = () => {
+        setIsOtherService(!isOtherService);
+        if (isOtherService) {
+            setOtherServiceDescription("");
+        }
+    };
+
     // Calculations
-    const selectedServiceData = services.find(s => s.id === selectedService);
-    const totalProductsCost = usedProducts.reduce((sum, p) => {
+    const totalProductsCost = usedProducts.reduce((sum: number, p: { productId: number; quantity: number }) => {
         const product = products.find(prod => prod.id === p.productId);
         return sum + (product ? product.price * p.quantity : 0);
     }, 0);
     const subtotal = baseAmount - discount + tips;
     const totalAmount = subtotal + totalProductsCost;
 
-    // Worker share calculations
-    const workerShares = assignedWorkers.map(aw => {
+    // Worker share calculations with SALON SHARING KEY applied
+    const workerShares = assignedWorkers.map((aw: { workerId: number; percentage: number }) => {
         const worker = workers.find(w => w.id === aw.workerId);
-        const share = (subtotal * aw.percentage) / 100;
-        return { ...aw, worker, share };
+        const incomeShare = (subtotal * aw.percentage) / 100; // Part du revenu
+        const workerAmount = (incomeShare * (worker?.sharingKey || 50)) / 100; // Part worker après clé salon
+        const salonAmount = incomeShare - workerAmount; // Part salon
+        return {
+            ...aw,
+            worker,
+            incomeShare,      // Total de cette part du revenu
+            workerAmount,     // Ce que le worker reçoit (avec salon key)
+            salonAmount       // Ce qui va au salon
+        };
     });
-    const totalWorkerShare = workerShares.reduce((sum, ws) => sum + ws.share, 0);
-    const businessShare = subtotal - totalWorkerShare;
+    const totalWorkerAmount = workerShares.reduce((sum: number, ws: any) => sum + ws.workerAmount, 0);
+    const totalSalonAmount = workerShares.reduce((sum: number, ws: any) => sum + ws.salonAmount, 0);
 
     const addWorker = () => {
-        const availableWorkers = workers.filter(w => !assignedWorkers.find(aw => aw.workerId === w.id));
+        const availableWorkers = workers.filter(w => !assignedWorkers.find((aw: { workerId: number }) => aw.workerId === w.id));
         if (availableWorkers.length > 0) {
-            setAssignedWorkers([...assignedWorkers, { workerId: availableWorkers[0].id, percentage: 0 }]);
+            const newWorkers = [...assignedWorkers, { workerId: availableWorkers[0].id, percentage: 0 }];
+            // Recalculate equal parts
+            const equalPart = Number((100 / newWorkers.length).toFixed(2));
+            const updatedWorkers = newWorkers.map((aw, idx) => ({
+                ...aw,
+                percentage: idx === newWorkers.length - 1
+                    ? Number((100 - (equalPart * (newWorkers.length - 1))).toFixed(2))
+                    : equalPart
+            }));
+            setAssignedWorkers(updatedWorkers);
         }
     };
 
+    const changeWorker = (oldWorkerId: number, newWorkerId: number) => {
+        // Replace worker in the list while keeping the same percentage
+        const updatedWorkers = assignedWorkers.map((aw: { workerId: number; percentage: number }) =>
+            aw.workerId === oldWorkerId
+                ? { ...aw, workerId: newWorkerId }
+                : aw
+        );
+        setAssignedWorkers(updatedWorkers);
+    };
+
     const removeWorker = (workerId: number) => {
-        setAssignedWorkers(assignedWorkers.filter(aw => aw.workerId !== workerId));
+        const filtered = assignedWorkers.filter((aw: { workerId: number }) => aw.workerId !== workerId);
+        if (filtered.length > 0) {
+            // Recalculate equal parts for remaining
+            const equalPart = Number((100 / filtered.length).toFixed(2));
+            const updatedWorkers = filtered.map((aw, idx) => ({
+                ...aw,
+                percentage: idx === filtered.length - 1
+                    ? Number((100 - (equalPart * (filtered.length - 1))).toFixed(2))
+                    : equalPart
+            }));
+            setAssignedWorkers(updatedWorkers);
+        }
     };
 
     const updateWorkerPercentage = (workerId: number, percentage: number) => {
-        setAssignedWorkers(assignedWorkers.map(aw =>
+        const updated = assignedWorkers.map((aw: { workerId: number; percentage: number }) =>
             aw.workerId === workerId ? { ...aw, percentage } : aw
-        ));
+        );
+        setAssignedWorkers(updated);
     };
 
     const addProduct = () => {
@@ -148,54 +230,22 @@ export default function AddRevenuePage() {
                             </Button>
                         </button>
                         <div>
-                            <h1 className="text-xl md:text-3xl font-bold text-gray-900">Nouvelle prestation</h1>
-                            <p className="text-sm md:text-base text-gray-500 hidden md:block">Enregistrer une nouvelle prestation et répartir les revenus</p>
+                            <h1 className="text-xl md:text-3xl font-bold text-gray-900">New Service</h1>
+                            <p className="text-sm md:text-base text-gray-500 hidden md:block">Record a new service and split income</p>
                         </div>
                     </div>
                     <div className="flex gap-2 md:gap-3 w-full md:w-auto">
                         <Link href="/income" className="flex-1 md:flex-none">
                             <Button variant="outline" size="sm" className="w-full md:w-auto">
-                                <span className="hidden md:inline">Annuler</span>
-                                <span className="md:hidden">Annuler</span>
+                                <span className="hidden md:inline">Cancel</span>
+                                <span className="md:hidden">Cancel</span>
                             </Button>
                         </Link>
                         <Button variant="primary" size="sm" className="flex-1 md:flex-none">
                             <Save className="w-4 h-4 md:w-5 md:h-5" />
-                            <span className="hidden md:inline ml-2">Enregistrer</span>
+                            <span className="hidden md:inline ml-2">Save</span>
                         </Button>
                     </div>
-                </div>
-
-                {/* Quick Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <StatCard
-                        title="Aujourd'hui"
-                        value="12"
-                        subtitle="prestations"
-                        icon={Calendar}
-                        gradient="bg-gradient-to-br from-purple-600 to-purple-700"
-                    />
-                    <StatCard
-                        title="Revenus du jour"
-                        value="€1,850"
-                        subtitle="+15% vs hier"
-                        icon={DollarSign}
-                        gradient="bg-gradient-to-br from-green-500 to-green-600"
-                    />
-                    <StatCard
-                        title="En attente"
-                        value="3"
-                        subtitle="à valider"
-                        icon={Clock}
-                        gradient="bg-gradient-to-br from-orange-500 to-orange-600"
-                    />
-                    <StatCard
-                        title="Clients actifs"
-                        value="8"
-                        subtitle="aujourd'hui"
-                        icon={Users}
-                        gradient="bg-gradient-to-br from-pink-500 to-pink-600"
-                    />
                 </div>
 
                 {/* Main Form */}
@@ -204,8 +254,8 @@ export default function AddRevenuePage() {
                         <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
                             <Scissors className="w-4 h-4 text-purple-600" />
                         </div>
-                        <h2 className="text-xl font-bold text-gray-900">Détails de la prestation</h2>
-                        <span className="text-sm text-gray-500 ml-auto">Étape 1/4</span>
+                        <h2 className="text-xl font-bold text-gray-900">Service Details</h2>
+                        <span className="text-sm text-gray-500 ml-auto">Step 1/4</span>
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -227,7 +277,7 @@ export default function AddRevenuePage() {
                                             : 'bg-gray-100 text-gray-600 border-2 border-transparent hover:bg-gray-200'
                                             }`}
                                     >
-                                        Client existant
+                                        Existing Client
                                     </button>
                                     <button
                                         onClick={() => setClientMode('anonymous')}
@@ -236,7 +286,7 @@ export default function AddRevenuePage() {
                                             : 'bg-gray-100 text-gray-600 border-2 border-transparent hover:bg-gray-200'
                                             }`}
                                     >
-                                        Anonyme
+                                        Anonymous
                                     </button>
                                     <button
                                         onClick={() => setClientMode('new')}
@@ -246,7 +296,7 @@ export default function AddRevenuePage() {
                                             }`}
                                     >
                                         <Plus className="w-3 h-3 inline mr-1" />
-                                        Nouveau
+                                        New
                                     </button>
                                 </div>
 
@@ -260,7 +310,7 @@ export default function AddRevenuePage() {
                                                 value={selectedClient || ""}
                                                 onChange={(e) => setSelectedClient(Number(e.target.value))}
                                             >
-                                                <option value="">Sélectionner un client...</option>
+                                                <option value="">Select a client...</option>
                                                 {clients.map(client => (
                                                     <option key={client.id} value={client.id}>{client.name} - {client.phone}</option>
                                                 ))}
@@ -274,18 +324,18 @@ export default function AddRevenuePage() {
                                     <div className="p-4 bg-orange-50 border border-orange-200 rounded-xl space-y-3">
                                         <div className="flex items-center gap-2 text-orange-800">
                                             <User className="w-5 h-5" />
-                                            <span className="font-medium">Client anonyme</span>
+                                            <span className="font-medium">Anonymous client</span>
                                         </div>
                                         <p className="text-sm text-orange-700">
-                                            La prestation sera enregistrée sans client associé. Vous pourrez compléter les informations plus tard.
+                                            The service will be recorded without an associated client. You can complete the information later.
                                         </p>
                                         <div>
-                                            <label className="block text-xs text-orange-700 mb-1">Note d'identification (optionnel)</label>
+                                            <label className="block text-xs text-orange-700 mb-1">Identification note (optional)</label>
                                             <input
                                                 type="text"
                                                 value={anonymousNote}
                                                 onChange={(e) => setAnonymousNote(e.target.value)}
-                                                placeholder="Ex: Femme, cheveux longs, référée par Marie..."
+                                                placeholder="e.g. Woman, long hair, referred by Mary..."
                                                 className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white text-sm"
                                             />
                                         </div>
@@ -298,7 +348,7 @@ export default function AddRevenuePage() {
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-2 text-green-800">
                                                 <Plus className="w-5 h-5" />
-                                                <span className="font-medium">Nouveau client</span>
+                                                <span className="font-medium">New client</span>
                                             </div>
                                             <label className="flex items-center gap-2 text-sm">
                                                 <input
@@ -307,20 +357,20 @@ export default function AddRevenuePage() {
                                                     onChange={(e) => setCompleteInfoLater(e.target.checked)}
                                                     className="w-4 h-4 text-green-600 rounded focus:ring-green-500"
                                                 />
-                                                <span className="text-green-700">Compléter plus tard</span>
+                                                <span className="text-green-700">Complete later</span>
                                             </label>
                                         </div>
 
                                         <div className="grid grid-cols-1 gap-3">
                                             <div>
                                                 <label className="block text-xs text-green-700 mb-1">
-                                                    Nom {!completeInfoLater && <span className="text-red-500">*</span>}
+                                                    Name {!completeInfoLater && <span className="text-red-500">*</span>}
                                                 </label>
                                                 <input
                                                     type="text"
                                                     value={newClientName}
                                                     onChange={(e) => setNewClientName(e.target.value)}
-                                                    placeholder="Nom complet du client"
+                                                    placeholder="Client's full name"
                                                     className="w-full px-3 py-2 border border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white text-sm"
                                                     required={!completeInfoLater}
                                                 />
@@ -329,7 +379,7 @@ export default function AddRevenuePage() {
                                             {!completeInfoLater && (
                                                 <>
                                                     <div>
-                                                        <label className="block text-xs text-green-700 mb-1">Téléphone</label>
+                                                        <label className="block text-xs text-green-700 mb-1">Phone</label>
                                                         <input
                                                             type="tel"
                                                             value={newClientPhone}
@@ -344,7 +394,7 @@ export default function AddRevenuePage() {
                                                             type="email"
                                                             value={newClientEmail}
                                                             onChange={(e) => setNewClientEmail(e.target.value)}
-                                                            placeholder="email@exemple.com"
+                                                            placeholder="email@example.com"
                                                             className="w-full px-3 py-2 border border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white text-sm"
                                                         />
                                                     </div>
@@ -354,7 +404,7 @@ export default function AddRevenuePage() {
 
                                         {completeInfoLater && (
                                             <p className="text-xs text-green-600 italic">
-                                                Le client sera créé avec un minimum d'informations. Vous pourrez compléter son profil depuis la page Clients.
+                                                The client will be created with minimum information. You can complete their profile from the Clients page.
                                             </p>
                                         )}
                                     </div>
@@ -365,27 +415,125 @@ export default function AddRevenuePage() {
                             <div>
                                 <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
                                     <Scissors className="w-4 h-4" />
-                                    Service effectué
+                                    Services performed (multiple selection)
                                 </label>
                                 <div className="grid grid-cols-2 gap-3">
-                                    {services.slice(0, 4).map(service => (
+                                    {services.slice(0, 6).map(service => (
                                         <button
                                             key={service.id}
-                                            onClick={() => {
-                                                setSelectedService(service.id);
-                                                setBaseAmount(service.price);
-                                            }}
-                                            className={`p-4 rounded-xl border-2 text-left transition-all ${selectedService === service.id
+                                            type="button"
+                                            onClick={() => toggleService(service.id)}
+                                            className={`p-4 rounded-xl border-2 text-left transition-all ${selectedServices.includes(service.id)
                                                 ? "border-purple-500 bg-purple-50"
                                                 : "border-gray-200 hover:border-purple-300"
                                                 }`}
                                         >
-                                            <p className="font-semibold text-gray-900">{service.name}</p>
-                                            <p className="text-sm text-gray-500">{service.duration}</p>
-                                            <p className="text-lg font-bold text-purple-600 mt-1">€{service.price}</p>
+                                            <div className="flex items-start justify-between">
+                                                <div className="flex-1">
+                                                    <p className="font-semibold text-gray-900">{service.name}</p>
+                                                    <p className="text-sm text-gray-500">{service.duration}</p>
+                                                    <p className="text-lg font-bold text-purple-600 mt-1">€{service.price}</p>
+                                                </div>
+                                                {selectedServices.includes(service.id) && (
+                                                    <div className="w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center">
+                                                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                        </svg>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </button>
                                     ))}
+
+                                    {/* Other Service Option */}
+                                    <button
+                                        type="button"
+                                        onClick={toggleOtherService}
+                                        className={`p-4 rounded-xl border-2 text-left transition-all ${isOtherService
+                                            ? "border-orange-500 bg-orange-50"
+                                            : "border-gray-200 hover:border-orange-300"
+                                            }`}
+                                    >
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1">
+                                                <p className="font-semibold text-gray-900">Other</p>
+                                                <p className="text-sm text-gray-500">Custom service</p>
+                                            </div>
+                                            {isOtherService && (
+                                                <div className="w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center">
+                                                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                    </svg>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </button>
                                 </div>
+
+                                {/* Other Service Description - Required if selected */}
+                                {isOtherService && (
+                                    <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-xl">
+                                        <label className="block text-sm font-medium text-orange-900 mb-2">
+                                            Custom service description *
+                                        </label>
+                                        <textarea
+                                            value={otherServiceDescription}
+                                            onChange={(e) => setOtherServiceDescription(e.target.value)}
+                                            placeholder="Describe the service performed (mandatory)..."
+                                            className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white"
+                                            rows={3}
+                                            required
+                                        />
+                                        {otherServiceDescription.trim() === "" && (
+                                            <p className="text-xs text-orange-600 mt-1 flex items-center gap-1">
+                                                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                                </svg>
+                                                This field is mandatory
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Selected Services Summary */}
+                                {(selectedServices.length > 0 || isOtherService) && (
+                                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                                        <p className="text-sm font-medium text-blue-900 mb-2">Selected services:</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {selectedServices.map(serviceId => {
+                                                const service = services.find(s => s.id === serviceId);
+                                                return service ? (
+                                                    <span key={serviceId} className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
+                                                        {service.name}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => toggleService(serviceId)}
+                                                            className="hover:bg-purple-200 rounded-full p-0.5"
+                                                        >
+                                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                            </svg>
+                                                        </button>
+                                                    </span>
+                                                ) : null;
+                                            })}
+                                            {isOtherService && (
+                                                <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-800 rounded-full text-xs font-medium">
+                                                    Other
+                                                    <button
+                                                        type="button"
+                                                        onClick={toggleOtherService}
+                                                        className="hover:bg-orange-200 rounded-full p-0.5"
+                                                    >
+                                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                        </svg>
+                                                    </button>
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -403,7 +551,7 @@ export default function AddRevenuePage() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Début</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Start</label>
                                     <input
                                         type="time"
                                         value={startTime}
@@ -412,7 +560,7 @@ export default function AddRevenuePage() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Fin</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">End</label>
                                     <input
                                         type="time"
                                         value={endTime}
@@ -424,10 +572,10 @@ export default function AddRevenuePage() {
 
                             {/* Amount Breakdown */}
                             <div className="bg-gray-50 rounded-xl p-4 space-y-4">
-                                <h4 className="font-semibold text-gray-900">Montant</h4>
+                                <h4 className="font-semibold text-gray-900">Amount</h4>
                                 <div className="grid grid-cols-3 gap-4">
                                     <div>
-                                        <label className="block text-xs text-gray-500 mb-1">Prix de base (€)</label>
+                                        <label className="block text-xs text-gray-500 mb-1">Base Price (€)</label>
                                         <input
                                             type="number"
                                             value={baseAmount}
@@ -436,7 +584,7 @@ export default function AddRevenuePage() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs text-gray-500 mb-1">Réduction (€)</label>
+                                        <label className="block text-xs text-gray-500 mb-1">Discount (€)</label>
                                         <input
                                             type="number"
                                             value={discount}
@@ -445,7 +593,7 @@ export default function AddRevenuePage() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs text-gray-500 mb-1">Pourboire (€)</label>
+                                        <label className="block text-xs text-gray-500 mb-1">Tips (€)</label>
                                         <input
                                             type="number"
                                             value={tips}
@@ -466,70 +614,159 @@ export default function AddRevenuePage() {
                             <div className="w-8 h-8 bg-pink-100 rounded-full flex items-center justify-center">
                                 <Users className="w-4 h-4 text-pink-600" />
                             </div>
-                            <h2 className="text-xl font-bold text-gray-900">Répartition entre travailleurs</h2>
-                            <span className="text-sm text-gray-500">Étape 2/4</span>
+                            <h2 className="text-xl font-bold text-gray-900">Worker Split</h2>
+                            <span className="text-sm text-gray-500">Step 2/4</span>
                         </div>
+                        {/* Workers CAN add other workers */}
                         <Button variant="outline" size="sm" onClick={addWorker}>
                             <Plus className="w-4 h-4" />
-                            Ajouter un travailleur
+                            Add Worker
                         </Button>
                     </div>
 
                     <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-800">
-                        <strong>Configuration des parts:</strong> Définissez le pourcentage de revenus pour chaque travailleur impliqué.
+                        <strong>Share Configuration:</strong> {isWorker
+                            ? "Define the split with your colleagues. You can modify your own share."
+                            : "Define the income percentage for each involved worker."
+                        }
                     </div>
+
+                    {/* Share Validation Warning */}
+                    {Math.abs(assignedWorkers.reduce((sum, aw) => sum + aw.percentage, 0) - 100) > 0.01 && (
+                        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-800 flex items-center gap-2">
+                            <HelpCircle className="w-4 h-4" />
+                            <span>Total shares must equal 100% (current: {assignedWorkers.reduce((sum, aw) => sum + aw.percentage, 0)}%)</span>
+                        </div>
+                    )}
 
                     {/* Worker Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                        {workerShares.map(({ workerId, percentage, worker, share }) => (
-                            <div key={workerId} className={`relative p-4 rounded-xl bg-gradient-to-br ${worker?.color} text-white`}>
-                                {assignedWorkers.length > 1 && (
-                                    <button
-                                        onClick={() => removeWorker(workerId)}
-                                        className="absolute top-2 right-2 w-6 h-6 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center"
-                                    >
-                                        <Trash2 className="w-3 h-3" />
-                                    </button>
-                                )}
-                                <div className="flex items-center gap-3 mb-3">
-                                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center font-bold">
-                                        {worker?.name.charAt(0)}
+                        {workerShares.map(({ workerId, percentage, worker, workerAmount, salonAmount, incomeShare }) => {
+                            const ownId = getWorkerId();
+                            const isOwnCard = workerId === Number(ownId) || (ownId === 'worker_demo_1' && workerId === 1);
+
+                            // PRIVACY LOGIC:
+                            // - ADMIN/OWNER/MANAGER: Sees ALL (shares, amounts, salon keys) ✅
+                            // - WORKER: Sees ALL shares (for collaboration) but ONLY own amount ✅
+
+                            // Important: isWorker is hierarchical (true for admin/manager). 
+                            // We use !isAdmin to restrict data visibility to those who are NOT admins.
+                            const canSeeAmount = isOwnCard || isAdmin;
+                            const canSeeSalonKey = isAdmin;
+
+                            // Add a fallback color if worker is not found
+                            const cardColor = worker?.color || "from-gray-500 to-gray-600";
+
+                            return (
+                                <div key={workerId} className={`relative p-4 rounded-xl shadow-lg bg-gradient-to-br ${cardColor} text-white transition-all transform hover:scale-[1.02]`}>
+                                    {/* Remove button - available for all during creation */}
+                                    {assignedWorkers.length > 1 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => removeWorker(workerId)}
+                                            className="absolute top-2 right-2 w-6 h-6 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center"
+                                        >
+                                            <Trash2 className="w-3 h-3" />
+                                        </button>
+                                    )}
+
+                                    <div className="flex items-center gap-2 sm:gap-3 mb-3">
+                                        {/* Worker Avatar - Mobile optimized */}
+                                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-full flex items-center justify-center font-bold text-lg flex-shrink-0">
+                                            {worker?.name.charAt(0)}
+                                        </div>
+
+                                        {/* Worker Selector Dropdown - Full width on mobile */}
+                                        <div className="flex-1 min-w-0">
+                                            <select
+                                                value={workerId}
+                                                onChange={(e) => changeWorker(workerId, Number(e.target.value))}
+                                                className="w-full bg-white/10 border border-white/30 rounded-lg px-2 sm:px-3 py-2 text-white text-sm sm:text-base font-semibold focus:outline-none focus:ring-2 focus:ring-white/50 cursor-pointer hover:bg-white/20 transition truncate"
+                                                style={{
+                                                    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='white' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                                                    backgroundPosition: 'right 0.5rem center',
+                                                    backgroundRepeat: 'no-repeat',
+                                                    backgroundSize: '1.5em 1.5em',
+                                                    paddingRight: '2.5rem'
+                                                }}
+                                            >
+                                                {workers
+                                                    .filter(w => w.id === workerId || !assignedWorkers.find(aw => aw.workerId === w.id))
+                                                    .map(w => (
+                                                        <option key={w.id} value={w.id} className="bg-gray-800 text-white">
+                                                            {w.name}
+                                                        </option>
+                                                    ))
+                                                }
+                                            </select>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p className="font-semibold">{worker?.name}</p>
-                                        <p className="text-xs opacity-80">Clé: {worker?.sharingKey}%</p>
+
+                                    {/* Share Percentage - Mobile optimized */}
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] sm:text-xs opacity-80">Commission share (%)</label>
+                                        <div className="relative">
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                max="100"
+                                                step="0.01"
+                                                value={percentage}
+                                                onChange={(e) => updateWorkerPercentage(workerId, Number(e.target.value))}
+                                                className="w-full pl-3 pr-10 py-2.5 sm:py-2 bg-white/20 border border-white/30 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/50 text-base sm:text-sm"
+                                            />
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 text-sm">%</span>
+                                        </div>
                                     </div>
+
+                                    {/* Amount Display - Shows worker's ACTUAL amount (after salon key) */}
+                                    {canSeeAmount ? (
+                                        <div className="mt-3 pt-3 border-t border-white/20 space-y-2">
+                                            {/* Admin sees complete breakdown */}
+                                            {isAdmin ? (
+                                                <>
+                                                    <div className="flex justify-between items-center">
+                                                        <p className="text-[10px] sm:text-xs opacity-70">Sharing key</p>
+                                                        <p className="text-sm font-bold">{worker?.sharingKey}%</p>
+                                                    </div>
+                                                    <div className="flex justify-between items-center pt-2 border-t border-white/10">
+                                                        <p className="text-[10px] sm:text-xs opacity-80">Worker share</p>
+                                                        <p className="text-xl sm:text-2xl font-bold">€{workerAmount.toFixed(2)}</p>
+                                                    </div>
+                                                    <div className="flex justify-between items-center">
+                                                        <p className="text-[10px] sm:text-xs opacity-70">Salon share</p>
+                                                        <p className="text-sm opacity-80">€{salonAmount.toFixed(2)}</p>
+                                                    </div>
+                                                    <div className="flex justify-between items-center pt-2 border-t border-white/10">
+                                                        <p className="text-[10px] sm:text-xs opacity-70">Total split</p>
+                                                        <p className="text-xs opacity-60">€{incomeShare.toFixed(2)}</p>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                /* Worker sees only their take-home */
+                                                <>
+                                                    <p className="text-[10px] sm:text-xs opacity-80">Your income</p>
+                                                    <p className="text-2xl sm:text-3xl font-bold">€{workerAmount.toFixed(2)}</p>
+                                                </>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="mt-3 pt-3 border-t border-white/20">
+                                            <div className="flex items-center gap-2 text-white/60">
+                                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                                </svg>
+                                                <p className="text-[10px]">Confidential amount</p>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-xs opacity-80">Part attribuée (%)</label>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        max="100"
-                                        value={percentage}
-                                        onChange={(e) => updateWorkerPercentage(workerId, Number(e.target.value))}
-                                        className="w-full px-3 py-2 bg-white/20 border border-white/30 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/50"
-                                    />
-                                </div>
-                                <div className="mt-3 pt-3 border-t border-white/20">
-                                    <p className="text-xs opacity-80">Montant</p>
-                                    <p className="text-2xl font-bold">€{share.toFixed(2)}</p>
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
 
-                    {/* Share Summary */}
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                        <div>
-                            <p className="text-sm text-gray-500">Total réparti aux travailleurs</p>
-                            <p className="text-xl font-bold text-gray-900">€{totalWorkerShare.toFixed(2)}</p>
-                        </div>
-                        <div className="text-right">
-                            <p className="text-sm text-gray-500">Part de l'entreprise</p>
-                            <p className="text-xl font-bold text-green-600">€{businessShare.toFixed(2)}</p>
-                        </div>
-                    </div>
+
+
                 </Card>
 
                 {/* Additional Information */}
@@ -538,19 +775,19 @@ export default function AddRevenuePage() {
                         <div className="w-8 h-8 bg-teal-100 rounded-full flex items-center justify-center">
                             <HelpCircle className="w-4 h-4 text-teal-600" />
                         </div>
-                        <h2 className="text-xl font-bold text-gray-900">Informations complémentaires</h2>
-                        <span className="text-sm text-gray-500">Étape 3/4</span>
+                        <h2 className="text-xl font-bold text-gray-900">Additional Information</h2>
+                        <span className="text-sm text-gray-500">Step 3/4</span>
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         {/* Notes */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Notes et remarques</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Notes and remarks</label>
                             <textarea
                                 rows={4}
                                 value={notes}
                                 onChange={(e) => setNotes(e.target.value)}
-                                placeholder="Ajouter des notes sur la prestation, les préférences du client, etc."
+                                placeholder="Add notes about the service, client preferences, etc."
                                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
                             />
                         </div>
@@ -558,14 +795,14 @@ export default function AddRevenuePage() {
                         {/* Products Used */}
                         <div>
                             <div className="flex items-center justify-between mb-2">
-                                <label className="block text-sm font-medium text-gray-700">Produits utilisés</label>
+                                <label className="block text-sm font-medium text-gray-700">Products used</label>
                                 <button onClick={addProduct} className="text-sm text-purple-600 hover:text-purple-800 flex items-center gap-1">
-                                    <Plus className="w-4 h-4" /> Ajouter
+                                    <Plus className="w-4 h-4" /> Add
                                 </button>
                             </div>
                             <div className="space-y-2">
                                 {usedProducts.length === 0 ? (
-                                    <p className="text-sm text-gray-400 italic">Aucun produit ajouté</p>
+                                    <p className="text-sm text-gray-400 italic">No products added</p>
                                 ) : (
                                     usedProducts.map((up, idx) => {
                                         const product = products.find(p => p.id === up.productId);
@@ -604,18 +841,18 @@ export default function AddRevenuePage() {
                                 )}
                             </div>
                             {totalProductsCost > 0 && (
-                                <p className="mt-2 text-sm text-gray-600">Total produits: <span className="font-semibold">€{totalProductsCost.toFixed(2)}</span></p>
+                                <p className="mt-2 text-sm text-gray-600">Total products: <span className="font-semibold">€{totalProductsCost.toFixed(2)}</span></p>
                             )}
                         </div>
                     </div>
 
                     {/* Payment Method */}
                     <div className="mt-6">
-                        <label className="block text-sm font-medium text-gray-700 mb-3">Mode de paiement</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-3">Payment Method</label>
                         <div className="flex flex-wrap gap-3">
                             {[
-                                { id: "card", label: "Carte bancaire", icon: CreditCard },
-                                { id: "cash", label: "Espèces", icon: Banknote },
+                                { id: "card", label: "Bank Card", icon: CreditCard },
+                                { id: "cash", label: "Cash", icon: Banknote },
                                 { id: "mobile", label: "Mobile Pay", icon: Smartphone },
                             ].map(method => (
                                 <button
@@ -640,91 +877,113 @@ export default function AddRevenuePage() {
                         <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
                             <CheckCircle className="w-4 h-4" />
                         </div>
-                        <h2 className="text-xl font-bold">Récapitulatif et validation</h2>
-                        <span className="text-sm opacity-80">Étape 4/4</span>
+                        <h2 className="text-xl font-bold">Recap & Validation</h2>
+                        <span className="text-sm opacity-80">Step 4/4</span>
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                         {/* Details */}
                         <div className="space-y-3">
-                            <h4 className="font-semibold opacity-80">Détails de la prestation</h4>
+                            <h4 className="font-semibold opacity-80">Service details</h4>
                             <div className="flex justify-between py-2 border-b border-white/20">
                                 <span className="opacity-80">Client</span>
                                 <span className="font-semibold">
                                     {clientMode === 'existing'
-                                        ? (clients.find(c => c.id === selectedClient)?.name || "Non sélectionné")
+                                        ? (clients.find(c => c.id === selectedClient)?.name || "Not selected")
                                         : clientMode === 'anonymous'
-                                            ? (anonymousNote ? `Anonyme (${anonymousNote})` : "Client anonyme")
-                                            : (newClientName || "Nouveau client (à créer)")
+                                            ? (anonymousNote ? `Anonymous (${anonymousNote})` : "Anonymous client")
+                                            : (newClientName || "New client (to be created)")
                                     }
                                 </span>
                             </div>
                             <div className="flex justify-between py-2 border-b border-white/20">
-                                <span className="opacity-80">Service</span>
-                                <span className="font-semibold">{selectedServiceData?.name}</span>
+                                <span className="opacity-80">Service(s)</span>
+                                <span className="font-semibold text-right">
+                                    {selectedServices.length > 0
+                                        ? selectedServices.map(id => services.find(s => s.id === id)?.name).join(', ')
+                                        : '—'
+                                    }
+                                    {isOtherService && (selectedServices.length > 0 ? ', ' : '') + 'Other'}
+                                </span>
                             </div>
                             <div className="flex justify-between py-2 border-b border-white/20">
                                 <span className="opacity-80">Date</span>
                                 <span className="font-semibold">{date}</span>
                             </div>
                             <div className="flex justify-between py-2 border-b border-white/20">
-                                <span className="opacity-80">Horaire</span>
+                                <span className="opacity-80">Schedule</span>
                                 <span className="font-semibold">{startTime} - {endTime}</span>
                             </div>
                         </div>
 
                         {/* Financials */}
                         <div className="space-y-3">
-                            <h4 className="font-semibold opacity-80">Répartition financière</h4>
-                            <div className="flex justify-between py-2 border-b border-white/20">
-                                <span className="opacity-80">Prix de base</span>
+                            <h4 className="font-semibold opacity-80">Financial split</h4>
+                            <div className="flex justify-between py-2">
+                                <span className="opacity-80">Base Price</span>
                                 <span className="font-semibold">€{baseAmount.toFixed(2)}</span>
                             </div>
                             {discount > 0 && (
-                                <div className="flex justify-between py-2 border-b border-white/20">
-                                    <span className="opacity-80">Réduction</span>
+                                <div className="flex justify-between py-2">
+                                    <span className="opacity-80">Discount</span>
                                     <span className="font-semibold text-red-300">-€{discount.toFixed(2)}</span>
                                 </div>
                             )}
                             {tips > 0 && (
-                                <div className="flex justify-between py-2 border-b border-white/20">
-                                    <span className="opacity-80">Pourboire</span>
+                                <div className="flex justify-between py-2">
+                                    <span className="opacity-80">Tip</span>
                                     <span className="font-semibold text-green-300">+€{tips.toFixed(2)}</span>
                                 </div>
                             )}
                             {totalProductsCost > 0 && (
-                                <div className="flex justify-between py-2 border-b border-white/20">
-                                    <span className="opacity-80">Produits</span>
+                                <div className="flex justify-between py-2">
+                                    <span className="opacity-80">Products</span>
                                     <span className="font-semibold">€{totalProductsCost.toFixed(2)}</span>
                                 </div>
                             )}
+
+                            {/* Detailed Totals (Moved from Step 2) */}
+                            <div className="pt-4 mt-2 border-t border-white/40 space-y-3">
+                                {isAdmin ? (
+                                    <>
+                                        <div className="flex justify-between items-center">
+                                            <span className="opacity-80">Total Workers</span>
+                                            <span className="font-bold text-xl text-green-300">€{totalWorkerAmount.toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="opacity-80">Total Enterprise</span>
+                                            <span className="font-bold text-xl text-yellow-300">€{totalSalonAmount.toFixed(2)}</span>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="flex justify-between items-center">
+                                        <span className="opacity-80">Your income</span>
+                                        <span className="font-bold text-2xl text-green-300">
+                                            €{(() => {
+                                                const ownId = getWorkerId();
+                                                const ownShare = workerShares.find(ws => ws.workerId === Number(ownId) || (ownId === 'worker_demo_1' && ws.workerId === 1));
+                                                return ownShare?.workerAmount.toFixed(2) || '0.00';
+                                            })()}
+                                        </span>
+                                    </div>
+                                )}
+                                <div className="pt-3 border-t border-white/20 flex justify-between items-center">
+                                    <span className="font-bold text-lg">Total Service</span>
+                                    <span className="font-bold text-xl">€{totalAmount.toFixed(2)}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Total Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
-                        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
-                            <p className="text-sm opacity-80 mb-1">Total Prestation</p>
-                            <p className="text-3xl font-bold">€{subtotal.toFixed(2)}</p>
-                        </div>
-                        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
-                            <p className="text-sm opacity-80 mb-1">Part Travailleurs</p>
-                            <p className="text-3xl font-bold">€{totalWorkerShare.toFixed(2)}</p>
-                        </div>
-                        <div className="bg-green-500/30 backdrop-blur-sm rounded-xl p-4 text-center">
-                            <p className="text-sm opacity-80 mb-1">Part Entreprise</p>
-                            <p className="text-3xl font-bold">€{businessShare.toFixed(2)}</p>
-                        </div>
-                    </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-white/20">
+                    {/* Action Buttons - Mobile optimized */}
+                    <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 mt-8 pt-6 border-t border-white/20">
                         <Button variant="outline" size="lg" className="bg-white/10 border-white/30 text-white hover:bg-white/20">
-                            Enregistrer comme brouillon
+                            Save as draft
                         </Button>
                         <Button variant="primary" size="lg" className="bg-white text-purple-700 hover:bg-gray-100">
                             <CheckCircle className="w-5 h-5" />
-                            Valider et enregistrer
+                            Validate and save
                         </Button>
                     </div>
                 </Card>
@@ -735,11 +994,11 @@ export default function AddRevenuePage() {
                         <HelpCircle className="w-6 h-6 text-blue-600" />
                     </div>
                     <div>
-                        <h4 className="font-semibold text-blue-900">Besoin d'aide ?</h4>
-                        <p className="text-sm text-blue-700">Consultez notre guide pour comprendre comment répartir les revenus entre plusieurs travailleurs.</p>
+                        <h4 className="font-semibold text-blue-900">Need help?</h4>
+                        <p className="text-sm text-blue-700">Check our guide to understand how to split income between multiple workers.</p>
                     </div>
                     <Button variant="outline" size="sm" className="ml-auto border-blue-300 text-blue-700">
-                        Voir le guide
+                        View guide
                     </Button>
                 </div>
             </div>

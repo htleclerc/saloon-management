@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import MainLayout from "@/components/layout/MainLayout";
 import { useTheme, useResponsive } from "@/context/ThemeProvider";
+import { useAuth, UserRole } from "@/context/AuthProvider";
 import {
     User,
     Building2,
@@ -25,17 +26,17 @@ import {
 } from "lucide-react";
 
 const settingsMenuItems = [
-    { id: "profile", name: "Profile", description: "Informations personnelles", icon: User, path: "/settings/profile", color: "from-blue-500 to-blue-600" },
-    { id: "workshop", name: "Workshop", description: "Configuration entreprise", icon: Building2, path: "/settings/workshop", color: "from-purple-500 to-purple-600" },
-    { id: "appearance", name: "Appearance", description: "Thème & polices", icon: Palette, path: "/settings/appearance", color: "from-pink-500 to-pink-600" },
-    { id: "notifications", name: "Notifications", description: "Alertes & rappels", icon: Bell, path: "/settings/notifications", color: "from-orange-500 to-orange-600" },
-    { id: "security", name: "Security", description: "Mots de passe & 2FA", icon: Shield, path: "/settings/security", color: "from-red-500 to-red-600" },
-    { id: "users", name: "User Management", description: "Équipe & rôles", icon: Users, path: "/settings/users", color: "from-green-500 to-green-600" },
-    { id: "billing", name: "Billing", description: "Paiements & factures", icon: CreditCard, path: "/settings/billing", color: "from-teal-500 to-teal-600" },
-    { id: "integrations", name: "Integrations", description: "Services tiers", icon: Link2, path: "/settings/integrations", color: "from-indigo-500 to-indigo-600" },
-    { id: "analytics", name: "Analytics", description: "Rapports & données", icon: BarChart3, path: "/settings/analytics", color: "from-cyan-500 to-cyan-600" },
-    { id: "emails", name: "Emails", description: "Modèles email", icon: Mail, path: "/settings/emails", color: "from-yellow-500 to-yellow-600" },
-    { id: "advanced", name: "Advanced", description: "Options avancées", icon: Settings, path: "/settings/advanced", color: "from-gray-500 to-gray-600" },
+    { id: "profile", name: "Profile", description: "Personal information", icon: User, path: "/settings/profile", color: "from-blue-500 to-blue-600", roles: ['client', 'worker', 'manager', 'admin'] },
+    { id: "workshop", name: "Workshop", description: "Business configuration", icon: Building2, path: "/settings/workshop", color: "from-purple-500 to-purple-600", roles: ['manager', 'admin'] },
+    { id: "appearance", name: "Appearance", description: "Themes & fonts", icon: Palette, path: "/settings/appearance", color: "from-pink-500 to-pink-600", roles: ['client', 'worker', 'manager', 'admin'] },
+    { id: "notifications", name: "Notifications", description: "Alerts & reminders", icon: Bell, path: "/settings/notifications", color: "from-orange-500 to-orange-600", roles: ['client', 'worker', 'manager', 'admin'] },
+    { id: "security", name: "Security", description: "Passwords & 2FA", icon: Shield, path: "/settings/security", color: "from-red-500 to-red-600", roles: ['client', 'worker', 'manager', 'admin'] },
+    { id: "users", name: "User Management", description: "Team & roles", icon: Users, path: "/settings/users", color: "from-green-500 to-green-600", roles: ['admin'] },
+    { id: "billing", name: "Billing", description: "Payments & invoices", icon: CreditCard, path: "/settings/billing", color: "from-teal-500 to-teal-600", roles: ['admin'] },
+    { id: "integrations", name: "Integrations", description: "Third-party services", icon: Link2, path: "/settings/integrations", color: "from-indigo-500 to-indigo-600", roles: ['manager', 'admin'] },
+    { id: "analytics", name: "Analytics", description: "Reports & data", icon: BarChart3, path: "/settings/analytics", color: "from-cyan-500 to-cyan-600", roles: ['manager', 'admin'] },
+    { id: "emails", name: "Emails", description: "Email templates", icon: Mail, path: "/settings/emails", color: "from-yellow-500 to-yellow-600", roles: ['manager', 'admin'] },
+    { id: "advanced", name: "Advanced", description: "Advanced options", icon: Settings, path: "/settings/advanced", color: "from-gray-500 to-gray-600", roles: ['admin'] },
 ];
 
 interface SettingsLayoutProps {
@@ -48,11 +49,18 @@ export default function SettingsLayout({ children, title, description }: Setting
     const pathname = usePathname();
     const { theme } = useTheme();
     const { isMobile } = useResponsive();
+    const { hasPermission } = useAuth();
     const [submenuCollapsed, setSubmenuCollapsed] = useState(false);
     const [mobileDropdownOpen, setMobileDropdownOpen] = useState(false);
 
     const isActive = (path: string) => pathname === path || pathname.startsWith(path + "/");
-    const activeItem = settingsMenuItems.find((item) => isActive(item.path)) || settingsMenuItems[0];
+
+    // Filter menu items based on permissions
+    const visibleMenuItems = settingsMenuItems.filter(item =>
+        hasPermission(item.roles as UserRole[])
+    );
+
+    const activeItem = visibleMenuItems.find((item) => isActive(item.path)) || visibleMenuItems[0];
 
     // Horizontal layout (tabs) - Only on Desktop if Horizontal theme is selected
     if (theme.submenuLayout === "horizontal" && !isMobile) {
@@ -67,7 +75,7 @@ export default function SettingsLayout({ children, title, description }: Setting
                             </div>
                         </div>
                         <nav className="flex overflow-x-auto hide-scrollbar">
-                            {settingsMenuItems.map((item) => {
+                            {visibleMenuItems.map((item) => {
                                 const Icon = item.icon;
                                 const active = isActive(item.path);
                                 return (
@@ -116,7 +124,7 @@ export default function SettingsLayout({ children, title, description }: Setting
 
                         {mobileDropdownOpen && (
                             <nav className="border-t border-gray-100 p-2 max-h-80 overflow-y-auto">
-                                {settingsMenuItems.map((item) => {
+                                {visibleMenuItems.map((item) => {
                                     const Icon = item.icon;
                                     const active = isActive(item.path);
                                     return (
@@ -166,7 +174,7 @@ export default function SettingsLayout({ children, title, description }: Setting
 
                         <nav className="p-2 max-h-[calc(100vh-200px)] overflow-y-auto">
                             <ul className="space-y-1">
-                                {settingsMenuItems.map((item) => {
+                                {visibleMenuItems.map((item) => {
                                     const Icon = item.icon;
                                     const active = isActive(item.path);
                                     return (

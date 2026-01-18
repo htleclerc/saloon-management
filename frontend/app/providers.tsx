@@ -11,12 +11,12 @@ interface ProvidersProps {
 
 export default function Providers({ children }: ProvidersProps) {
     return (
-        <ThemeProvider>
+        <AuthProvider>
             <I18nProvider>
-                <AuthProvider>
+                <ThemeProvider>
                     {children}
-                </AuthProvider>
+                </ThemeProvider>
             </I18nProvider>
-        </ThemeProvider>
+        </AuthProvider>
     );
 }

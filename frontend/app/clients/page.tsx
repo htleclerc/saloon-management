@@ -4,9 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
+import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
 import Button from "@/components/ui/Button";
-import { Plus, Download, Filter, Search, Eye, Edit, Trash2, Users, UserPlus, RefreshCcw, User, ArrowUp, Upload, MessageSquare, X, Phone, Mail, MapPin, Calendar, CreditCard } from "lucide-react";
+import { Plus, Download, Filter, Search, Eye, Edit, Trash2, Users, UserPlus, RefreshCcw, User, ArrowUp, Upload, MessageSquare, X, Phone, Mail, MapPin, Calendar, CreditCard, FileText } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/export";
 
 const clients = [
     { id: "CLI-00123", name: "Marie Dubois", phone: "+33 6 12 34 56 78", email: "marie.dubois@email.com", address: "Paris, France", type: "Regular", totalVisits: 12, totalSpent: "€1440", status: "Active" },
@@ -33,13 +35,66 @@ const clientDistributionData = [
     { name: "Inactive Members", value: 78163, color: "#6B7280" },
 ];
 
+// Export columns configuration
+const clientExportColumns: ExportColumn[] = [
+    { key: "id", header: "Client ID" },
+    { key: "name", header: "Name" },
+    { key: "phone", header: "Phone" },
+    { key: "email", header: "Email" },
+    { key: "address", header: "Address" },
+    { key: "type", header: "Type" },
+    { key: "totalVisits", header: "Total Visits" },
+    { key: "totalSpent", header: "Total Spent" },
+    { key: "status", header: "Status" },
+];
+
 export default function ClientsPage() {
+    const [searchTerm, setSearchTerm] = useState("");
+    const { getCardStyle } = useKpiCardStyle();
     const [selectedClient, setSelectedClient] = useState<any>(null); // Quick type for now
+    const [selectedClientIds, setSelectedClientIds] = useState<Set<string>>(new Set());
 
     const totalClients = clients.length;
     const activeClients = clients.filter(c => c.status === "Active").length;
     const vipClients = clients.filter(c => c.type === "VIP").length;
     const totalRevenue = clients.reduce((sum, c) => sum + parseFloat(c.totalSpent.replace(/[€,]/g, "")), 0);
+
+    // Toggle client selection
+    const toggleClientSelection = (id: string) => {
+        const newSelected = new Set(selectedClientIds);
+        if (newSelected.has(id)) {
+            newSelected.delete(id);
+        } else {
+            newSelected.add(id);
+        }
+        setSelectedClientIds(newSelected);
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedClientIds.size === clients.length) {
+            setSelectedClientIds(new Set());
+        } else {
+            setSelectedClientIds(new Set(clients.map(c => c.id)));
+        }
+    };
+
+    // Export handlers
+    const handleExportAll = () => {
+        exportToCSV(clients, clientExportColumns, "clients");
+    };
+
+    const handleExportPDF = () => {
+        exportToPDF(clients, clientExportColumns, "Clients Report", "clients");
+    };
+
+    const handleExportSelected = () => {
+        const selectedClients = clients.filter(c => selectedClientIds.has(c.id));
+        if (selectedClients.length === 0) {
+            alert("Please select at least one client to export");
+            return;
+        }
+        exportToCSV(selectedClients, clientExportColumns, "clients_selected");
+    };
 
     return (
         <MainLayout>
@@ -54,7 +109,7 @@ export default function ClientsPage() {
 
                 {/* Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <Card gradient="bg-gradient-to-br from-purple-600 to-purple-700" className="text-white">
+                    <Card className="text-white" style={getCardStyle(0)}>
                         <div className="flex justify-between items-start">
                             <div className="p-2 bg-white/20 rounded-lg">
                                 <Users className="w-6 h-6 text-white" />
@@ -70,7 +125,7 @@ export default function ClientsPage() {
                             </div>
                         </div>
                     </Card>
-                    <Card gradient="bg-gradient-to-br from-pink-500 to-pink-600" className="text-white">
+                    <Card className="text-white" style={getCardStyle(1)}>
                         <div className="flex justify-between items-start">
                             <div className="p-2 bg-white/20 rounded-lg">
                                 <UserPlus className="w-6 h-6 text-white" />
@@ -86,7 +141,7 @@ export default function ClientsPage() {
                             </div>
                         </div>
                     </Card>
-                    <Card gradient="bg-gradient-to-br from-orange-500 to-orange-600" className="text-white">
+                    <Card className="text-white" style={getCardStyle(2)}>
                         <div className="flex justify-between items-start">
                             <div className="p-2 bg-white/20 rounded-lg">
                                 <RefreshCcw className="w-6 h-6 text-white" />
@@ -102,7 +157,7 @@ export default function ClientsPage() {
                             </div>
                         </div>
                     </Card>
-                    <Card gradient="bg-gradient-to-br from-teal-500 to-teal-600" className="text-white">
+                    <Card className="text-white" style={getCardStyle(3)}>
                         <div className="flex justify-between items-start">
                             <div className="p-2 bg-white/20 rounded-lg">
                                 <User className="w-6 h-6 text-white" />
@@ -129,9 +184,13 @@ export default function ClientsPage() {
                                 <Filter className="w-4 h-4 mr-2" />
                                 Filter
                             </Button>
-                            <Button variant="outline" size="sm" className="bg-gray-50 border-gray-200">
+                            <Button variant="outline" size="sm" className="bg-gray-50 border-gray-200" onClick={handleExportAll}>
                                 <Download className="w-4 h-4 mr-2" />
-                                Export
+                                CSV
+                            </Button>
+                            <Button variant="outline" size="sm" className="bg-gray-50 border-gray-200" onClick={handleExportPDF}>
+                                <FileText className="w-4 h-4 mr-2" />
+                                PDF
                             </Button>
                         </div>
                     </div>
@@ -221,7 +280,12 @@ export default function ClientsPage() {
                             <thead className="bg-white border-b border-gray-100">
                                 <tr>
                                     <th className="px-6 py-4 text-left w-10">
-                                        <input type="checkbox" className="rounded border-gray-300 text-[#A855F7] focus:ring-[#A855F7]" />
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedClientIds.size === clients.length && clients.length > 0}
+                                            onChange={toggleSelectAll}
+                                            className="rounded border-gray-300 text-[#A855F7] focus:ring-[#A855F7]"
+                                        />
                                     </th>
                                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">Client ID</th>
                                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th>
@@ -241,7 +305,13 @@ export default function ClientsPage() {
                                         className="hover:bg-gray-50 transition-colors cursor-pointer"
                                     >
                                         <td className="px-6 py-4">
-                                            <input type="checkbox" onClick={(e) => e.stopPropagation()} className="rounded border-gray-300 text-[#A855F7] focus:ring-[#A855F7]" />
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedClientIds.has(client.id)}
+                                                onChange={() => toggleClientSelection(client.id)}
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="rounded border-gray-300 text-[#A855F7] focus:ring-[#A855F7]"
+                                            />
                                         </td>
                                         <td className="px-6 py-4 text-sm text-gray-500 font-mono hidden lg:table-cell">{client.id}</td>
                                         <td className="px-6 py-4">
@@ -327,9 +397,9 @@ export default function ClientsPage() {
                             <MessageSquare className="w-4 h-4 mr-2" />
                             Send SMS
                         </Button>
-                        <Button variant="secondary" size="md" className="bg-orange-100 text-orange-700 hover:bg-orange-200 border-none flex-1 md:flex-none justify-center">
+                        <Button variant="secondary" size="md" className="bg-orange-100 text-orange-700 hover:bg-orange-200 border-none flex-1 md:flex-none justify-center" onClick={handleExportSelected}>
                             <Download className="w-4 h-4 mr-2" />
-                            Export Selected
+                            Export Selected ({selectedClientIds.size})
                         </Button>
                         <Button variant="danger" size="md" className="bg-red-100 text-red-700 hover:bg-red-200 border-none flex-1 md:flex-none justify-center">
                             <Trash2 className="w-4 h-4 mr-2" />

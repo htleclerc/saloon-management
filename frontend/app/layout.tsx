@@ -38,7 +38,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" data-theme="modern" data-accent="purple" suppressHydrationWarning>
+    <html lang="fr" suppressHydrationWarning>
       <body
         className={`${openSans.variable} ${inter.variable} ${roboto.variable} ${poppins.variable} antialiased`}
       >

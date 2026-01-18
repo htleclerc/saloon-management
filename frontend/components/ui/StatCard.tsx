@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, CSSProperties } from "react";
 import { LucideIcon } from "lucide-react";
 
 interface StatCardProps {
@@ -9,6 +9,7 @@ interface StatCardProps {
     subtitle?: string;
     change?: string;
     changeType?: "positive" | "negative";
+    style?: CSSProperties;
 }
 
 export default function StatCard({
@@ -19,9 +20,10 @@ export default function StatCard({
     subtitle,
     change,
     changeType = "positive",
+    style,
 }: StatCardProps) {
     return (
-        <div className={`${gradient} rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300`}>
+        <div className={`${gradient} rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300`} style={style}>
             <div className="flex items-start justify-between mb-4">
                 <div>
                     <p className="text-sm opacity-90 mb-1">{title}</p>

@@ -11,13 +11,13 @@ export default function ProfileSettingsPage() {
     const [lastName, setLastName] = useState("User");
     const [email, setEmail] = useState("admin@workshopmanager.com");
     const [phone, setPhone] = useState("+33 6 12 34 56 78");
-    const [language, setLanguage] = useState("fr");
-    const [timezone, setTimezone] = useState("Europe/Paris");
+    const [language, setLanguage] = useState("en");
+    const [timezone, setTimezone] = useState("Europe/London");
 
     return (
         <SettingsLayout
             title="Profile Settings"
-            description="Gérez vos informations personnelles et préférences de compte"
+            description="Manage your personal information and account preferences"
         >
             {/* Profile Photo */}
             <Card>
@@ -31,11 +31,11 @@ export default function ProfileSettingsPage() {
                         </button>
                     </div>
                     <div>
-                        <h3 className="font-semibold text-gray-900 text-lg">Photo de profil</h3>
-                        <p className="text-sm text-gray-500 mb-3">JPG, PNG ou GIF. 1MB max.</p>
+                        <h3 className="font-semibold text-gray-900 text-lg">Profile Photo</h3>
+                        <p className="text-sm text-gray-500 mb-3">JPG, PNG or GIF. 1MB max.</p>
                         <div className="flex gap-2">
-                            <Button variant="outline" size="sm">Changer la photo</Button>
-                            <Button variant="outline" size="sm" className="text-red-600 hover:bg-red-50">Supprimer</Button>
+                            <Button variant="outline" size="sm">Change photo</Button>
+                            <Button variant="outline" size="sm" className="text-red-600 hover:bg-red-50">Delete</Button>
                         </div>
                     </div>
                 </div>
@@ -43,11 +43,11 @@ export default function ProfileSettingsPage() {
 
             {/* Personal Information */}
             <Card>
-                <h3 className="font-semibold text-gray-900 text-lg mb-4">Informations personnelles</h3>
+                <h3 className="font-semibold text-gray-900 text-lg mb-4">Personal Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Prénom <span className="text-red-500">*</span>
+                            First Name <span className="text-red-500">*</span>
                         </label>
                         <input
                             type="text"
@@ -58,7 +58,7 @@ export default function ProfileSettingsPage() {
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Nom <span className="text-red-500">*</span>
+                            Last Name <span className="text-red-500">*</span>
                         </label>
                         <input
                             type="text"
@@ -79,7 +79,7 @@ export default function ProfileSettingsPage() {
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Téléphone</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
                         <input
                             type="tel"
                             value={phone}
@@ -97,13 +97,13 @@ export default function ProfileSettingsPage() {
                         <Globe className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                        <h3 className="font-semibold text-gray-900">Paramètres régionaux</h3>
-                        <p className="text-xs text-gray-500">Langue et fuseau horaire</p>
+                        <h3 className="font-semibold text-gray-900">Regional Settings</h3>
+                        <p className="text-xs text-gray-500">Language and timezone</p>
                     </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Langue</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Language</label>
                         <select
                             value={language}
                             onChange={(e) => setLanguage(e.target.value)}
@@ -116,7 +116,7 @@ export default function ProfileSettingsPage() {
                         </select>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Fuseau horaire</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Timezone</label>
                         <select
                             value={timezone}
                             onChange={(e) => setTimezone(e.target.value)}
@@ -133,10 +133,10 @@ export default function ProfileSettingsPage() {
 
             {/* Save Button */}
             <div className="flex justify-end gap-3">
-                <Button variant="outline" size="md">Annuler</Button>
+                <Button variant="outline" size="md">Cancel</Button>
                 <Button variant="primary" size="md">
                     <Save className="w-4 h-4" />
-                    Sauvegarder les modifications
+                    Save Changes
                 </Button>
             </div>
         </SettingsLayout>

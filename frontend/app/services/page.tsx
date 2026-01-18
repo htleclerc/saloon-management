@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
+import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
 import Button from "@/components/ui/Button";
 import { Plus, Star, Clock, DollarSign } from "lucide-react";
+import { useAuth } from "@/context/AuthProvider";
 
 const services = [
     {
@@ -77,6 +80,10 @@ const services = [
 import Link from "next/link";
 
 export default function ServicesPage() {
+    const [searchTerm, setSearchTerm] = useState("");
+    const { getCardStyle } = useKpiCardStyle();
+    const { hasPermission } = useAuth();
+    const isManager = hasPermission(['manager', 'admin']);
     const totalServices = services.length;
     const avgPrice = Math.round(services.reduce((sum, s) => sum + s.price, 0) / services.length);
     const mostPopular = services.reduce((max, s) => (s.popularity > max.popularity ? s : max), services[0]);
@@ -90,27 +97,29 @@ export default function ServicesPage() {
                         <h1 className="text-3xl font-bold text-gray-900">Service Management</h1>
                         <p className="text-gray-500 mt-1">Manage your workshop services and pricing</p>
                     </div>
-                    <Link href="/services/add">
-                        <Button variant="primary" size="md">
-                            <Plus className="w-5 h-5" />
-                            Add Service
-                        </Button>
-                    </Link>
+                    {isManager && (
+                        <Link href="/services/add">
+                            <Button variant="primary" size="md">
+                                <Plus className="w-5 h-5" />
+                                Add Service
+                            </Button>
+                        </Link>
+                    )}
                 </div>
 
                 {/* Summary Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Card gradient="bg-gradient-to-br from-purple-600 to-purple-700" className="text-white">
+                    <Card className="text-white" style={getCardStyle(0)}>
                         <p className="text-sm opacity-90 mb-1">Total Services</p>
                         <h3 className="text-3xl font-bold">{totalServices}</h3>
                         <p className="text-sm opacity-80 mt-1">Active services</p>
                     </Card>
-                    <Card gradient="bg-gradient-to-br from-pink-500 to-pink-600" className="text-white">
+                    <Card className="text-white" style={getCardStyle(1)}>
                         <p className="text-sm opacity-90 mb-1">Average Price</p>
                         <h3 className="text-3xl font-bold">€{avgPrice}</h3>
                         <p className="text-sm opacity-80 mt-1">Across all services</p>
                     </Card>
-                    <Card gradient="bg-gradient-to-br from-orange-500 to-orange-600" className="text-white">
+                    <Card className="text-white" style={getCardStyle(2)}>
                         <p className="text-sm opacity-90 mb-1">Most Popular</p>
                         <h3 className="text-2xl font-bold">{mostPopular.name}</h3>
                         <p className="text-sm opacity-80 mt-1">{mostPopular.popularity}% popularity</p>
@@ -161,11 +170,13 @@ export default function ServicesPage() {
                                 </div>
 
                                 <div className="flex gap-2 pt-2">
-                                    <Link href={`/services/edit/${service.id}`} className="flex-1">
-                                        <Button variant="outline" size="sm" className="w-full">
-                                            Edit
-                                        </Button>
-                                    </Link>
+                                    {isManager && (
+                                        <Link href={`/services/edit/${service.id}`} className="flex-1">
+                                            <Button variant="outline" size="sm" className="w-full">
+                                                Edit
+                                            </Button>
+                                        </Link>
+                                    )}
                                     <Button variant="primary" size="sm" className="flex-1">
                                         View Details
                                     </Button>
@@ -220,10 +231,17 @@ export default function ServicesPage() {
                                             <td className="px-4 py-4 text-right font-semibold text-green-600">€{revenue.toLocaleString()}</td>
                                             <td className="px-4 py-4 text-center">
                                                 <div className="flex items-center justify-center gap-2">
-                                                    <Link href={`/services/edit/${service.id}`}>
-                                                        <button className="text-purple-600 hover:text-purple-800 text-sm font-medium">Edit</button>
-                                                    </Link>
-                                                    <button className="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button>
+                                                    {isManager && (
+                                                        <>
+                                                            <Link href={`/services/edit/${service.id}`}>
+                                                                <button className="text-purple-600 hover:text-purple-800 text-sm font-medium">Edit</button>
+                                                            </Link>
+                                                            <button className="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button>
+                                                        </>
+                                                    )}
+                                                    {!isManager && (
+                                                        <button className="text-purple-600 hover:text-purple-800 text-sm font-medium">Details</button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
