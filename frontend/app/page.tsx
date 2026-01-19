@@ -78,18 +78,18 @@ const expenseCategories = [
 ];
 
 const topPerformers = [
-  { name: "Isabelle", role: "Hair Stylist", revenue: 4250, clients: 42, rating: 4.9, avatar: "I", bg: "bg-purple-100", text: "text-purple-600" },
-  { name: "Fatima S", role: "Nail Artist", revenue: 3890, clients: 38, rating: 4.8, avatar: "F", bg: "bg-pink-100", text: "text-pink-600" },
-  { name: "Nadine B", role: "Colorist", revenue: 3560, clients: 35, rating: 4.8, avatar: "N", bg: "bg-orange-100", text: "text-orange-600" },
-  { name: "Yasmine M", role: "Stylist", revenue: 3120, clients: 31, rating: 4.7, avatar: "Y", bg: "bg-teal-100", text: "text-teal-600" },
+  { name: "Isabelle", role: "Hair Stylist", revenue: 4250, clients: 42, rating: 4.9, avatar: "I", bg: "bg-[var(--color-primary-light)]", text: "text-[var(--color-primary)]" },
+  { name: "Fatima S", role: "Nail Artist", revenue: 3890, clients: 38, rating: 4.8, avatar: "F", bg: "bg-[var(--color-secondary-light)]", text: "text-[var(--color-secondary)]" },
+  { name: "Nadine B", role: "Colorist", revenue: 3560, clients: 35, rating: 4.8, avatar: "N", bg: "bg-[var(--color-warning-light)]", text: "text-[var(--color-warning)]" },
+  { name: "Yasmine M", role: "Stylist", revenue: 3120, clients: 31, rating: 4.7, avatar: "Y", bg: "bg-[var(--color-success-light)]", text: "text-[var(--color-success)]" },
 ];
 
 const todaysSessions = [
-  { time: "09:00 AM", client: "Marie Anderson", type: "Box Braids", worker: "Orphelia", price: "€120", status: "Completed", statusColor: "bg-green-100 text-green-700" },
+  { time: "09:00 AM", client: "Marie Anderson", type: "Box Braids", worker: "Orphelia", price: "€120", status: "Completed", statusColor: "bg-[var(--color-success-light)] text-[var(--color-success)]" },
   { time: "10:30 AM", client: "Lina Davis", type: "Cornrows", worker: "Fatima", price: "€85", status: "In Progress", statusColor: "bg-blue-100 text-blue-700" },
-  { time: "12:00 PM", client: "Sophie Martin", type: "Twists", worker: "Amara", price: "€95", status: "Pending", statusColor: "bg-yellow-100 text-yellow-700" },
-  { time: "02:00 PM", client: "Anna Brown", type: "Locs", worker: "Orphelia", price: "€150", status: "Pending", statusColor: "bg-yellow-100 text-yellow-700" },
-  { time: "03:30 PM", client: "Lisa Wilson", type: "Braids", worker: "Naomie", price: "€110", status: "Pending", statusColor: "bg-yellow-100 text-yellow-700" },
+  { time: "12:00 PM", client: "Sophie Martin", type: "Twists", worker: "Amara", price: "€95", status: "Pending", statusColor: "bg-[var(--color-warning-light)] text-[var(--color-warning)]" },
+  { time: "02:00 PM", client: "Anna Brown", type: "Locs", worker: "Orphelia", price: "€150", status: "Pending", statusColor: "bg-[var(--color-warning-light)] text-[var(--color-warning)]" },
+  { time: "03:30 PM", client: "Lisa Wilson", type: "Braids", worker: "Naomie", price: "€110", status: "Pending", statusColor: "bg-[var(--color-warning-light)] text-[var(--color-warning)]" },
 ];
 
 const recentNotifications = [
@@ -132,12 +132,12 @@ const weeklyAttendanceData = [
 ];
 
 const topRevenueGenerators = [
-  { name: "Alice W.", value: 15420, color: "#8B5CF6" },
-  { name: "Box braids", value: 12345, color: "#EC4899" },
-  { name: "Hair Coloring", value: 9876, color: "#F59E0B" },
-  { name: "Dr Robert (stylist)", value: 8543, color: "#10B981" },
-  { name: "Cornrows", value: 7654, color: "#3B82F6" },
-  { name: "Anna Stylist", value: 6432, color: "#EF4444" },
+  { name: "Alice W.", value: 15420, color: "var(--color-primary)" },
+  { name: "Box braids", value: 12345, color: "var(--color-secondary)" },
+  { name: "Hair Coloring", value: 9876, color: "var(--color-warning)" },
+  { name: "Dr Robert (stylist)", value: 8543, color: "var(--color-success)" },
+  { name: "Cornrows", value: 7654, color: "var(--color-primary-light)" },
+  { name: "Anna Stylist", value: 6432, color: "var(--color-error)" },
 ];
 
 const recentUserActivity = [
@@ -163,7 +163,7 @@ const recentUserActivity = [
     user: "Dr Robert",
     action: "Dr Robert has left 6 annotations.",
     time: "Today at 12:24",
-    color: "bg-purple-50/80 border border-purple-100"
+    color: "bg-[var(--color-primary-light)] border border-[var(--color-primary-light)]"
   },
 ];
 
@@ -314,7 +314,7 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {canAddIncome() && (
               <Link href="/income/add">
-                <button className="w-full h-full flex items-center justify-center gap-3 bg-purple-600 hover:bg-purple-700 text-white py-4 rounded-xl font-medium transition-all shadow-md hover:shadow-lg">
+                <button className="w-full h-full flex items-center justify-center gap-3 bg-[var(--color-primary)] hover:opacity-90 text-white py-4 rounded-xl font-medium transition-all shadow-md hover:shadow-lg text-sm sm:text-base">
                   <Plus className="w-5 h-5" />
                   <span>Add Revenue</span>
                 </button>
@@ -322,7 +322,7 @@ export default function Dashboard() {
             )}
             {canAddExpenses() && (
               <Link href="/expenses/add">
-                <button className="w-full h-full flex items-center justify-center gap-3 bg-pink-500 hover:bg-pink-600 text-white py-4 rounded-xl font-medium transition-all shadow-md hover:shadow-lg">
+                <button className="w-full h-full flex items-center justify-center gap-3 bg-[var(--color-secondary)] hover:opacity-90 text-white py-4 rounded-xl font-medium transition-all shadow-md hover:shadow-lg text-sm sm:text-base">
                   <Wallet className="w-5 h-5" />
                   <span>Add Expense</span>
                 </button>
@@ -330,7 +330,7 @@ export default function Dashboard() {
             )}
             {hasPermission(['manager', 'admin']) && (
               <Link href="/workers/add">
-                <button className="w-full h-full flex items-center justify-center gap-3 bg-orange-500 hover:bg-orange-600 text-white py-4 rounded-xl font-medium transition-all shadow-md hover:shadow-lg">
+                <button className="w-full h-full flex items-center justify-center gap-3 bg-[var(--color-warning)] hover:opacity-90 text-white py-4 rounded-xl font-medium transition-all shadow-md hover:shadow-lg text-sm sm:text-base">
                   <Users className="w-5 h-5" />
                   <span>Add Worker</span>
                 </button>
@@ -342,48 +342,48 @@ export default function Dashboard() {
         {/* --- Charts Section --- */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Monthly Revenue Chart */}
-          <Card className="p-6 border-t-4 border-purple-500 bg-purple-50/10">
+          <Card className="p-6 border-t-4 border-[var(--color-primary)] bg-[var(--color-primary-light)]">
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h3 className="font-bold text-gray-900">Monthly Revenue</h3>
                 <p className="text-xs text-gray-500">Year 2026</p>
               </div>
-              <span className="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-1 rounded">Yearly</span>
+              <span className="bg-[var(--color-primary-light)] text-[var(--color-primary)] text-xs font-bold px-2 py-1 rounded">Yearly</span>
             </div>
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={workerMonthlyRevenue}>
                 <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f3f4f6" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-                <Tooltip cursor={{ fill: '#F3E8FF', opacity: 0.5 }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
-                <Bar dataKey="value" fill="#8B5CF6" radius={[4, 4, 4, 4]} barSize={20} />
+                <Tooltip cursor={{ fill: 'var(--color-primary-light)', opacity: 0.5 }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
+                <Bar dataKey="value" fill="var(--color-primary)" radius={[4, 4, 4, 4]} barSize={20} />
               </BarChart>
             </ResponsiveContainer>
           </Card>
 
           {/* Monthly Expenses Chart */}
-          <Card className="p-6 border-t-4 border-pink-500 bg-pink-50/10">
+          <Card className="p-6 border-t-4 border-[var(--color-secondary)] bg-[var(--color-secondary-light)]">
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h3 className="font-bold text-gray-900">Monthly Expenses</h3>
                 <p className="text-xs text-gray-500">Year 2026</p>
               </div>
-              <span className="bg-pink-100 text-pink-700 text-xs font-bold px-2 py-1 rounded">Yearly</span>
+              <span className="bg-[var(--color-secondary-light)] text-[var(--color-secondary)] text-xs font-bold px-2 py-1 rounded">Yearly</span>
             </div>
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={workerMonthlyExpenses}>
                 <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f3f4f6" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-                <Tooltip cursor={{ fill: '#FCE7F3', opacity: 0.5 }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
-                <Bar dataKey="value" fill="#EC4899" radius={[4, 4, 4, 4]} barSize={20} />
+                <Tooltip cursor={{ fill: 'var(--color-secondary-light)', opacity: 0.5 }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
+                <Bar dataKey="value" fill="var(--color-secondary)" radius={[4, 4, 4, 4]} barSize={20} />
               </BarChart>
             </ResponsiveContainer>
           </Card>
         </div>
 
         {/* --- Profit Analysis (Full Width) --- */}
-        <Card className="p-6 border-t-4 border-orange-500 bg-orange-50/10">
+        <Card className="p-6 border-t-4 border-[var(--color-warning)] bg-[var(--color-warning-light)]">
           <div className="flex justify-between items-center mb-6">
             <div>
               <h3 className="font-bold text-gray-900">Profit Analysis</h3>
@@ -399,20 +399,20 @@ export default function Dashboard() {
               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
               <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
               <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }} />
-              <Line type="monotone" dataKey="revenue" stroke="#8B5CF6" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
-              <Line type="monotone" dataKey="expenses" stroke="#EC4899" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
-              <Line type="monotone" dataKey="profit" stroke="#F59E0B" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
+              <Line type="monotone" dataKey="revenue" stroke="var(--color-primary)" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
+              <Line type="monotone" dataKey="expenses" stroke="var(--color-secondary)" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
+              <Line type="monotone" dataKey="profit" stroke="var(--color-warning)" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
             </LineChart>
           </ResponsiveContainer>
           <div className="flex justify-center gap-6 mt-4">
             <div className="flex items-center gap-2 text-sm text-gray-600">
-              <div className="w-3 h-3 rounded-full bg-purple-500"></div> Revenue
+              <div className="w-3 h-3 rounded-full bg-[var(--color-primary)]"></div> Revenue
             </div>
             <div className="flex items-center gap-2 text-sm text-gray-600">
-              <div className="w-3 h-3 rounded-full bg-pink-500"></div> Expenses
+              <div className="w-3 h-3 rounded-full bg-[var(--color-secondary)]"></div> Expenses
             </div>
             <div className="flex items-center gap-2 text-sm text-gray-600">
-              <div className="w-3 h-3 rounded-full bg-orange-500"></div> Profit
+              <div className="w-3 h-3 rounded-full bg-[var(--color-warning)]"></div> Profit
             </div>
           </div>
         </Card>
@@ -421,16 +421,16 @@ export default function Dashboard() {
         <div>
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-bold text-gray-900 text-lg">{isWorker ? "My Performance" : "Top Performing Team"}</h3>
-            <Link href="/workers" className="text-sm text-purple-600 font-medium flex items-center gap-1 hover:underline">
+            <Link href="/workers" className="text-sm text-[var(--color-primary)] font-medium flex items-center gap-1 hover:underline">
               View All Workers <ChevronRight className="w-4 h-4" />
             </Link>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {filteredTopPerformers.map((worker, idx) => (
-              <Card key={worker.name} className={`p-4 flex flex-col gap-3 transition-all border ${idx === 0 ? "bg-purple-50/30 border-purple-100 hover:border-purple-200 hover:shadow-lg" :
-                idx === 1 ? "bg-pink-50/30 border-pink-100 hover:border-pink-200 hover:shadow-lg" :
-                  idx === 2 ? "bg-orange-50/30 border-orange-100 hover:border-orange-200 hover:shadow-lg" :
-                    "bg-teal-50/30 border-teal-100 hover:border-teal-200 hover:shadow-lg"
+              <Card key={worker.name} className={`p-4 flex flex-col gap-3 transition-all border ${idx === 0 ? "bg-[var(--color-primary-light)] border-[var(--color-primary-light)] hover:border-[var(--color-primary)] hover:shadow-lg" :
+                idx === 1 ? "bg-[var(--color-secondary-light)] border-[var(--color-secondary-light)] hover:border-[var(--color-secondary)] hover:shadow-lg" :
+                  idx === 2 ? "bg-[var(--color-warning-light)] border-[var(--color-warning-light)] hover:border-[var(--color-warning)] hover:shadow-lg" :
+                    "bg-[var(--color-success-light)] border-[var(--color-success-light)] hover:border-[var(--color-success)] hover:shadow-lg"
                 }`}>
                 <div className="flex items-start justify-between">
                   <div className="flex gap-3">
@@ -467,7 +467,7 @@ export default function Dashboard() {
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-bold text-gray-900">{isWorker ? "My Services Today" : "Today's Services"}</h3>
               <div className="flex gap-2">
-                <span className="bg-purple-100 text-purple-700 text-xs font-bold px-3 py-1 rounded-full">5 / 12 Completed</span>
+                <span className="bg-[var(--color-primary-light)] text-[var(--color-primary)] text-xs font-bold px-3 py-1 rounded-full">5 / 12 Completed</span>
               </div>
             </div>
             <div className="overflow-x-auto">
@@ -484,11 +484,11 @@ export default function Dashboard() {
                 </thead>
                 <tbody className="divide-y divide-gray-50">
                   {filteredTodaysSessions.map((session, index) => (
-                    <tr key={index} className={`transition-colors ${index % 5 === 0 ? "bg-purple-50/20 hover:bg-purple-50/40" :
-                      index % 5 === 1 ? "bg-pink-50/20 hover:bg-pink-50/40" :
-                        index % 5 === 2 ? "bg-orange-50/20 hover:bg-orange-50/40" :
-                          index % 5 === 3 ? "bg-teal-50/20 hover:bg-teal-50/40" :
-                            "bg-blue-50/20 hover:bg-blue-50/40"
+                    <tr key={index} className={`transition-colors ${index % 5 === 0 ? "bg-[var(--color-primary-light)] hover:opacity-80" :
+                      index % 5 === 1 ? "bg-[var(--color-secondary-light)] hover:opacity-80" :
+                        index % 5 === 2 ? "bg-[var(--color-warning-light)] hover:opacity-80" :
+                          index % 5 === 3 ? "bg-[var(--color-success-light)] hover:opacity-80" :
+                            "bg-blue-50/20 hover:opacity-80"
                       }`}>
                       <td className="py-4 pl-2 text-sm font-medium text-gray-900">{session.time}</td>
                       <td className="py-4">
@@ -568,10 +568,10 @@ export default function Dashboard() {
                 <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
                 <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
-                <Bar dataKey="value1" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="value2" fill="#EC4899" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="value3" fill="#F59E0B" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="value4" fill="#10B981" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="value1" fill="var(--color-primary)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="value2" fill="var(--color-secondary)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="value3" fill="var(--color-warning)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="value4" fill="var(--color-success)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </Card>
@@ -579,18 +579,18 @@ export default function Dashboard() {
           {/* Recent Activities */}
           <Card className="p-6">
             <div className="flex items-center gap-2 mb-6">
-              <Receipt className="w-5 h-5 text-orange-600" />
+              <Receipt className="w-5 h-5 text-[var(--color-warning)]" />
               <h3 className="font-bold text-gray-900">Recent Activities</h3>
             </div>
             <div className="space-y-4">
               {filteredRecentActivities.slice(0, 4).map((activity, idx) => (
-                <div key={activity.id} className={`flex items-center justify-between p-3 rounded-lg transition-colors border ${idx === 0 ? "bg-purple-50/80 border-purple-100 hover:bg-purple-100/80" :
-                  idx === 1 ? "bg-pink-50/80 border-pink-100 hover:bg-pink-100/80" :
-                    idx === 2 ? "bg-orange-50/80 border-orange-100 hover:bg-orange-100/80" :
-                      "bg-teal-50/80 border-teal-100 hover:bg-teal-100/80"
+                <div key={activity.id} className={`flex items-center justify-between p-3 rounded-lg transition-colors border ${idx === 0 ? "bg-[var(--color-primary-light)] border-[var(--color-primary-light)] hover:opacity-80" :
+                  idx === 1 ? "bg-[var(--color-secondary-light)] border-[var(--color-secondary-light)] hover:opacity-80" :
+                    idx === 2 ? "bg-[var(--color-warning-light)] border-[var(--color-warning-light)] hover:opacity-80" :
+                      "bg-[var(--color-success-light)] border-[var(--color-success-light)] hover:opacity-80"
                   }`}>
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold text-xs">
+                    <div className="w-8 h-8 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)] rounded-full flex items-center justify-center text-white font-bold text-xs">
                       {activity.client.charAt(0)}
                     </div>
                     <div>
@@ -629,10 +629,10 @@ export default function Dashboard() {
                   <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
                   <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
-                  <Bar dataKey="value1" stackId="a" fill="#8B5CF6" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="value2" stackId="a" fill="#EC4899" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="value3" stackId="a" fill="#F59E0B" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="value4" stackId="a" fill="#10B981" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="value1" stackId="a" fill="var(--color-primary)" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="value2" stackId="a" fill="var(--color-secondary)" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="value3" stackId="a" fill="var(--color-warning)" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="value4" stackId="a" fill="var(--color-success)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </Card>
@@ -641,7 +641,7 @@ export default function Dashboard() {
             <Card className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="font-bold text-gray-900">Top 10 Revenue Generators</h3>
-                <button className="text-purple-600 text-sm font-medium hover:underline">View All</button>
+                <button className="text-[var(--color-primary)] text-sm font-medium hover:underline">View All</button>
               </div>
               <div className="space-y-4">
                 {topRevenueGenerators.map((item, idx) => (
@@ -668,7 +668,7 @@ export default function Dashboard() {
 
         {!isWorker && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="p-6 border-t-4 border-purple-500 bg-purple-50/10">
+            <Card className="p-6 border-t-4 border-[var(--color-primary)] bg-[var(--color-primary-light)]">
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Bookings</p>
@@ -678,13 +678,13 @@ export default function Dashboard() {
                     +11% increase
                   </p>
                 </div>
-                <div className="bg-purple-100 p-3 rounded-lg">
-                  <Calendar className="w-6 h-6 text-purple-600" />
+                <div className="bg-[var(--color-primary-light)] p-3 rounded-lg">
+                  <Calendar className="w-6 h-6 text-[var(--color-primary)]" />
                 </div>
               </div>
             </Card>
 
-            <Card className="p-6 border-t-4 border-pink-500 bg-pink-50/10">
+            <Card className="p-6 border-t-4 border-[var(--color-secondary)] bg-[var(--color-secondary-light)]">
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Members</p>
@@ -694,13 +694,13 @@ export default function Dashboard() {
                     +3% increase
                   </p>
                 </div>
-                <div className="bg-pink-100 p-3 rounded-lg">
-                  <Users className="w-6 h-6 text-pink-600" />
+                <div className="bg-[var(--color-secondary-light)] p-3 rounded-lg">
+                  <Users className="w-6 h-6 text-[var(--color-secondary)]" />
                 </div>
               </div>
             </Card>
 
-            <Card className="p-6 border-t-4 border-orange-500 bg-orange-50/10">
+            <Card className="p-6 border-t-4 border-[var(--color-warning)] bg-[var(--color-warning-light)]">
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-sm text-gray-500 mb-1">Occupancy Rate</p>
@@ -710,8 +710,8 @@ export default function Dashboard() {
                     +5% increase
                   </p>
                 </div>
-                <div className="bg-orange-100 p-3 rounded-lg">
-                  <Briefcase className="w-6 h-6 text-orange-600" />
+                <div className="bg-[var(--color-warning-light)] p-3 rounded-lg">
+                  <Briefcase className="w-6 h-6 text-[var(--color-warning)]" />
                 </div>
               </div>
             </Card>
@@ -723,7 +723,7 @@ export default function Dashboard() {
           {/* Recent Notifications */}
           <Card className="p-6">
             <div className="flex items-center gap-2 mb-6">
-              <Bell className="w-5 h-5 text-purple-600" />
+              <Bell className="w-5 h-5 text-[var(--color-primary)]" />
               <h3 className="font-bold text-gray-900">Recent Notifications</h3>
             </div>
             <div className="space-y-4">
@@ -758,7 +758,7 @@ export default function Dashboard() {
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-bold text-gray-900">Recent User Activity & Alerts</h3>
               <div className="flex gap-2">
-                <button className="text-xs px-3 py-1 bg-purple-600 text-white rounded-full font-medium">Filters</button>
+                <button className="text-xs px-3 py-1 bg-[var(--color-primary)] text-white rounded-full font-medium">Filters</button>
                 <button className="text-xs px-3 py-1 bg-white border border-gray-200 rounded-full text-gray-600">Archive</button>
                 <button className="text-xs px-3 py-1 bg-white border border-gray-200 rounded-full text-gray-600">Delete</button>
               </div>
@@ -774,7 +774,7 @@ export default function Dashboard() {
           </Card>
         </div>
 
-      </div >
-    </MainLayout >
+      </div>
+    </MainLayout>
   );
 }

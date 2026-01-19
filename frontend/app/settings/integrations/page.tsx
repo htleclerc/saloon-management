@@ -69,8 +69,8 @@ export default function IntegrationsSettingsPage() {
                             <div
                                 key={integration.id}
                                 className={`p-4 rounded-xl border-2 ${integration.connected
-                                        ? "border-green-200 bg-green-50"
-                                        : "border-gray-200 bg-white"
+                                    ? "border-green-200 bg-green-50"
+                                    : "border-gray-200 bg-white"
                                     }`}
                             >
                                 <div className="flex items-start justify-between mb-3">
@@ -96,11 +96,11 @@ export default function IntegrationsSettingsPage() {
                                         <p className="text-xs text-gray-600">{integration.account}</p>
                                         <div className="flex gap-2">
                                             <Button variant="outline" size="sm" className="text-xs">Configurer</Button>
-                                            <Button variant="outline" size="sm" className="text-xs text-red-600 hover:bg-red-50">Déconnecter</Button>
+                                            <Button variant="danger" size="sm" className="text-xs">Déconnecter</Button>
                                         </div>
                                     </div>
                                 ) : (
-                                    <Button variant="primary" size="sm" className="w-full">
+                                    <Button variant="success" size="sm" className="w-full">
                                         <Plug className="w-4 h-4" />
                                         Connecter
                                     </Button>
@@ -130,7 +130,7 @@ export default function IntegrationsSettingsPage() {
                         </div>
                         <div className="flex gap-2">
                             <Button variant="outline" size="sm" className="text-xs">Copier</Button>
-                            <Button variant="outline" size="sm" className="text-xs text-red-600 hover:bg-red-50">Révoquer</Button>
+                            <Button variant="danger" size="sm" className="text-xs">Révoquer</Button>
                         </div>
                     </div>
                     <code className="block p-3 bg-gray-900 text-green-400 rounded-lg text-xs font-mono">

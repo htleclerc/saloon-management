@@ -55,7 +55,7 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
                             <Trash2 className="w-5 h-5" />
                             Delete
                         </Button>
-                        <Button variant="outline" size="md" onClick={() => router.back()}>
+                        <Button variant="danger" size="md" onClick={() => router.back()}>
                             <X className="w-5 h-5" />
                             Cancel
                         </Button>
@@ -187,11 +187,11 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
                             </div>
                         </div>
                         <div className="flex gap-4 mt-8">
-                            <Button type="submit" variant="primary" size="lg" className="flex-1">
+                            <Button type="submit" variant="success" size="lg" className="flex-1">
                                 <Save className="w-5 h-5" />
                                 Update Client
                             </Button>
-                            <Button type="button" variant="outline" size="lg" onClick={() => router.back()}>
+                            <Button type="button" variant="danger" size="lg" onClick={() => router.back()}>
                                 <X className="w-5 h-5" />
                                 Cancel
                             </Button>

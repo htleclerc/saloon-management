@@ -29,6 +29,7 @@ import {
     FlaskConical,
     Heart,
     Compass,
+    CalendarCheck,
 } from "lucide-react";
 
 const menuItems = [
@@ -36,7 +37,8 @@ const menuItems = [
     { name: "Team", icon: Users, path: "/team", roles: ['manager', 'admin'] },
     { name: "Daily", icon: TrendingUp, path: "/daily", roles: ['manager', 'admin', 'worker'] },
     { name: "Income", icon: DollarSign, path: "/income", roles: ['manager', 'admin', 'worker'] },
-    { name: "Appointments", icon: Calendar, path: "/appointments" },
+    { name: "Appointments", icon: CalendarCheck, path: "/appointments" },
+    { name: "Calendar", icon: Calendar, path: "/calendar", roles: ['manager', 'admin'] },
     { name: "Clients", icon: UserCheck, path: "/clients", roles: ['manager', 'admin'] },
     { name: "Expenses", icon: Receipt, path: "/expenses", roles: ['manager', 'admin'] },
     { name: "Approvals", icon: CheckSquare, path: "/approvals", roles: ['manager', 'admin'] },
@@ -223,7 +225,7 @@ export default function Sidebar() {
                                                     switchTenant(tenant.id);
                                                     setShowTenantDropdown(false);
                                                 }}
-                                                className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 transition-colors ${tenant.id === user.tenantId ? 'bg-purple-50 text-purple-700 font-medium' : 'text-gray-700'
+                                                className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 transition-colors ${tenant.id === user.tenantId ? 'bg-[var(--color-primary-light)] text-[var(--color-primary)] font-medium' : 'text-gray-700'
                                                     }`}
                                             >
                                                 {tenant.name}
@@ -241,7 +243,7 @@ export default function Sidebar() {
                         <button className="flex flex-col items-center gap-1 py-3 bg-white/10 hover:bg-white/20 rounded-lg transition-colors relative">
                             <Bell className="w-5 h-5" />
                             <span className="text-xs">Alerts</span>
-                            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
+                            <span className="absolute top-2 right-2 w-2 h-2 bg-[var(--color-error)] rounded-full"></span>
                         </button>
 
                         {/* Dark Mode Toggle */}

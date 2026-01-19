@@ -5,85 +5,126 @@ import Link from "next/link";
 import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import { Calendar, Clock, User, Plus, Search, Eye, Edit, Trash2, Check, AlertCircle, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download, FileText, CheckSquare, Square } from "lucide-react";
+import { Calendar, Clock, User, Plus, Search, Eye, Edit, Trash2, Check, AlertCircle, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download, FileText, CheckSquare, Square, X } from "lucide-react";
 import { exportToCSV, exportToPDF, sortData, SortConfig, SortDirection, getNextSortDirection, ExportColumn } from "@/lib/export";
 import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
 import { useAuth, RequirePermission } from "@/context/AuthProvider";
+import { useBooking } from "@/context/BookingProvider";
+import { BookingStatus } from "@/types";
+import { useRouter } from "next/navigation";
+import AppointmentDetailModal from "@/components/booking/AppointmentDetailModal";
 
-// Mock appointments data
-const appointmentsData = [
-    { id: "APT-001", clientName: "Marie Dubois", clientPhone: "+33 6 12 34 56 78", service: "Box Braids", worker: "Orphelia", date: "2026-01-20", time: "09:00", duration: "3h", price: "€120", status: "Confirmed" },
-    { id: "APT-002", clientName: "Jean Martin", clientPhone: "+33 6 98 76 54 32", service: "Cornrows", worker: "Worker 2", date: "2026-01-20", time: "10:30", duration: "2h", price: "€85", status: "Pending" },
-    { id: "APT-003", clientName: "Sophie Laurent", clientPhone: "+33 7 11 22 33 44", service: "Twists", worker: "Worker 3", date: "2026-01-20", time: "14:00", duration: "2.5h", price: "€95", status: "Confirmed" },
-    { id: "APT-004", clientName: "Pierre Rousseau", clientPhone: "+33 6 55 66 77 88", service: "Locs", worker: "Orphelia", date: "2026-01-21", time: "11:00", duration: "4h", price: "€150", status: "Completed" },
-    { id: "APT-005", clientName: "Anonymous Client", clientPhone: "-", service: "Braids", worker: "Worker 4", date: "2026-01-21", time: "15:30", duration: "2h", price: "€110", status: "Cancelled" },
-    { id: "APT-006", clientName: "Amélie Bernard", clientPhone: "+33 7 44 55 66 77", service: "Hair Treatment", worker: "Worker 2", date: "2026-01-22", time: "10:00", duration: "1.5h", price: "€75", status: "Confirmed" },
-    { id: "APT-007", clientName: "Lucas Petit", clientPhone: "+33 6 22 33 44 55", service: "Box Braids", worker: "Orphelia", date: "2026-01-22", time: "14:00", duration: "3h", price: "€120", status: "Pending" },
-    { id: "APT-008", clientName: "Emma Leroy", clientPhone: "+33 7 88 99 00 11", service: "Cornrows", worker: "Worker 3", date: "2026-01-23", time: "09:30", duration: "2h", price: "€85", status: "Confirmed" },
-    { id: "APT-009", clientName: "Thomas Moreau", clientPhone: "+33 6 11 22 33 44", service: "Twists", worker: "Worker 2", date: "2026-01-23", time: "11:00", duration: "2.5h", price: "€95", status: "Pending" },
-    { id: "APT-010", clientName: "Léa Simon", clientPhone: "+33 7 55 66 77 88", service: "Locs", worker: "Worker 4", date: "2026-01-24", time: "10:00", duration: "4h", price: "€150", status: "Confirmed" },
-    { id: "APT-011", clientName: "Hugo Michel", clientPhone: "+33 6 99 88 77 66", service: "Hair Treatment", worker: "Orphelia", date: "2026-01-24", time: "15:00", duration: "1.5h", price: "€75", status: "Completed" },
-    { id: "APT-012", clientName: "Chloé Garcia", clientPhone: "+33 7 33 22 11 00", service: "Senegalese Twists", worker: "Worker 2", date: "2026-01-25", time: "09:00", duration: "4h", price: "€135", status: "Confirmed" },
+// Helper for labels
+const servicesList = [
+    { id: 1, name: "Box Braids", price: 120 },
+    { id: 2, name: "Cornrows", price: 85 },
+    { id: 3, name: "Twists", price: 95 },
+    { id: 4, name: "Locs", price: 150 },
+    { id: 5, name: "Hair Treatment", price: 75 },
+    { id: 6, name: "Senegalese Twists", price: 135 },
+    { id: 7, name: "Other", price: 0 },
 ];
 
-type Appointment = typeof appointmentsData[0];
+const workersList = [
+    { id: 1, name: "Orphelia" },
+    { id: 2, name: "Worker 2" },
+    { id: 3, name: "Worker 3" },
+    { id: 4, name: "Worker 4" },
+];
+
+type Appointment = {
+    id: number;
+    displayId: string;
+    clientName: string;
+    clientPhone?: string;
+    serviceIds: number[];
+    serviceName: string;
+    workerIds: number[];
+    workerName: string;
+    date: string;
+    time: string;
+    duration: number;
+    totalPrice: string;
+    status: string;
+};
 
 // Export columns configuration
 const exportColumns: ExportColumn[] = [
-    { key: "id", header: "ID" },
+    { key: "displayId", header: "ID" },
     { key: "clientName", header: "Client" },
     { key: "clientPhone", header: "Phone" },
-    { key: "service", header: "Service" },
-    { key: "worker", header: "Worker" },
+    { key: "serviceName", header: "Service" },
+    { key: "workerName", header: "Worker" },
     { key: "date", header: "Date" },
     { key: "time", header: "Time" },
     { key: "duration", header: "Duration" },
-    { key: "price", header: "Price" },
+    { key: "totalPrice", header: "Price" },
     { key: "status", header: "Status" },
 ];
 
 export default function AppointmentsPage() {
     const { getCardStyle } = useKpiCardStyle();
+    const { bookings, updateBookingStatus, cancelBooking, approveReschedule, rejectReschedule } = useBooking();
+    const router = useRouter();
+    const [detailModal, setDetailModal] = useState<{ open: boolean; appointment: any | null }>({ open: false, appointment: null });
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("All");
     const [workerFilter, setWorkerFilter] = useState("All");
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
-    const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+    const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
 
     const { user, hasPermission, canAddServices } = useAuth();
     const isWorker = user?.role === 'worker';
     const isClient = user?.role === 'client';
-    const currentUserName = user?.name || 'Admin User';
+    const isAdminOrManager = hasPermission(['manager', 'admin']);
 
-    // Filter total data based on worker/client status
+    // Map context bookings to UI format
+    const appointments = useMemo(() => {
+        return bookings.map(b => {
+            const serviceNames = b.serviceIds.map(id => servicesList.find(s => s.id === id)?.name || "Service").join(", ");
+            const workerNames = b.workerIds.length > 0
+                ? b.workerIds.map(id => workersList.find(w => w.id === id)?.name || "Worker").join(", ")
+                : "Pool";
+            const totalPrice = b.serviceIds.reduce((sum, id) => sum + (servicesList.find(s => s.id === id)?.price || 0), 0);
+
+            const isAdminModified = b.interactionHistory.some(i =>
+                (i.action.toLowerCase().includes('edit') || i.action.toLowerCase().includes('update') || i.action.toLowerCase().includes('modify')) &&
+                (i.user.toLowerCase().includes('admin') || i.user.toLowerCase().includes('manager') || i.user === 'Orphelia')
+            );
+
+            return {
+                ...b,
+                serviceName: serviceNames,
+                workerName: workerNames,
+                totalPrice: `€${totalPrice}`,
+                displayId: `APT-${b.id.toString().slice(-3)}`,
+                isAdminModified
+            };
+        });
+    }, [bookings]);
+
+    // Role-based filtering
     const initialAppointments = useMemo(() => {
         if (isWorker) {
-            return appointmentsData.filter(apt => apt.worker === currentUserName);
+            return appointments.filter(apt => apt.workerIds.includes(parseInt(user?.id || '0')));
         }
         if (isClient) {
-            // For demo, we'll match clientName with the user's name
-            return appointmentsData.filter(apt => apt.clientName === "Marie Dubois" || apt.clientName === currentUserName);
+            return appointments.filter(apt => apt.clientName === user?.name || apt.clientId === parseInt(user?.id || '0'));
         }
-        return appointmentsData;
-    }, [isWorker, isClient, currentUserName]);
-
-    // Get unique workers for filter
-    const workers = useMemo(() => {
-        const uniqueWorkers = [...new Set(initialAppointments.map(a => a.worker))];
-        return uniqueWorkers.sort();
-    }, [initialAppointments]);
+        return appointments;
+    }, [isWorker, isClient, appointments, user]);
 
     // Filter appointments
     const filteredAppointments = useMemo(() => {
         return initialAppointments.filter((apt) => {
             const matchesSearch = apt.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                apt.service.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                apt.worker.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                apt.id.toLowerCase().includes(searchTerm.toLowerCase());
+                apt.serviceName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                apt.workerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                apt.displayId.toLowerCase().includes(searchTerm.toLowerCase());
             const matchesStatus = statusFilter === "All" || apt.status === statusFilter;
-            const matchesWorker = workerFilter === "All" || apt.worker === workerFilter;
+            const matchesWorker = workerFilter === "All" || apt.workerName.includes(workerFilter);
             return matchesSearch && matchesStatus && matchesWorker;
         });
     }, [searchTerm, statusFilter, workerFilter, initialAppointments]);
@@ -117,9 +158,9 @@ export default function AppointmentsPage() {
             return <ArrowUpDown className="w-3.5 h-3.5 text-gray-400" />;
         }
         if (sortConfig.direction === 'asc') {
-            return <ArrowUp className="w-3.5 h-3.5 text-purple-600" />;
+            return <ArrowUp className="w-3.5 h-3.5 text-[var(--color-primary)]" />;
         }
-        return <ArrowDown className="w-3.5 h-3.5 text-purple-600" />;
+        return <ArrowDown className="w-3.5 h-3.5 text-[var(--color-primary)]" />;
     };
 
     // Handle selection
@@ -131,7 +172,7 @@ export default function AppointmentsPage() {
         }
     };
 
-    const toggleSelectItem = (id: string) => {
+    const toggleSelectItem = (id: number) => {
         const newSelected = new Set(selectedItems);
         if (newSelected.has(id)) {
             newSelected.delete(id);
@@ -171,10 +212,12 @@ export default function AppointmentsPage() {
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case "Confirmed": return "bg-green-100 text-green-700";
-            case "Pending": return "bg-yellow-100 text-yellow-700";
+            case "Confirmed": return "bg-[var(--color-success-light)] text-[var(--color-success)]";
+            case "Pending": return "bg-[var(--color-warning-light)] text-[var(--color-warning)]";
+            case "PendingApproval": return "bg-[var(--color-secondary-light)] text-[var(--color-secondary)] font-bold animate-pulse";
+            case "Rescheduled": return "bg-[var(--color-primary-light)] text-[var(--color-primary)]";
             case "Completed": return "bg-blue-100 text-blue-700";
-            case "Cancelled": return "bg-red-100 text-red-700";
+            case "Cancelled": return "bg-[var(--color-error-light)] text-[var(--color-error)]";
             default: return "bg-gray-100 text-gray-700";
         }
     };
@@ -193,72 +236,90 @@ export default function AppointmentsPage() {
         setSelectedItems(new Set());
     };
 
+    const handleViewDetails = (appointment: any) => {
+        setDetailModal({ open: true, appointment });
+    };
+
+    const handleEdit = (appointment: any, targetStep?: number) => {
+        const stepParam = targetStep !== undefined ? `&step=${targetStep}` : "";
+        router.push(`/appointments/book?edit=${appointment.id}${stepParam}`);
+    };
+
+    const handleCancel = (id: number) => {
+        if (confirm("Are you sure you want to cancel this appointment?")) {
+            cancelBooking(id, "Cancelled from appointments list");
+            setDetailModal({ open: false, appointment: null });
+        }
+    };
+
     return (
         <MainLayout>
             <div className="space-y-6">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                    <div>
+                    <div className="w-full md:w-auto">
                         <h1 className="text-3xl font-bold text-gray-900">Appointments</h1>
                         <p className="text-gray-500 mt-1">Manage and track all appointments</p>
                     </div>
-                    {canAddServices() && (
-                        <Link href="/appointments/book">
-                            <Button variant="primary" size="lg" className="bg-purple-600 hover:bg-purple-700 gap-2">
-                                <Plus className="w-5 h-5" />
-                                New Appointment
-                            </Button>
-                        </Link>
+                    {(canAddServices() || isClient) && (
+                        <div className="w-full md:w-auto flex justify-end">
+                            <Link href="/appointments/book">
+                                <Button variant="primary" size="lg" className="bg-[var(--color-primary)] hover:opacity-90 transition-opacity gap-2 border-none">
+                                    <Plus className="w-5 h-5" />
+                                    <span className="hidden sm:inline">{isClient ? "Book Appointment" : "New Appointment"}</span>
+                                </Button>
+                            </Link>
+                        </div>
                     )}
                 </div>
 
                 {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <Card className="text-white" style={getCardStyle(0)}>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
+                    <Card className="text-white p-4 sm:p-6" style={getCardStyle(0)}>
                         <div className="flex justify-between items-start">
-                            <div className="p-2 bg-white/20 rounded-lg">
-                                <Calendar className="w-6 h-6 text-white" />
+                            <div className="p-1.5 sm:p-2 bg-white/20 rounded-lg">
+                                <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                             </div>
                         </div>
-                        <div className="mt-4">
-                            <p className="text-sm opacity-90 mb-1">Total Appointments</p>
-                            <h3 className="text-3xl font-bold">{stats.total}</h3>
+                        <div className="mt-2 sm:mt-4">
+                            <p className="text-[10px] sm:text-sm opacity-90 mb-0.5 sm:mb-1 uppercase font-bold tracking-wider">Total</p>
+                            <h3 className="text-xl sm:text-3xl font-bold">{stats.total}</h3>
                         </div>
                     </Card>
 
-                    <Card gradient="" style={getCardStyle(1)} className="text-white">
+                    <Card gradient="" style={getCardStyle(1)} className="text-white p-4 sm:p-6">
                         <div className="flex justify-between items-start">
-                            <div className="p-2 bg-white/20 rounded-lg">
-                                <Check className="w-6 h-6 text-white" />
+                            <div className="p-1.5 sm:p-2 bg-white/20 rounded-lg">
+                                <Check className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                             </div>
                         </div>
-                        <div className="mt-4">
-                            <p className="text-sm opacity-90 mb-1">Confirmed</p>
-                            <h3 className="text-3xl font-bold">{stats.confirmed}</h3>
+                        <div className="mt-2 sm:mt-4">
+                            <p className="text-[10px] sm:text-sm opacity-90 mb-0.5 sm:mb-1 uppercase font-bold tracking-wider">Confirmed</p>
+                            <h3 className="text-xl sm:text-3xl font-bold">{stats.confirmed}</h3>
                         </div>
                     </Card>
 
-                    <Card gradient="" style={getCardStyle(2)} className="text-white">
+                    <Card gradient="" style={getCardStyle(2)} className="text-white p-4 sm:p-6">
                         <div className="flex justify-between items-start">
-                            <div className="p-2 bg-white/20 rounded-lg">
-                                <Clock className="w-6 h-6 text-white" />
+                            <div className="p-1.5 sm:p-2 bg-white/20 rounded-lg">
+                                <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                             </div>
                         </div>
-                        <div className="mt-4">
-                            <p className="text-sm opacity-90 mb-1">Pending</p>
-                            <h3 className="text-3xl font-bold">{stats.pending}</h3>
+                        <div className="mt-2 sm:mt-4">
+                            <p className="text-[10px] sm:text-sm opacity-90 mb-0.5 sm:mb-1 uppercase font-bold tracking-wider">Pending</p>
+                            <h3 className="text-xl sm:text-3xl font-bold">{stats.pending}</h3>
                         </div>
                     </Card>
 
-                    <Card className="text-white" style={getCardStyle(3)}>
+                    <Card className="text-white p-4 sm:p-6" style={getCardStyle(3)}>
                         <div className="flex justify-between items-start">
-                            <div className="p-2 bg-white/20 rounded-lg">
-                                <AlertCircle className="w-6 h-6 text-white" />
+                            <div className="p-1.5 sm:p-2 bg-white/20 rounded-lg">
+                                <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                             </div>
                         </div>
-                        <div className="mt-4">
-                            <p className="text-sm opacity-90 mb-1">Today</p>
-                            <h3 className="text-3xl font-bold">{stats.today}</h3>
+                        <div className="mt-2 sm:mt-4">
+                            <p className="text-[10px] sm:text-sm opacity-90 mb-0.5 sm:mb-1 uppercase font-bold tracking-wider">Today</p>
+                            <h3 className="text-xl sm:text-3xl font-bold">{stats.today}</h3>
                         </div>
                     </Card>
                 </div>
@@ -274,7 +335,7 @@ export default function AppointmentsPage() {
                                 placeholder="Search by client, service, worker, or ID..."
                                 value={searchTerm}
                                 onChange={(e) => handleFilterChange(setSearchTerm)(e.target.value)}
-                                className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-300"
+                                className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                             />
                         </div>
 
@@ -283,7 +344,7 @@ export default function AppointmentsPage() {
                             <select
                                 value={statusFilter}
                                 onChange={(e) => handleFilterChange(setStatusFilter)(e.target.value)}
-                                className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-300"
+                                className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                             >
                                 <option value="All">All Status</option>
                                 <option value="Confirmed">Confirmed</option>
@@ -295,11 +356,11 @@ export default function AppointmentsPage() {
                                 <select
                                     value={workerFilter}
                                     onChange={(e) => handleFilterChange(setWorkerFilter)(e.target.value)}
-                                    className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-300"
+                                    className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                                 >
                                     <option value="All">All Workers</option>
-                                    {workers.map(worker => (
-                                        <option key={worker} value={worker}>{worker}</option>
+                                    {workersList.map(worker => (
+                                        <option key={worker.id} value={worker.name}>{worker.name}</option>
                                     ))}
                                 </select>
                             )}
@@ -314,7 +375,7 @@ export default function AppointmentsPage() {
                                 onClick={handleExportCSV}
                             >
                                 <Download className="w-4 h-4" />
-                                CSV
+                                <span className="hidden sm:inline">CSV</span>
                             </Button>
                             <Button
                                 variant="outline"
@@ -323,15 +384,15 @@ export default function AppointmentsPage() {
                                 onClick={handleExportPDF}
                             >
                                 <FileText className="w-4 h-4" />
-                                PDF
+                                <span className="hidden sm:inline">PDF</span>
                             </Button>
                         </div>
                     </div>
 
                     {/* Bulk Actions - shown when items are selected */}
                     {selectedItems.size > 0 && hasPermission(['manager', 'admin']) && (
-                        <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap items-center gap-3">
-                            <span className="text-sm font-medium text-purple-600">
+                        <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap items-center justify-end sm:justify-start gap-3">
+                            <span className="text-sm font-medium text-[var(--color-primary)]">
                                 {selectedItems.size} selected
                             </span>
                             <div className="h-4 w-px bg-gray-300"></div>
@@ -341,7 +402,8 @@ export default function AppointmentsPage() {
                                 className="text-green-600 border-green-200 hover:bg-green-50"
                                 onClick={() => handleBulkStatusChange("Confirmed")}
                             >
-                                Mark Confirmed
+                                <CheckSquare className="w-4 h-4 sm:mr-1" />
+                                <span className="hidden sm:inline">Mark Confirmed</span>
                             </Button>
                             <Button
                                 variant="outline"
@@ -349,7 +411,8 @@ export default function AppointmentsPage() {
                                 className="text-blue-600 border-blue-200 hover:bg-blue-50"
                                 onClick={() => handleBulkStatusChange("Completed")}
                             >
-                                Mark Completed
+                                <Check className="w-4 h-4 sm:mr-1" />
+                                <span className="hidden sm:inline">Mark Completed</span>
                             </Button>
                             <Button
                                 variant="outline"
@@ -357,8 +420,8 @@ export default function AppointmentsPage() {
                                 className="text-red-600 border-red-200 hover:bg-red-50"
                                 onClick={handleBulkDelete}
                             >
-                                <Trash2 className="w-4 h-4 mr-1" />
-                                Delete
+                                <Trash2 className="w-4 h-4 sm:mr-1" />
+                                <span className="hidden sm:inline">Delete</span>
                             </Button>
                             <button
                                 onClick={() => setSelectedItems(new Set())}
@@ -387,7 +450,7 @@ export default function AppointmentsPage() {
                                     setItemsPerPage(Number(e.target.value));
                                     setCurrentPage(1);
                                 }}
-                                className="px-2 py-1 border border-gray-200 rounded text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-300"
+                                className="px-2 py-1 border border-gray-200 rounded text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                             >
                                 <option value={5}>5</option>
                                 <option value={10}>10</option>
@@ -397,7 +460,93 @@ export default function AppointmentsPage() {
                             <span className="text-gray-500">per page</span>
                         </div>
                     </div>
-                    <div className="overflow-x-auto">
+                    {/* Mobile Card View */}
+                    <div className="md:hidden divide-y divide-gray-100">
+                        {paginatedAppointments.map((apt) => (
+                            <div key={apt.id} className={`p-4 space-y-3 ${selectedItems.has(apt.id) ? 'bg-purple-50' : 'bg-white'}`}>
+                                <div className="flex justify-between items-start">
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => toggleSelectItem(apt.id)}
+                                            className="p-1 hover:bg-gray-100 rounded transition"
+                                        >
+                                            {selectedItems.size > 0 && selectedItems.has(apt.id) ? (
+                                                <CheckSquare className="w-5 h-5 text-[var(--color-primary)]" />
+                                            ) : (
+                                                <Square className="w-5 h-5 text-gray-300" />
+                                            )}
+                                        </button>
+                                        <span className="text-xs font-mono text-gray-500">{apt.displayId}</span>
+                                    </div>
+                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusColor(apt.status)}`}>
+                                        {apt.status}
+                                    </span>
+                                </div>
+
+                                <div className="flex justify-between items-end">
+                                    <div className="space-y-1">
+                                        <p className="font-bold text-gray-900">{apt.clientName}</p>
+                                        <p className="text-sm text-[var(--color-primary)] font-medium">{apt.serviceName}</p>
+                                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                                            <Calendar className="w-3.5 h-3.5" />
+                                            <span>{apt.date} at {apt.time}</span>
+                                        </div>
+                                    </div>
+                                    <div className="text-right space-y-2" onClick={(e) => e.stopPropagation()}>
+                                        <p className="font-black text-lg text-gray-900">{apt.totalPrice}</p>
+                                        <div className="flex items-center justify-end gap-2">
+                                            {(isAdminOrManager || (isClient && apt.isAdminModified)) && (
+                                                <Button
+                                                    variant="success"
+                                                    size="sm"
+                                                    onClick={() => updateBookingStatus(apt.id, 'Confirmed')}
+                                                    className="w-10 h-10 p-0 flex items-center justify-center shadow-sm"
+                                                    disabled={apt.status !== 'Pending'}
+                                                    title="Valider"
+                                                >
+                                                    <Check className="w-5 h-5" />
+                                                </Button>
+                                            )}
+                                            {isClient && apt.status === 'PendingApproval' && (
+                                                <Button
+                                                    variant="success"
+                                                    size="sm"
+                                                    onClick={() => approveReschedule(apt.id)}
+                                                    className="w-10 h-10 p-0 flex items-center justify-center shadow-sm"
+                                                    title="Approve Reschedule"
+                                                >
+                                                    <Check className="w-5 h-5" />
+                                                </Button>
+                                            )}
+                                            {isClient && apt.status === 'PendingApproval' && (
+                                                <Button
+                                                    variant="danger"
+                                                    size="sm"
+                                                    onClick={() => rejectReschedule(apt.id)}
+                                                    className="w-10 h-10 p-0 flex items-center justify-center shadow-sm"
+                                                    title="Reject Reschedule"
+                                                >
+                                                    <X className="w-5 h-5" />
+                                                </Button>
+                                            )}
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => handleViewDetails(apt)}
+                                                className="w-10 h-10 p-0 flex items-center justify-center bg-[var(--color-primary-light)] border-transparent text-[var(--color-primary)] hover:opacity-80"
+                                                title="Voir"
+                                            >
+                                                <Eye className="w-5 h-5" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block overflow-x-auto">
                         <table className="w-full">
                             <thead className="bg-gray-50">
                                 <tr>
@@ -407,7 +556,7 @@ export default function AppointmentsPage() {
                                             className="p-1 hover:bg-gray-200 rounded transition"
                                         >
                                             {isAllSelected ? (
-                                                <CheckSquare className="w-5 h-5 text-purple-600" />
+                                                <CheckSquare className="w-5 h-5 text-[var(--color-primary)]" />
                                             ) : (
                                                 <Square className="w-5 h-5 text-gray-400" />
                                             )}
@@ -477,34 +626,38 @@ export default function AppointmentsPage() {
                                 {paginatedAppointments.map((apt) => (
                                     <tr
                                         key={apt.id}
-                                        className={`hover:bg-gray-50 transition ${selectedItems.has(apt.id) ? 'bg-purple-50' : ''}`}
+                                        className={`hover:bg-gray-50 transition cursor-pointer ${selectedItems.has(apt.id) ? 'bg-purple-50' : ''}`}
+                                        onClick={() => handleViewDetails(apt)}
                                     >
                                         <td className="px-4 py-4">
                                             <button
-                                                onClick={() => toggleSelectItem(apt.id)}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    toggleSelectItem(apt.id);
+                                                }}
                                                 className="p-1 hover:bg-gray-200 rounded transition"
                                             >
                                                 {selectedItems.has(apt.id) ? (
-                                                    <CheckSquare className="w-5 h-5 text-purple-600" />
+                                                    <CheckSquare className="w-5 h-5 text-[var(--color-primary)]" />
                                                 ) : (
                                                     <Square className="w-5 h-5 text-gray-400" />
                                                 )}
                                             </button>
                                         </td>
-                                        <td className="px-6 py-4 text-sm font-mono text-gray-600">{apt.id}</td>
+                                        <td className="px-6 py-4 text-sm font-mono text-gray-600">{apt.displayId}</td>
                                         <td className="px-6 py-4">
                                             <div>
                                                 <p className="font-semibold text-gray-900">{apt.clientName}</p>
                                                 <p className="text-xs text-gray-500">{apt.clientPhone}</p>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-gray-900">{apt.service}</td>
+                                        <td className="px-6 py-4 text-sm text-gray-900">{apt.serviceName}</td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
-                                                <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-semibold text-xs">
-                                                    {apt.worker.charAt(0)}
+                                                <div className="w-8 h-8 bg-[var(--color-primary-light)] rounded-full flex items-center justify-center text-[var(--color-primary)] font-semibold text-xs">
+                                                    {apt.workerName.charAt(0)}
                                                 </div>
-                                                <span className="text-sm text-gray-900">{apt.worker}</span>
+                                                <span className="text-sm text-gray-900">{apt.workerName}</span>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
@@ -513,28 +666,58 @@ export default function AppointmentsPage() {
                                                 <p className="text-xs text-gray-500">{apt.time}</p>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-gray-700">{apt.duration}</td>
-                                        <td className="px-6 py-4 text-sm font-bold text-gray-900">{apt.price}</td>
+                                        <td className="px-6 py-4 text-sm text-gray-700">{apt.duration} min</td>
+                                        <td className="px-6 py-4 text-sm font-bold text-gray-900">{apt.totalPrice}</td>
                                         <td className="px-6 py-4">
                                             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(apt.status)}`}>
                                                 {apt.status}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                                             <div className="flex items-center justify-center gap-2">
-                                                <button className="p-2 hover:bg-purple-50 rounded-lg transition text-purple-600">
-                                                    <Eye className="w-4 h-4" />
-                                                </button>
-                                                {hasPermission(['manager', 'admin']) && (
-                                                    <>
-                                                        <button className="p-2 hover:bg-pink-50 rounded-lg transition text-pink-600">
-                                                            <Edit className="w-4 h-4" />
-                                                        </button>
-                                                        <button className="p-2 hover:bg-red-50 rounded-lg transition text-red-600">
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
-                                                    </>
+                                                {(isAdminOrManager || (isClient && apt.isAdminModified)) && (
+                                                    <Button
+                                                        variant="success"
+                                                        size="sm"
+                                                        onClick={() => updateBookingStatus(apt.id, 'Confirmed')}
+                                                        className="w-10 h-10 p-0 flex items-center justify-center shadow-sm"
+                                                        disabled={apt.status !== 'Pending'}
+                                                        title="Valider"
+                                                    >
+                                                        <Check className="w-5 h-5" />
+                                                    </Button>
                                                 )}
+                                                {isClient && apt.status === 'PendingApproval' && (
+                                                    <Button
+                                                        variant="success"
+                                                        size="sm"
+                                                        onClick={() => approveReschedule(apt.id)}
+                                                        className="w-10 h-10 p-0 flex items-center justify-center shadow-sm"
+                                                        title="Approve Reschedule"
+                                                    >
+                                                        <Check className="w-5 h-5" />
+                                                    </Button>
+                                                )}
+                                                {isClient && apt.status === 'PendingApproval' && (
+                                                    <Button
+                                                        variant="danger"
+                                                        size="sm"
+                                                        onClick={() => rejectReschedule(apt.id, "Rejected by client")}
+                                                        className="w-10 h-10 p-0 flex items-center justify-center shadow-sm"
+                                                        title="Reject Reschedule"
+                                                    >
+                                                        <X className="w-5 h-5" />
+                                                    </Button>
+                                                )}
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => handleViewDetails(apt)}
+                                                    className="w-10 h-10 p-0 flex items-center justify-center bg-[var(--color-primary-light)] border-transparent text-[var(--color-primary)] hover:opacity-80"
+                                                    title="Voir"
+                                                >
+                                                    <Eye className="w-5 h-5" />
+                                                </Button>
                                             </div>
                                         </td>
                                     </tr>
@@ -573,7 +756,7 @@ export default function AppointmentsPage() {
                                             <button
                                                 key={pageNum}
                                                 onClick={() => setCurrentPage(pageNum)}
-                                                className={`w-8 h-8 rounded-lg text-sm font-medium transition ${currentPage === pageNum ? "bg-purple-600 text-white" : "hover:bg-gray-100 text-gray-600"}`}
+                                                className={`w-8 h-8 rounded-lg text-sm font-medium transition ${currentPage === pageNum ? "bg-[var(--color-primary)] text-white" : "hover:bg-gray-100 text-gray-600"}`}
                                             >
                                                 {pageNum}
                                             </button>
@@ -591,6 +774,25 @@ export default function AppointmentsPage() {
                         </div>
                     )}
                 </Card>
+
+                {/* Appointment Detail Modal */}
+                <AppointmentDetailModal
+                    isOpen={detailModal.open}
+                    appointment={detailModal.appointment}
+                    onClose={() => setDetailModal({ open: false, appointment: null })}
+                    onCancel={handleCancel}
+                    onConfirm={(id) => {
+                        updateBookingStatus(id, 'Confirmed');
+                        setDetailModal({ open: false, appointment: null });
+                    }}
+                    onEdit={handleEdit}
+                    onApproveReschedule={approveReschedule}
+                    onRejectReschedule={rejectReschedule}
+                    servicesList={servicesList}
+                    isAdmin={isAdminOrManager}
+                    userRole={user?.role}
+                    isAdminModified={detailModal.appointment?.isAdminModified}
+                />
             </div>
         </MainLayout>
     );

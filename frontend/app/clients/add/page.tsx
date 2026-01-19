@@ -42,7 +42,7 @@ export default function AddClientPage() {
                         <h1 className="text-3xl font-bold text-gray-900">Add New Client</h1>
                         <p className="text-gray-500 mt-1">Create a new client profile</p>
                     </div>
-                    <Button variant="outline" size="md" onClick={() => router.back()}>
+                    <Button variant="danger" size="md" onClick={() => router.back()}>
                         <X className="w-5 h-5" />
                         Cancel
                     </Button>
@@ -181,11 +181,11 @@ export default function AddClientPage() {
                             </div>
                         </div>
                         <div className="flex gap-4 mt-8">
-                            <Button type="submit" variant="primary" size="lg" className="flex-1">
+                            <Button type="submit" variant="success" size="lg" className="flex-1">
                                 <Save className="w-5 h-5" />
                                 Save Client
                             </Button>
-                            <Button type="button" variant="outline" size="lg" onClick={() => router.back()}>
+                            <Button type="button" variant="danger" size="lg" onClick={() => router.back()}>
                                 <X className="w-5 h-5" />
                                 Cancel
                             </Button>

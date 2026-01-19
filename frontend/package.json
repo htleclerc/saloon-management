@@ -6,7 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "type-check": "tsc --noEmit",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "test": "echo 'No tests configured yet' && exit 0",
+    "test:watch": "echo 'No tests configured yet' && exit 0",
+    "test:coverage": "echo 'No tests configured yet' && exit 0"
   },
   "dependencies": {
     "date-fns": "^4.1.0",

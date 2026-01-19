@@ -233,7 +233,7 @@ export default function Header() {
                                         {crumb.isLink && !isLast ? (
                                             <Link
                                                 href={crumb.path}
-                                                className="text-sm font-medium text-gray-500 hover:text-purple-600 transition-colors truncate max-w-[150px]"
+                                                className="text-sm font-medium text-gray-500 hover:text-[var(--color-primary)] transition-colors truncate max-w-[150px]"
                                             >
                                                 {crumb.label}
                                             </Link>
@@ -269,9 +269,9 @@ export default function Header() {
                                     // Simulation loop: clear searching state after a short delay
                                     setTimeout(() => setIsSearching(false), 500);
                                 }}
-                                className="w-48 xl:w-64 h-10 pl-10 pr-4 bg-gray-100 border-transparent focus:bg-white focus:border-purple-300 focus:ring-4 focus:ring-purple-100 rounded-xl text-sm transition-all duration-300 outline-none"
+                                className="w-48 xl:w-64 h-10 pl-10 pr-4 bg-gray-100 border-transparent focus:bg-white focus:border-[var(--color-primary-light)] focus:ring-4 focus:ring-[var(--color-primary-light)] rounded-xl text-sm transition-all duration-300 outline-none"
                             />
-                            <Search className={`absolute left-3.5 w-4 h-4 transition-colors ${isSearching ? "text-purple-600 animate-pulse" : "text-gray-400 group-focus-within:text-purple-500"}`} />
+                            <Search className={`absolute left-3.5 w-4 h-4 transition-colors ${isSearching ? "text-[var(--color-primary)] animate-pulse" : "text-gray-400 group-focus-within:text-[var(--color-primary)]"}`} />
                             {searchQuery && (
                                 <button
                                     onClick={() => setSearchQuery("")}
@@ -286,8 +286,8 @@ export default function Header() {
                                 <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                                     <p className="text-[10px] text-gray-400 uppercase font-bold px-2 py-1">Recent Results</p>
                                     <div className="space-y-1">
-                                        <button className="w-full text-left px-2 py-2 hover:bg-purple-50 rounded-lg text-sm text-gray-700 flex items-center gap-2 transition-colors">
-                                            <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                                        <button className="w-full text-left px-2 py-2 hover:bg-[var(--color-primary-light)] rounded-lg text-sm text-gray-700 flex items-center gap-2 transition-colors">
+                                            <div className="w-2 h-2 rounded-full bg-[var(--color-primary)]"></div>
                                             <span>Results for "{searchQuery}"...</span>
                                         </button>
                                     </div>
@@ -308,14 +308,14 @@ export default function Header() {
                         <div className="relative" ref={tenantDropdownRef}>
                             <button
                                 onClick={() => setTenantDropdownOpen(!tenantDropdownOpen)}
-                                className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg transition text-sm"
+                                className="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-primary-light)] hover:opacity-80 border border-[var(--color-primary-light)] rounded-lg transition text-sm"
                                 title="Switch Salon"
                             >
-                                <Building className="w-4 h-4 text-purple-600" />
-                                <span className="text-purple-700 font-medium max-w-[120px] truncate">
+                                <Building className="w-4 h-4 text-[var(--color-primary)]" />
+                                <span className="text-[var(--color-primary)] font-medium max-w-[120px] truncate">
                                     {currentTenant?.name || "Select Salon"}
                                 </span>
-                                <ChevronDown className={`w-3 h-3 text-purple-500 transition-transform ${tenantDropdownOpen ? 'rotate-180' : ''}`} />
+                                <ChevronDown className={`w-3 h-3 text-[var(--color-primary)] transition-transform ${tenantDropdownOpen ? 'rotate-180' : ''}`} />
                             </button>
 
                             {tenantDropdownOpen && (
@@ -330,24 +330,24 @@ export default function Header() {
                                                 switchTenant(tenant.id);
                                                 setTenantDropdownOpen(false);
                                             }}
-                                            className={`w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 transition text-sm ${user.tenantId === tenant.id ? "bg-purple-50" : ""
+                                            className={`w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 transition text-sm ${user.tenantId === tenant.id ? "bg-[var(--color-primary-light)]" : ""
                                                 }`}
                                         >
                                             <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${user.tenantId === tenant.id
-                                                ? "bg-purple-600 text-white"
+                                                ? "bg-[var(--color-primary)] text-white"
                                                 : "bg-gray-100 text-gray-600"
                                                 }`}>
                                                 <Building className="w-4 h-4" />
                                             </div>
                                             <div className="flex-1 text-left">
-                                                <p className={`font-medium ${user.tenantId === tenant.id ? "text-purple-700" : "text-gray-700"
+                                                <p className={`font-medium ${user.tenantId === tenant.id ? "text-[var(--color-primary)]" : "text-gray-700"
                                                     }`}>
                                                     {tenant.name}
                                                 </p>
                                                 <p className="text-xs text-gray-500">{tenant.slug}</p>
                                             </div>
                                             {user.tenantId === tenant.id && (
-                                                <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
+                                                <div className="w-2 h-2 bg-[var(--color-primary)] rounded-full"></div>
                                             )}
                                         </button>
                                     ))}
@@ -380,7 +380,7 @@ export default function Header() {
                                             setLanguage(lang as Language);
                                             setLangDropdownOpen(false);
                                         }}
-                                        className={`w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-50 transition text-sm ${language === lang ? "bg-purple-50 text-purple-700" : "text-gray-700"
+                                        className={`w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-50 transition text-sm ${language === lang ? "bg-[var(--color-primary-light)] text-[var(--color-primary)]" : "text-gray-700"
                                             }`}
                                     >
                                         <span className="text-lg">{languageFlags[lang as Language]}</span>
@@ -447,7 +447,7 @@ export default function Header() {
                                     <p className="text-xs text-gray-500 capitalize">{user?.role || "Unknown"}</p>
                                 </div>
                             )}
-                            <div className="w-9 h-9 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center cursor-pointer hover:shadow-lg transition">
+                            <div className="w-9 h-9 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary)] rounded-full flex items-center justify-center cursor-pointer hover:shadow-lg transition">
                                 <User className="w-5 h-5 text-white" />
                             </div>
                         </button>

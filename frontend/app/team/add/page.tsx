@@ -55,7 +55,7 @@ export default function AddTeamMemberPage() {
                                 value={formData.firstName}
                                 onChange={handleChange}
                                 required
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                             />
                         </div>
                         <div>
@@ -68,7 +68,7 @@ export default function AddTeamMemberPage() {
                                 value={formData.lastName}
                                 onChange={handleChange}
                                 required
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                             />
                         </div>
                         <div>
@@ -81,7 +81,7 @@ export default function AddTeamMemberPage() {
                                 value={formData.email}
                                 onChange={handleChange}
                                 required
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                             />
                         </div>
                         <div>
@@ -94,7 +94,7 @@ export default function AddTeamMemberPage() {
                                 value={formData.phone}
                                 onChange={handleChange}
                                 required
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                             />
                         </div>
                         <div>
@@ -109,7 +109,7 @@ export default function AddTeamMemberPage() {
                                 min="0"
                                 max="100"
                                 required
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                             />
                             <p className="text-xs text-gray-500 mt-1">Percentage of income this team member keeps</p>
                         </div>
@@ -119,7 +119,7 @@ export default function AddTeamMemberPage() {
                                 name="role"
                                 value={formData.role}
                                 onChange={handleChange}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                             >
                                 <option>Worker</option>
                                 <option>Admin</option>
@@ -133,7 +133,7 @@ export default function AddTeamMemberPage() {
                                 name="address"
                                 value={formData.address}
                                 onChange={handleChange}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                             />
                         </div>
                         <div>
@@ -143,7 +143,7 @@ export default function AddTeamMemberPage() {
                                 name="city"
                                 value={formData.city}
                                 onChange={handleChange}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                             />
                         </div>
                         <div>
@@ -153,7 +153,7 @@ export default function AddTeamMemberPage() {
                                 name="zipCode"
                                 value={formData.zipCode}
                                 onChange={handleChange}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                             />
                         </div>
                         <div>
@@ -162,7 +162,7 @@ export default function AddTeamMemberPage() {
                                 name="status"
                                 value={formData.status}
                                 onChange={handleChange}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                             >
                                 <option>Active</option>
                                 <option>Inactive</option>
@@ -175,16 +175,16 @@ export default function AddTeamMemberPage() {
                                 value={formData.notes}
                                 onChange={handleChange}
                                 rows={4}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                             />
                         </div>
                     </div>
                     <div className="flex gap-4 mt-8">
-                        <Button type="submit" variant="primary" size="lg" className="flex-1">
+                        <Button type="submit" variant="success" size="lg" className="flex-1">
                             <Save className="w-5 h-5" />
                             Save Team Member
                         </Button>
-                        <Button type="button" variant="outline" size="lg" onClick={() => router.back()}>
+                        <Button type="button" variant="danger" size="lg" onClick={() => router.back()}>
                             <X className="w-5 h-5" />
                             Cancel
                         </Button>

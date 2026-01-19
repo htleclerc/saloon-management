@@ -135,6 +135,39 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
             hasCustomSecondary ? `${secondaryColor}15` : palette.secondaryLight
         );
 
+        // --- Semantic Colors (Success, Warning, Danger) ---
+        const semanticMode = currentTenant?.semanticColorMode || "default";
+
+        // Defaults from globals.css as fallback
+        const standardColors = {
+            success: "#22c55e",
+            warning: "#f59e0b",
+            error: "#ef4444"
+        };
+
+        let successColor = standardColors.success;
+        let warningColor = standardColors.warning;
+        let errorColor = standardColors.error;
+
+        if (semanticMode === "theme") {
+            successColor = primaryColor;
+            warningColor = secondaryColor;
+            errorColor = "#ef4444"; // Danger usually stays red unless customized
+        } else if (semanticMode === "custom") {
+            successColor = currentTenant?.customSuccessColor || standardColors.success;
+            warningColor = currentTenant?.customWarningColor || standardColors.warning;
+            errorColor = currentTenant?.customDangerColor || standardColors.error;
+        }
+
+        document.documentElement.style.setProperty("--color-success", successColor);
+        document.documentElement.style.setProperty("--color-warning", warningColor);
+        document.documentElement.style.setProperty("--color-error", errorColor);
+
+        // Generate light variants (15% opacity)
+        document.documentElement.style.setProperty("--color-success-light", `${successColor}15`);
+        document.documentElement.style.setProperty("--color-warning-light", `${warningColor}15`);
+        document.documentElement.style.setProperty("--color-error-light", `${errorColor}15`);
+
         // Apply font size
         const fontSizes = { small: "14px", normal: "16px", large: "18px" };
         document.documentElement.style.setProperty("--base-font-size", fontSizes[theme.fontSize]);

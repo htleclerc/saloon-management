@@ -66,7 +66,7 @@ export default function TeamPayrollPage() {
             <Card>
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg flex items-center justify-center">
+                        <div className="w-10 h-10 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] rounded-lg flex items-center justify-center">
                             <DollarSign className="w-5 h-5 text-white" />
                         </div>
                         <div>
@@ -104,11 +104,11 @@ export default function TeamPayrollPage() {
                                 <tr key={worker.name} className="hover:bg-gray-50">
                                     <td className="px-4 py-4 font-medium text-gray-900">{worker.name}</td>
                                     <td className="px-4 py-4 text-right text-gray-600">€{worker.baseSalary.toLocaleString()}</td>
-                                    <td className="px-4 py-4 text-right text-green-600 font-medium">+€{worker.commission.toLocaleString()}</td>
-                                    <td className="px-4 py-4 text-right text-blue-600">+€{worker.tips}</td>
+                                    <td className="px-4 py-4 text-right text-[var(--color-success)] font-medium">+€{worker.commission.toLocaleString()}</td>
+                                    <td className="px-4 py-4 text-right text-[var(--color-primary)]">+€{worker.tips}</td>
                                     <td className="px-4 py-4 text-right font-bold text-gray-900">€{worker.total.toLocaleString()}</td>
                                     <td className="px-4 py-4 text-center">
-                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${worker.status === "paid" ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"
+                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${worker.status === "paid" ? "bg-[var(--color-success-light)] text-[var(--color-success)]" : "bg-[var(--color-warning-light)] text-[var(--color-warning)]"
                                             }`}>
                                             {worker.status === "paid" ? "Paid" : "Pending"}
                                         </span>
@@ -126,19 +126,19 @@ export default function TeamPayrollPage() {
                                 </tr>
                             ))}
                         </tbody>
-                        <tfoot className="bg-purple-50">
+                        <tfoot className="bg-[var(--color-primary-light)]">
                             <tr>
-                                <td className="px-4 py-4 font-bold text-purple-700">Total</td>
-                                <td className="px-4 py-4 text-right font-bold text-purple-700">
+                                <td className="px-4 py-4 font-bold text-[var(--color-primary)]">Total</td>
+                                <td className="px-4 py-4 text-right font-bold text-[var(--color-primary)]">
                                     €{payrollData.reduce((sum, w) => sum + w.baseSalary, 0).toLocaleString()}
                                 </td>
-                                <td className="px-4 py-4 text-right font-bold text-purple-700">
+                                <td className="px-4 py-4 text-right font-bold text-[var(--color-primary)]">
                                     €{totalCommissions.toLocaleString()}
                                 </td>
-                                <td className="px-4 py-4 text-right font-bold text-purple-700">
+                                <td className="px-4 py-4 text-right font-bold text-[var(--color-primary)]">
                                     €{payrollData.reduce((sum, w) => sum + w.tips, 0).toLocaleString()}
                                 </td>
-                                <td className="px-4 py-4 text-right font-bold text-purple-700">
+                                <td className="px-4 py-4 text-right font-bold text-[var(--color-primary)]">
                                     €{totalPayroll.toLocaleString()}
                                 </td>
                                 <td colSpan={2}></td>
@@ -164,7 +164,7 @@ export default function TeamPayrollPage() {
                             </div>
                             <div className="text-right">
                                 <p className="font-bold text-gray-900">€{payment.amount.toLocaleString()}</p>
-                                <span className="text-xs text-green-600">Completed</span>
+                                <span className="text-xs text-[var(--color-success)] font-medium">Completed</span>
                             </div>
                         </div>
                     ))}

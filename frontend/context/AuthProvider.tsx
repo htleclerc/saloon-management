@@ -20,6 +20,10 @@ interface Tenant {
     customPrimaryColor?: string; // User-selected custom color (overrides primaryColor)
     customSecondaryColor?: string; // User-selected custom secondary color
     useCustomColorOverride?: boolean; // Whether to use custom colors instead of palette
+    semanticColorMode?: "default" | "theme" | "custom";
+    customSuccessColor?: string;
+    customWarningColor?: string;
+    customDangerColor?: string;
 }
 
 interface User {
@@ -39,6 +43,7 @@ interface User {
 interface AuthContextType {
     user: User | null;
     isAuthenticated: boolean;
+    isLoading: boolean;
     login: (user: User) => void;
     demoLogin: (role: UserRole) => void;
     logout: () => void;
@@ -53,7 +58,15 @@ interface AuthContextType {
     isDemoMode: boolean;
     currentTenant: Tenant | null;
     switchTenant: (tenantId: string) => void;
-    updateTenantColors: (primaryColor?: string, secondaryColor?: string, useOverride?: boolean) => void;
+    updateTenantColors: (
+        primaryColor?: string,
+        secondaryColor?: string,
+        useOverride?: boolean,
+        semanticMode?: "default" | "theme" | "custom",
+        success?: string,
+        warning?: string,
+        danger?: string
+    ) => void;
     // Worker-specific permission utilities
     canAddIncome: () => boolean;
     canAddExpenses: () => boolean;
@@ -89,6 +102,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
     const [mounted, setMounted] = useState(false);
 
     // Load user from localStorage on mount
@@ -115,6 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setUser(null);
             }
         }
+        setIsLoading(false);
     }, []);
 
     // Save user to localStorage
@@ -183,6 +198,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             } : undefined
         };
         setUser(demoUser);
+        localStorage.setItem("workshop-user", JSON.stringify(demoUser));
+        window.location.href = "/";
     };
 
     const logout = () => {
@@ -260,7 +277,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const currentTenant = user?.tenants?.find(t => t.id === user.tenantId) || null;
 
     // Update tenant custom colors
-    const updateTenantColors = (primaryColor?: string, secondaryColor?: string, useOverride?: boolean) => {
+    const updateTenantColors = (
+        primaryColor?: string,
+        secondaryColor?: string,
+        useOverride?: boolean,
+        semanticMode?: "default" | "theme" | "custom",
+        success?: string,
+        warning?: string,
+        danger?: string
+    ) => {
         if (!user || !currentTenant || !user.tenants) return;
 
         const updatedTenants = user.tenants.map(t => {
@@ -270,6 +295,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     customPrimaryColor: primaryColor || undefined,
                     customSecondaryColor: secondaryColor || undefined,
                     useCustomColorOverride: useOverride ?? false,
+                    semanticColorMode: semanticMode || undefined,
+                    customSuccessColor: success || undefined,
+                    customWarningColor: warning || undefined,
+                    customDangerColor: danger || undefined,
                 };
             }
             return t;
@@ -316,6 +345,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             value={{
                 user,
                 isAuthenticated: !!user,
+                isLoading,
                 login,
                 demoLogin,
                 logout,

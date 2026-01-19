@@ -56,6 +56,10 @@ export default function AppearanceSettingsPage() {
     const [customPrimaryColor, setCustomPrimaryColor] = useState<string>("");
     const [customSecondaryColor, setCustomSecondaryColor] = useState<string>("");
     const [useCustomOverride, setUseCustomOverride] = useState<boolean>(false);
+    const [semanticMode, setSemanticMode] = useState<"default" | "theme" | "custom">("default");
+    const [customSuccessColor, setCustomSuccessColor] = useState<string>("");
+    const [customWarningColor, setCustomWarningColor] = useState<string>("");
+    const [customDangerColor, setCustomDangerColor] = useState<string>("");
 
     useEffect(() => {
         setLocalTheme(theme);
@@ -64,6 +68,10 @@ export default function AppearanceSettingsPage() {
             setCustomPrimaryColor(currentTenant.customPrimaryColor || "");
             setCustomSecondaryColor(currentTenant.customSecondaryColor || "");
             setUseCustomOverride(currentTenant.useCustomColorOverride ?? false);
+            setSemanticMode(currentTenant.semanticColorMode || "default");
+            setCustomSuccessColor(currentTenant.customSuccessColor || "");
+            setCustomWarningColor(currentTenant.customWarningColor || "");
+            setCustomDangerColor(currentTenant.customDangerColor || "");
         }
     }, [theme, currentTenant]);
 
@@ -71,9 +79,25 @@ export default function AppearanceSettingsPage() {
         updateTheme(localTheme);
         // Save custom colors to tenant only if override is enabled
         if (useCustomOverride) {
-            updateTenantColors(customPrimaryColor || undefined, customSecondaryColor || undefined, useCustomOverride);
+            updateTenantColors(
+                customPrimaryColor || undefined,
+                customSecondaryColor || undefined,
+                useCustomOverride,
+                semanticMode,
+                customSuccessColor || undefined,
+                customWarningColor || undefined,
+                customDangerColor || undefined
+            );
         } else {
-            updateTenantColors(undefined, undefined, false);
+            updateTenantColors(
+                undefined,
+                undefined,
+                false,
+                semanticMode,
+                customSuccessColor || undefined,
+                customWarningColor || undefined,
+                customDangerColor || undefined
+            );
         }
     };
 
@@ -243,6 +267,118 @@ export default function AppearanceSettingsPage() {
                             className="h-12 rounded-lg shadow-sm"
                             style={{ background: `linear-gradient(90deg, ${customPrimaryColor || selectedPalette.primary} 0%, ${customSecondaryColor || selectedPalette.secondary} 100%)` }}
                         />
+                    </div>
+                </div>
+            </Card>
+
+            {/* Semantic Colors - Action & Status */}
+            <Card>
+                <div className="flex items-center gap-3 mb-4 pb-3 border-b border-gray-100">
+                    <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
+                        <Check className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                        <h3 className="font-semibold text-gray-900">Action & Status Colors</h3>
+                        <p className="text-xs text-gray-500">Configure success, warning and danger colors</p>
+                    </div>
+                </div>
+
+                <div className="space-y-6">
+                    {/* Mode Selection */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {[
+                            { id: "default", name: "Default", description: "Green / Orange / Red" },
+                            { id: "theme", name: "Theme-Aligned", description: "Match salon palette" },
+                            { id: "custom", name: "Custom", description: "Choose precision colors" },
+                        ].map((mode) => {
+                            const isSelected = semanticMode === mode.id;
+                            return (
+                                <button
+                                    key={mode.id}
+                                    onClick={() => setSemanticMode(mode.id as any)}
+                                    className={`p-4 rounded-xl border-2 text-left transition-all duration-200 ${isSelected
+                                        ? "border-emerald-500 bg-emerald-50 shadow-md"
+                                        : "border-gray-200 hover:border-emerald-200 hover:shadow-md"
+                                        }`}
+                                >
+                                    <div className="flex items-center justify-between mb-1">
+                                        <p className="font-bold text-gray-900 text-sm">{mode.name}</p>
+                                        {isSelected && <Check className="w-4 h-4 text-emerald-600" />}
+                                    </div>
+                                    <p className="text-[10px] text-gray-500">{mode.description}</p>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* Custom Color Pickers */}
+                    {semanticMode === "custom" && (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-xl animate-in fade-in slide-in-from-top-2">
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-gray-700 uppercase">Success</label>
+                                <div className="relative">
+                                    <input
+                                        type="color"
+                                        value={customSuccessColor || "#22c55e"}
+                                        onChange={(e) => setCustomSuccessColor(e.target.value)}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    />
+                                    <div className="h-10 rounded-lg border-2 border-gray-200 flex items-center gap-2 px-3 bg-white">
+                                        <div className="w-5 h-5 rounded-full" style={{ backgroundColor: customSuccessColor || "#22c55e" }} />
+                                        <span className="text-xs font-mono">{customSuccessColor || "#22c55e"}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-gray-700 uppercase">Warning</label>
+                                <div className="relative">
+                                    <input
+                                        type="color"
+                                        value={customWarningColor || "#f59e0b"}
+                                        onChange={(e) => setCustomWarningColor(e.target.value)}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    />
+                                    <div className="h-10 rounded-lg border-2 border-gray-200 flex items-center gap-2 px-3 bg-white">
+                                        <div className="w-5 h-5 rounded-full" style={{ backgroundColor: customWarningColor || "#f59e0b" }} />
+                                        <span className="text-xs font-mono">{customWarningColor || "#f59e0b"}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-gray-700 uppercase">Danger</label>
+                                <div className="relative">
+                                    <input
+                                        type="color"
+                                        value={customDangerColor || "#ef4444"}
+                                        onChange={(e) => setCustomDangerColor(e.target.value)}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    />
+                                    <div className="h-10 rounded-lg border-2 border-gray-200 flex items-center gap-2 px-3 bg-white">
+                                        <div className="w-5 h-5 rounded-full" style={{ backgroundColor: customDangerColor || "#ef4444" }} />
+                                        <span className="text-xs font-mono">{customDangerColor || "#ef4444"}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Preview Section */}
+                    <div className="pt-2">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase mb-3 tracking-widest text-center">Live Component Preview</p>
+                        <div className="flex flex-wrap items-center justify-center gap-4">
+                            <div className="flex flex-col items-center gap-2">
+                                <div className="px-4 py-2 rounded-lg text-white font-bold text-xs shadow-sm bg-success">Success Action</div>
+                                <span className="text-[8px] text-gray-400 uppercase">Button / Badge</span>
+                            </div>
+                            <div className="flex flex-col items-center gap-2">
+                                <div className="px-4 py-2 rounded-lg text-white font-bold text-xs shadow-sm bg-warning">Warning Action</div>
+                                <span className="text-[8px] text-gray-400 uppercase">Attention / Pending</span>
+                            </div>
+                            <div className="flex flex-col items-center gap-2">
+                                <div className="px-4 py-2 rounded-lg text-white font-bold text-xs shadow-sm bg-error">Danger Action</div>
+                                <span className="text-[8px] text-gray-400 uppercase">Refuse / Cancel</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </Card>

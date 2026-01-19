@@ -68,20 +68,20 @@ const monthlySalesData = [
 
 // Expense Categories for Pie Chart
 const expenseCategories = [
-    { name: "Administrative", value: 32, color: "#3B82F6", amount: 2000 },
-    { name: "Marketing", value: 25, color: "#EC4899", amount: 999 },
-    { name: "Insurance", value: 18, color: "#8B5CF6", amount: 350 },
-    { name: "Software", value: 12, color: "#10B981", amount: 599 },
-    { name: "Meals", value: 8, color: "#F59E0B", amount: 220 },
-    { name: "Utilities", value: 5, color: "#EF4444", amount: 120 },
+    { name: "Administrative", value: 32, color: "var(--color-primary)", amount: 2000 },
+    { name: "Marketing", value: 25, color: "var(--color-secondary)", amount: 999 },
+    { name: "Insurance", value: 12, color: "var(--color-warning)", amount: 350 },
+    { name: "Software", value: 18, color: "var(--color-success)", amount: 599 },
+    { name: "Meals", value: 8, color: "var(--color-primary-light)", amount: 220 },
+    { name: "Utilities", value: 5, color: "var(--color-error)", amount: 120 },
 ];
 
 // Quarterly Performance Data
 const quarterlyPerformance = [
-    { quarter: "Q1", value: 5580, color: "#8B5CF6" },
-    { quarter: "Q2", value: 5795, color: "#10B981" },
-    { quarter: "Q3", value: 5058, color: "#F59E0B" },
-    { quarter: "Q4", value: 5399, color: "#EF4444" },
+    { quarter: "Q1", value: 5580, color: "var(--color-primary)" },
+    { quarter: "Q2", value: 5795, color: "var(--color-success)" },
+    { quarter: "Q3", value: 5058, color: "var(--color-warning)" },
+    { quarter: "Q4", value: 5399, color: "var(--color-error)" },
 ];
 
 // Tax Summary Data
@@ -161,7 +161,7 @@ export default function ReportsPage() {
                         {/* Period Filters */}
                         <div className="flex bg-gray-100 rounded-lg p-1">
                             <button className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-white hover:shadow-sm rounded-md transition">Daily</button>
-                            <button className="px-3 py-1.5 text-sm font-medium bg-white shadow-sm text-purple-600 rounded-md">Weekly</button>
+                            <button className="px-3 py-1.5 text-sm font-medium bg-white shadow-sm text-[var(--color-primary)] rounded-md">Weekly</button>
                             <button className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-white hover:shadow-sm rounded-md transition">Monthly</button>
                             <button className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-white hover:shadow-sm rounded-md transition">Yearly</button>
                         </div>
@@ -266,13 +266,13 @@ export default function ReportsPage() {
                                                 <span className="text-sm font-medium text-gray-900">{row.worker}</span>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-4 text-right font-semibold text-green-600">€{row.revenue.toLocaleString()}</td>
-                                        <td className="px-4 py-4 text-right font-semibold text-red-600">€{row.expense.toLocaleString()}</td>
-                                        <td className="px-4 py-4 text-right font-semibold text-green-600">€{row.profit.toLocaleString()}</td>
-                                        <td className="px-4 py-4 text-right font-semibold text-orange-600">€{row.tax.toLocaleString()}</td>
-                                        <td className="px-4 py-4 text-right font-semibold text-blue-600">€{row.savings.toLocaleString()}</td>
+                                        <td className="px-4 py-4 text-right font-semibold text-[var(--color-success)]">€{row.revenue.toLocaleString()}</td>
+                                        <td className="px-4 py-4 text-right font-semibold text-[var(--color-error)]">€{row.expense.toLocaleString()}</td>
+                                        <td className="px-4 py-4 text-right font-semibold text-[var(--color-success)]">€{row.profit.toLocaleString()}</td>
+                                        <td className="px-4 py-4 text-right font-semibold text-[var(--color-warning)]">€{row.tax.toLocaleString()}</td>
+                                        <td className="px-4 py-4 text-right font-semibold text-[var(--color-primary)]">€{row.savings.toLocaleString()}</td>
                                         <td className="px-4 py-4 text-center">
-                                            <button className="text-purple-600 hover:text-purple-800 transition">
+                                            <button className="text-[var(--color-primary)] hover:opacity-80 transition">
                                                 <Edit className="w-4 h-4" />
                                             </button>
                                         </td>
@@ -282,11 +282,11 @@ export default function ReportsPage() {
                             <tfoot className="bg-gray-50 font-semibold">
                                 <tr>
                                     <td className="px-4 py-3 text-sm" colSpan={2}>Total</td>
-                                    <td className="px-4 py-3 text-right text-green-600">€{filteredMonthlyBreakdown.reduce((sum, r) => sum + r.revenue, 0).toLocaleString()}</td>
-                                    <td className="px-4 py-3 text-right text-red-600">€{filteredMonthlyBreakdown.reduce((sum, r) => sum + r.expense, 0).toLocaleString()}</td>
-                                    <td className="px-4 py-3 text-right text-green-600">€{filteredMonthlyBreakdown.reduce((sum, r) => sum + r.profit, 0).toLocaleString()}</td>
-                                    <td className="px-4 py-3 text-right text-orange-600">€{filteredMonthlyBreakdown.reduce((sum, r) => sum + r.tax, 0).toLocaleString()}</td>
-                                    <td className="px-4 py-3 text-right text-blue-600">€{filteredMonthlyBreakdown.reduce((sum, r) => sum + r.savings, 0).toLocaleString()}</td>
+                                    <td className="px-4 py-3 text-right text-[var(--color-success)]">€{filteredMonthlyBreakdown.reduce((sum, r) => sum + r.revenue, 0).toLocaleString()}</td>
+                                    <td className="px-4 py-3 text-right text-[var(--color-error)]">€{filteredMonthlyBreakdown.reduce((sum, r) => sum + r.expense, 0).toLocaleString()}</td>
+                                    <td className="px-4 py-3 text-right text-[var(--color-success)]">€{filteredMonthlyBreakdown.reduce((sum, r) => sum + r.profit, 0).toLocaleString()}</td>
+                                    <td className="px-4 py-3 text-right text-[var(--color-warning)]">€{filteredMonthlyBreakdown.reduce((sum, r) => sum + r.tax, 0).toLocaleString()}</td>
+                                    <td className="px-4 py-3 text-right text-[var(--color-primary)]">€{filteredMonthlyBreakdown.reduce((sum, r) => sum + r.savings, 0).toLocaleString()}</td>
                                     <td className="px-4 py-3"></td>
                                 </tr>
                             </tfoot>
@@ -306,8 +306,8 @@ export default function ReportsPage() {
                                 <YAxis />
                                 <Tooltip />
                                 <Legend />
-                                <Bar dataKey="revenue" fill="#3B82F6" radius={[4, 4, 0, 0]} name="Revenue" />
-                                <Bar dataKey="expenses" fill="#EF4444" radius={[4, 4, 0, 0]} name="Expenses" />
+                                <Bar dataKey="revenue" fill="var(--color-success)" radius={[4, 4, 0, 0]} name="Revenue" />
+                                <Bar dataKey="expenses" fill="var(--color-error)" radius={[4, 4, 0, 0]} name="Expenses" />
                             </BarChart>
                         </ResponsiveContainer>
                     </Card>
@@ -321,7 +321,7 @@ export default function ReportsPage() {
                                 <XAxis dataKey="month" />
                                 <YAxis />
                                 <Tooltip />
-                                <Line type="monotone" dataKey="sales" stroke="#F59E0B" strokeWidth={3} dot={{ fill: "#F59E0B", strokeWidth: 2 }} name="Sales" />
+                                <Line type="monotone" dataKey="sales" stroke="var(--color-primary)" strokeWidth={3} dot={{ fill: "var(--color-primary)", strokeWidth: 2 }} name="Sales" />
                             </LineChart>
                         </ResponsiveContainer>
                     </Card>
@@ -449,7 +449,7 @@ export default function ReportsPage() {
                                                 <td className="px-4 py-3 text-sm text-gray-900">{tax.description}</td>
                                                 <td className="px-4 py-3 text-right font-semibold text-gray-900">€{tax.amount.toLocaleString()}</td>
                                                 <td className="px-4 py-3 text-center">
-                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${tax.status === 'Paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${tax.status === 'Paid' ? 'bg-[var(--color-success-light)] text-[var(--color-success)]' : 'bg-[var(--color-warning-light)] text-[var(--color-warning)]'}`}>
                                                         {tax.status}
                                                     </span>
                                                 </td>
@@ -471,7 +471,7 @@ export default function ReportsPage() {
                                             <span className="text-sm font-semibold text-gray-900">{tax.rate}%</span>
                                         </div>
                                         <div className="w-full bg-gray-200 rounded-full h-3">
-                                            <div className="h-3 rounded-full bg-purple-600" style={{ width: `${(tax.rate / 25) * 100}%` }}></div>
+                                            <div className="h-3 rounded-full bg-[var(--color-primary)]" style={{ width: `${(tax.rate / 25) * 100}%` }}></div>
                                         </div>
                                     </div>
                                 ))}
@@ -491,7 +491,7 @@ export default function ReportsPage() {
                                 <XAxis dataKey="month" />
                                 <YAxis />
                                 <Tooltip />
-                                <Line type="monotone" dataKey="purchases" stroke="#8B5CF6" strokeWidth={2} dot={{ fill: "#8B5CF6", strokeWidth: 2 }} name="Purchases" />
+                                <Line type="monotone" dataKey="purchases" stroke="var(--color-primary)" strokeWidth={2} dot={{ fill: "var(--color-primary)", strokeWidth: 2 }} name="Purchases" />
                             </LineChart>
                         </ResponsiveContainer>
                     </Card>
@@ -513,7 +513,7 @@ export default function ReportsPage() {
                                         <tr key={idx} className="hover:bg-gray-50">
                                             <td className="px-4 py-3 text-sm font-medium text-gray-900">{fee.category}</td>
                                             <td className="px-4 py-3 text-right text-sm text-gray-600">{fee.percentage}%</td>
-                                            <td className="px-4 py-3 text-right font-semibold text-red-600">-€{fee.amount.toLocaleString()}</td>
+                                            <td className="px-4 py-3 text-right font-semibold text-[var(--color-error)]">-€{fee.amount.toLocaleString()}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -521,7 +521,7 @@ export default function ReportsPage() {
                                     <tr>
                                         <td className="px-4 py-2 text-sm">Total Fees</td>
                                         <td className="px-4 py-2 text-right text-sm">{feeBreakdown.reduce((sum, f) => sum + f.percentage, 0).toFixed(1)}%</td>
-                                        <td className="px-4 py-2 text-right text-red-600">-€{feeBreakdown.reduce((sum, f) => sum + f.amount, 0).toLocaleString()}</td>
+                                        <td className="px-4 py-2 text-right text-[var(--color-error)]">-€{feeBreakdown.reduce((sum, f) => sum + f.amount, 0).toLocaleString()}</td>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -533,17 +533,17 @@ export default function ReportsPage() {
                 <Card>
                     <h3 className="text-lg font-semibold mb-4">Monthly vs Weekly Analysis</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
-                            <p className="text-sm font-medium text-blue-600 mb-1">Weekly Average</p>
+                        <div className="p-4 bg-[var(--color-secondary-light)] rounded-xl border border-[var(--color-secondary-light)]">
+                            <p className="text-sm font-medium text-[var(--color-secondary)] mb-1">Weekly Average</p>
                             <h4 className="text-2xl font-bold text-gray-900">€{monthlyWeeklyAnalysis.weekly.toLocaleString()}</h4>
                         </div>
-                        <div className="p-4 bg-purple-50 rounded-xl border border-purple-100">
-                            <p className="text-sm font-medium text-purple-600 mb-1">Monthly Total</p>
+                        <div className="p-4 bg-[var(--color-primary-light)] rounded-xl border border-[var(--color-primary-light)]">
+                            <p className="text-sm font-medium text-[var(--color-primary)] mb-1">Monthly Total</p>
                             <h4 className="text-2xl font-bold text-gray-900">€{monthlyWeeklyAnalysis.monthly.toLocaleString()}</h4>
                         </div>
-                        <div className="p-4 bg-green-50 rounded-xl border border-green-100">
-                            <p className="text-sm font-medium text-green-600 mb-1">Month vs Previous</p>
-                            <h4 className="text-2xl font-bold text-green-600">+€{monthlyWeeklyAnalysis.difference.toLocaleString()}</h4>
+                        <div className="p-4 bg-[var(--color-success-light)] rounded-xl border border-[var(--color-success-light)]">
+                            <p className="text-sm font-medium text-[var(--color-success)] mb-1">Month vs Previous</p>
+                            <h4 className="text-2xl font-bold text-[var(--color-success)]">+€{monthlyWeeklyAnalysis.difference.toLocaleString()}</h4>
                         </div>
                     </div>
                 </Card>
@@ -551,8 +551,8 @@ export default function ReportsPage() {
                 {/* Financial Recommendations */}
                 <Card gradient="" style={getCardStyle(0)}>
                     <div className="flex items-center gap-2 mb-4">
-                        <Lightbulb className="w-5 h-5 text-purple-600" />
-                        <h3 className="text-lg font-semibold">Financial Recommendations</h3>
+                        <Lightbulb className="w-5 h-5 text-white" />
+                        <h3 className="text-lg font-semibold text-white">Financial Recommendations</h3>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {recommendations.map((rec, idx) => (

@@ -6,12 +6,12 @@ import Button from "@/components/ui/Button";
 import { Calendar, Clock, Plus, User } from "lucide-react";
 
 const teamMembers = [
-    { id: 1, name: "Orphelia", color: "from-purple-500 to-purple-700" },
-    { id: 2, name: "Team Member 2", color: "from-pink-500 to-pink-700" },
-    { id: 3, name: "Team Member 3", color: "from-orange-500 to-orange-700" },
-    { id: 4, name: "Team Member 4", color: "from-teal-500 to-teal-700" },
-    { id: 5, name: "Team Member 5", color: "from-blue-500 to-blue-700" },
-    { id: 6, name: "Team Member 6", color: "from-indigo-500 to-indigo-700" },
+    { id: 1, name: "Orphelia", color: "from-[var(--color-primary)] to-[var(--color-primary-dark)]" },
+    { id: 2, name: "Team Member 2", color: "from-[var(--color-secondary)] to-[var(--color-secondary-dark)]" },
+    { id: 3, name: "Team Member 3", color: "from-[var(--color-warning)] to-[var(--color-warning-dark)]" },
+    { id: 4, name: "Team Member 4", color: "from-[var(--color-success)] to-[var(--color-success-dark)]" },
+    { id: 5, name: "Team Member 5", color: "from-[var(--color-info,bg-blue-500)] to-[var(--color-info-dark,bg-blue-600)]" },
+    { id: 6, name: "Team Member 6", color: "from-[var(--color-primary-dark)] to-[var(--color-secondary-dark)]" },
 ];
 
 const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -48,7 +48,7 @@ export default function TeamSchedulesPage() {
             {/* Weekly Schedule Grid */}
             <Card>
                 <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                    <div className="w-10 h-10 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] rounded-lg flex items-center justify-center">
                         <Calendar className="w-5 h-5 text-white" />
                     </div>
                     <div>
@@ -84,7 +84,7 @@ export default function TeamSchedulesPage() {
                                             <td key={day} className="py-3 px-2 text-center">
                                                 {data.available ? (
                                                     <div className="flex flex-col items-center">
-                                                        <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">
+                                                        <span className="px-2 py-1 bg-[var(--color-success-light)] text-[var(--color-success)] text-xs rounded-full font-medium">
                                                             {data.appointments} APT
                                                         </span>
                                                     </div>
@@ -107,7 +107,7 @@ export default function TeamSchedulesPage() {
             <Card>
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                        <div className="w-10 h-10 bg-gradient-to-br from-[var(--color-secondary)] to-[var(--color-secondary-dark)] rounded-lg flex items-center justify-center">
                             <Clock className="w-5 h-5 text-white" />
                         </div>
                         <div>
@@ -143,9 +143,9 @@ export default function TeamSchedulesPage() {
                                     </span>
                                 </div>
                                 {hours.map((hour, idx) => (
-                                    <div key={hour} className="h-12 border border-gray-100 rounded-lg m-0.5 hover:bg-purple-50 cursor-pointer transition-colors flex items-center justify-center">
+                                    <div key={hour} className="h-12 border border-gray-100 rounded-lg m-0.5 hover:bg-[var(--color-primary-light)] cursor-pointer transition-colors flex items-center justify-center">
                                         {idx % 3 === 0 && (
-                                            <span className="text-xs text-purple-600 font-medium">APT</span>
+                                            <span className="text-xs text-[var(--color-primary)] font-medium">APT</span>
                                         )}
                                     </div>
                                 ))}

@@ -26,16 +26,16 @@ import {
 } from "lucide-react";
 
 const settingsMenuItems = [
-    { id: "profile", name: "Profile", description: "Personal information", icon: User, path: "/settings/profile", color: "from-blue-500 to-blue-600", roles: ['client', 'worker', 'manager', 'admin'] },
-    { id: "workshop", name: "Workshop", description: "Business configuration", icon: Building2, path: "/settings/workshop", color: "from-purple-500 to-purple-600", roles: ['manager', 'admin'] },
-    { id: "appearance", name: "Appearance", description: "Themes & fonts", icon: Palette, path: "/settings/appearance", color: "from-pink-500 to-pink-600", roles: ['client', 'worker', 'manager', 'admin'] },
-    { id: "notifications", name: "Notifications", description: "Alerts & reminders", icon: Bell, path: "/settings/notifications", color: "from-orange-500 to-orange-600", roles: ['client', 'worker', 'manager', 'admin'] },
-    { id: "security", name: "Security", description: "Passwords & 2FA", icon: Shield, path: "/settings/security", color: "from-red-500 to-red-600", roles: ['client', 'worker', 'manager', 'admin'] },
-    { id: "users", name: "User Management", description: "Team & roles", icon: Users, path: "/settings/users", color: "from-green-500 to-green-600", roles: ['admin'] },
-    { id: "billing", name: "Billing", description: "Payments & invoices", icon: CreditCard, path: "/settings/billing", color: "from-teal-500 to-teal-600", roles: ['admin'] },
-    { id: "integrations", name: "Integrations", description: "Third-party services", icon: Link2, path: "/settings/integrations", color: "from-indigo-500 to-indigo-600", roles: ['manager', 'admin'] },
-    { id: "analytics", name: "Analytics", description: "Reports & data", icon: BarChart3, path: "/settings/analytics", color: "from-cyan-500 to-cyan-600", roles: ['manager', 'admin'] },
-    { id: "emails", name: "Emails", description: "Email templates", icon: Mail, path: "/settings/emails", color: "from-yellow-500 to-yellow-600", roles: ['manager', 'admin'] },
+    { id: "profile", name: "Profile", description: "Personal information", icon: User, path: "/settings/profile", color: "from-[var(--color-info,bg-blue-500)] to-[var(--color-info-dark,bg-blue-700)]", roles: ['client', 'worker', 'manager', 'admin'] },
+    { id: "workshop", name: "Workshop", description: "Business configuration", icon: Building2, path: "/settings/workshop", color: "from-[var(--color-primary)] to-[var(--color-primary-dark)]", roles: ['manager', 'admin'] },
+    { id: "appearance", name: "Appearance", description: "Themes & fonts", icon: Palette, path: "/settings/appearance", color: "from-[var(--color-secondary)] to-[var(--color-secondary-dark)]", roles: ['client', 'worker', 'manager', 'admin'] },
+    { id: "notifications", name: "Notifications", description: "Alerts & reminders", icon: Bell, path: "/settings/notifications", color: "from-[var(--color-warning)] to-[var(--color-warning-dark)]", roles: ['client', 'worker', 'manager', 'admin'] },
+    { id: "security", name: "Security", description: "Passwords & 2FA", icon: Shield, path: "/settings/security", color: "from-[var(--color-error)] to-[var(--color-error-dark)]", roles: ['client', 'worker', 'manager', 'admin'] },
+    { id: "users", name: "User Management", description: "Team & roles", icon: Users, path: "/settings/users", color: "from-[var(--color-success)] to-[var(--color-success-dark)]", roles: ['admin'] },
+    { id: "billing", name: "Billing", description: "Payments & invoices", icon: CreditCard, path: "/settings/billing", color: "from-[var(--color-info,bg-blue-500)] opacity-80 to-[var(--color-info-dark,bg-blue-700)]", roles: ['admin'] },
+    { id: "integrations", name: "Integrations", description: "Third-party services", icon: Link2, path: "/settings/integrations", color: "from-[var(--color-primary)] opacity-80 to-[var(--color-primary-dark)]", roles: ['manager', 'admin'] },
+    { id: "analytics", name: "Analytics", description: "Reports & data", icon: BarChart3, path: "/settings/analytics", color: "from-[var(--color-info,bg-blue-500)] to-[var(--color-info-dark,bg-blue-700)]", roles: ['manager', 'admin'] },
+    { id: "emails", name: "Emails", description: "Email templates", icon: Mail, path: "/settings/emails", color: "from-[var(--color-warning-light)] to-[var(--color-warning)]", roles: ['manager', 'admin'] },
     { id: "advanced", name: "Advanced", description: "Advanced options", icon: Settings, path: "/settings/advanced", color: "from-gray-500 to-gray-600", roles: ['admin'] },
 ];
 
@@ -83,7 +83,7 @@ export default function SettingsLayout({ children, title, description }: Setting
                                         key={item.id}
                                         href={item.path}
                                         className={`flex items-center gap-2 px-4 py-3 border-b-2 whitespace-nowrap transition-all ${active
-                                            ? "border-purple-600 bg-purple-50 text-purple-700"
+                                            ? "border-[var(--color-primary)] bg-[var(--color-primary-light)] text-[var(--color-primary)]"
                                             : "border-transparent hover:bg-gray-50 text-gray-600"
                                             }`}
                                     >
@@ -132,7 +132,7 @@ export default function SettingsLayout({ children, title, description }: Setting
                                             key={item.id}
                                             href={item.path}
                                             onClick={() => setMobileDropdownOpen(false)}
-                                            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${active ? "bg-purple-50 text-purple-700" : "hover:bg-gray-50"
+                                            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${active ? "bg-[var(--color-primary-light)] text-[var(--color-primary)]" : "hover:bg-gray-50"
                                                 }`}
                                         >
                                             <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center`}>
@@ -157,11 +157,11 @@ export default function SettingsLayout({ children, title, description }: Setting
             <div className="flex gap-6 min-h-[calc(100vh-120px)]">
                 <aside className={`flex-shrink-0 transition-all duration-300 ${submenuCollapsed ? "w-16" : "w-72"}`}>
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden sticky top-6">
-                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-600 to-pink-600">
+                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)]">
                             {!submenuCollapsed && (
                                 <div>
                                     <h2 className="text-sm font-bold text-white">Settings</h2>
-                                    <p className="text-purple-200 text-xs">Configuration</p>
+                                    <p className="text-white opacity-80 text-xs">Configuration</p>
                                 </div>
                             )}
                             <button
@@ -191,12 +191,12 @@ export default function SettingsLayout({ children, title, description }: Setting
                                                 {!submenuCollapsed && (
                                                     <>
                                                         <div className="flex-1 min-w-0">
-                                                            <p className={`text-sm font-medium truncate ${active ? "text-purple-700" : "text-gray-700"}`}>
+                                                            <p className={`text-sm font-medium truncate ${active ? "text-[var(--color-primary)]" : "text-gray-700"}`}>
                                                                 {item.name}
                                                             </p>
                                                             <p className="text-xs text-gray-400 truncate">{item.description}</p>
                                                         </div>
-                                                        {active && <ChevronRight className="w-4 h-4 text-purple-500 flex-shrink-0" />}
+                                                        {active && <ChevronRight className="w-4 h-4 text-[var(--color-primary)] flex-shrink-0" />}
                                                     </>
                                                 )}
                                             </Link>

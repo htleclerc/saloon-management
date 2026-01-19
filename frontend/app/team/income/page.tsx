@@ -118,36 +118,36 @@ function TeamIncomePageContent() {
 
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <Card className="p-4 bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+                    <Card className="p-4 bg-gradient-to-br from-[var(--color-success-light)] to-[var(--color-success-light)] border-[var(--color-success-light)]">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center">
+                            <div className="w-10 h-10 bg-gradient-to-br from-[var(--color-success)] to-[var(--color-success-dark)] rounded-lg flex items-center justify-center">
                                 <DollarSign className="w-5 h-5 text-white" />
                             </div>
                             <div>
                                 <p className="text-xs text-gray-500 uppercase tracking-wider">Total Income</p>
-                                <p className="text-xl font-bold text-green-700">€{totalIncome.toLocaleString()}</p>
+                                <p className="text-xl font-bold text-[var(--color-success)]">€{totalIncome.toLocaleString()}</p>
                             </div>
                         </div>
                     </Card>
-                    <Card className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+                    <Card className="p-4 bg-gradient-to-br from-[var(--color-primary-light)] to-[var(--color-primary-light)] border-[var(--color-primary-light)]">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center">
+                            <div className="w-10 h-10 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] rounded-lg flex items-center justify-center">
                                 <TrendingUp className="w-5 h-5 text-white" />
                             </div>
                             <div>
                                 <p className="text-xs text-gray-500 uppercase tracking-wider">Completed</p>
-                                <p className="text-xl font-bold text-purple-700">{completedCount}</p>
+                                <p className="text-xl font-bold text-[var(--color-primary)]">{completedCount}</p>
                             </div>
                         </div>
                     </Card>
-                    <Card className="p-4 bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
+                    <Card className="p-4 bg-gradient-to-br from-[var(--color-warning-light)] to-[var(--color-warning-light)] border-[var(--color-warning-light)]">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-yellow-500 rounded-lg flex items-center justify-center">
+                            <div className="w-10 h-10 bg-gradient-to-br from-[var(--color-warning)] to-[var(--color-warning-dark)] rounded-lg flex items-center justify-center">
                                 <Calendar className="w-5 h-5 text-white" />
                             </div>
                             <div>
                                 <p className="text-xs text-gray-500 uppercase tracking-wider">Pending</p>
-                                <p className="text-xl font-bold text-yellow-700">{pendingCount}</p>
+                                <p className="text-xl font-bold text-[var(--color-warning)]">{pendingCount}</p>
                             </div>
                         </div>
                     </Card>
@@ -167,7 +167,7 @@ function TeamIncomePageContent() {
                                 <select
                                     value={selectedMember ?? ""}
                                     onChange={(e) => handleMemberChange(e.target.value ? parseInt(e.target.value) : null)}
-                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-300"
+                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                                 >
                                     <option value="">All Team Members</option>
                                     {teamMembers.map((member) => (
@@ -186,7 +186,7 @@ function TeamIncomePageContent() {
                                         placeholder="Client or service..."
                                         value={searchQuery}
                                         onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-                                        className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-300"
+                                        className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                                     />
                                 </div>
                             </div>
@@ -204,12 +204,12 @@ function TeamIncomePageContent() {
                         <table className="w-full">
                             <thead className="bg-gray-50 border-b border-gray-100">
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Team Member</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Client</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Service</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Team Member</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Client</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Service</th>
+                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Amount</th>
+                                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -219,7 +219,7 @@ function TeamIncomePageContent() {
                                             <td className="px-4 py-3 text-sm text-gray-600">{item.date}</td>
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="w-8 h-8 bg-gradient-to-br from-purple-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-xs">
+                                                    <div className="w-8 h-8 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] rounded-full flex items-center justify-center text-white font-bold text-xs">
                                                         {item.member.charAt(0)}
                                                     </div>
                                                     <span className="text-sm font-medium text-gray-900">{item.member}</span>
@@ -227,11 +227,11 @@ function TeamIncomePageContent() {
                                             </td>
                                             <td className="px-4 py-3 text-sm text-gray-900">{item.client}</td>
                                             <td className="px-4 py-3 text-sm text-gray-600">{item.service}</td>
-                                            <td className="px-4 py-3 text-sm text-right font-semibold text-green-600">€{item.amount}</td>
+                                            <td className="px-4 py-3 text-sm text-right font-semibold text-[var(--color-success)]">€{item.amount}</td>
                                             <td className="px-4 py-3 text-center">
                                                 <span className={`text-xs px-2 py-1 rounded-full ${item.status === "Completed"
-                                                    ? "bg-green-100 text-green-700"
-                                                    : "bg-yellow-100 text-yellow-700"
+                                                    ? "bg-[var(--color-success-light)] text-[var(--color-success)]"
+                                                    : "bg-[var(--color-warning-light)] text-[var(--color-warning)]"
                                                     }`}>
                                                     {item.status}
                                                 </span>
@@ -247,10 +247,10 @@ function TeamIncomePageContent() {
                                 )}
                             </tbody>
                             {filteredData.length > 0 && (
-                                <tfoot className="bg-purple-50 font-semibold">
+                                <tfoot className="bg-[var(--color-primary-light)] font-semibold">
                                     <tr>
-                                        <td colSpan={4} className="px-4 py-3 text-sm text-purple-900">Total</td>
-                                        <td className="px-4 py-3 text-sm text-right text-green-700">€{totalIncome.toLocaleString()}</td>
+                                        <td colSpan={4} className="px-4 py-3 text-sm text-[var(--color-primary)]">Total</td>
+                                        <td className="px-4 py-3 text-sm text-right text-[var(--color-success)]">€{totalIncome.toLocaleString()}</td>
                                         <td className="px-4 py-3"></td>
                                     </tr>
                                 </tfoot>
@@ -270,7 +270,7 @@ function TeamIncomePageContent() {
                                     disabled={currentPage === 1}
                                     className={`p-2 rounded-lg transition-colors ${currentPage === 1
                                         ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                        : "bg-purple-100 text-purple-700 hover:bg-purple-200"
+                                        : "bg-[var(--color-primary-light)] text-[var(--color-primary)] hover:opacity-80"
                                         }`}
                                 >
                                     <ChevronLeft className="w-4 h-4" />
@@ -280,7 +280,7 @@ function TeamIncomePageContent() {
                                         key={i}
                                         onClick={() => setCurrentPage(i + 1)}
                                         className={`w-8 h-8 text-sm font-medium rounded-lg transition-colors ${currentPage === i + 1
-                                            ? "bg-purple-600 text-white"
+                                            ? "bg-[var(--color-primary)] text-white"
                                             : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                                             }`}
                                     >
@@ -292,7 +292,7 @@ function TeamIncomePageContent() {
                                     disabled={currentPage === totalPages}
                                     className={`p-2 rounded-lg transition-colors ${currentPage === totalPages
                                         ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                                        : "bg-purple-100 text-purple-700 hover:bg-purple-200"
+                                        : "bg-[var(--color-primary-light)] text-[var(--color-primary)] hover:opacity-80"
                                         }`}
                                 >
                                     <ChevronRight className="w-4 h-4" />

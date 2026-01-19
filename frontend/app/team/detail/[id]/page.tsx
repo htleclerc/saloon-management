@@ -63,11 +63,11 @@ const teamMemberData = {
 
 // Performance Overview Cards
 const performanceCards = [
-    { label: "C$8,430", sublabel: "Total Sales", color: "text-purple-600" },
-    { label: "C$40,094", sublabel: "Total Expenses", color: "text-pink-600" },
-    { label: "467", sublabel: "Total Services", color: "text-orange-600" },
-    { label: "4.0", sublabel: "Rating", color: "text-teal-600" },
-    { label: "C$8,770", sublabel: "Net Profit", color: "text-blue-600" },
+    { label: "C$8,430", sublabel: "Total Sales", color: "text-[var(--color-primary)]" },
+    { label: "C$40,094", sublabel: "Total Expenses", color: "text-[var(--color-error)]" },
+    { label: "467", sublabel: "Total Services", color: "text-[var(--color-warning)]" },
+    { label: "4.0", sublabel: "Rating", color: "text-[var(--color-success)]" },
+    { label: "C$8,770", sublabel: "Net Profit", color: "text-[var(--color-success)]" },
 ];
 
 // Income Row Type
@@ -239,12 +239,12 @@ const activityHistory = [
 
 // Client Comments/Reviews
 const clientComments = [
-    { id: 1, client: "Marie Dubois", avatar: "M", rating: 5, date: "2 days ago", comment: "Orphelia is incredible! My box braids are perfect and she took the time to explain the maintenance. I will be back!", color: "bg-purple-100 text-purple-600" },
-    { id: 2, client: "Sophie Laurent", avatar: "S", rating: 5, date: "1 week ago", comment: "Very professional and fast. The result is beautiful, exactly what I wanted.", color: "bg-pink-100 text-pink-600" },
-    { id: 3, client: "Anna Martin", avatar: "A", rating: 4, date: "2 weeks ago", comment: "Great work on my cornrows! Just a bit long but the result is worth it.", color: "bg-orange-100 text-orange-600" },
-    { id: 4, client: "Claire Petit", avatar: "C", rating: 5, date: "3 weeks ago", comment: "Best hairdresser for locs! She really takes care of my hair.", color: "bg-teal-100 text-teal-600" },
-    { id: 5, client: "Julie Bernard", avatar: "J", rating: 5, date: "1 month ago", comment: "I love my new look! Orphelia is very talented and attentive.", color: "bg-blue-100 text-blue-600" },
-    { id: 6, client: "Nadia Koné", avatar: "N", rating: 4, date: "1 month ago", comment: "Very satisfied with my twists. Nice atmosphere in the salon.", color: "bg-indigo-100 text-indigo-600" },
+    { id: 1, client: "Marie Dubois", avatar: "M", rating: 5, date: "2 days ago", comment: "Orphelia is incredible! My box braids are perfect and she took the time to explain the maintenance. I will be back!", color: "bg-[var(--color-primary-light)] text-[var(--color-primary)]" },
+    { id: 2, client: "Sophie Laurent", avatar: "S", rating: 5, date: "1 week ago", comment: "Very professional and fast. The result is beautiful, exactly what I wanted.", color: "bg-[var(--color-secondary-light)] text-[var(--color-secondary)]" },
+    { id: 3, client: "Anna Martin", avatar: "A", rating: 4, date: "2 weeks ago", comment: "Great work on my cornrows! Just a bit long but the result is worth it.", color: "bg-[var(--color-warning-light)] text-[var(--color-warning)]" },
+    { id: 4, client: "Claire Petit", avatar: "C", rating: 5, date: "3 weeks ago", comment: "Best hairdresser for locs! She really takes care of my hair.", color: "bg-[var(--color-success-light)] text-[var(--color-success)]" },
+    { id: 5, client: "Julie Bernard", avatar: "J", rating: 5, date: "1 month ago", comment: "I love my new look! Orphelia is very talented and attentive.", color: "bg-[var(--color-info-light,bg-blue-100)] text-[var(--color-info,text-blue-700)]" },
+    { id: 6, client: "Nadia Koné", avatar: "N", rating: 4, date: "1 month ago", comment: "Very satisfied with my twists. Nice atmosphere in the salon.", color: "bg-[var(--color-primary-light)] opacity-80 text-[var(--color-primary)]" },
 ];
 
 // Weekly Income Breakdown
@@ -293,18 +293,18 @@ const salaryPerformanceData = [
 
 // Client Satisfaction Data
 const clientSatisfactionData = [
-    { name: "Marie Dubois", rating: 4.9, service: "Box Braids", date: "2 days ago", avatar: "M", color: "bg-purple-100 text-purple-600" },
-    { name: "Sophie Laurent", rating: 4.8, service: "Twists", date: "1 week ago", avatar: "S", color: "bg-pink-100 text-pink-600" },
-    { name: "Anna Martin", rating: 5.0, service: "Cornrows", date: "2 weeks ago", avatar: "A", color: "bg-orange-100 text-orange-600" },
+    { name: "Marie Dubois", rating: 4.9, service: "Box Braids", date: "2 days ago", avatar: "M", color: "bg-[var(--color-primary-light)] text-[var(--color-primary)]" },
+    { name: "Sophie Laurent", rating: 4.8, service: "Twists", date: "1 week ago", avatar: "S", color: "bg-[var(--color-secondary-light)] text-[var(--color-secondary)]" },
+    { name: "Anna Martin", rating: 5.0, service: "Cornrows", date: "2 weeks ago", avatar: "A", color: "bg-[var(--color-warning-light)] text-[var(--color-warning)]" },
 ];
 
 // Service Time Distribution
 const serviceTimeDistribution = [
-    { name: "Box Braids", value: 35, color: "#8B5CF6" },
-    { name: "Twists", value: 25, color: "#EC4899" },
-    { name: "Cornrows", value: 20, color: "#F59E0B" },
-    { name: "Locs", value: 12, color: "#10B981" },
-    { name: "Other", value: 8, color: "#3B82F6" },
+    { name: "Box Braids", value: 35, color: "var(--color-primary)" },
+    { name: "Twists", value: 25, color: "var(--color-secondary)" },
+    { name: "Cornrows", value: 20, color: "var(--color-warning)" },
+    { name: "Locs", value: 12, color: "var(--color-success)" },
+    { name: "Other", value: 8, color: "var(--color-info, #3B82F6)" },
 ];
 
 // Top Appointment Services
@@ -327,11 +327,11 @@ const overallPerformanceData = [
 
 // Top Repeat Clients
 const topRepeatClients = [
-    { name: "Marie Dubois", visits: 24, spent: "C$2,880", avatar: "M", color: "bg-purple-100 text-purple-600" },
-    { name: "Sophie Laurent", visits: 18, spent: "C$1,710", avatar: "S", color: "bg-pink-100 text-pink-600" },
-    { name: "Anna Martin", visits: 15, spent: "C$1,275", avatar: "A", color: "bg-orange-100 text-orange-600" },
-    { name: "Claire Petit", visits: 12, spent: "C$1,800", avatar: "C", color: "bg-teal-100 text-teal-600" },
-    { name: "Julie Bernard", visits: 10, spent: "C$1,300", avatar: "J", color: "bg-blue-100 text-blue-600" },
+    { name: "Marie Dubois", visits: 24, spent: "C$2,880", avatar: "M", color: "bg-[var(--color-primary-light)] text-[var(--color-primary)]" },
+    { name: "Sophie Laurent", visits: 18, spent: "C$1,710", avatar: "S", color: "bg-[var(--color-secondary-light)] text-[var(--color-secondary)]" },
+    { name: "Anna Martin", visits: 15, spent: "C$1,275", avatar: "A", color: "bg-[var(--color-warning-light)] text-[var(--color-warning)]" },
+    { name: "Claire Petit", visits: 12, spent: "C$1,800", avatar: "C", color: "bg-[var(--color-success-light)] text-[var(--color-success)]" },
+    { name: "Julie Bernard", visits: 10, spent: "C$1,300", avatar: "J", color: "bg-[var(--color-info-light,bg-blue-100)] text-[var(--color-info,text-blue-700)]" },
 ];
 
 // Daily Activities
@@ -399,46 +399,46 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
         <div className="space-y-6">
             {/* Performance Overview Stats */}
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                <Card className="p-4 text-center bg-gradient-to-br from-purple-100/30 to-white hover:shadow-lg transition-shadow border-purple-50">
-                    <h3 className="text-xl font-bold text-purple-600">{performanceCards[0].label}</h3>
+                <Card className="p-4 text-center bg-gradient-to-br from-[var(--color-primary-light)] to-white hover:shadow-lg transition-shadow border-[var(--color-primary-light)]">
+                    <h3 className="text-xl font-bold text-[var(--color-primary)]">{performanceCards[0].label}</h3>
                     <p className="text-xs text-gray-500 mt-1">{performanceCards[0].sublabel}</p>
                 </Card>
-                <Card className="p-4 text-center bg-gradient-to-br from-pink-100/30 to-white hover:shadow-lg transition-shadow border-pink-50">
-                    <h3 className="text-xl font-bold text-pink-600">{performanceCards[1].label}</h3>
+                <Card className="p-4 text-center bg-gradient-to-br from-[var(--color-error-light)] to-white hover:shadow-lg transition-shadow border-[var(--color-error-light)]">
+                    <h3 className="text-xl font-bold text-[var(--color-error)]">{performanceCards[1].label}</h3>
                     <p className="text-xs text-gray-500 mt-1">{performanceCards[1].sublabel}</p>
                 </Card>
-                <Card className="p-4 text-center bg-gradient-to-br from-orange-100/30 to-white hover:shadow-lg transition-shadow border-orange-50">
-                    <h3 className="text-xl font-bold text-orange-600">{performanceCards[2].label}</h3>
+                <Card className="p-4 text-center bg-gradient-to-br from-[var(--color-warning-light)] to-white hover:shadow-lg transition-shadow border-[var(--color-warning-light)]">
+                    <h3 className="text-xl font-bold text-[var(--color-warning)]">{performanceCards[2].label}</h3>
                     <p className="text-xs text-gray-500 mt-1">{performanceCards[2].sublabel}</p>
                 </Card>
-                <Card className="p-4 text-center bg-gradient-to-br from-teal-100/30 to-white hover:shadow-lg transition-shadow border-teal-50">
-                    <h3 className="text-xl font-bold text-teal-600">{performanceCards[3].label}</h3>
+                <Card className="p-4 text-center bg-gradient-to-br from-[var(--color-success-light)] to-white hover:shadow-lg transition-shadow border-[var(--color-success-light)]">
+                    <h3 className="text-xl font-bold text-[var(--color-success)]">{performanceCards[3].label}</h3>
                     <p className="text-xs text-gray-500 mt-1">{performanceCards[3].sublabel}</p>
                 </Card>
-                <Card className="p-4 text-center bg-gradient-to-br from-blue-100/30 to-white hover:shadow-lg transition-shadow border-blue-50">
-                    <h3 className="text-xl font-bold text-blue-600">{performanceCards[4].label}</h3>
+                <Card className="p-4 text-center bg-gradient-to-br from-[var(--color-success-light)] to-white hover:shadow-lg transition-shadow border-[var(--color-success-light)]">
+                    <h3 className="text-xl font-bold text-[var(--color-success)]">{performanceCards[4].label}</h3>
                     <p className="text-xs text-gray-500 mt-1">{performanceCards[4].sublabel}</p>
                 </Card>
             </div>
 
             {/* Quick Info Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="p-4 bg-gradient-to-br from-indigo-100/30 to-white hover:shadow-md transition-shadow border-indigo-50">
+                <Card className="p-4 bg-gradient-to-br from-[var(--color-primary-light)] to-white hover:shadow-md transition-shadow border-[var(--color-primary-light)]">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center"><Percent className="w-5 h-5 text-white" /></div>
-                        <div><p className="text-sm text-gray-600">Sharing Key</p><p className="text-xl font-bold text-purple-700">{teamMemberData.sharingKey}%</p></div>
+                        <div className="w-10 h-10 bg-[var(--color-primary)] rounded-lg flex items-center justify-center shadow-lg shadow-[var(--color-primary-light)]"><Percent className="w-5 h-5 text-white" /></div>
+                        <div><p className="text-sm text-gray-600">Sharing Key</p><p className="text-xl font-bold text-[var(--color-primary)]">{teamMemberData.sharingKey}%</p></div>
                     </div>
                 </Card>
-                <Card className="p-4 bg-gradient-to-br from-rose-100/30 to-white hover:shadow-md transition-shadow border-rose-50">
+                <Card className="p-4 bg-gradient-to-br from-[var(--color-warning-light)] to-white hover:shadow-md transition-shadow border-[var(--color-warning-light)]">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg flex items-center justify-center"><Calendar className="w-5 h-5 text-white" /></div>
-                        <div><p className="text-sm text-gray-600">Joined</p><p className="text-xl font-bold text-pink-700">{teamMemberData.joinDate}</p></div>
+                        <div className="w-10 h-10 bg-[var(--color-warning)] rounded-lg flex items-center justify-center shadow-lg shadow-[var(--color-warning-light)]"><Calendar className="w-5 h-5 text-white" /></div>
+                        <div><p className="text-sm text-gray-600">Joined</p><p className="text-xl font-bold text-[var(--color-warning)]">{teamMemberData.joinDate}</p></div>
                     </div>
                 </Card>
-                <Card className="p-4 bg-gradient-to-br from-emerald-100/30 to-white hover:shadow-md transition-shadow border-emerald-50">
+                <Card className="p-4 bg-gradient-to-br from-[var(--color-success-light)] to-white hover:shadow-md transition-shadow border-[var(--color-success-light)]">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg flex items-center justify-center"><MapPin className="w-5 h-5 text-white" /></div>
-                        <div><p className="text-sm text-gray-600">Location</p><p className="text-xl font-bold text-teal-700">{teamMemberData.location}</p></div>
+                        <div className="w-10 h-10 bg-[var(--color-success)] rounded-lg flex items-center justify-center shadow-lg shadow-[var(--color-success-light)]"><MapPin className="w-5 h-5 text-white" /></div>
+                        <div><p className="text-sm text-gray-600">Location</p><p className="text-xl font-bold text-[var(--color-success)]">{teamMemberData.location}</p></div>
                     </div>
                 </Card>
             </div>
@@ -448,7 +448,7 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                 <div className="flex flex-col gap-4 mb-4">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                            <DollarSign className="w-5 h-5 text-green-500" />
+                            <DollarSign className="w-5 h-5 text-[var(--color-success)]" />
                             Income Transactions
                         </h3>
                         <Link href={`/team/income?workerId=${id}`}>
@@ -468,7 +468,7 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                                 placeholder="Search client or service..."
                                 value={transactionSearch}
                                 onChange={(e) => { setTransactionSearch(e.target.value); setTransactionPage(1); }}
-                                className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-300"
+                                className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                             />
                         </div>
                     </div>
@@ -493,14 +493,14 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                                         <td className="px-4 py-3 text-sm text-gray-600">{item.date}</td>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center gap-2">
-                                                <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-green-500 rounded-full flex items-center justify-center text-white font-bold text-xs">{item.client.charAt(0)}</div>
+                                                <div className="w-8 h-8 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] rounded-full flex items-center justify-center text-white font-bold text-xs">{item.client.charAt(0)}</div>
                                                 <span className="text-sm font-medium text-gray-900">{item.client}</span>
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-sm text-gray-600 hidden sm:table-cell">{item.service}</td>
-                                        <td className="px-4 py-3 text-sm text-right font-semibold text-green-600">€{item.amount}</td>
+                                        <td className="px-4 py-3 text-sm text-right font-semibold text-[var(--color-success)]">€{item.amount}</td>
                                         <td className="px-4 py-3 text-center hidden sm:table-cell">
-                                            <span className={`text-xs px-2 py-1 rounded-full ${item.status === "Completed" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>{item.status}</span>
+                                            <span className={`text-xs px-2 py-1 rounded-full ${item.status === "Completed" ? "bg-[var(--color-success-light)] text-[var(--color-success)]" : "bg-[var(--color-warning-light)] text-[var(--color-warning)]"}`}>{item.status}</span>
                                         </td>
                                     </tr>
                                 ))
@@ -511,10 +511,10 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                             )}
                         </tbody>
                         {filteredTransactions.length > 0 && (
-                            <tfoot className="bg-purple-50 font-semibold">
+                            <tfoot className="bg-[var(--color-primary-light)] font-semibold">
                                 <tr>
-                                    <td colSpan={3} className="px-4 py-3 text-sm text-purple-900">Total ({filteredTransactions.length} transactions)</td>
-                                    <td className="px-4 py-3 text-sm text-right text-green-700">€{filteredTransactions.reduce((sum, t) => sum + t.amount, 0).toLocaleString()}</td>
+                                    <td colSpan={3} className="px-4 py-3 text-sm text-[var(--color-primary)]">Total ({filteredTransactions.length} transactions)</td>
+                                    <td className="px-4 py-3 text-sm text-right text-[var(--color-success)]">€{filteredTransactions.reduce((sum, t) => sum + t.amount, 0).toLocaleString()}</td>
                                     <td className="px-4 py-3 hidden sm:table-cell"></td>
                                 </tr>
                             </tfoot>
@@ -532,7 +532,7 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                             <button
                                 onClick={() => setTransactionPage(p => Math.max(1, p - 1))}
                                 disabled={transactionPage === 1}
-                                className={`p-2 rounded-lg transition-colors ${transactionPage === 1 ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-purple-100 text-purple-700 hover:bg-purple-200"}`}
+                                className={`p-2 rounded-lg transition-colors ${transactionPage === 1 ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-[var(--color-primary-light)] text-[var(--color-primary)] hover:opacity-80"}`}
                             >
                                 <ChevronLeft className="w-4 h-4" />
                             </button>
@@ -540,7 +540,7 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                                 <button
                                     key={i}
                                     onClick={() => setTransactionPage(i + 1)}
-                                    className={`w-8 h-8 text-sm font-medium rounded-lg transition-colors ${transactionPage === i + 1 ? "bg-purple-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+                                    className={`w-8 h-8 text-sm font-medium rounded-lg transition-colors ${transactionPage === i + 1 ? "bg-[var(--color-primary)] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
                                 >
                                     {i + 1}
                                 </button>
@@ -548,7 +548,7 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                             <button
                                 onClick={() => setTransactionPage(p => Math.min(totalTransactionPages, p + 1))}
                                 disabled={transactionPage === totalTransactionPages}
-                                className={`p-2 rounded-lg transition-colors ${transactionPage === totalTransactionPages ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-purple-100 text-purple-700 hover:bg-purple-200"}`}
+                                className={`p-2 rounded-lg transition-colors ${transactionPage === totalTransactionPages ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-[var(--color-primary-light)] text-[var(--color-primary)] hover:opacity-80"}`}
                             >
                                 <ChevronRight className="w-4 h-4" />
                             </button>
@@ -560,23 +560,23 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
             </Card>
             <Card className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-bold text-gray-900 flex items-center gap-2"><History className="w-5 h-5 text-blue-500" />Activity History</h3>
+                    <h3 className="font-bold text-gray-900 flex items-center gap-2"><History className="w-5 h-5 text-[var(--color-primary)]" />Activity History</h3>
                     <Button variant="outline" size="sm" className="text-xs">View All</Button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {activityHistory.map((item) => {
                         const IconComponent = item.icon;
                         return (
-                            <div key={item.id} className={`flex items-center gap-3 p-3 rounded-lg ${item.type === "service" ? "bg-purple-50" :
-                                item.type === "review" ? "bg-yellow-50" :
-                                    item.type === "booking" ? "bg-blue-50" :
-                                        item.type === "payment" ? "bg-green-50" :
+                            <div key={item.id} className={`flex items-center gap-3 p-3 rounded-lg ${item.type === "service" ? "bg-[var(--color-primary-light)]" :
+                                item.type === "review" ? "bg-[var(--color-warning-light)]" :
+                                    item.type === "booking" ? "bg-[var(--color-info-light)]" :
+                                        item.type === "payment" ? "bg-[var(--color-success-light)]" :
                                             "bg-gray-50"
                                 }`}>
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${item.type === "service" ? "bg-purple-100 text-purple-600" :
-                                    item.type === "review" ? "bg-yellow-100 text-yellow-600" :
-                                        item.type === "booking" ? "bg-blue-100 text-blue-600" :
-                                            item.type === "payment" ? "bg-green-100 text-green-600" :
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${item.type === "service" ? "bg-[var(--color-primary-light)] text-[var(--color-primary)]" :
+                                    item.type === "review" ? "bg-[var(--color-warning-light)] text-[var(--color-warning)]" :
+                                        item.type === "booking" ? "bg-[var(--color-info-light)] text-[var(--color-info)]" :
+                                            item.type === "payment" ? "bg-[var(--color-success-light)] text-[var(--color-success)]" :
                                                 "bg-gray-100 text-gray-600"
                                     }`}>
                                     <IconComponent className="w-4 h-4" />
@@ -594,7 +594,7 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
             {/* Client Comments Preview */}
             < Card className="p-6" >
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-bold text-gray-900 flex items-center gap-2"><MessageSquare className="w-5 h-5 text-pink-500" />Recent Client Comments</h3>
+                    <h3 className="font-bold text-gray-900 flex items-center gap-2"><MessageSquare className="w-5 h-5 text-[var(--color-secondary)]" />Recent Client Comments</h3>
                     <Button variant="outline" size="sm" className="text-xs">View All</Button>
                 </div>
                 <div className="space-y-4">
@@ -628,33 +628,33 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
             {/* Performance Overview Stats + Action Buttons */}
             <div className="space-y-4">
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                    <Card className="p-4 text-center bg-gradient-to-br from-purple-100/30 to-white hover:shadow-lg transition-shadow border-purple-50">
-                        <h3 className="text-xl font-bold text-purple-600">{performanceCards[0].label}</h3>
+                    <Card className="p-4 text-center bg-gradient-to-br from-[var(--color-primary-light)] to-white hover:shadow-lg transition-shadow border-[var(--color-primary-light)]">
+                        <h3 className="text-xl font-bold text-[var(--color-primary)]">{performanceCards[0].label}</h3>
                         <p className="text-xs text-gray-500 mt-1">{performanceCards[0].sublabel}</p>
                     </Card>
-                    <Card className="p-4 text-center bg-gradient-to-br from-pink-100/30 to-white hover:shadow-lg transition-shadow border-pink-50">
-                        <h3 className="text-xl font-bold text-pink-600">{performanceCards[1].label}</h3>
+                    <Card className="p-4 text-center bg-gradient-to-br from-[var(--color-error-light)] to-white hover:shadow-lg transition-shadow border-[var(--color-error-light)]">
+                        <h3 className="text-xl font-bold text-[var(--color-error)]">{performanceCards[1].label}</h3>
                         <p className="text-xs text-gray-500 mt-1">{performanceCards[1].sublabel}</p>
                     </Card>
-                    <Card className="p-4 text-center bg-gradient-to-br from-orange-100/30 to-white hover:shadow-lg transition-shadow border-orange-50">
-                        <h3 className="text-xl font-bold text-orange-600">{performanceCards[2].label}</h3>
+                    <Card className="p-4 text-center bg-gradient-to-br from-[var(--color-warning-light)] to-white hover:shadow-lg transition-shadow border-[var(--color-warning-light)]">
+                        <h3 className="text-xl font-bold text-[var(--color-warning)]">{performanceCards[2].label}</h3>
                         <p className="text-xs text-gray-500 mt-1">{performanceCards[2].sublabel}</p>
                     </Card>
-                    <Card className="p-4 text-center bg-gradient-to-br from-teal-100/30 to-white hover:shadow-lg transition-shadow border-teal-50">
-                        <h3 className="text-xl font-bold text-teal-600">{performanceCards[3].label}</h3>
+                    <Card className="p-4 text-center bg-gradient-to-br from-[var(--color-success-light)] to-white hover:shadow-lg transition-shadow border-[var(--color-success-light)]">
+                        <h3 className="text-xl font-bold text-[var(--color-success)]">{performanceCards[3].label}</h3>
                         <p className="text-xs text-gray-500 mt-1">{performanceCards[3].sublabel}</p>
                     </Card>
-                    <Card className="p-4 text-center bg-gradient-to-br from-blue-100/30 to-white hover:shadow-lg transition-shadow border-blue-50">
-                        <h3 className="text-xl font-bold text-blue-600">{performanceCards[4].label}</h3>
+                    <Card className="p-4 text-center bg-gradient-to-br from-[var(--color-info-light,bg-blue-50)] to-white hover:shadow-lg transition-shadow border-[var(--color-info-light,border-blue-100)]">
+                        <h3 className="text-xl font-bold text-[var(--color-info,text-blue-600)]">{performanceCards[4].label}</h3>
                         <p className="text-xs text-gray-500 mt-1">{performanceCards[4].sublabel}</p>
                     </Card>
                 </div>
 
                 {/* Action Buttons - Moved to top right area */}
                 <div className="flex justify-end gap-3">
-                    <Button variant="primary" size="sm" className="bg-gradient-to-r from-purple-500 to-purple-600"><Eye className="w-4 h-4 mr-2" />View Reports</Button>
-                    <Button variant="primary" size="sm" className="bg-gradient-to-r from-pink-500 to-pink-600"><BarChart3 className="w-4 h-4 mr-2" />Analytics</Button>
-                    <Button variant="primary" size="sm" className="bg-gradient-to-r from-orange-500 to-orange-600"><Calendar className="w-4 h-4 mr-2" />Schedule</Button>
+                    <Button variant="primary" size="sm" className="bg-gradient-to-r from-[var(--color-primary)] to-gray-900 border-none"><Eye className="w-4 h-4 mr-2" />View Reports</Button>
+                    <Button variant="primary" size="sm" className="bg-gradient-to-r from-[var(--color-secondary)] to-gray-900 border-none"><BarChart3 className="w-4 h-4 mr-2" />Analytics</Button>
+                    <Button variant="primary" size="sm" className="bg-gradient-to-r from-[var(--color-warning)] to-gray-900 border-none"><Calendar className="w-4 h-4 mr-2" />Schedule</Button>
                 </div>
             </div>
 
@@ -662,23 +662,23 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
             <Card className="p-6">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
                     <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                        <TrendingUp className="w-5 h-5 text-green-500" />
+                        <TrendingUp className="w-5 h-5 text-[var(--color-success)]" />
                         Income Overview
                     </h3>
                     <div className="flex items-center gap-3">
                         <select
                             value={selectedYear}
                             onChange={(e) => handleYearChange(e.target.value)}
-                            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-purple-100 text-purple-700 border-0 cursor-pointer focus:ring-2 focus:ring-purple-300"
+                            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-[var(--color-primary-light)] text-[var(--color-primary)] border-0 cursor-pointer focus:ring-2 focus:ring-[var(--color-primary-light)]"
                         >
                             {availableYears.map((year) => (
                                 <option key={year} value={year}>{year}</option>
                             ))}
                         </select>
                         <div className="flex items-center bg-gray-100 rounded-lg p-1">
-                            <button onClick={() => handlePeriodChange("week")} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${incomePeriod === "week" ? "bg-white text-purple-700 shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>Week</button>
-                            <button onClick={() => handlePeriodChange("month")} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${incomePeriod === "month" ? "bg-white text-purple-700 shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>Month</button>
-                            <button onClick={() => handlePeriodChange("year")} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${incomePeriod === "year" ? "bg-white text-purple-700 shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>Year</button>
+                            <button onClick={() => handlePeriodChange("week")} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${incomePeriod === "week" ? "bg-white text-[var(--color-primary)] shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>Week</button>
+                            <button onClick={() => handlePeriodChange("month")} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${incomePeriod === "month" ? "bg-white text-[var(--color-primary)] shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>Month</button>
+                            <button onClick={() => handlePeriodChange("year")} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${incomePeriod === "year" ? "bg-white text-[var(--color-primary)] shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>Year</button>
                         </div>
                     </div>
                 </div>
@@ -700,21 +700,21 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                                     <td className="px-4 py-3 text-sm font-medium text-gray-900">{row.period}</td>
                                     <td className="px-4 py-3 text-sm text-center text-gray-600">{row.services}</td>
                                     <td className="px-4 py-3 text-sm text-center text-gray-600">{row.clients}</td>
-                                    <td className="px-4 py-3 text-sm text-right font-semibold text-green-600">€{row.income.toLocaleString()}</td>
-                                    <td className="px-4 py-3 text-sm text-right font-semibold text-purple-600">€{row.salary.toLocaleString()}</td>
+                                    <td className="px-4 py-3 text-sm text-right font-semibold text-[var(--color-success)]">€{row.income.toLocaleString()}</td>
+                                    <td className="px-4 py-3 text-sm text-right font-semibold text-[var(--color-primary)]">€{row.salary.toLocaleString()}</td>
                                     <td className="px-4 py-3 text-center">
-                                        <span className={`text-xs px-2 py-1 rounded-full ${row.status === "Completed" ? "bg-green-100 text-green-700" : row.status === "In Progress" ? "bg-blue-100 text-blue-700" : "bg-yellow-100 text-yellow-700"}`}>{row.status}</span>
+                                        <span className={`text-xs px-2 py-1 rounded-full ${row.status === "Completed" ? "bg-[var(--color-success-light)] text-[var(--color-success)]" : row.status === "In Progress" ? "bg-[var(--color-info-light,bg-blue-100)] text-[var(--color-info,text-blue-700)]" : "bg-[var(--color-warning-light)] text-[var(--color-warning)]"}`}>{row.status}</span>
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
-                        <tfoot className="bg-purple-50 font-semibold">
+                        <tfoot className="bg-[var(--color-primary-light)] font-semibold">
                             <tr>
-                                <td className="px-4 py-3 text-sm text-purple-900">Total</td>
-                                <td className="px-4 py-3 text-sm text-center text-purple-700">{currentIncomeData.reduce((sum, r) => sum + r.services, 0)}</td>
-                                <td className="px-4 py-3 text-sm text-center text-purple-700">{currentIncomeData.reduce((sum, r) => sum + r.clients, 0)}</td>
-                                <td className="px-4 py-3 text-sm text-right text-green-700">€{currentIncomeData.reduce((sum, r) => sum + r.income, 0).toLocaleString()}</td>
-                                <td className="px-4 py-3 text-sm text-right text-purple-700">€{currentIncomeData.reduce((sum, r) => sum + r.salary, 0).toLocaleString()}</td>
+                                <td className="px-4 py-3 text-sm text-[var(--color-primary)]">Total</td>
+                                <td className="px-4 py-3 text-sm text-center text-[var(--color-primary)]">{currentIncomeData.reduce((sum, r) => sum + r.services, 0)}</td>
+                                <td className="px-4 py-3 text-sm text-center text-[var(--color-primary)]">{currentIncomeData.reduce((sum, r) => sum + r.clients, 0)}</td>
+                                <td className="px-4 py-3 text-sm text-right text-[var(--color-success)]">€{currentIncomeData.reduce((sum, r) => sum + r.income, 0).toLocaleString()}</td>
+                                <td className="px-4 py-3 text-sm text-right text-[var(--color-primary)]">€{currentIncomeData.reduce((sum, r) => sum + r.salary, 0).toLocaleString()}</td>
                                 <td className="px-4 py-3"></td>
                             </tr>
                         </tfoot>
@@ -724,9 +724,9 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                     <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
                         <p className="text-sm text-gray-500">Showing {(incomePage - 1) * itemsPerPage + 1} to {Math.min(incomePage * itemsPerPage, currentIncomeData.length)} of {currentIncomeData.length}</p>
                         <div className="flex items-center gap-2">
-                            <button onClick={() => setIncomePage(p => Math.max(1, p - 1))} disabled={incomePage === 1} className={`px-3 py-1.5 text-xs font-medium rounded-md ${incomePage === 1 ? "bg-gray-100 text-gray-400" : "bg-purple-100 text-purple-700 hover:bg-purple-200"}`}>Previous</button>
-                            {[...Array(totalPages)].map((_, i) => (<button key={i} onClick={() => setIncomePage(i + 1)} className={`w-8 h-8 text-xs font-medium rounded-md ${incomePage === i + 1 ? "bg-purple-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>{i + 1}</button>))}
-                            <button onClick={() => setIncomePage(p => Math.min(totalPages, p + 1))} disabled={incomePage === totalPages} className={`px-3 py-1.5 text-xs font-medium rounded-md ${incomePage === totalPages ? "bg-gray-100 text-gray-400" : "bg-purple-100 text-purple-700 hover:bg-purple-200"}`}>Next</button>
+                            <button onClick={() => setIncomePage(p => Math.max(1, p - 1))} disabled={incomePage === 1} className={`px-3 py-1.5 text-xs font-medium rounded-md ${incomePage === 1 ? "bg-gray-100 text-gray-400" : "bg-[var(--color-primary-light)] text-[var(--color-primary)] hover:opacity-80"}`}>Previous</button>
+                            {[...Array(totalPages)].map((_, i) => (<button key={i} onClick={() => setIncomePage(i + 1)} className={`w-8 h-8 text-xs font-medium rounded-md ${incomePage === i + 1 ? "bg-[var(--color-primary)] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>{i + 1}</button>))}
+                            <button onClick={() => setIncomePage(p => Math.min(totalPages, p + 1))} disabled={incomePage === totalPages} className={`px-3 py-1.5 text-xs font-medium rounded-md ${incomePage === totalPages ? "bg-gray-100 text-gray-400" : "bg-[var(--color-primary-light)] text-[var(--color-primary)] hover:opacity-80"}`}>Next</button>
                         </div>
                     </div>
                 )}
@@ -743,24 +743,24 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                         {recentIncomeHistory.slice(0, 5).map((item) => (
                             <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-green-500 rounded-full flex items-center justify-center text-white font-bold text-sm">{item.client.charAt(0)}</div>
+                                    <div className="w-10 h-10 bg-gradient-to-br from-[var(--color-success)] to-[var(--color-success-dark)] rounded-full flex items-center justify-center text-white font-bold text-sm">{item.client.charAt(0)}</div>
                                     <div><p className="font-medium text-gray-900 text-sm">{item.client}</p><p className="text-xs text-gray-500">{item.service} • {item.date}</p></div>
                                 </div>
-                                <div className="text-right"><p className="font-bold text-green-600">{item.amount}</p><span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">{item.status}</span></div>
+                                <div className="text-right"><p className="font-bold text-[var(--color-success)]">{item.amount}</p><span className="text-xs px-2 py-0.5 rounded-full bg-[var(--color-success-light)] text-[var(--color-success)]">{item.status}</span></div>
                             </div>
                         ))}
                     </div>
                 </Card>
                 <Card className="p-6">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-bold text-gray-900 flex items-center gap-2"><Scissors className="w-5 h-5 text-purple-500" />Services Summary</h3>
+                        <h3 className="font-bold text-gray-900 flex items-center gap-2"><Scissors className="w-5 h-5 text-[var(--color-primary)]" />Services Summary</h3>
                         <Button variant="outline" size="sm" className="text-xs">View All</Button>
                     </div>
                     <div className="space-y-3">
                         {recentServices.map((item) => (
                             <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
                                 <div><p className="font-medium text-gray-900 text-sm">{item.service}</p><p className="text-xs text-gray-500">{item.count} performed • Last: {item.lastPerformed}</p></div>
-                                <p className="font-bold text-purple-600">{item.income}</p>
+                                <p className="font-bold text-[var(--color-primary)]">{item.income}</p>
                             </div>
                         ))}
                     </div>
@@ -778,8 +778,8 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
                             <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
-                            <Tooltip />
-                            <Bar dataKey="value" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
+                            <Tooltip cursor={{ fill: 'var(--color-primary-light)', opacity: 0.4 }} />
+                            <Bar dataKey="value" fill="var(--color-primary)" radius={[4, 4, 0, 0]} />
                         </BarChart>
                     </ResponsiveContainer>
                 </Card>
@@ -793,7 +793,7 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                             <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
                             <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
                             <Tooltip />
-                            <Line type="monotone" dataKey="value" stroke="#EC4899" strokeWidth={3} dot={{ fill: "#EC4899", r: 4 }} />
+                            <Line type="monotone" dataKey="value" stroke="var(--color-secondary)" strokeWidth={3} dot={{ fill: "var(--color-secondary)", r: 4 }} />
                         </LineChart>
                     </ResponsiveContainer>
                 </Card>
@@ -809,18 +809,18 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                         <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
                         <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
-                        <Tooltip />
-                        <Bar dataKey="braids" fill="#8B5CF6" />
-                        <Bar dataKey="twists" fill="#EC4899" />
-                        <Bar dataKey="cornrows" fill="#F59E0B" />
-                        <Bar dataKey="locs" fill="#10B981" radius={[4, 4, 0, 0]} />
+                        <Tooltip cursor={{ fill: 'var(--color-primary-light)', opacity: 0.2 }} />
+                        <Bar dataKey="braids" fill="var(--color-primary)" />
+                        <Bar dataKey="twists" fill="var(--color-secondary)" />
+                        <Bar dataKey="cornrows" fill="var(--color-warning)" />
+                        <Bar dataKey="locs" fill="var(--color-success)" radius={[4, 4, 0, 0]} />
                     </BarChart>
                 </ResponsiveContainer>
                 <div className="flex justify-center gap-6 mt-4">
-                    <div className="flex items-center gap-2 text-xs"><div className="w-3 h-3 rounded bg-purple-500"></div><span>Braids</span></div>
-                    <div className="flex items-center gap-2 text-xs"><div className="w-3 h-3 rounded bg-pink-500"></div><span>Twists</span></div>
-                    <div className="flex items-center gap-2 text-xs"><div className="w-3 h-3 rounded bg-orange-500"></div><span>Cornrows</span></div>
-                    <div className="flex items-center gap-2 text-xs"><div className="w-3 h-3 rounded bg-teal-500"></div><span>Locs</span></div>
+                    <div className="flex items-center gap-2 text-xs"><div className="w-3 h-3 rounded bg-[var(--color-primary)]"></div><span>Braids</span></div>
+                    <div className="flex items-center gap-2 text-xs"><div className="w-3 h-3 rounded bg-[var(--color-secondary)]"></div><span>Twists</span></div>
+                    <div className="flex items-center gap-2 text-xs"><div className="w-3 h-3 rounded bg-[var(--color-warning)]"></div><span>Cornrows</span></div>
+                    <div className="flex items-center gap-2 text-xs"><div className="w-3 h-3 rounded bg-[var(--color-success)]"></div><span>Locs</span></div>
                 </div>
             </Card>
 
@@ -847,9 +847,9 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                                     <td className="px-3 py-3 text-gray-900 font-medium">{row.date}</td>
                                     <td className="px-3 py-3 text-center text-gray-600">{row.clients}</td>
                                     <td className="px-3 py-3 text-center text-gray-600">{row.services}</td>
-                                    <td className="px-3 py-3 text-right text-green-600 font-medium">€{row.income.toLocaleString()}</td>
-                                    <td className="px-3 py-3 text-right text-red-500 font-medium">€{row.expenses.toLocaleString()}</td>
-                                    <td className="px-3 py-3 text-right text-purple-600 font-bold">€{row.profit.toLocaleString()}</td>
+                                    <td className="px-3 py-3 text-right text-[var(--color-success)] font-medium">€{row.income.toLocaleString()}</td>
+                                    <td className="px-3 py-3 text-right text-[var(--color-error)] font-medium">€{row.expenses.toLocaleString()}</td>
+                                    <td className="px-3 py-3 text-right text-[var(--color-primary)] font-bold">€{row.profit.toLocaleString()}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -867,11 +867,11 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                         <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
                         <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
-                        <Tooltip />
-                        <Bar dataKey="value1" fill="#8B5CF6" />
-                        <Bar dataKey="value2" fill="#EC4899" />
-                        <Bar dataKey="value3" fill="#F59E0B" />
-                        <Bar dataKey="value4" fill="#10B981" radius={[4, 4, 0, 0]} />
+                        <Tooltip cursor={{ fill: 'var(--color-primary-light)', opacity: 0.2 }} />
+                        <Bar dataKey="value1" fill="var(--color-primary)" />
+                        <Bar dataKey="value2" fill="var(--color-secondary)" />
+                        <Bar dataKey="value3" fill="var(--color-warning)" />
+                        <Bar dataKey="value4" fill="var(--color-success)" radius={[4, 4, 0, 0]} />
                     </BarChart>
                 </ResponsiveContainer>
             </Card>
@@ -882,7 +882,7 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                     <h3 className="font-bold text-gray-900 mb-4">Daily Activities Log</h3>
                     <div className="space-y-3">
                         {dailyActivities.map((activity, idx) => (
-                            <div key={idx} className={`p-3 rounded-lg border ${activity.type === "success" ? "bg-green-50 border-green-100" : "bg-blue-50 border-blue-100"}`}>
+                            <div key={idx} className={`p-3 rounded-lg border ${activity.type === "success" ? "bg-[var(--color-success-light)] border-[var(--color-success-light)]" : "bg-[var(--color-info-light,bg-blue-50)] border-[var(--color-info-light,border-blue-100)]"}`}>
                                 <p className="font-medium text-gray-900 text-sm">{activity.action}</p>
                                 <p className="text-xs text-gray-500">{activity.time}</p>
                             </div>
@@ -934,13 +934,13 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                     <h3 className="font-bold text-gray-900 mb-4">Top Appointment Services</h3>
                     <div className="space-y-3">
                         {topAppointmentServices.map((service, idx) => (
-                            <div key={idx} className="p-3 rounded-lg bg-purple-50">
+                            <div key={idx} className="p-3 rounded-lg bg-[var(--color-primary-light)]">
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="font-medium text-gray-900 text-sm">{service.name}</span>
-                                    <span className="text-sm font-bold text-purple-600">{service.income}</span>
+                                    <span className="text-sm font-bold text-[var(--color-primary)]">{service.income}</span>
                                 </div>
                                 <div className="w-full bg-white/50 rounded-full h-2">
-                                    <div className="bg-gradient-to-r from-purple-500 to-pink-500 h-2 rounded-full" style={{ width: `${service.percentage}%` }}></div>
+                                    <div className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] h-2 rounded-full" style={{ width: `${service.percentage}%` }}></div>
                                 </div>
                                 <p className="text-xs text-gray-600 mt-1">{service.count} bookings</p>
                             </div>
@@ -957,11 +957,11 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                         <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
                         <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
-                        <Tooltip />
-                        <Bar dataKey="value1" fill="#8B5CF6" />
-                        <Bar dataKey="value2" fill="#EC4899" />
-                        <Bar dataKey="value3" fill="#F59E0B" />
-                        <Bar dataKey="value4" fill="#10B981" radius={[4, 4, 0, 0]} />
+                        <Tooltip cursor={{ fill: 'var(--color-primary-light)', opacity: 0.2 }} />
+                        <Bar dataKey="value1" fill="var(--color-primary)" />
+                        <Bar dataKey="value2" fill="var(--color-secondary)" />
+                        <Bar dataKey="value3" fill="var(--color-warning)" />
+                        <Bar dataKey="value4" fill="var(--color-success)" radius={[4, 4, 0, 0]} />
                     </BarChart>
                 </ResponsiveContainer>
             </Card>
@@ -975,7 +975,7 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                             <div className={`w-12 h-12 rounded-full ${client.color} flex items-center justify-center font-bold mx-auto mb-2`}>{client.avatar}</div>
                             <p className="font-medium text-gray-900 text-sm">{client.name}</p>
                             <p className="text-xs text-gray-500">{client.visits} visits</p>
-                            <p className="text-sm font-bold text-purple-600 mt-1">{client.spent}</p>
+                            <p className="text-sm font-bold text-[var(--color-primary)] mt-1">{client.spent}</p>
                         </div>
                     ))}
                 </div>
@@ -984,10 +984,10 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
             {/* Client Comments Section - NEW */}
             <Card className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-bold text-gray-900 flex items-center gap-2"><MessageSquare className="w-5 h-5 text-pink-500" />Client Comments & Reviews</h3>
+                    <h3 className="font-bold text-gray-900 flex items-center gap-2"><MessageSquare className="w-5 h-5 text-[var(--color-secondary)]" />Client Comments & Reviews</h3>
                     <div className="flex items-center gap-2">
                         <span className="text-sm text-gray-500">Average Rating:</span>
-                        <div className="flex items-center gap-1 bg-yellow-50 px-3 py-1 rounded-full">
+                        <div className="flex items-center gap-1 bg-[var(--color-warning-light)] px-3 py-1 rounded-full">
                             <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                             <span className="font-bold text-gray-900">4.7</span>
                         </div>
@@ -1010,7 +1010,7 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                                     <p className="text-sm text-gray-600 mt-2 leading-relaxed">{comment.comment}</p>
                                     <div className="flex items-center gap-2 mt-3">
                                         <span className="text-xs text-gray-400">{comment.date}</span>
-                                        <button className="text-xs text-purple-600 hover:underline flex items-center gap-1"><ThumbsUp className="w-3 h-3" />Helpful</button>
+                                        <button className="text-xs text-[var(--color-primary)] hover:underline flex items-center gap-1"><ThumbsUp className="w-3 h-3" />Helpful</button>
                                     </div>
                                 </div>
                             </div>
@@ -1027,24 +1027,24 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
             description="Detailed analytics and performance metrics"
         >
             <div className="space-y-6 pb-8">
-                {/* Header Section - Purple Gradient */}
-                <div className="bg-gradient-to-r from-purple-600 to-purple-500 rounded-2xl p-6 text-white shadow-lg">
+                {/* Header Section - Primary Gradient */}
+                <div className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-dark)] rounded-2xl p-6 text-white shadow-lg">
                     <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
-                            <div className="w-20 h-20 rounded-full bg-yellow-300 flex items-center justify-center border-4 border-white/30 overflow-hidden">
+                            <div className="w-20 h-20 rounded-full bg-[var(--color-warning-light)] flex items-center justify-center border-4 border-white/30 overflow-hidden">
                                 <img
                                     src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face"
                                     alt="Orphelia"
                                     className="w-full h-full object-cover"
                                     onError={(e) => {
                                         (e.target as HTMLImageElement).style.display = 'none';
-                                        (e.target as HTMLImageElement).parentElement!.innerHTML = '<span class="text-3xl font-bold text-purple-600">O</span>';
+                                        (e.target as HTMLImageElement).parentElement!.innerHTML = `<span class="text-3xl font-bold text-[var(--color-primary)]">O</span>`;
                                     }}
                                 />
                             </div>
                             <div>
                                 <h2 className="text-2xl font-bold">{teamMemberData.name}</h2>
-                                <div className="flex flex-wrap items-center gap-2 text-purple-100 text-sm mt-1">
+                                <div className="flex flex-wrap items-center gap-2 opacity-90 text-sm mt-1">
                                     <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{teamMemberData.email}</span>
                                     <span>•</span>
                                     <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{teamMemberData.phone}</span>
@@ -1063,7 +1063,7 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                                     <Edit className="w-3 h-3 mr-1" />Edit Profile
                                 </Button>
                             </Link>
-                            <Button variant="primary" size="sm" className="bg-white text-purple-600 hover:bg-purple-50 text-xs">Download Report</Button>
+                            <Button variant="primary" size="sm" className="bg-white text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-xs border-none">Download Report</Button>
                         </div>
                     </div>
                 </div>
@@ -1072,13 +1072,13 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                 <div className="flex items-center bg-gray-100 rounded-xl p-1 w-fit">
                     <button
                         onClick={() => setViewMode("simple")}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === "simple" ? "bg-white text-purple-700 shadow-sm" : "text-gray-600 hover:text-gray-900"}`}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === "simple" ? "bg-white text-[var(--color-primary)] shadow-sm" : "text-gray-600 hover:text-gray-900"}`}
                     >
                         <LayoutGrid className="w-4 h-4" />Simple
                     </button>
                     <button
                         onClick={() => setViewMode("advanced")}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === "advanced" ? "bg-white text-purple-700 shadow-sm" : "text-gray-600 hover:text-gray-900"}`}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === "advanced" ? "bg-white text-[var(--color-primary)] shadow-sm" : "text-gray-600 hover:text-gray-900"}`}
                     >
                         <Table className="w-4 h-4" />Advanced
                     </button>

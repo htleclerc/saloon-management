@@ -37,7 +37,7 @@ export default function EditServicePage() {
                             <p className="text-gray-500">Modify service ID: #{id}</p>
                         </div>
                     </div>
-                    <Button variant="outline" size="md" className="text-red-600 border-red-200 hover:bg-red-50">
+                    <Button variant="danger" size="md" onClick={() => {/* handle delete */ }}>
                         <Trash2 className="w-5 h-5" />
                         Delete Service
                     </Button>
@@ -125,9 +125,9 @@ export default function EditServicePage() {
 
                     <div className="flex justify-end gap-3">
                         <Link href="/services">
-                            <Button variant="outline" size="lg">Cancel</Button>
+                            <Button variant="danger" size="lg">Cancel</Button>
                         </Link>
-                        <Button variant="primary" size="lg" type="submit">
+                        <Button variant="success" size="lg" type="submit">
                             <Save className="w-5 h-5" />
                             Update Service
                         </Button>

@@ -11,15 +11,15 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/export";
 
 const expenseCategories = [
-    { name: "Office Rental", color: "bg-purple-500", amount: 2500, icon: "🏢" },
-    { name: "Rental Relative Expenses", color: "bg-pink-500", amount: 850, icon: "📋" },
-    { name: "Electricity", color: "bg-orange-500", amount: 420, icon: "⚡" },
-    { name: "IG & Facebook & Google", color: "bg-green-500", amount: 650, icon: "📱" },
-    { name: "Office Cleaning", color: "bg-blue-500", amount: 300, icon: "🧹" },
-    { name: "Internet", color: "bg-indigo-500", amount: 150, icon: "🌐" },
-    { name: "TV", color: "bg-red-500", amount: 80, icon: "📺" },
-    { name: "Other Expenses", color: "bg-yellow-500", amount: 420, icon: "💰" },
-    { name: "Beauty Supply", color: "bg-teal-500", amount: 1200, icon: "💄" },
+    { name: "Office Rental", color: "bg-[var(--color-primary)]", amount: 2500, icon: "🏢" },
+    { name: "Rental Relative Expenses", color: "bg-[var(--color-secondary)]", amount: 850, icon: "📋" },
+    { name: "Electricity", color: "bg-[var(--color-warning)]", amount: 420, icon: "⚡" },
+    { name: "IG & Facebook & Google", color: "bg-[var(--color-success)]", amount: 650, icon: "📱" },
+    { name: "Office Cleaning", color: "bg-[var(--color-info,bg-blue-500)]", amount: 300, icon: "🧹" },
+    { name: "Internet", color: "bg-[var(--color-primary-dark)]", amount: 150, icon: "🌐" },
+    { name: "TV", color: "bg-[var(--color-error)]", amount: 80, icon: "📺" },
+    { name: "Other Expenses", color: "bg-[var(--color-warning-light)]", amount: 420, icon: "💰" },
+    { name: "Beauty Supply", color: "bg-[var(--color-success-dark)] shadow-sm", amount: 1200, icon: "💄" },
 ];
 
 const recentExpenses = [
@@ -144,7 +144,7 @@ export default function ExpensesPage() {
                             <XAxis type="number" />
                             <YAxis dataKey="name" type="category" width={120} />
                             <Tooltip />
-                            <Bar dataKey="amount" fill="#8B5CF6" radius={[0, 8, 8, 0]} />
+                            <Bar dataKey="amount" fill="var(--color-primary)" radius={[0, 8, 8, 0]} />
                         </BarChart>
                     </ResponsiveContainer>
                 </Card>
@@ -174,13 +174,13 @@ export default function ExpensesPage() {
                                         <td className="px-4 py-4 text-sm text-gray-500">#{expense.id}</td>
                                         <td className="px-4 py-4 text-sm text-gray-900">{expense.date}</td>
                                         <td className="px-4 py-4">
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[var(--color-primary-light)] text-[var(--color-primary)]">
                                                 {expense.category}
                                             </span>
                                         </td>
                                         <td className="px-4 py-4 text-sm text-gray-900">{expense.description}</td>
                                         <td className="px-4 py-4">
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[var(--color-info-light,bg-blue-100)] text-[var(--color-info,text-blue-800)]">
                                                 {expense.salon}
                                             </span>
                                         </td>
@@ -188,9 +188,9 @@ export default function ExpensesPage() {
                                         <td className="px-4 py-4 text-center">
                                             <div className="flex items-center justify-center gap-2">
                                                 <Link href={`/expenses/edit/${expense.id}`}>
-                                                    <button className="text-purple-600 hover:text-purple-800 text-sm font-medium">Edit</button>
+                                                    <button className="text-[var(--color-primary)] hover:opacity-80 text-sm font-medium">Edit</button>
                                                 </Link>
-                                                <button className="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button>
+                                                <button className="text-[var(--color-error)] hover:opacity-80 text-sm font-medium">Delete</button>
                                             </div>
                                         </td>
                                     </tr>

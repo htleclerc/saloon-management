@@ -156,8 +156,8 @@ export default function AddIncomePage() {
             salonAmount       // Ce qui va au salon
         };
     });
-    const totalWorkerAmount = workerShares.reduce((sum: number, ws: any) => sum + ws.workerAmount, 0);
-    const totalSalonAmount = workerShares.reduce((sum: number, ws: any) => sum + ws.salonAmount, 0);
+    const totalWorkerAmount = workerShares.reduce((sum, ws) => sum + ws.workerAmount, 0);
+    const totalSalonAmount = workerShares.reduce((sum, ws) => sum + ws.salonAmount, 0);
 
     const addWorker = () => {
         const availableWorkers = workers.filter(w => !assignedWorkers.find((aw: { workerId: number }) => aw.workerId === w.id));
@@ -236,12 +236,12 @@ export default function AddIncomePage() {
                     </div>
                     <div className="flex gap-2 md:gap-3 w-full md:w-auto">
                         <Link href="/income" className="flex-1 md:flex-none">
-                            <Button variant="outline" size="sm" className="w-full md:w-auto">
+                            <Button variant="danger" size="sm" className="w-full md:w-auto">
                                 <span className="hidden md:inline">Cancel</span>
                                 <span className="md:hidden">Cancel</span>
                             </Button>
                         </Link>
-                        <Button variant="primary" size="sm" className="flex-1 md:flex-none">
+                        <Button variant="success" size="sm" className="flex-1 md:flex-none">
                             <Save className="w-4 h-4 md:w-5 md:h-5" />
                             <span className="hidden md:inline ml-2">Save</span>
                         </Button>
@@ -618,7 +618,7 @@ export default function AddIncomePage() {
                             <span className="text-sm text-gray-500">Step 2/4</span>
                         </div>
                         {/* Workers CAN add other workers */}
-                        <Button variant="outline" size="sm" onClick={addWorker}>
+                        <Button variant="success" size="sm" onClick={addWorker}>
                             <Plus className="w-4 h-4" />
                             Add Worker
                         </Button>
@@ -978,10 +978,10 @@ export default function AddIncomePage() {
 
                     {/* Action Buttons - Mobile optimized */}
                     <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 mt-8 pt-6 border-t border-white/20">
-                        <Button variant="outline" size="lg" className="bg-white/10 border-white/30 text-white hover:bg-white/20">
+                        <Button variant="success" size="lg" className="bg-white/10 border-white/30 text-white hover:bg-white/20">
                             Save as draft
                         </Button>
-                        <Button variant="primary" size="lg" className="bg-white text-purple-700 hover:bg-gray-100">
+                        <Button variant="success" size="lg" className="bg-white text-purple-700 hover:bg-gray-100 font-black">
                             <CheckCircle className="w-5 h-5" />
                             Validate and save
                         </Button>

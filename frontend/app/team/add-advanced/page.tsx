@@ -123,7 +123,7 @@ export default function AddAdvancedTeamMemberPage() {
     const renderStep1 = () => (
         <Card>
             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
-                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <div className="w-10 h-10 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] rounded-lg flex items-center justify-center border-none">
                     <User className="w-5 h-5 text-white" />
                 </div>
                 <div>
@@ -138,7 +138,7 @@ export default function AddAdvancedTeamMemberPage() {
                     <div className="w-24 h-24 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center text-gray-500 text-2xl font-bold">
                         {firstName && lastName ? `${firstName[0]}${lastName[0]}`.toUpperCase() : "?"}
                     </div>
-                    <button className="absolute bottom-0 right-0 w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white shadow-lg hover:bg-purple-700 transition-colors">
+                    <button className="absolute bottom-0 right-0 w-8 h-8 bg-[var(--color-primary)] rounded-full flex items-center justify-center text-white shadow-lg hover:opacity-90 transition-opacity">
                         <Camera className="w-4 h-4" />
                     </button>
                 </div>
@@ -158,7 +158,7 @@ export default function AddAdvancedTeamMemberPage() {
                         type="text"
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
                         placeholder="First Name"
                     />
                 </div>
@@ -170,7 +170,7 @@ export default function AddAdvancedTeamMemberPage() {
                         type="text"
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
                         placeholder="Last Name"
                     />
                 </div>
@@ -182,7 +182,7 @@ export default function AddAdvancedTeamMemberPage() {
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
                         placeholder="email@example.com"
                     />
                 </div>
@@ -194,7 +194,7 @@ export default function AddAdvancedTeamMemberPage() {
                         type="tel"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
                         placeholder="+33 6 12 34 56 78"
                     />
                 </div>
@@ -204,7 +204,7 @@ export default function AddAdvancedTeamMemberPage() {
                         type="text"
                         value={address}
                         onChange={(e) => setAddress(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
                         placeholder="123 Street Address"
                     />
                 </div>
@@ -214,7 +214,7 @@ export default function AddAdvancedTeamMemberPage() {
                         type="text"
                         value={city}
                         onChange={(e) => setCity(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
                         placeholder="City"
                     />
                 </div>
@@ -224,7 +224,7 @@ export default function AddAdvancedTeamMemberPage() {
                         type="text"
                         value={zipCode}
                         onChange={(e) => setZipCode(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
                         placeholder="Zip Code"
                     />
                 </div>
@@ -234,7 +234,7 @@ export default function AddAdvancedTeamMemberPage() {
                         type="date"
                         value={birthDate}
                         onChange={(e) => setBirthDate(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
                     />
                 </div>
                 <div>
@@ -242,7 +242,7 @@ export default function AddAdvancedTeamMemberPage() {
                     <select
                         value={gender}
                         onChange={(e) => setGender(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
                     >
                         <option value="female">Female</option>
                         <option value="male">Male</option>
@@ -256,7 +256,7 @@ export default function AddAdvancedTeamMemberPage() {
     const renderStep2 = () => (
         <Card>
             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
-                <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg flex items-center justify-center">
+                <div className="w-10 h-10 bg-gradient-to-br from-[var(--color-secondary)] to-[var(--color-secondary-dark)] rounded-lg flex items-center justify-center border-none">
                     <Briefcase className="w-5 h-5 text-white" />
                 </div>
                 <div>
@@ -271,7 +271,7 @@ export default function AddAdvancedTeamMemberPage() {
                     <select
                         value={role}
                         onChange={(e) => setRole(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
                     >
                         <option value="Team Member">Team Member</option>
                         <option value="Manager">Manager</option>
@@ -283,7 +283,7 @@ export default function AddAdvancedTeamMemberPage() {
                     <select
                         value={employeeType}
                         onChange={(e) => setEmployeeType(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
                     >
                         <option value="full-time">Full-time</option>
                         <option value="part-time">Part-time</option>
@@ -296,7 +296,7 @@ export default function AddAdvancedTeamMemberPage() {
                         type="date"
                         value={startDate}
                         onChange={(e) => setStartDate(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
                     />
                 </div>
                 <div>
@@ -305,15 +305,15 @@ export default function AddAdvancedTeamMemberPage() {
                         type="date"
                         value={contractEndDate}
                         onChange={(e) => setContractEndDate(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
                     />
                 </div>
             </div>
 
             {/* Sharing Key Slider */}
-            <div className="mt-6 p-4 bg-purple-50 rounded-xl">
+            <div className="mt-6 p-4 bg-[var(--color-primary-light)] rounded-xl">
                 <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Sharing Key: <span className="text-purple-600 font-bold">{sharingKey}%</span>
+                    Sharing Key: <span className="text-[var(--color-primary)] font-bold">{sharingKey}%</span>
                 </label>
                 <input
                     type="range"
@@ -321,7 +321,7 @@ export default function AddAdvancedTeamMemberPage() {
                     max="100"
                     value={sharingKey}
                     onChange={(e) => setSharingKey(parseInt(e.target.value))}
-                    className="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                    className="w-full h-2 bg-[var(--color-primary-light)] opacity-70 rounded-lg appearance-none cursor-pointer accent-[var(--color-primary)]"
                 />
                 <div className="flex justify-between text-xs text-gray-500 mt-1">
                     <span>0% (Company)</span>
@@ -348,7 +348,7 @@ export default function AddAdvancedTeamMemberPage() {
     const renderStep3 = () => (
         <Card>
             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
-                <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
+                <div className="w-10 h-10 bg-gradient-to-br from-[var(--color-warning)] to-[var(--color-warning-dark)] rounded-lg flex items-center justify-center border-none">
                     <Scissors className="w-5 h-5 text-white" />
                 </div>
                 <div>
@@ -369,13 +369,13 @@ export default function AddAdvancedTeamMemberPage() {
                                 type="button"
                                 onClick={() => toggleService(service.id)}
                                 className={`p-3 rounded-xl border-2 text-left transition-all ${isSelected
-                                    ? "border-purple-500 bg-purple-50"
-                                    : "border-gray-200 hover:border-purple-300"
+                                    ? "border-[var(--color-primary)] bg-[var(--color-primary-light)]"
+                                    : "border-gray-200 hover:border-[var(--color-primary-light)]"
                                     }`}
                             >
                                 <div className="flex items-center justify-between mb-1">
                                     <span className="font-medium text-sm text-gray-900">{service.name}</span>
-                                    {isSelected && <Check className="w-4 h-4 text-purple-600" />}
+                                    {isSelected && <Check className="w-4 h-4 text-[var(--color-primary)] font-bold" />}
                                 </div>
                                 <div className="flex gap-2 text-xs text-gray-500">
                                     <span>{service.duration}</span>
@@ -394,7 +394,7 @@ export default function AddAdvancedTeamMemberPage() {
                     <select
                         value={experienceLevel}
                         onChange={(e) => setExperienceLevel(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
                     >
                         <option value="beginner">Beginner (0-2 years)</option>
                         <option value="intermediate">Intermediate (2-5 years)</option>
@@ -407,7 +407,7 @@ export default function AddAdvancedTeamMemberPage() {
                         type="text"
                         value={specialties}
                         onChange={(e) => setSpecialties(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
                         placeholder="Ex: African braids, coloring..."
                     />
                 </div>
@@ -418,7 +418,7 @@ export default function AddAdvancedTeamMemberPage() {
     const renderStep4 = () => (
         <Card>
             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                <div className="w-10 h-10 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] rounded-lg flex items-center justify-center border-none">
                     <Calendar className="w-5 h-5 text-white" />
                 </div>
                 <div>
@@ -431,7 +431,7 @@ export default function AddAdvancedTeamMemberPage() {
                 {weekDays.map((day) => (
                     <div
                         key={day}
-                        className={`flex items-center gap-4 p-3 rounded-xl transition-all ${schedule[day].active ? "bg-purple-50 border border-purple-200" : "bg-gray-50"
+                        className={`flex items-center gap-4 p-3 rounded-xl transition-all ${schedule[day].active ? "bg-[var(--color-primary-light)] border border-[var(--color-primary-light)]" : "bg-gray-50"
                             }`}
                     >
                         <label className="flex items-center gap-3 cursor-pointer w-20">
@@ -439,9 +439,9 @@ export default function AddAdvancedTeamMemberPage() {
                                 type="checkbox"
                                 checked={schedule[day].active}
                                 onChange={() => toggleDay(day)}
-                                className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+                                className="w-4 h-4 text-[var(--color-primary)] rounded focus:ring-[var(--color-primary-light)]"
                             />
-                            <span className={`font-medium text-sm ${schedule[day].active ? "text-purple-700" : "text-gray-500"}`}>
+                            <span className={`font-medium text-sm ${schedule[day].active ? "text-[var(--color-primary)]" : "text-gray-500"}`}>
                                 {day}
                             </span>
                         </label>
@@ -472,14 +472,14 @@ export default function AddAdvancedTeamMemberPage() {
     );
 
     const renderStep5 = () => (
-        <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white border-0">
+        <Card className="bg-gradient-to-br from-[var(--color-success)] to-[var(--color-success-dark)] text-white border-0">
             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-white/20">
-                <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center border-none">
                     <CheckCircle className="w-5 h-5 text-white" />
                 </div>
                 <div>
                     <h3 className="font-semibold">Recap & Validation</h3>
-                    <p className="text-xs text-green-100">Check information before creation</p>
+                    <p className="text-xs text-white opacity-80">Check information before creation</p>
                 </div>
             </div>
 
@@ -534,7 +534,7 @@ export default function AddAdvancedTeamMemberPage() {
             description="Complete form to create a new team member"
         >
             {/* Mobile Step Indicator - Only visible on mobile */}
-            <div className="md:hidden mb-4 p-4 bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl text-white shadow-lg">
+            <div className="md:hidden mb-4 p-4 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-dark)] rounded-xl text-white shadow-lg">
                 <div className="text-sm font-medium opacity-90">Step {currentStep} of 5</div>
                 <div className="text-lg font-bold mt-1">{steps[currentStep - 1].name}</div>
                 <div className="text-xs opacity-75 mt-1">{steps[currentStep - 1].description}</div>
@@ -557,16 +557,16 @@ export default function AddAdvancedTeamMemberPage() {
                                 >
                                     <div
                                         className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${isActive
-                                            ? "bg-purple-600 text-white shadow-lg"
+                                            ? "bg-[var(--color-primary)] text-white shadow-lg"
                                             : isCompleted
-                                                ? "bg-green-500 text-white"
+                                                ? "bg-[var(--color-success)] text-white"
                                                 : "bg-gray-200 text-gray-500"
                                             }`}
                                     >
                                         {isCompleted ? <Check className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
                                     </div>
                                     <span
-                                        className={`text-[10px] md:text-xs mt-1 font-medium whitespace-nowrap ${isActive ? "text-purple-600" : isCompleted ? "text-green-600" : "text-gray-400"
+                                        className={`text-[10px] md:text-xs mt-1 font-medium whitespace-nowrap ${isActive ? "text-[var(--color-primary)]" : isCompleted ? "text-[var(--color-success)]" : "text-gray-400"
                                             }`}
                                     >
                                         {step.name}
@@ -574,7 +574,7 @@ export default function AddAdvancedTeamMemberPage() {
                                 </button>
                                 {idx < steps.length - 1 && (
                                     <div
-                                        className={`w-16 md:w-24 h-1 mx-2 rounded ${currentStep > step.id ? "bg-green-500" : "bg-gray-200"
+                                        className={`w-16 md:w-24 h-1 mx-2 rounded ${currentStep > step.id ? "bg-[var(--color-success)]" : "bg-gray-200"
                                             }`}
                                     />
                                 )}

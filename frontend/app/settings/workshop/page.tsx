@@ -7,9 +7,9 @@ import { useState } from "react";
 import { Save, Scissors, Shirt, Wrench, Check, Plus, Trash2 } from "lucide-react";
 
 const workshopTemplates = [
-    { id: "hair-salon", name: "Hair Salon / Braiding", icon: Scissors, color: "from-purple-500 to-purple-700" },
-    { id: "tailor-shop", name: "Tailor Shop / Sewing", icon: Shirt, color: "from-pink-500 to-pink-700" },
-    { id: "mechanic-shop", name: "Mechanic Shop / Garage", icon: Wrench, color: "from-orange-500 to-orange-700" },
+    { id: "hair-salon", name: "Hair Salon / Braiding", icon: Scissors, color: "from-[var(--color-primary)] to-[var(--color-primary-dark)]" },
+    { id: "tailor-shop", name: "Tailor Shop / Sewing", icon: Shirt, color: "from-[var(--color-secondary)] to-[var(--color-secondary-dark)]" },
+    { id: "mechanic-shop", name: "Mechanic Shop / Garage", icon: Wrench, color: "from-[var(--color-warning)] to-[var(--color-warning-dark)]" },
 ];
 
 const defaultServices = [
@@ -109,12 +109,12 @@ export default function WorkshopSettingsPage() {
                                 key={template.id}
                                 onClick={() => setSelectedTemplate(template.id)}
                                 className={`relative p-5 rounded-xl border-2 transition-all text-left ${isSelected
-                                        ? "border-purple-500 bg-purple-50 shadow-md"
-                                        : "border-gray-200 hover:border-purple-300"
+                                    ? "border-[var(--color-primary)] bg-[var(--color-primary-light)] shadow-md"
+                                    : "border-gray-200 hover:border-[var(--color-primary-light)]"
                                     }`}
                             >
                                 {isSelected && (
-                                    <div className="absolute top-3 right-3 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center">
+                                    <div className="absolute top-3 right-3 w-6 h-6 bg-[var(--color-primary)] rounded-full flex items-center justify-center">
                                         <Check className="w-4 h-4 text-white" />
                                     </div>
                                 )}
@@ -177,10 +177,10 @@ export default function WorkshopSettingsPage() {
                     {defaultCategories.map((category, idx) => (
                         <span
                             key={idx}
-                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-100 text-purple-800 rounded-lg text-sm font-medium"
+                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-[var(--color-primary-light)] text-[var(--color-primary)] rounded-lg text-sm font-medium"
                         >
                             {category}
-                            <button className="text-purple-400 hover:text-red-500">
+                            <button className="text-[var(--color-primary)] opacity-60 hover:text-[var(--color-error)]">
                                 <Trash2 className="w-3 h-3" />
                             </button>
                         </span>

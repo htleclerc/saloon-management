@@ -3,11 +3,12 @@ import { ReactNode } from "react";
 interface ButtonProps {
     children: ReactNode;
     onClick?: () => void;
-    variant?: "primary" | "secondary" | "outline" | "danger";
+    variant?: "primary" | "secondary" | "outline" | "danger" | "success";
     size?: "sm" | "md" | "lg";
     className?: string;
     disabled?: boolean;
     type?: "button" | "submit" | "reset";
+    title?: string;
 }
 
 export default function Button({
@@ -18,14 +19,16 @@ export default function Button({
     className = "",
     disabled = false,
     type = "button",
+    title,
 }: ButtonProps) {
     const baseClasses = "font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2";
 
     const variantClasses = {
-        primary: "bg-gradient-to-r from-purple-600 to-purple-700 text-white hover:from-purple-700 hover:to-purple-800 shadow-md",
-        secondary: "bg-gradient-to-r from-pink-500 to-pink-600 text-white hover:from-pink-600 hover:to-pink-700 shadow-md",
-        outline: "border-2 border-purple-600 text-purple-600 hover:bg-purple-50",
-        danger: "bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 shadow-md",
+        primary: "bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary)] text-white hover:opacity-90 shadow-md",
+        secondary: "bg-gradient-to-r from-[var(--color-secondary)] to-[var(--color-secondary)] text-white hover:opacity-90 shadow-md",
+        outline: "border-2 border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary-light)]",
+        danger: "bg-[var(--color-error)] text-white hover:opacity-90 shadow-md",
+        success: "bg-[var(--color-success)] text-white hover:opacity-90 shadow-md",
     };
 
     const sizeClasses = {
@@ -39,6 +42,7 @@ export default function Button({
             type={type}
             onClick={onClick}
             disabled={disabled}
+            title={title}
             className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className} ${disabled ? "opacity-50 cursor-not-allowed" : ""
                 }`}
         >

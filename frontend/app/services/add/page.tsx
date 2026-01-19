@@ -116,9 +116,9 @@ export default function AddServicePage() {
 
                     <div className="flex justify-end gap-3">
                         <Link href="/services">
-                            <Button variant="outline" size="lg">Cancel</Button>
+                            <Button variant="danger" size="lg">Cancel</Button>
                         </Link>
-                        <Button variant="primary" size="lg" type="submit">
+                        <Button variant="success" size="lg" type="submit">
                             <Save className="w-5 h-5" />
                             Create Service
                         </Button>

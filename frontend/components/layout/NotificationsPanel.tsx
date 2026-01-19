@@ -38,13 +38,13 @@ export default function NotificationsPanel({
     const getNotificationIcon = (type: NotificationType) => {
         switch (type) {
             case 'success':
-                return <CheckCircle className="w-5 h-5 text-green-500" />;
+                return <CheckCircle className="w-5 h-5 text-[var(--color-success)]" />;
             case 'warning':
-                return <AlertCircle className="w-5 h-5 text-orange-500" />;
+                return <AlertCircle className="w-5 h-5 text-[var(--color-warning)]" />;
             case 'validation':
-                return <CheckCircle className="w-5 h-5 text-purple-500" />;
+                return <CheckCircle className="w-5 h-5 text-[var(--color-primary)]" />;
             case 'booking':
-                return <Calendar className="w-5 h-5 text-blue-500" />;
+                return <Calendar className="w-5 h-5 text-[var(--color-info)]" />;
             default:
                 return <Info className="w-5 h-5 text-gray-500" />;
         }
@@ -55,13 +55,13 @@ export default function NotificationsPanel({
 
         switch (type) {
             case 'validation':
-                return 'bg-purple-50 hover:bg-purple-100 border-l-4 border-purple-500';
+                return 'bg-[var(--color-primary-light)] hover:opacity-90 border-l-4 border-[var(--color-primary)]';
             case 'success':
-                return 'bg-green-50 hover:bg-green-100 border-l-4 border-green-500';
+                return 'bg-[var(--color-success-light)] hover:opacity-90 border-l-4 border-[var(--color-success)]';
             case 'warning':
-                return 'bg-orange-50 hover:bg-orange-100 border-l-4 border-orange-500';
+                return 'bg-[var(--color-warning-light)] hover:opacity-90 border-l-4 border-[var(--color-warning)]';
             case 'booking':
-                return 'bg-blue-50 hover:bg-blue-100 border-l-4 border-blue-500';
+                return 'bg-[var(--color-info-light)] hover:opacity-90 border-l-4 border-[var(--color-info)]';
             default:
                 return 'bg-gray-50 hover:bg-gray-100';
         }
@@ -70,7 +70,7 @@ export default function NotificationsPanel({
     return (
         <div className="fixed top-16 left-4 right-4 mx-auto w-auto sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-2 sm:w-96 sm:max-w-none max-w-[28rem] bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden">
             {/* Header */}
-            <div className="p-2.5 sm:p-4 border-b border-gray-100 bg-gradient-to-r from-purple-500 to-purple-600">
+            <div className="p-2.5 sm:p-4 border-b border-gray-100 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-dark)]">
                 <div className="flex items-center justify-between">
                     <h3 className="text-sm sm:text-lg font-semibold text-white">Notifications</h3>
                     {unreadCount > 0 && (
@@ -114,7 +114,7 @@ export default function NotificationsPanel({
                                                 {notification.title}
                                             </h4>
                                             {!notification.isRead && (
-                                                <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-purple-500 rounded-full flex-shrink-0 mt-1"></span>
+                                                <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-[var(--color-primary)] rounded-full flex-shrink-0 mt-1"></span>
                                             )}
                                         </div>
                                         <p className={`text-[10px] sm:text-xs ${notification.isRead ? 'text-gray-500' : 'text-gray-700'} mb-1 sm:mb-2 line-clamp-2`}>
@@ -152,7 +152,7 @@ export default function NotificationsPanel({
                                                             notification.actions!.onApprove!();
                                                             onMarkAsRead(notification.id);
                                                         }}
-                                                        className="flex items-center gap-0.5 sm:gap-1 px-1.5 py-0.5 sm:px-3 sm:py-1.5 bg-gradient-to-r from-purple-500 to-purple-600 text-white text-[9px] sm:text-xs font-medium rounded-md sm:rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all shadow-sm"
+                                                        className="flex items-center gap-0.5 sm:gap-1 px-1.5 py-0.5 sm:px-3 sm:py-1.5 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-dark)] text-white text-[9px] sm:text-xs font-medium rounded-md sm:rounded-lg hover:from-[var(--color-primary-dark)] hover:to-[var(--color-primary-dark)] transition-all shadow-sm"
                                                     >
                                                         <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                                                         Approuver
@@ -187,7 +187,7 @@ export default function NotificationsPanel({
                     {unreadCount > 0 && (
                         <button
                             onClick={onMarkAllAsRead}
-                            className="text-xs font-medium text-purple-600 hover:text-purple-700 transition"
+                            className="text-xs font-medium text-[var(--color-primary)] hover:text-[var(--color-primary-dark)] transition"
                         >
                             Tout marquer comme lu
                         </button>

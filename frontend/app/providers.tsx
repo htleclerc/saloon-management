@@ -2,6 +2,7 @@
 
 import { ThemeProvider } from "@/context/ThemeProvider";
 import { AuthProvider } from "@/context/AuthProvider";
+import { BookingProvider } from "@/context/BookingProvider";
 import { I18nProvider } from "@/i18n";
 import { ReactNode } from "react";
 
@@ -13,9 +14,11 @@ export default function Providers({ children }: ProvidersProps) {
     return (
         <AuthProvider>
             <I18nProvider>
-                <ThemeProvider>
-                    {children}
-                </ThemeProvider>
+                <BookingProvider>
+                    <ThemeProvider>
+                        {children}
+                    </ThemeProvider>
+                </BookingProvider>
             </I18nProvider>
         </AuthProvider>
     );

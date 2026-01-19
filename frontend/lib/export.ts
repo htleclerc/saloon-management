@@ -3,10 +3,10 @@
  * Works entirely client-side without backend
  */
 
-export interface ExportColumn {
+export interface ExportColumn<TData = unknown> {
     key: string;
     header: string;
-    formatter?: (value: any) => string;
+    formatter?: (value: TData) => string;
 }
 
 /**

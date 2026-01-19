@@ -233,11 +233,11 @@ export default function IncomePage() {
                                             <td className="px-4 py-4 text-center">
                                                 <span
                                                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${income.status === "Validated"
-                                                        ? "bg-green-100 text-green-800"
+                                                        ? "bg-[var(--color-success-light)] text-[var(--color-success)]"
                                                         : income.status === "Pending"
-                                                            ? "bg-orange-100 text-orange-800"
+                                                            ? "bg-[var(--color-warning-light)] text-[var(--color-warning)]"
                                                             : income.status === "In Review"
-                                                                ? "bg-red-100 text-red-800"
+                                                                ? "bg-[var(--color-error-light)] text-[var(--color-error)]"
                                                                 : "bg-gray-100 text-gray-800"
                                                         }`}
                                                 >
@@ -248,7 +248,7 @@ export default function IncomePage() {
                                                 <div className="flex flex-wrap items-center justify-center gap-2" onClick={(e) => e.stopPropagation()}>
                                                     {/* Admin Actions */}
                                                     {!isWorker && income.status !== "Validated" && income.status !== "Closed" && (
-                                                        <button className="text-green-600 hover:text-green-800 text-xs font-bold uppercase tracking-wider">Validate</button>
+                                                        <button className="text-[var(--color-success)] hover:opacity-80 text-xs font-bold uppercase tracking-wider">Validate</button>
                                                     )}
 
                                                     {/* Worker Actions */}
@@ -256,9 +256,9 @@ export default function IncomePage() {
                                                         <>
                                                             {income.workers.includes(user?.name || "Orphelia") && income.author !== (user?.name || "Orphelia") && (
                                                                 <>
-                                                                    <button className="text-green-600 hover:text-green-800 text-xs font-bold">Accept</button>
-                                                                    <button className="text-red-600 hover:text-red-800 text-xs font-bold">Refuse</button>
-                                                                    <button className="text-orange-600 hover:text-orange-800 text-xs font-bold">Withdraw</button>
+                                                                    <button className="text-[var(--color-success)] hover:opacity-80 text-xs font-bold">Accept</button>
+                                                                    <button className="text-[var(--color-error)] hover:opacity-80 text-xs font-bold">Refuse</button>
+                                                                    <button className="text-[var(--color-warning)] hover:opacity-80 text-xs font-bold">Withdraw</button>
                                                                 </>
                                                             )}
                                                             {income.author === (user?.name || "Orphelia") && (
@@ -295,9 +295,9 @@ export default function IncomePage() {
                                                             <div className="space-y-4 relative before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-200">
                                                                 {income.history?.map((event, idx) => (
                                                                     <div key={idx} className="relative pl-8">
-                                                                        <div className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center ${event.action === 'Created' ? 'bg-blue-500' :
-                                                                            event.action === 'Validated' ? 'bg-green-500' :
-                                                                                event.action === 'Refused' ? 'bg-red-500' : 'bg-gray-400'
+                                                                        <div className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 border-white flex items-center justify-center ${event.action === 'Created' ? 'bg-[var(--color-info)]' :
+                                                                            event.action === 'Validated' ? 'bg-[var(--color-success)]' :
+                                                                                event.action === 'Refused' ? 'bg-[var(--color-error)]' : 'bg-gray-400'
                                                                             }`}>
                                                                             {event.action === 'Validated' && <Check className="w-2.5 h-2.5 text-white" />}
                                                                             {event.action === 'Refused' && <X className="w-2.5 h-2.5 text-white" />}

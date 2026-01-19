@@ -3,20 +3,36 @@
 import React, { useState } from "react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import { Calendar, Clock, Star, MessageSquare, ChevronRight, CheckCircle } from "lucide-react";
+import { Calendar, Clock, Star, MessageSquare, ChevronRight, CheckCircle, Plus, Info, X, Edit, Trash2, AlertCircle } from "lucide-react";
+import { useBooking } from "@/context/BookingProvider";
+import { useAuth } from "@/context/AuthProvider";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import AppointmentDetailModal from "@/components/booking/AppointmentDetailModal";
 
-const nextAppointments = [
-    { id: 1, salon: "Demo Salon", service: "Box Braids", date: "2026-01-20", time: "09:00 AM", status: "Confirmed" },
+// Helper for labels
+const servicesList = [
+    { id: 1, name: "Box Braids", price: 120 },
+    { id: 2, name: "Cornrows", price: 85 },
+    { id: 3, name: "Twists", price: 95 },
+    { id: 4, name: "Locs", price: 150 },
+    { id: 5, name: "Hair Treatment", price: 75 },
+    { id: 6, name: "Senegalese Twists", price: 135 },
+    { id: 7, name: "Other", price: 0 },
 ];
 
-const pastServices = [
+const pastServicesDefault = [
     { id: 101, salon: "Downtown Branch", service: "Cornrows", date: "2025-12-15", worker: "Fatima", price: "€85", rating: null, comment: "" },
-    { id: 102, salon: "Demo Salon", service: "Twists", date: "2025-11-20", worker: "Amara", price: "€95", rating: 5, comment: "Excellent service !" },
+    { id: 102, salon: "Demo Salon", service: "Twists", date: "2025-11-20", worker: "Amara", price: "€95", rating: 5, comment: "Excellent service!" },
 ];
 
 export default function ClientDashboard() {
-    const [history, setHistory] = useState(pastServices);
+    const { bookings, cancelBooking } = useBooking();
+    const { user, isAdmin, isClient } = useAuth();
+    const router = useRouter();
+    const [history, setHistory] = useState(pastServicesDefault);
     const [ratingModal, setRatingModal] = useState<{ open: boolean; serviceId: number | null }>({ open: false, serviceId: null });
+    const [detailModal, setDetailModal] = useState<{ open: boolean; appointment: any | null }>({ open: false, appointment: null });
     const [newRating, setNewRating] = useState(0);
     const [newComment, setNewComment] = useState("");
 
@@ -37,6 +53,30 @@ export default function ClientDashboard() {
         }
     };
 
+    // Filter user's upcoming appointments
+    const clientAppointments = React.useMemo(() => {
+        return bookings
+            .filter(b => (b.clientName === user?.name || b.clientId === parseInt(user?.id || '0')) && !['Cancelled', 'Completed', 'Finished'].includes(b.status))
+            .map(b => ({
+                ...b,
+                salon: "Demo Salon", // In a real app, this would be looked up
+                servicesLabel: b.serviceIds.map(id => servicesList.find(s => s.id === id)?.name || "Service").join(", "),
+            }));
+    }, [bookings, user]);
+
+    const handleCancel = (id: number) => {
+        if (confirm("Are you sure you want to cancel this appointment?")) {
+            cancelBooking(id, "Cancelled by client");
+            setDetailModal({ open: false, appointment: null });
+        }
+    };
+
+    const handleEdit = (apt: any) => {
+        // Redirige vers le booking avec des params pour pré-remplir
+        // Pour cet MVP, on simule en passant l'ID
+        router.push(`/appointments/book?edit=${apt.id}`);
+    };
+
     return (
         <div className="space-y-8">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -50,24 +90,40 @@ export default function ClientDashboard() {
             <div className="space-y-4">
                 <div className="flex justify-between items-center">
                     <h3 className="text-lg font-bold text-gray-900">My Next Appointments</h3>
-                    <Button variant="outline" size="sm" className="text-purple-600 border-purple-200">Book Appointment</Button>
+                    <Link href="/appointments/book">
+                        <Button variant="outline" size="sm" className="text-purple-600 border-purple-200 gap-2">
+                            <Plus className="w-4 h-4" />
+                            Book Appointment
+                        </Button>
+                    </Link>
                 </div>
-                {nextAppointments.length > 0 ? (
+                {clientAppointments.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {nextAppointments.map(apt => (
-                            <Card key={apt.id} className="p-4 border-l-4 border-purple-500">
+                        {clientAppointments.map(apt => (
+                            <Card
+                                key={apt.id}
+                                className="p-4 border-l-4 border-purple-500 hover:shadow-md transition-all cursor-pointer group"
+                                onClick={() => setDetailModal({ open: true, appointment: apt })}
+                            >
                                 <div className="flex justify-between items-start">
                                     <div className="space-y-2">
                                         <div className="flex items-center gap-2 text-purple-600 font-bold">
                                             <Calendar className="w-4 h-4" />
                                             <span>{apt.date} at {apt.time}</span>
                                         </div>
-                                        <p className="text-lg font-bold text-gray-900">{apt.service}</p>
+                                        <p className="text-lg font-bold text-gray-900 group-hover:text-purple-600 transition-colors">{apt.servicesLabel}</p>
                                         <p className="text-sm text-gray-500">{apt.salon}</p>
                                     </div>
-                                    <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded-full uppercase tracking-wider">
-                                        {apt.status}
-                                    </span>
+                                    <div className="flex flex-col items-end gap-2">
+                                        <span className={`text-xs font-bold px-2 py-1 rounded-full uppercase tracking-wider ${apt.status === 'Confirmed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'
+                                            }`}>
+                                            {apt.status}
+                                        </span>
+                                        <div className="flex items-center gap-1 text-purple-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <span className="text-xs font-bold uppercase">Details</span>
+                                            <ChevronRight className="w-4 h-4" />
+                                        </div>
+                                    </div>
                                 </div>
                             </Card>
                         ))}
@@ -146,12 +202,23 @@ export default function ClientDashboard() {
                             onChange={(e) => setNewComment(e.target.value)}
                         />
                         <div className="flex gap-3 pt-2">
-                            <Button variant="outline" className="flex-1" onClick={() => setRatingModal({ open: false, serviceId: null })}>Cancel</Button>
-                            <Button className="flex-1 bg-purple-600 hover:bg-purple-700" onClick={submitRating}>Save</Button>
+                            <Button variant="danger" className="flex-1" onClick={() => setRatingModal({ open: false, serviceId: null })}>Cancel</Button>
+                            <Button variant="success" className="flex-1" onClick={submitRating}>Save</Button>
                         </div>
                     </Card>
                 </div>
             )}
+            {/* Appointment Detail Modal */}
+            <AppointmentDetailModal
+                isOpen={detailModal.open}
+                appointment={detailModal.appointment}
+                onClose={() => setDetailModal({ open: false, appointment: null })}
+                onCancel={handleCancel}
+                onEdit={handleEdit}
+                servicesList={servicesList}
+                userRole={user?.role}
+                isAdmin={isAdmin}
+            />
         </div>
     );
 }

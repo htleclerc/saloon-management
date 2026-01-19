@@ -62,7 +62,7 @@ export default function TeamPerformancePage() {
             <Card>
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="font-semibold text-gray-900 text-lg">Performance Ranking</h3>
-                    <select className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    <select className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]">
                         <option>This month</option>
                         <option>This quarter</option>
                         <option>This year</option>
@@ -86,9 +86,9 @@ export default function TeamPerformancePage() {
                                 .map((worker, idx) => (
                                     <tr key={worker.name} className="hover:bg-gray-50">
                                         <td className="px-4 py-4">
-                                            <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${idx === 0 ? "bg-yellow-100 text-yellow-700" :
+                                            <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${idx === 0 ? "bg-[var(--color-warning-light)] text-[var(--color-warning)]" :
                                                 idx === 1 ? "bg-gray-100 text-gray-600" :
-                                                    idx === 2 ? "bg-orange-100 text-orange-700" :
+                                                    idx === 2 ? "bg-[var(--color-warning-light)] opacity-80 text-[var(--color-warning)]" :
                                                         "bg-gray-50 text-gray-500"
                                                 }`}>
                                                 {idx + 1}
@@ -99,12 +99,12 @@ export default function TeamPerformancePage() {
                                         <td className="px-4 py-4 text-right text-gray-600">{worker.services}</td>
                                         <td className="px-4 py-4 text-right">
                                             <div className="flex items-center justify-end gap-1">
-                                                <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                                                <Star className="w-4 h-4 text-[var(--color-warning)] fill-[var(--color-warning)]" />
                                                 <span className="font-medium">{worker.rating}</span>
                                             </div>
                                         </td>
                                         <td className="px-4 py-4 text-right">
-                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${worker.growth.startsWith("+") ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${worker.growth.startsWith("+") ? "bg-[var(--color-success-light)] text-[var(--color-success)]" : "bg-[var(--color-error-light)] text-[var(--color-error)]"
                                                 }`}>
                                                 {worker.growth}
                                             </span>
@@ -119,7 +119,7 @@ export default function TeamPerformancePage() {
             {/* Goals Section */}
             <Card>
                 <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                    <div className="w-10 h-10 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] rounded-lg flex items-center justify-center">
                         <Target className="w-5 h-5 text-white" />
                     </div>
                     <div>
@@ -134,7 +134,7 @@ export default function TeamPerformancePage() {
                             <span className="text-sm text-gray-600">€{totalIncome.toLocaleString()} / €250,000</span>
                         </div>
                         <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-gradient-to-r from-purple-500 to-purple-600 rounded-full" style={{ width: `${(totalIncome / 250000) * 100}%` }} />
+                            <div className="h-full bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-dark)] rounded-full" style={{ width: `${(totalIncome / 250000) * 100}%` }} />
                         </div>
                     </div>
                     <div>
@@ -143,7 +143,7 @@ export default function TeamPerformancePage() {
                             <span className="text-sm text-gray-600">{avgRating} / 5.0</span>
                         </div>
                         <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-full" style={{ width: `${(parseFloat(avgRating) / 5) * 100}%` }} />
+                            <div className="h-full bg-gradient-to-r from-[var(--color-warning)] to-[var(--color-warning-dark)] rounded-full" style={{ width: `${(parseFloat(avgRating) / 5) * 100}%` }} />
                         </div>
                     </div>
                 </div>
