@@ -264,9 +264,9 @@ export default function AppointmentsPage() {
                     {(canAddServices() || isClient) && (
                         <div className="w-full md:w-auto flex justify-end">
                             <Link href="/appointments/book">
-                                <Button variant="primary" size="lg" className="bg-[var(--color-primary)] hover:opacity-90 transition-opacity gap-2 border-none">
-                                    <Plus className="w-5 h-5" />
-                                    <span className="hidden sm:inline">{isClient ? "Book Appointment" : "New Appointment"}</span>
+                                <Button variant="primary" size="md" className="rounded-2xl h-14 w-14 md:h-12 md:w-auto md:px-6 flex items-center justify-center p-0 md:p-auto shadow-xl shadow-purple-500/30 active:scale-95 transition-all">
+                                    <Plus className="w-8 h-8 md:w-6 md:h-6" />
+                                    <span className="hidden md:inline ml-2 font-bold">{isClient ? "Book Appointment" : "New Appointment"}</span>
                                 </Button>
                             </Link>
                         </div>

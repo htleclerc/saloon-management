@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
+import { useAuth } from "@/context/AuthProvider";
+import { useActionPermissions } from "@/lib/permissions";
 import {
     DollarSign,
     TrendingUp,
@@ -19,6 +22,10 @@ import {
     Plus,
     Search,
     Filter,
+    LayoutGrid,
+    BarChart2,
+    ChevronDown,
+    ChevronUp,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -100,33 +107,73 @@ const pendingPayments = [
 export default function IncomeDashboardPage() {
     const [view, setView] = useState<'simple' | 'advanced'>('simple');
     const [selectedPeriod, setSelectedPeriod] = useState('Daily');
+    const [expandedMobileRows, setExpandedMobileRows] = useState<number[]>([]);
     const { getCardStyle } = useKpiCardStyle();
     const [currentDate, setCurrentDate] = useState("January 14, 2026");
+    const { user } = useAuth(); // Assuming AuthProvider exposes user
+    const permissions = useActionPermissions({ user } as any);
+    const router = useRouter();
+
+    useEffect(() => {
+        if (!permissions.canViewFinancialDashboard) {
+            router.push("/income");
+        }
+    }, [permissions.canViewFinancialDashboard, router]);
+
+    if (!permissions.canViewFinancialDashboard) return null;
+
+    const toggleMobileRow = (idx: number) => {
+        setExpandedMobileRows(prev =>
+            prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
+        );
+    };
 
     return (
         <MainLayout>
             <div className="space-y-6">
-                {/* Header */}
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                {/* Standardized Header */}
+                <div className="flex flex-col gap-4 md:gap-6">
                     <div>
-                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Income Overview</h1>
-                        <p className="text-gray-500 mt-1 text-sm md:text-base">Track income, salaries, and worker performance</p>
+                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Income Management</h1>
+                        <p className="text-gray-500 mt-1 text-sm md:text-base">Track and manage all income streams</p>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-                        <Button variant="outline" size="sm" className="flex-1 md:flex-none">
-                            <Printer className="w-4 h-4 md:mr-2" />
-                            <span className="hidden md:inline">Print</span>
-                        </Button>
-                        <Button variant="outline" size="sm" className="flex-1 md:flex-none">
-                            <Download className="w-4 h-4 md:mr-2" />
-                            <span className="hidden md:inline">Export</span>
-                        </Button>
-                        <Link href="/income/add">
-                            <Button variant="primary" size="sm" className="bg-[#A855F7] hover:bg-[#9333EA] flex-1 md:flex-none">
-                                <Plus className="w-4 h-4 md:mr-2" />
-                                <span className="hidden md:inline">Add Income</span>
+
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                        {/* View Toggle - Left in Desktop */}
+                        <div className="flex items-center gap-2 bg-white p-1.5 rounded-xl shadow-sm border border-gray-100 w-full md:w-auto">
+                            <Link href="/income" className="flex-1 md:flex-none">
+                                <button
+                                    className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold text-gray-500 hover:bg-gray-50 rounded-lg transition-all"
+                                >
+                                    <LayoutGrid size={18} />
+                                    <span>Simple List</span>
+                                </button>
+                            </Link>
+                            <button
+                                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold rounded-lg transition-all bg-[var(--color-primary-light)] text-[var(--color-primary)] shadow-sm"
+                            >
+                                <BarChart2 size={18} />
+                                <span>Advanced View</span>
+                            </button>
+                        </div>
+
+                        {/* Action Buttons - Right in Desktop */}
+                        <div className="grid grid-cols-2 md:flex items-center gap-3 w-full md:w-auto">
+                            <Button variant="outline" size="md" className="flex-1 md:flex-none rounded-xl h-11 flex items-center justify-center gap-2 font-bold text-gray-600 border-gray-200">
+                                <Printer className="w-4 h-4" />
+                                <span>Print</span>
                             </Button>
-                        </Link>
+                            <Button variant="outline" size="md" className="flex-1 md:flex-none rounded-xl h-11 flex items-center justify-center gap-2 font-bold text-gray-600 border-gray-200">
+                                <Download className="w-4 h-4" />
+                                <span>Export</span>
+                            </Button>
+                            <Link href="/income/add" className="col-span-2 md:col-span-1">
+                                <Button variant="primary" size="md" className="w-full rounded-xl h-11 flex items-center justify-center gap-2 font-bold shadow-lg shadow-purple-500/20 bg-[#A855F7] hover:bg-[#9333EA]">
+                                    <Plus className="w-5 h-5" />
+                                    <span>Add Income</span>
+                                </Button>
+                            </Link>
+                        </div>
                     </div>
                 </div>
 
@@ -259,8 +306,8 @@ export default function IncomeDashboardPage() {
                     {/* Mobile Card View */}
                     <div className="block md:hidden divide-y divide-gray-100">
                         {dailySalaryData.map((row, idx) => (
-                            <div key={idx} className="p-4 hover:bg-gray-50">
-                                <div className="flex items-start justify-between mb-3">
+                            <div key={idx} className="p-4 hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => toggleMobileRow(idx)}>
+                                <div className="flex items-start justify-between">
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-purple-200 rounded-full flex items-center justify-center text-[#A855F7] font-bold text-sm border border-purple-200">
                                             {row.avatar}
@@ -270,43 +317,55 @@ export default function IncomeDashboardPage() {
                                             <p className="text-xs text-gray-500">{row.date} • {row.day}</p>
                                         </div>
                                     </div>
-                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${row.status === "Paid"
-                                        ? "bg-green-100 text-green-700"
-                                        : "bg-orange-100 text-orange-700"
-                                        }`}>
-                                        {row.status}
-                                    </span>
-                                </div>
-                                <div className="mb-2">
-                                    <p className="text-sm text-gray-700">{row.service}</p>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2 text-sm">
-                                    <div>
-                                        <p className="text-xs text-gray-500">Income</p>
-                                        <p className="font-semibold text-gray-900">{row.income}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-gray-500">Salary</p>
-                                        <p className="font-semibold text-gray-900">{row.salary}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-gray-500">Tips</p>
-                                        <p className="font-semibold text-green-600">{row.tips}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-gray-500">Total</p>
-                                        <p className="font-bold text-gray-900">{row.total}</p>
+                                    <div className="flex items-center gap-4">
+                                        <div className="text-right flex flex-col items-end">
+                                            <p className="font-bold text-gray-900 text-sm">{row.income}</p>
+                                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold mt-1 ${row.status === "Paid"
+                                                ? "bg-green-100 text-green-700"
+                                                : "bg-orange-100 text-orange-700"
+                                                }`}>
+                                                {row.status}
+                                            </span>
+                                        </div>
+                                        {expandedMobileRows.includes(idx) ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
                                     </div>
                                 </div>
+
+                                {expandedMobileRows.includes(idx) && (
+                                    <div className="mt-4 pt-4 border-t border-gray-100 animate-in fade-in slide-in-from-top-2 duration-200">
+                                        <div className="mb-4">
+                                            <p className="text-xs text-gray-500 mb-1 uppercase tracking-wider font-bold">Service</p>
+                                            <p className="text-sm text-gray-700 font-medium">{row.service}</p>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                                                <p className="text-[10px] text-gray-500 mb-1 uppercase tracking-wider font-bold">Income</p>
+                                                <p className="font-bold text-gray-900">{row.income}</p>
+                                            </div>
+                                            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                                                <p className="text-[10px] text-gray-500 mb-1 uppercase tracking-wider font-bold">Salary</p>
+                                                <p className="font-bold text-gray-900">{row.salary}</p>
+                                            </div>
+                                            <div className="bg-green-50 p-3 rounded-xl border border-green-100">
+                                                <p className="text-[10px] text-green-600 mb-1 uppercase tracking-wider font-bold">Tips</p>
+                                                <p className="font-bold text-green-700">{row.tips}</p>
+                                            </div>
+                                            <div className="bg-[var(--color-primary-light)] p-3 rounded-xl border border-[var(--color-primary-light)]">
+                                                <p className="text-[10px] text-[var(--color-primary)] mb-1 uppercase tracking-wider font-bold">Total</p>
+                                                <p className="font-bold text-[var(--color-primary)]">{row.total}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
                     {/* Desktop Table View */}
-                    <div className="hidden md:block overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-gray-50 border-b border-gray-100">
+                    <div className="hidden md:block overflow-x-auto -mx-6 px-6 pb-2 scrollbar-thin scrollbar-thumb-purple-100 scrollbar-track-transparent">
+                        <table className="w-full min-w-[1000px]">
+                            <thead className="bg-gray-50 border-b border-gray-100 bg-white sticky top-0 z-10 italic">
                                 <tr>
-                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</th>
+                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Date</th>
                                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Day</th>
                                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Worker</th>
                                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Service</th>
@@ -549,38 +608,42 @@ export default function IncomeDashboardPage() {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         {workerPerformanceData.map((worker, idx) => (
-                            <div
-                                key={idx}
-                                className="p-4 rounded-xl border-2 hover:shadow-lg transition-all cursor-pointer"
-                                style={{ borderColor: worker.color }}
-                            >
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div
-                                        className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold"
-                                        style={{ backgroundColor: worker.color }}
-                                    >
-                                        {worker.name.charAt(0)}
+                            <Link key={idx} href={`/team/detail/${idx + 1}`}>
+                                <div
+                                    className="p-4 rounded-xl border-2 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer bg-white group"
+                                    style={{ borderColor: worker.color }}
+                                >
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <div
+                                            className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold"
+                                            style={{ backgroundColor: worker.color }}
+                                        >
+                                            {worker.name.charAt(0)}
+                                        </div>
+                                        <div className="flex-1">
+                                            <h4 className="font-semibold text-gray-900 flex items-center justify-between">
+                                                {worker.name}
+                                                <TrendingUp className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: worker.color }} />
+                                            </h4>
+                                            <p className="text-xs text-gray-500">{worker.services} services</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h4 className="font-semibold text-gray-900">{worker.name}</h4>
-                                        <p className="text-xs text-gray-500">{worker.services} services</p>
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center text-sm p-1.5 rounded-lg group-hover:bg-gray-50 transition-colors">
+                                            <span className="text-xs text-gray-500">Income</span>
+                                            <span className="font-semibold text-gray-900">€{worker.income.toLocaleString()}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm p-1.5 rounded-lg group-hover:bg-gray-50 transition-colors">
+                                            <span className="text-xs text-gray-500">Salary</span>
+                                            <span className="font-semibold text-gray-900">€{worker.salary.toLocaleString()}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-sm p-1.5 rounded-lg group-hover:bg-gray-50 transition-colors">
+                                            <span className="text-xs text-gray-500">Tips</span>
+                                            <span className="font-semibold text-green-600">€{worker.tips.toLocaleString()}</span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-xs text-gray-500">Income</span>
-                                        <span className="font-semibold text-gray-900">€{worker.income.toLocaleString()}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-xs text-gray-500">Salary</span>
-                                        <span className="font-semibold text-gray-900">€{worker.salary.toLocaleString()}</span>
-                                    </div>
-                                    <div className="flex justify-between items-center">
-                                        <span className="text-xs text-gray-500">Tips</span>
-                                        <span className="font-semibold text-green-600">€{worker.tips.toLocaleString()}</span>
-                                    </div>
-                                </div>
-                            </div>
+                            </Link>
                         ))}
                     </div>
                 </div>

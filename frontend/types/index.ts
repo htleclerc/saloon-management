@@ -84,6 +84,12 @@ export interface Product {
     id: number;
     name: string;
     price: number;
+    stock: number;
+    description?: string;
+    category?: string;
+    image?: string;
+    isLinkedToService?: boolean;
+    serviceId?: number;
 }
 
 export interface UsedProduct {
@@ -125,7 +131,8 @@ export type BookingStatus =
     | 'Validated'
     | 'PendingApproval'
     | 'Rescheduled'
-    | 'Closed';
+    | 'Closed'
+    | 'Started';
 
 export interface BookingInteraction {
     id: string;
@@ -171,4 +178,41 @@ export interface DayCapacity {
     closedSlots: string[]; // List of times like ["09:00", "09:30"]
     isClosed: boolean;
     allowOverbooking: boolean;
+}
+
+// ============================================================
+// Income & Invoice Types
+// ============================================================
+
+export type IncomeStatus = 'Draft' | 'Pending' | 'Validated' | 'Refused' | 'Closed' | 'Cancelled';
+
+export interface IncomeHistoryEvent {
+    date: string;
+    action: string;
+    user: string;
+    comment?: string;
+}
+
+export interface IncomeComment {
+    date: string;
+    user: string;
+    text: string;
+}
+
+export interface Income {
+    id: number;
+    date: string;
+    clientId: number | 'anonymous';
+    clientName: string;
+    serviceIds: number[];
+    workerIds: number[];
+    amount: number;
+    status: IncomeStatus;
+    createdBy: string;
+    bookingIds: number[];
+    history: IncomeHistoryEvent[];
+    comments: IncomeComment[];
+    hasInvoice: boolean;
+    invoiceUrl?: string;
+    paymentMethod?: string;
 }

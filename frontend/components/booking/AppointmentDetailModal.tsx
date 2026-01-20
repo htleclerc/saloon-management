@@ -16,9 +16,15 @@ import {
     AlertCircle,
     History,
     ChevronRight,
-    Users
+    Users,
+    FileText,
+    Download
 } from "lucide-react";
 import { Booking, Service } from "@/types";
+import { QRCodeSVG } from "qrcode.react";
+import { jsPDF } from "jspdf";
+import { UserRole } from "@/context/AuthProvider";
+import { canPerformBookingAction } from "@/lib/permissions";
 
 interface AppointmentDetailModalProps {
     isOpen: boolean;
@@ -69,24 +75,21 @@ export default function AppointmentDetailModal({
     const isStaff = isAdmin || userRole === 'manager' || userRole === 'admin';
     const isClientRole = userRole === 'client';
 
-    // Button Logic: canView and isActif
-    const valider = {
-        canView: isStaff || (isClientRole && isAdminModified),
-        isActif: appointment.status === 'Pending'
-    };
-    const modifier = {
-        canView: isStaff || isClientRole,
-        isActif: appointment.status !== 'Cancelled'
-    };
-    const annuler = {
-        canView: isStaff || isClientRole,
-        isActif: appointment.status !== 'Cancelled'
-    };
+    // Simplified roles and permission checks using centralized rules
+    const role = userRole as UserRole || (isAdmin ? "admin" : "client");
+
+    const canConfirm = canPerformBookingAction(appointment, "confirm", role);
+    const canEdit = canPerformBookingAction(appointment, "edit", role);
+    const canCancel = canPerformBookingAction(appointment, "cancel", role);
+    const canApprove = canPerformBookingAction(appointment, "approve_reschedule", role);
+    const canReject = canPerformBookingAction(appointment, "reject_reschedule", role);
+    const canManageTeam = canPerformBookingAction(appointment, "manage_team", role);
+    const canViewInvoice = canPerformBookingAction(appointment, "view_invoice", role, !!appointment.incomeId);
     const clientAction = {
-        canView: isClientRole && appointment.status === 'PendingApproval',
+        canView: canApprove || canReject,
     };
     const manageTeam = {
-        canView: isStaff && appointment.status !== 'Cancelled' && appointment.status !== 'Closed',
+        canView: canManageTeam,
     };
 
     const salonName = "Demo Salon"; // In a real app, this would be looked up
@@ -173,8 +176,8 @@ export default function AppointmentDetailModal({
                         </div>
                     </div>
 
-                    {/* Interaction History (Admins only) */}
-                    {isAdmin && appointment.interactionHistory.length > 0 && (
+                    {/* Interaction History (Staff only) */}
+                    {isStaff && appointment.interactionHistory.length > 0 && (
                         <div className="space-y-2 relative">
                             <div className="flex items-center justify-between">
                                 <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Audit Trail</p>
@@ -202,6 +205,29 @@ export default function AppointmentDetailModal({
                         </div>
                     )}
 
+                    {/* Financial Documents (NEW) */}
+                    {appointment.incomeId && (
+                        <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 flex flex-col md:flex-row items-center justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-blue-100 rounded-lg">
+                                    <FileText className="w-5 h-5 text-blue-600" />
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-blue-900 text-sm italic">Service Invoice Available</h4>
+                                    <p className="text-[10px] text-blue-500 uppercase font-bold tracking-tight">Status: Ready to Download</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <Button size="sm" variant="outline" className="border-blue-200 text-blue-700 hover:bg-white text-xs px-3">
+                                    <Download className="w-3.5 h-3.5 mr-2" /> PDF Invoice
+                                </Button>
+                                <div className="bg-white p-1 rounded shadow-sm">
+                                    <QRCodeSVG value={`https://saloon.app/client/invoices/${appointment.incomeId}`} size={48} />
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Staff Comments */}
                     {appointment.comments.length > 0 && (
                         <div className="bg-[var(--color-primary-light)] p-4 rounded-xl space-y-3">
@@ -226,7 +252,7 @@ export default function AppointmentDetailModal({
                     )}
 
                     {/* Full History Overlay - Now placed correctly to cover the whole content area */}
-                    {showFullHistory && isAdmin && (
+                    {showFullHistory && isStaff && (
                         <div className="absolute inset-0 bg-white z-20 flex flex-col p-6 md:p-8 animate-in slide-in-from-bottom-2 duration-300">
                             <div className="flex items-center justify-between mb-6 border-b border-gray-100 pb-3">
                                 <div className="flex items-center gap-3">
@@ -297,34 +323,34 @@ export default function AppointmentDetailModal({
                             </>
                         )}
 
-                        {valider.canView && onConfirm && appointment.status === 'Pending' && (
+                        {canConfirm && onConfirm && appointment.status === 'Pending' && (
                             <Button
                                 variant="success"
                                 className="flex-1 gap-2 font-bold"
                                 onClick={() => onConfirm(appointment.id)}
-                                disabled={!valider.isActif}
+                                disabled={!canConfirm}
                             >
                                 <CheckCircle className="w-4 h-4" />
-                                {!valider.isActif ? "Already Confirmed" : "Confirm Appointment"}
+                                {!canConfirm ? "Action unavailable" : "Confirm Appointment"}
                             </Button>
                         )}
-                        {modifier.canView && (
+                        {canEdit && (
                             <Button
                                 variant="outline"
                                 className="flex-1 border-[var(--color-primary-light)] text-[var(--color-primary)] gap-2 font-bold"
                                 onClick={() => onEdit(appointment)}
-                                disabled={!modifier.isActif}
+                                disabled={!canEdit}
                             >
                                 <Edit className="w-4 h-4" />
                                 {isAdmin ? "Edit Appointment" : "Modify Appointment"}
                             </Button>
                         )}
-                        {annuler.canView && (
+                        {canCancel && (
                             <Button
                                 variant="danger"
                                 className="flex-1 gap-2 font-bold"
                                 onClick={() => onCancel(appointment.id)}
-                                disabled={!annuler.isActif}
+                                disabled={!canCancel}
                             >
                                 <Trash2 className="w-4 h-4" />
                                 {isAdmin ? "Cancel Appointment" : "Cancel Booking"}

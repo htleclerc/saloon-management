@@ -113,8 +113,8 @@ function TeamLayoutContent({ children, title, description }: TeamLayoutProps) {
                     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                             <div>
-                                <h1 className="text-xl font-bold text-gray-900">{title}</h1>
-                                <p className="text-gray-500 text-xs">{description}</p>
+                                <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{title}</h1>
+                                <p className="text-gray-500 text-sm md:text-base mt-1">{description}</p>
                             </div>
                         </div>
                         <nav className="flex overflow-x-auto hide-scrollbar">
@@ -161,7 +161,7 @@ function TeamLayoutContent({ children, title, description }: TeamLayoutProps) {
                                     <activeItem.icon className="w-4 h-4 text-white" />
                                 </div>
                                 <div className="text-left">
-                                    <p className="font-semibold text-gray-900 text-sm">{title}</p>
+                                    <p className="font-bold text-gray-900 text-base">{title}</p>
                                     <p className="text-xs text-gray-500">{activeItem.name}</p>
                                 </div>
                             </div>
@@ -272,9 +272,9 @@ function TeamLayoutContent({ children, title, description }: TeamLayoutProps) {
 
                 {/* Main Content */}
                 <main className="flex-1 min-w-0">
-                    <div className="mb-2">
-                        <h1 className="text-xl font-bold text-gray-900">{title}</h1>
-                        <p className="text-gray-500 text-xs">{description}</p>
+                    <div className="mb-4">
+                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{title}</h1>
+                        <p className="text-gray-500 text-sm md:text-base mt-1">{description}</p>
                     </div>
                     <div className="space-y-4">{children}</div>
                 </main>

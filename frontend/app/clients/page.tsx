@@ -100,10 +100,18 @@ export default function ClientsPage() {
         <MainLayout>
             <div className="space-y-6">
                 {/* Header */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900">Client Management</h1>
                         <p className="text-gray-500 mt-1">Add, modify, or delete client information</p>
+                    </div>
+                    <div className="flex w-full md:w-auto items-center justify-end">
+                        <Link href="/clients/add">
+                            <Button variant="primary" size="md" className="rounded-2xl h-14 w-14 md:h-12 md:w-auto md:px-6 flex items-center justify-center p-0 md:p-auto shadow-xl shadow-purple-500/30 active:scale-95 transition-all">
+                                <Plus className="w-8 h-8 md:w-6 md:h-6" />
+                                <span className="hidden md:inline ml-2 font-bold whitespace-nowrap">Add New Client</span>
+                            </Button>
+                        </Link>
                     </div>
                 </div>
 
@@ -195,19 +203,13 @@ export default function ClientsPage() {
                         </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <Link href="/clients/add">
-                            <button className="w-full flex items-center justify-center gap-2 bg-[#A855F7] hover:bg-[#9333EA] text-white py-3 rounded-lg transition-colors font-medium">
-                                <UserPlus className="w-5 h-5" />
-                                Add New Client
-                            </button>
-                        </Link>
-                        <button className="w-full flex items-center justify-center gap-2 bg-[#10B981] hover:bg-[#059669] text-white py-3 rounded-lg transition-colors font-medium">
-                            <User className="w-5 h-5" />
-                            Generate Anonymous
+                        <button className="flex-1 h-14 flex items-center justify-center gap-2 bg-[#10B981] hover:bg-[#059669] text-white rounded-2xl transition-all font-bold active:scale-95">
+                            <Plus className="w-6 h-6" />
+                            <span className="hidden sm:inline">Quick Generic</span>
                         </button>
-                        <button className="w-full flex items-center justify-center gap-2 bg-[#EC4899] hover:bg-[#DB2777] text-white py-3 rounded-lg transition-colors font-medium">
-                            <Upload className="w-5 h-5" />
-                            Import Clients
+                        <button className="flex-1 h-14 flex items-center justify-center gap-2 bg-[#EC4899] hover:bg-[#DB2777] text-white rounded-2xl transition-all font-bold active:scale-95">
+                            <Upload className="w-6 h-6" />
+                            <span className="hidden sm:inline">Import</span>
                         </button>
                     </div>
                 </div>

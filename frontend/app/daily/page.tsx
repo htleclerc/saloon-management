@@ -7,6 +7,8 @@ import Button from "@/components/ui/Button";
 import StatCard from "@/components/ui/StatCard";
 import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
 import { useAuth } from "@/context/AuthProvider";
+import { useBooking } from "@/context/BookingProvider";
+import { useConfirm } from "@/context/ConfirmProvider";
 import {
     Calendar,
     ChevronLeft,
@@ -17,33 +19,43 @@ import {
     DollarSign,
     TrendingUp,
     AlertCircle,
-    CheckCircle
+    CheckCircle,
+    PlayCircle
 } from "lucide-react";
 
-const appointments = [
-    { id: 1, time: "09:00", client: "Marie Dubois", service: "Box Braids", worker: "Orphelia", amount: "€120", status: "Completed" },
-    { id: 2, time: "10:30", client: "Jean Martin", service: "Cornrows", worker: "Worker 2", amount: "€85", status: "In Progress" },
-    { id: 3, time: "13:00", client: "Sophie Laurent", service: "Twists", worker: "Orphelia", amount: "€95", status: "Scheduled" },
-    { id: 4, time: "15:30", client: "Pierre Rousseau", service: "Locs", worker: "Worker 3", amount: "€150", status: "Scheduled" },
-];
-
 export default function DailyPage() {
-    const [selectedDate, setSelectedDate] = useState("2024-01-15");
+    const [selectedDate, setSelectedDate] = useState("2026-01-19"); // Hardcoded to match task context if needed
     const { getCardStyle } = useKpiCardStyle();
     const { user, hasPermission, getWorkerId } = useAuth();
+    const { bookings, startBooking } = useBooking();
+    const { confirm } = useConfirm();
 
     const workerId = getWorkerId();
     const isWorker = user?.role === 'worker';
 
-    // Filter appointments by worker if user is a worker
-    const filteredAppointments = isWorker
-        ? appointments.filter(apt => apt.worker === user?.name || apt.worker === 'Orphelia') // Using name match for demo
-        : appointments;
+    // Simple date filter for demo: only today's bookings
+    const dailyBookings = bookings.filter(b => b.date === selectedDate);
 
-    // Filter workers list to show only current worker for workers
+    const filteredAppointments = isWorker
+        ? dailyBookings.filter(apt => (apt.workerIds || []).includes(Number(workerId) || 0))
+        : dailyBookings;
+
     const availableWorkers = isWorker
-        ? ['Orphelia'] // Show only current worker in demo
+        ? [user?.name || 'Worker']
         : ['Orphelia', 'Worker 2', 'Worker 3'];
+
+    const handleStart = async (id: number) => {
+        const isConfirmed = await confirm({
+            title: "Start appointment?",
+            message: "Start this appointment and create draft income?",
+            type: "info",
+            confirmText: "Start",
+            cancelText: "Cancel"
+        });
+        if (isConfirmed) {
+            startBooking(id);
+        }
+    };
 
     return (
         <MainLayout>
@@ -71,80 +83,85 @@ export default function DailyPage() {
                 {/* Daily Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <StatCard
-                        title="Today's Income"
-                        value="€1,245"
-                        subtitle="15 appointments"
-                        icon={DollarSign}
+                        title="Today's Bookings"
+                        value={filteredAppointments.length.toString()}
+                        subtitle="Total scheduled"
+                        icon={Calendar}
                         gradient=""
                         style={getCardStyle(0)}
                     />
                     <StatCard
                         title="Completed"
-                        value="12"
-                        subtitle="Out of 15"
+                        value={filteredAppointments.filter(b => b.status === 'Closed' || b.status === 'Finished').length.toString()}
+                        subtitle="Done for today"
                         icon={CheckCircle}
                         gradient=""
                         style={getCardStyle(1)}
                     />
                     <StatCard
-                        title="Pending"
-                        value="2"
-                        subtitle="Scheduled"
+                        title="In Progress"
+                        value={filteredAppointments.filter(b => b.status === 'Started').length.toString()}
+                        subtitle="Currently working"
                         icon={Clock}
                         gradient=""
                         style={getCardStyle(2)}
                     />
                     <StatCard
-                        title="Avg. Ticket"
-                        value="€56"
-                        subtitle="+5% from yesterday"
-                        icon={TrendingUp}
+                        title="Income (Draft)"
+                        value="€-- "
+                        subtitle="Calculated on validation"
+                        icon={DollarSign}
                         gradient=""
                         style={getCardStyle(3)}
                     />
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Timeline/Schedule */}
                     <Card className="lg:col-span-2">
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="text-xl font-bold text-gray-900">Today's Schedule</h3>
                             <Button variant="outline" size="sm">Print Schedule</Button>
                         </div>
                         <div className="space-y-6">
-                            {appointments.map((apt) => (
+                            {filteredAppointments.length > 0 ? filteredAppointments.sort((a, b) => a.time.localeCompare(b.time)).map((apt) => (
                                 <div key={apt.id} className="relative pl-8 border-l-2 border-purple-100 pb-6 last:pb-0">
-                                    <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-purple-500 border-2 border-white"></div>
+                                    <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 border-white ${apt.status === 'Started' ? 'bg-blue-500' :
+                                        apt.status === 'Closed' || apt.status === 'Finished' ? 'bg-green-500' : 'bg-purple-500'
+                                        }`}></div>
                                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 bg-gray-50 rounded-xl hover:bg-white hover:shadow-md transition">
                                         <div className="flex items-center gap-4">
                                             <div className="text-lg font-bold text-purple-600 w-16">{apt.time}</div>
                                             <div>
-                                                <p className="font-bold text-gray-900">{apt.client}</p>
-                                                <p className="text-sm text-gray-500">{apt.service} • {apt.worker}</p>
+                                                <p className="font-bold text-gray-900">{apt.clientName}</p>
+                                                <p className="text-sm text-gray-500">Service: {apt.serviceIds.join(", ")}</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-4">
                                             <div className="text-right">
-                                                <p className="font-bold text-gray-900">{apt.amount}</p>
-                                                <span className={`text-xs px-2 py-1 rounded-full font-medium ${apt.status === 'Completed' ? 'bg-green-100 text-green-700' :
-                                                    apt.status === 'In Progress' ? 'bg-blue-100 text-blue-700' :
+                                                <span className={`text-xs px-2 py-1 rounded-full font-medium ${apt.status === 'Closed' || apt.status === 'Finished' ? 'bg-green-100 text-green-700' :
+                                                    apt.status === 'Started' ? 'bg-blue-100 text-blue-700' :
                                                         'bg-orange-100 text-orange-700'
                                                     }`}>
                                                     {apt.status}
                                                 </span>
                                             </div>
-                                            <Button variant="outline" size="sm">Edit</Button>
+                                            {(apt.status === 'Pending' || apt.status === 'Confirmed') && (
+                                                <Button size="sm" onClick={() => handleStart(apt.id)} className="bg-blue-600 hover:bg-blue-700 text-white gap-2">
+                                                    <PlayCircle className="w-4 h-4" /> Start
+                                                </Button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
-                            ))}
+                            )) : (
+                                <p className="text-center text-gray-500 py-12">No appointments scheduled for this date.</p>
+                            )}
                         </div>
                     </Card>
 
-                    {/* Side Info */}
                     <div className="space-y-6">
                         <Card>
-                            <h3 className="text-lg font-bold text-gray-900 mb-4">Worker Availability</h3>
+                            <h3 className="text-lg font-bold text-gray-900 mb-4">Staff Status</h3>
                             <div className="space-y-4">
                                 {availableWorkers.map((worker, i) => (
                                     <div key={i} className="flex items-center justify-between">
@@ -154,7 +171,7 @@ export default function DailyPage() {
                                             </div>
                                             <span className="text-sm font-medium text-gray-700">{worker}</span>
                                         </div>
-                                        <span className={`w - 3 h - 3 rounded - full ${i === 2 ? 'bg-red-500' : 'bg-green-500'} `}></span>
+                                        <span className={`w-3 h-3 rounded-full bg-green-500`}></span>
                                     </div>
                                 ))}
                             </div>
@@ -166,11 +183,8 @@ export default function DailyPage() {
                                 <h3 className="text-lg font-bold">Quick Note</h3>
                             </div>
                             <p className="text-sm opacity-90 leading-relaxed mb-4">
-                                Remember to check the stock for hair oils. We are running low on the premium brand.
+                                Ensure all started bookings are closed at the end of the service to generate invoices.
                             </p>
-                            <Button variant="secondary" size="sm" className="w-full">
-                                Add Note
-                            </Button>
                         </Card>
                     </div>
                 </div>

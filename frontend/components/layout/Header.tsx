@@ -208,7 +208,7 @@ export default function Header() {
 
     return (
         <header className={`fixed top-0 ${getLeftPosition()} right-0 h-16 bg-white border-b border-gray-200 z-40 transition-all duration-300`}>
-            <div className="h-full px-4 md:px-6 flex items-center justify-between gap-4">
+            <div className="h-full px-5 md:px-6 flex items-center justify-between gap-4">
 
                 {/* Mobile Menu Button */}
                 {isMobile && (

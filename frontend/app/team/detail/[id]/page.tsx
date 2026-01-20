@@ -2,7 +2,7 @@
 
 import { use, useState, useCallback, useMemo, Suspense } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import TeamLayout from "@/components/layout/TeamLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -33,6 +33,8 @@ import {
     ThumbsUp,
     AlertCircle,
     Search,
+    ArrowLeft,
+    Trash2
 } from "lucide-react";
 import {
     LineChart,
@@ -48,6 +50,9 @@ import {
     Pie,
     Cell,
 } from "recharts";
+
+import { useAuth } from "@/context/AuthProvider";
+import { useActionPermissions } from "@/lib/permissions";
 
 const teamMemberData = {
     id: 1,
@@ -344,12 +349,18 @@ const dailyActivities = [
 function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
     const searchParams = useSearchParams();
+    const router = useRouter();
     const initialView = searchParams.get("view") === "advanced" ? "advanced" : "simple";
     const [viewMode, setViewMode] = useState<"simple" | "advanced">(initialView);
     const [incomePeriod, setIncomePeriod] = useState<"week" | "month" | "year">("month");
     const [selectedYear, setSelectedYear] = useState("2024");
     const [incomePage, setIncomePage] = useState(1);
     const itemsPerPage = 5;
+
+    const auth = useAuth();
+    const permissions = useActionPermissions(auth as any);
+    const isOwnProfile = auth.user?.name === teamMemberData.name; // Simulating ID check with name for mock
+    const canSeeFinancials = permissions.isAdmin || permissions.isManager;
 
     // SimpleView transactions table state
     const [transactionDateFilter, setTransactionDateFilter] = useState<DateFilterValue>({ year: new Date().getFullYear(), month: new Date().getMonth() + 1, week: null });
@@ -403,10 +414,14 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                     <h3 className="text-xl font-bold text-[var(--color-primary)]">{performanceCards[0].label}</h3>
                     <p className="text-xs text-gray-500 mt-1">{performanceCards[0].sublabel}</p>
                 </Card>
-                <Card className="p-4 text-center bg-gradient-to-br from-[var(--color-error-light)] to-white hover:shadow-lg transition-shadow border-[var(--color-error-light)]">
-                    <h3 className="text-xl font-bold text-[var(--color-error)]">{performanceCards[1].label}</h3>
-                    <p className="text-xs text-gray-500 mt-1">{performanceCards[1].sublabel}</p>
-                </Card>
+
+                {canSeeFinancials && (
+                    <Card className="p-4 text-center bg-gradient-to-br from-[var(--color-error-light)] to-white hover:shadow-lg transition-shadow border-[var(--color-error-light)]">
+                        <h3 className="text-xl font-bold text-[var(--color-error)]">{performanceCards[1].label}</h3>
+                        <p className="text-xs text-gray-500 mt-1">{performanceCards[1].sublabel}</p>
+                    </Card>
+                )}
+
                 <Card className="p-4 text-center bg-gradient-to-br from-[var(--color-warning-light)] to-white hover:shadow-lg transition-shadow border-[var(--color-warning-light)]">
                     <h3 className="text-xl font-bold text-[var(--color-warning)]">{performanceCards[2].label}</h3>
                     <p className="text-xs text-gray-500 mt-1">{performanceCards[2].sublabel}</p>
@@ -415,10 +430,13 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                     <h3 className="text-xl font-bold text-[var(--color-success)]">{performanceCards[3].label}</h3>
                     <p className="text-xs text-gray-500 mt-1">{performanceCards[3].sublabel}</p>
                 </Card>
-                <Card className="p-4 text-center bg-gradient-to-br from-[var(--color-success-light)] to-white hover:shadow-lg transition-shadow border-[var(--color-success-light)]">
-                    <h3 className="text-xl font-bold text-[var(--color-success)]">{performanceCards[4].label}</h3>
-                    <p className="text-xs text-gray-500 mt-1">{performanceCards[4].sublabel}</p>
-                </Card>
+
+                {canSeeFinancials && (
+                    <Card className="p-4 text-center bg-gradient-to-br from-[var(--color-success-light)] to-white hover:shadow-lg transition-shadow border-[var(--color-success-light)]">
+                        <h3 className="text-xl font-bold text-[var(--color-success)]">{performanceCards[4].label}</h3>
+                        <p className="text-xs text-gray-500 mt-1">{performanceCards[4].sublabel}</p>
+                    </Card>
+                )}
             </div>
 
             {/* Quick Info Cards */}
@@ -652,8 +670,12 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
 
                 {/* Action Buttons - Moved to top right area */}
                 <div className="flex justify-end gap-3">
-                    <Button variant="primary" size="sm" className="bg-gradient-to-r from-[var(--color-primary)] to-gray-900 border-none"><Eye className="w-4 h-4 mr-2" />View Reports</Button>
-                    <Button variant="primary" size="sm" className="bg-gradient-to-r from-[var(--color-secondary)] to-gray-900 border-none"><BarChart3 className="w-4 h-4 mr-2" />Analytics</Button>
+                    {canSeeFinancials && (
+                        <>
+                            <Button variant="primary" size="sm" className="bg-gradient-to-r from-[var(--color-primary)] to-gray-900 border-none"><Eye className="w-4 h-4 mr-2" />View Reports</Button>
+                            <Button variant="primary" size="sm" className="bg-gradient-to-r from-[var(--color-secondary)] to-gray-900 border-none"><BarChart3 className="w-4 h-4 mr-2" />Analytics</Button>
+                        </>
+                    )}
                     <Button variant="primary" size="sm" className="bg-gradient-to-r from-[var(--color-warning)] to-gray-900 border-none"><Calendar className="w-4 h-4 mr-2" />Schedule</Button>
                 </div>
             </div>
@@ -1027,7 +1049,18 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
             description="Detailed analytics and performance metrics"
         >
             <div className="space-y-6 pb-8">
-                {/* Header Section - Primary Gradient */}
+                {/* Back Button */}
+                <div className="flex items-center">
+                    <button
+                        onClick={() => router.back()}
+                        className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] rounded-lg transition-all"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        <span>Back</span>
+                    </button>
+                </div>
+
+                {/* Header Section - Primary Gradient steering away from default */}
                 <div className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-dark)] rounded-2xl p-6 text-white shadow-lg">
                     <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
@@ -1058,29 +1091,41 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                             </div>
                         </div>
                         <div className="flex gap-2">
-                            <Link href={`/team/edit-advanced/${id}`}>
-                                <Button variant="outline" size="sm" className="bg-white/10 border-white/30 text-white hover:bg-white/20 text-xs">
-                                    <Edit className="w-3 h-3 mr-1" />Edit Profile
-                                </Button>
-                            </Link>
-                            <Button variant="primary" size="sm" className="bg-white text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-xs border-none">Download Report</Button>
+                            {(permissions.isAdmin || permissions.isManager || isOwnProfile) && (
+                                <Link href={`/team/edit-advanced/${id}`}>
+                                    <Button variant="outline" size="sm" className="bg-white/10 border-white/30 text-white hover:bg-white/20 text-xs">
+                                        <Edit className="w-3 h-3 mr-1" />Edit Profile
+                                    </Button>
+                                </Link>
+                            )}
+                            {canSeeFinancials && (
+                                <Button variant="primary" size="sm" className="bg-white text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-xs border-none">Download Report</Button>
+                            )}
                         </div>
                     </div>
                 </div>
 
                 {/* View Toggle */}
-                <div className="flex items-center bg-gray-100 rounded-xl p-1 w-fit">
+                <div className="flex items-center gap-2 bg-white p-1.5 rounded-xl shadow-sm border border-gray-100 w-fit">
                     <button
                         onClick={() => setViewMode("simple")}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === "simple" ? "bg-white text-[var(--color-primary)] shadow-sm" : "text-gray-600 hover:text-gray-900"}`}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === "simple"
+                            ? "bg-[var(--color-primary-light)] text-[var(--color-primary)] shadow-sm"
+                            : "text-gray-500 hover:bg-gray-50"
+                            }`}
                     >
-                        <LayoutGrid className="w-4 h-4" />Simple
+                        <LayoutGrid className="w-4 h-4" />
+                        <span>Simple Overview</span>
                     </button>
                     <button
                         onClick={() => setViewMode("advanced")}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === "advanced" ? "bg-white text-[var(--color-primary)] shadow-sm" : "text-gray-600 hover:text-gray-900"}`}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === "advanced"
+                            ? "bg-[var(--color-primary-light)] text-[var(--color-primary)] shadow-sm"
+                            : "text-gray-500 hover:bg-gray-50"
+                            }`}
                     >
-                        <Table className="w-4 h-4" />Advanced
+                        <Table className="w-4 h-4" />
+                        <span>Advanced Data</span>
                     </button>
                 </div>
 

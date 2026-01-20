@@ -25,6 +25,7 @@ import {
     Pie,
     Cell,
 } from "recharts";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 const workers = [
     { id: 1, name: "Orphelia", avatar: "O", status: "Active", sharingKey: 70, totalRevenue: "€45,830", totalSalary: "€32,081", monthRevenue: "€4,990", monthSalary: "€3,423", yearRevenue: "€52,450", yearSalary: "€36,715", clients: 187, rating: 4.9, services: 203, color: "from-[var(--color-primary)] to-[var(--color-primary-dark)]" },
@@ -405,11 +406,11 @@ function TeamPageContent() {
                     </div>
                 </div>
 
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead className="bg-gray-50">
+                <div className="overflow-x-auto -mx-4 md:-mx-6 px-4 md:px-6 pb-2 scrollbar-thin scrollbar-thumb-purple-100 scrollbar-track-transparent">
+                    <table className="w-full min-w-[1000px]">
+                        <thead className="bg-gray-50 border-b border-gray-100 sticky top-0 bg-white z-10 italic">
                             <tr>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Team Member</th>
+                                <th className="px-4 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Team Member</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Status</th>
                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Share %</th>
                                 <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Revenue</th>
@@ -976,18 +977,42 @@ function TeamPageContent() {
             <div className="space-y-6">
                 {/* View Toggle + Quick Actions */}
                 <div className="flex flex-wrap items-center justify-between gap-4">
-                    <div className="flex items-center bg-gray-100 rounded-xl p-1">
-                        <button onClick={() => setViewMode("simple")} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === "simple" ? "bg-white text-[var(--color-primary)] shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>
-                            <LayoutGrid className="w-4 h-4" />Simple
+                    <div className="flex items-center gap-2 bg-white p-1.5 rounded-xl shadow-sm border border-gray-100 w-fit">
+                        <button
+                            onClick={() => setViewMode("simple")}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === "simple"
+                                ? "bg-[var(--color-primary-light)] text-[var(--color-primary)] shadow-sm"
+                                : "text-gray-500 hover:bg-gray-50"
+                                }`}
+                        >
+                            <LayoutGrid className="w-4 h-4" />
+                            <span>Simple List</span>
                         </button>
-                        <button onClick={() => setViewMode("advanced")} className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === "advanced" ? "bg-white text-[var(--color-primary)] shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>
-                            <Table className="w-4 h-4" />Advanced
+                        <button
+                            onClick={() => setViewMode("advanced")}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === "advanced"
+                                ? "bg-[var(--color-primary-light)] text-[var(--color-primary)] shadow-sm"
+                                : "text-gray-500 hover:bg-gray-50"
+                                }`}
+                        >
+                            <Table className="w-4 h-4" />
+                            <span>Advanced View</span>
                         </button>
                     </div>
-                    <div className="flex gap-3">
+                    <div className="flex w-full md:w-auto items-center justify-end gap-3">
                         <RequirePermission role={['manager', 'admin']}>
-                            <Link href="/team/add"><Button variant="outline" size="sm"><Plus className="w-4 h-4" />Quick Add</Button></Link>
-                            <Link href="/team/add-advanced"><Button variant="primary" size="sm"><Plus className="w-4 h-4" />Complete Form</Button></Link>
+                            <Link href="/team/add">
+                                <Button variant="outline" size="md" className="rounded-2xl h-14 w-14 md:h-12 md:w-auto md:px-6 flex items-center justify-center p-0 md:p-auto shadow-sm active:scale-95 transition-all">
+                                    <Plus className="w-8 h-8 md:w-6 md:h-6" />
+                                    <span className="hidden md:inline ml-2 text-sm font-bold whitespace-nowrap">Quick Add</span>
+                                </Button>
+                            </Link>
+                            <Link href="/team/add-advanced">
+                                <Button variant="primary" size="md" className="rounded-2xl h-14 w-14 md:h-12 md:w-auto md:px-6 flex items-center justify-center p-0 md:p-auto shadow-xl shadow-purple-500/30 active:scale-95 transition-all">
+                                    <Plus className="w-8 h-8 md:w-6 md:h-6" />
+                                    <span className="hidden md:inline ml-2 text-sm font-bold whitespace-nowrap">Complete Form</span>
+                                </Button>
+                            </Link>
                         </RequirePermission>
                     </div>
                 </div>
@@ -1016,8 +1041,10 @@ function LoadingFallback() {
 
 export default function TeamPage() {
     return (
-        <Suspense fallback={<LoadingFallback />}>
-            <TeamPageContent />
-        </Suspense>
+        <ProtectedRoute requiredRole={['manager', 'admin']}>
+            <Suspense fallback={<div>Loading Team...</div>}>
+                <TeamPageContent />
+            </Suspense>
+        </ProtectedRoute>
     );
 }

@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { Booking, BookingStatus, DayCapacity, BookingInteraction, BookingComment } from "@/types";
 import { useAuth } from "./AuthProvider";
+import { useIncome } from "./IncomeProvider";
 
 interface BookingContextType {
     bookings: Booking[];
@@ -19,6 +20,7 @@ interface BookingContextType {
     toggleSlotClosure: (date: string, time: string) => void;
     getAvailableSlots: (date: string, clientId?: number | string) => Array<{ time: string; status: 'available' | 'waitlist' | 'unavailable'; isSensitive?: boolean; weight: number; max: number }>;
     getBookingHistory: (id: number) => BookingInteraction[];
+    startBooking: (id: number) => void;
 }
 
 const BookingContext = createContext<BookingContextType | undefined>(undefined);
@@ -32,6 +34,7 @@ const DEFAULT_TIME_SLOTS = [
 
 export function BookingProvider({ children }: { children: ReactNode }) {
     const { user } = useAuth();
+    const { addIncome } = useIncome();
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [dayCapacities, setDayCapacities] = useState<Record<string, DayCapacity>>({});
     const [mounted, setMounted] = useState(false);
@@ -53,6 +56,37 @@ export function BookingProvider({ children }: { children: ReactNode }) {
             localStorage.setItem("workshop-capacities", JSON.stringify(dayCapacities));
         }
     }, [bookings, dayCapacities, mounted]);
+
+    // Auto-closure logic
+    useEffect(() => {
+        if (!mounted) return;
+
+        const interval = setInterval(() => {
+            const now = new Date();
+            const currentTimeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+            const currentDateStr = now.toISOString().split('T')[0];
+
+            setBookings(prev => prev.map(b => {
+                if (b.status === 'Started' && b.date === currentDateStr && currentTimeStr >= b.endTime) {
+                    const interaction: BookingInteraction = {
+                        id: Math.random().toString(36).substr(2, 9),
+                        timestamp: new Date(),
+                        user: "System",
+                        action: "Auto-closed (time expired)",
+                    };
+                    return {
+                        ...b,
+                        status: 'Closed',
+                        updatedAt: new Date(),
+                        interactionHistory: [...b.interactionHistory, interaction]
+                    };
+                }
+                return b;
+            }));
+        }, 60000); // Check every minute
+
+        return () => clearInterval(interval);
+    }, [mounted]);
 
     const calculateEndTime = (startTime: string, durationMinutes: number): string => {
         const [hours, minutes] = startTime.split(':').map(Number);
@@ -277,6 +311,32 @@ export function BookingProvider({ children }: { children: ReactNode }) {
         return bookings.find(b => b.id === id)?.interactionHistory || [];
     };
 
+    const startBooking = (id: number) => {
+        const booking = bookings.find(b => b.id === id);
+        if (!booking) return;
+
+        // 1. Update booking status
+        updateBookingStatus(id, 'Started', "Appointment started by user");
+
+        // 2. Create draft income
+        // Calculation of amount (sum of services if we had prices here, but for now we follow the pre-filled detail logic)
+        // In a real app we'd fetch prices. For this mockup, let's assume some default or use previous data.
+        const incomeId = addIncome({
+            date: booking.date,
+            clientId: booking.clientId as any,
+            clientName: booking.clientName,
+            serviceIds: booking.serviceIds,
+            workerIds: booking.workerIds,
+            amount: 100, // Placeholder amount, will be editable
+            status: 'Draft',
+            createdBy: user?.name || "System",
+            bookingIds: [id],
+        });
+
+        // 3. Link income to booking
+        setBookings(prev => prev.map(b => b.id === id ? { ...b, incomeId } : b));
+    };
+
     return (
         <BookingContext.Provider
             value={{
@@ -293,7 +353,8 @@ export function BookingProvider({ children }: { children: ReactNode }) {
                 updateDayCapacity,
                 toggleSlotClosure,
                 getAvailableSlots,
-                getBookingHistory
+                getBookingHistory,
+                startBooking
             }}
         >
             {children}

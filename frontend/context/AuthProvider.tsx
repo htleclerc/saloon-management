@@ -40,7 +40,7 @@ interface User {
     permissions?: WorkerPermissions; // Worker-specific permissions
 }
 
-interface AuthContextType {
+export interface AuthContextType {
     user: User | null;
     isAuthenticated: boolean;
     isLoading: boolean;
@@ -51,6 +51,7 @@ interface AuthContextType {
     hasPermission: (requiredRole: UserRole | UserRole[]) => boolean;
     hasExactRole: (requiredRole: UserRole | UserRole[]) => boolean;
     isSuperAdmin: boolean;
+    isOwner: boolean;
     isAdmin: boolean;
     isManager: boolean;
     isWorker: boolean;
@@ -189,8 +190,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isDemo: true,
             demoCreatedAt: new Date().toISOString(),
             avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=Demo${role}`,
-            // For workers, assign a worker ID and permissions
-            workerId: role === 'worker' ? 'worker_demo_1' : undefined,
+            // For workers, assign a worker ID and permissions (using '1' to match Orphelia in mock data)
+            workerId: role === 'worker' ? '1' : undefined,
             permissions: role === 'worker' ? {
                 canAddIncome: true,  // Demo worker has full permissions
                 canAddExpenses: false,  // Demo: can't add expenses
@@ -353,6 +354,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 hasPermission,
                 hasExactRole,
                 isSuperAdmin,
+                isOwner,
                 isAdmin,
                 isManager,
                 isWorker,

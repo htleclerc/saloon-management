@@ -5,6 +5,7 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { useState } from "react";
 import { Save, Scissors, Shirt, Wrench, Check, Plus, Trash2 } from "lucide-react";
+import Link from "next/link";
 
 const workshopTemplates = [
     { id: "hair-salon", name: "Hair Salon / Braiding", icon: Scissors, color: "from-[var(--color-primary)] to-[var(--color-primary-dark)]" },
@@ -135,10 +136,12 @@ export default function WorkshopSettingsPage() {
                         <h3 className="font-semibold text-gray-900 text-lg">Services par défaut</h3>
                         <p className="text-xs text-gray-500">Services pré-configurés pour votre entreprise</p>
                     </div>
-                    <Button variant="outline" size="sm">
-                        <Plus className="w-4 h-4" />
-                        Ajouter
-                    </Button>
+                    <Link href="/services/add?mode=simple">
+                        <Button variant="outline" size="sm">
+                            <Plus className="w-4 h-4" />
+                            Ajouter
+                        </Button>
+                    </Link>
                 </div>
                 <div className="space-y-2">
                     {defaultServices.map((service, idx) => (

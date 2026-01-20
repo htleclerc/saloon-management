@@ -21,6 +21,7 @@ import {
     Legend,
     ResponsiveContainer,
 } from "recharts";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 // Annual Financial Overview Data
 const annualOverview = {
@@ -149,424 +150,426 @@ export default function ReportsPage() {
         ? monthlyBreakdown.slice(0, 1) // Demo: show only first entry for worker
         : monthlyBreakdown;
     return (
-        <MainLayout>
-            <div className="space-y-6">
-                {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <ProtectedRoute requiredRole={['manager', 'admin']}>
+            <MainLayout>
+                <div className="space-y-6">
+                    {/* Header */}
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div>
+                            <h1 className="text-3xl font-bold text-gray-900">Site One Report</h1>
+                            <p className="text-gray-500 mt-1">Comprehensive financial analysis and insights</p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3">
+                            {/* Period Filters */}
+                            <div className="flex bg-gray-100 rounded-lg p-1">
+                                <button className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-white hover:shadow-sm rounded-md transition">Daily</button>
+                                <button className="px-3 py-1.5 text-sm font-medium bg-white shadow-sm text-[var(--color-primary)] rounded-md">Weekly</button>
+                                <button className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-white hover:shadow-sm rounded-md transition">Monthly</button>
+                                <button className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-white hover:shadow-sm rounded-md transition">Yearly</button>
+                            </div>
+                            <Button variant="outline" size="sm" className="gap-2">
+                                <Calendar className="w-4 h-4" />
+                                Dec 1 - Dec 31, 2025
+                                <ChevronDown className="w-4 h-4" />
+                            </Button>
+                            <Button variant="primary" size="md">
+                                <Download className="w-5 h-5" />
+                                Export Report
+                            </Button>
+                        </div>
+                    </div>
+
+                    {/* Annual Financial Overview */}
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">Site One Report</h1>
-                        <p className="text-gray-500 mt-1">Comprehensive financial analysis and insights</p>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3">
-                        {/* Period Filters */}
-                        <div className="flex bg-gray-100 rounded-lg p-1">
-                            <button className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-white hover:shadow-sm rounded-md transition">Daily</button>
-                            <button className="px-3 py-1.5 text-sm font-medium bg-white shadow-sm text-[var(--color-primary)] rounded-md">Weekly</button>
-                            <button className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-white hover:shadow-sm rounded-md transition">Monthly</button>
-                            <button className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-white hover:shadow-sm rounded-md transition">Yearly</button>
-                        </div>
-                        <Button variant="outline" size="sm" className="gap-2">
-                            <Calendar className="w-4 h-4" />
-                            Dec 1 - Dec 31, 2025
-                            <ChevronDown className="w-4 h-4" />
-                        </Button>
-                        <Button variant="primary" size="md">
-                            <Download className="w-5 h-5" />
-                            Export Report
-                        </Button>
-                    </div>
-                </div>
-
-                {/* Annual Financial Overview */}
-                <div>
-                    <h3 className="text-lg font-semibold mb-4">Annual Financial Overview</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                        <Card gradient="" style={getCardStyle(0)} className="text-white">
-                            <div className="flex items-center gap-2 mb-2">
-                                <span className="text-xl">💰</span>
-                                <p className="text-xs opacity-90">Total Revenue</p>
-                            </div>
-                            <h3 className="text-2xl font-bold">€{annualOverview.totalRevenue.toLocaleString()}</h3>
-                            <div className="flex items-center gap-1 mt-2">
-                                <TrendingUp className="w-3 h-3" />
-                                <span className="text-xs">+12.5% vs last year</span>
-                            </div>
-                        </Card>
-                        <Card gradient="" style={getCardStyle(1)} className="text-white">
-                            <div className="flex items-center gap-2 mb-2">
-                                <span className="text-xl">📊</span>
-                                <p className="text-xs opacity-90">Total Expenses</p>
-                            </div>
-                            <h3 className="text-2xl font-bold">€{annualOverview.totalExpenses.toLocaleString()}</h3>
-                            <div className="flex items-center gap-1 mt-2">
-                                <TrendingDown className="w-3 h-3" />
-                                <span className="text-xs">-3.2% vs last year</span>
-                            </div>
-                        </Card>
-                        <Card gradient="" style={getCardStyle(2)} className="text-white">
-                            <div className="flex items-center gap-2 mb-2">
-                                <span className="text-xl">📈</span>
-                                <p className="text-xs opacity-90">Net Profit</p>
-                            </div>
-                            <h3 className="text-2xl font-bold">€{annualOverview.netProfit.toLocaleString()}</h3>
-                            <div className="flex items-center gap-1 mt-2">
-                                <TrendingUp className="w-3 h-3" />
-                                <span className="text-xs">+8.4% vs last year</span>
-                            </div>
-                        </Card>
-                        <Card gradient="" style={getCardStyle(3)} className="text-white">
-                            <div className="flex items-center gap-2 mb-2">
-                                <span className="text-xl">🧾</span>
-                                <p className="text-xs opacity-90">Tax Payments</p>
-                            </div>
-                            <h3 className="text-2xl font-bold">€{annualOverview.taxPayments.toLocaleString()}</h3>
-                            <div className="flex items-center gap-1 mt-2">
-                                <TrendingUp className="w-3 h-3" />
-                                <span className="text-xs">+2.1% vs last year</span>
-                            </div>
-                        </Card>
-                        <Card gradient="" style={getCardStyle(4)} className="text-white">
-                            <div className="flex items-center gap-2 mb-2">
-                                <span className="text-xl">💎</span>
-                                <p className="text-xs opacity-90">Savings</p>
-                            </div>
-                            <h3 className="text-2xl font-bold">€{annualOverview.savings.toLocaleString()}</h3>
-                            <div className="flex items-center gap-1 mt-2">
-                                <TrendingUp className="w-3 h-3" />
-                                <span className="text-xs">+15.3% vs last year</span>
-                            </div>
-                        </Card>
-                    </div>
-                </div>
-
-                {/* Monthly Financial Breakdown Table */}
-                <Card>
-                    <h3 className="text-lg font-semibold mb-4">Monthly Financial Breakdown</h3>
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Worker</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Revenue</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Expense</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Profit</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Tax</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Savings</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {filteredMonthlyBreakdown.map((row) => (
-                                    <tr key={row.id} className="hover:bg-gray-50 transition">
-                                        <td className="px-4 py-4 text-sm text-gray-900">{row.date}</td>
-                                        <td className="px-4 py-4">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-xl">{row.avatar}</span>
-                                                <span className="text-sm font-medium text-gray-900">{row.worker}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-4 text-right font-semibold text-[var(--color-success)]">€{row.revenue.toLocaleString()}</td>
-                                        <td className="px-4 py-4 text-right font-semibold text-[var(--color-error)]">€{row.expense.toLocaleString()}</td>
-                                        <td className="px-4 py-4 text-right font-semibold text-[var(--color-success)]">€{row.profit.toLocaleString()}</td>
-                                        <td className="px-4 py-4 text-right font-semibold text-[var(--color-warning)]">€{row.tax.toLocaleString()}</td>
-                                        <td className="px-4 py-4 text-right font-semibold text-[var(--color-primary)]">€{row.savings.toLocaleString()}</td>
-                                        <td className="px-4 py-4 text-center">
-                                            <button className="text-[var(--color-primary)] hover:opacity-80 transition">
-                                                <Edit className="w-4 h-4" />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                            <tfoot className="bg-gray-50 font-semibold">
-                                <tr>
-                                    <td className="px-4 py-3 text-sm" colSpan={2}>Total</td>
-                                    <td className="px-4 py-3 text-right text-[var(--color-success)]">€{filteredMonthlyBreakdown.reduce((sum, r) => sum + r.revenue, 0).toLocaleString()}</td>
-                                    <td className="px-4 py-3 text-right text-[var(--color-error)]">€{filteredMonthlyBreakdown.reduce((sum, r) => sum + r.expense, 0).toLocaleString()}</td>
-                                    <td className="px-4 py-3 text-right text-[var(--color-success)]">€{filteredMonthlyBreakdown.reduce((sum, r) => sum + r.profit, 0).toLocaleString()}</td>
-                                    <td className="px-4 py-3 text-right text-[var(--color-warning)]">€{filteredMonthlyBreakdown.reduce((sum, r) => sum + r.tax, 0).toLocaleString()}</td>
-                                    <td className="px-4 py-3 text-right text-[var(--color-primary)]">€{filteredMonthlyBreakdown.reduce((sum, r) => sum + r.savings, 0).toLocaleString()}</td>
-                                    <td className="px-4 py-3"></td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </Card>
-
-                {/* Charts Row - Quarterly & Monthly */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Quarterly Revenue vs Expenses */}
-                    <Card>
-                        <h3 className="text-lg font-semibold mb-4">Quarterly Revenue vs Expenses</h3>
-                        <ResponsiveContainer width="100%" height={280}>
-                            <BarChart data={quarterlyData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                <XAxis dataKey="quarter" />
-                                <YAxis />
-                                <Tooltip />
-                                <Legend />
-                                <Bar dataKey="revenue" fill="var(--color-success)" radius={[4, 4, 0, 0]} name="Revenue" />
-                                <Bar dataKey="expenses" fill="var(--color-error)" radius={[4, 4, 0, 0]} name="Expenses" />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    </Card>
-
-                    {/* Monthly Sales Analysis */}
-                    <Card>
-                        <h3 className="text-lg font-semibold mb-4">Monthly Sales Analysis</h3>
-                        <ResponsiveContainer width="100%" height={280}>
-                            <LineChart data={monthlySalesData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                <XAxis dataKey="month" />
-                                <YAxis />
-                                <Tooltip />
-                                <Line type="monotone" dataKey="sales" stroke="var(--color-primary)" strokeWidth={3} dot={{ fill: "var(--color-primary)", strokeWidth: 2 }} name="Sales" />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </Card>
-                </div>
-
-                {/* Annual Expense Categories - Pie Chart */}
-                <Card>
-                    <h3 className="text-lg font-semibold mb-4">Annual Expense Categories</h3>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
-                        <ResponsiveContainer width="100%" height={300}>
-                            <PieChart>
-                                <Pie
-                                    data={expenseCategories}
-                                    cx="50%"
-                                    cy="50%"
-                                    labelLine={false}
-                                    outerRadius={120}
-                                    fill="#8884d8"
-                                    dataKey="value"
-                                >
-                                    {expenseCategories.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.color} />
-                                    ))}
-                                </Pie>
-                                <Tooltip />
-                            </PieChart>
-                        </ResponsiveContainer>
-                        <div className="space-y-3">
-                            {expenseCategories.map((cat, idx) => (
-                                <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-4 h-4 rounded-full" style={{ backgroundColor: cat.color }}></div>
-                                        <span className="font-medium text-gray-700">{cat.name}</span>
-                                    </div>
-                                    <div className="text-right">
-                                        <span className="font-semibold text-gray-900">€{cat.amount.toLocaleString()}</span>
-                                        <span className="text-sm text-gray-500 ml-2">{cat.value}%</span>
-                                    </div>
+                        <h3 className="text-lg font-semibold mb-4">Annual Financial Overview</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                            <Card gradient="" style={getCardStyle(0)} className="text-white">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-xl">💰</span>
+                                    <p className="text-xs opacity-90">Total Revenue</p>
                                 </div>
-                            ))}
+                                <h3 className="text-2xl font-bold">€{annualOverview.totalRevenue.toLocaleString()}</h3>
+                                <div className="flex items-center gap-1 mt-2">
+                                    <TrendingUp className="w-3 h-3" />
+                                    <span className="text-xs">+12.5% vs last year</span>
+                                </div>
+                            </Card>
+                            <Card gradient="" style={getCardStyle(1)} className="text-white">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-xl">📊</span>
+                                    <p className="text-xs opacity-90">Total Expenses</p>
+                                </div>
+                                <h3 className="text-2xl font-bold">€{annualOverview.totalExpenses.toLocaleString()}</h3>
+                                <div className="flex items-center gap-1 mt-2">
+                                    <TrendingDown className="w-3 h-3" />
+                                    <span className="text-xs">-3.2% vs last year</span>
+                                </div>
+                            </Card>
+                            <Card gradient="" style={getCardStyle(2)} className="text-white">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-xl">📈</span>
+                                    <p className="text-xs opacity-90">Net Profit</p>
+                                </div>
+                                <h3 className="text-2xl font-bold">€{annualOverview.netProfit.toLocaleString()}</h3>
+                                <div className="flex items-center gap-1 mt-2">
+                                    <TrendingUp className="w-3 h-3" />
+                                    <span className="text-xs">+8.4% vs last year</span>
+                                </div>
+                            </Card>
+                            <Card gradient="" style={getCardStyle(3)} className="text-white">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-xl">🧾</span>
+                                    <p className="text-xs opacity-90">Tax Payments</p>
+                                </div>
+                                <h3 className="text-2xl font-bold">€{annualOverview.taxPayments.toLocaleString()}</h3>
+                                <div className="flex items-center gap-1 mt-2">
+                                    <TrendingUp className="w-3 h-3" />
+                                    <span className="text-xs">+2.1% vs last year</span>
+                                </div>
+                            </Card>
+                            <Card gradient="" style={getCardStyle(4)} className="text-white">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-xl">💎</span>
+                                    <p className="text-xs opacity-90">Savings</p>
+                                </div>
+                                <h3 className="text-2xl font-bold">€{annualOverview.savings.toLocaleString()}</h3>
+                                <div className="flex items-center gap-1 mt-2">
+                                    <TrendingUp className="w-3 h-3" />
+                                    <span className="text-xs">+15.3% vs last year</span>
+                                </div>
+                            </Card>
                         </div>
                     </div>
-                </Card>
 
-                {/* Quarterly Performance Comparison */}
-                <Card>
-                    <h3 className="text-lg font-semibold mb-4">Quarterly Performance Comparison</h3>
-                    <p className="text-sm text-gray-500 mb-4">Quarterly performance numbers</p>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                        {quarterlyPerformance.map((q, idx) => (
-                            <div key={idx} className="p-4 rounded-xl" style={{ backgroundColor: `${q.color}15` }}>
-                                <p className="text-sm font-medium text-gray-600">{q.quarter}</p>
-                                <h4 className="text-2xl font-bold mt-1" style={{ color: q.color }}>€{q.value.toLocaleString()}</h4>
-                                <div className="mt-2 h-2 rounded-full" style={{ backgroundColor: `${q.color}30` }}>
-                                    <div className="h-full rounded-full" style={{ width: `${(q.value / 6000) * 100}%`, backgroundColor: q.color }}></div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    <ResponsiveContainer width="100%" height={250}>
-                        <BarChart data={quarterlyPerformance}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                            <XAxis dataKey="quarter" />
-                            <YAxis />
-                            <Tooltip />
-                            <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                                {quarterlyPerformance.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.color} />
-                                ))}
-                            </Bar>
-                        </BarChart>
-                    </ResponsiveContainer>
-                </Card>
-
-                {/* Tax Summary & Payment Schedule */}
-                <div>
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold">Tax Summary & Payment Schedule</h3>
-                        <Button variant="outline" size="sm">View All</Button>
-                    </div>
-
-                    {/* Tax Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                        <Card gradient="" style={getCardStyle(0)} className="text-white">
-                            <div className="flex items-center gap-2 mb-2">
-                                <span className="text-xl">📋</span>
-                                <p className="text-xs opacity-90">Income Tax</p>
-                            </div>
-                            <h3 className="text-2xl font-bold">€{taxSummary.incomeTax.toLocaleString()}</h3>
-                        </Card>
-                        <Card gradient="" style={getCardStyle(1)} className="text-white">
-                            <div className="flex items-center gap-2 mb-2">
-                                <span className="text-xl">📊</span>
-                                <p className="text-xs opacity-90">Estimated Tax</p>
-                            </div>
-                            <h3 className="text-2xl font-bold">€{taxSummary.estimatedTax.toLocaleString()}</h3>
-                        </Card>
-                        <Card gradient="" style={getCardStyle(2)} className="text-white">
-                            <div className="flex items-center gap-2 mb-2">
-                                <span className="text-xl">💵</span>
-                                <p className="text-xs opacity-90">Tax this Month</p>
-                            </div>
-                            <h3 className="text-2xl font-bold">€{taxSummary.taxThisMonth.toLocaleString()}</h3>
-                        </Card>
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* Monthly Tax Payment Details */}
-                        <Card>
-                            <h4 className="text-md font-semibold mb-4">Monthly Tax Payment Details</h4>
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead className="bg-gray-50">
-                                        <tr>
-                                            <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Date</th>
-                                            <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Description</th>
-                                            <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600">Amount</th>
-                                            <th className="px-4 py-2 text-center text-xs font-semibold text-gray-600">Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100">
-                                        {taxPaymentDetails.map((tax, idx) => (
-                                            <tr key={idx} className="hover:bg-gray-50">
-                                                <td className="px-4 py-3 text-sm text-gray-700">{tax.date}</td>
-                                                <td className="px-4 py-3 text-sm text-gray-900">{tax.description}</td>
-                                                <td className="px-4 py-3 text-right font-semibold text-gray-900">€{tax.amount.toLocaleString()}</td>
-                                                <td className="px-4 py-3 text-center">
-                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${tax.status === 'Paid' ? 'bg-[var(--color-success-light)] text-[var(--color-success)]' : 'bg-[var(--color-warning-light)] text-[var(--color-warning)]'}`}>
-                                                        {tax.status}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </Card>
-
-                        {/* Tax Rate Comparison */}
-                        <Card>
-                            <h4 className="text-md font-semibold mb-4">Tax Rate Comparison</h4>
-                            <div className="space-y-4">
-                                {taxRateData.map((tax, idx) => (
-                                    <div key={idx}>
-                                        <div className="flex justify-between mb-1">
-                                            <span className="text-sm font-medium text-gray-700">{tax.name}</span>
-                                            <span className="text-sm font-semibold text-gray-900">{tax.rate}%</span>
-                                        </div>
-                                        <div className="w-full bg-gray-200 rounded-full h-3">
-                                            <div className="h-3 rounded-full bg-[var(--color-primary)]" style={{ width: `${(tax.rate / 25) * 100}%` }}></div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </Card>
-                    </div>
-                </div>
-
-                {/* Purchase Trends & Fee Breakdown */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Purchase Trends */}
+                    {/* Monthly Financial Breakdown Table */}
                     <Card>
-                        <h3 className="text-lg font-semibold mb-4">Purchase Trends</h3>
-                        <ResponsiveContainer width="100%" height={250}>
-                            <LineChart data={purchaseTrends}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                <XAxis dataKey="month" />
-                                <YAxis />
-                                <Tooltip />
-                                <Line type="monotone" dataKey="purchases" stroke="var(--color-primary)" strokeWidth={2} dot={{ fill: "var(--color-primary)", strokeWidth: 2 }} name="Purchases" />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </Card>
-
-                    {/* Fee Breakdown */}
-                    <Card>
-                        <h3 className="text-lg font-semibold mb-4">Fee Breakdown</h3>
+                        <h3 className="text-lg font-semibold mb-4">Monthly Financial Breakdown</h3>
                         <div className="overflow-x-auto">
                             <table className="w-full">
                                 <thead className="bg-gray-50">
                                     <tr>
-                                        <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Category</th>
-                                        <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600">Percentage</th>
-                                        <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600">Amount</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Worker</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Revenue</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Expense</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Profit</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Tax</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Savings</th>
+                                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {feeBreakdown.map((fee, idx) => (
-                                        <tr key={idx} className="hover:bg-gray-50">
-                                            <td className="px-4 py-3 text-sm font-medium text-gray-900">{fee.category}</td>
-                                            <td className="px-4 py-3 text-right text-sm text-gray-600">{fee.percentage}%</td>
-                                            <td className="px-4 py-3 text-right font-semibold text-[var(--color-error)]">-€{fee.amount.toLocaleString()}</td>
+                                    {filteredMonthlyBreakdown.map((row) => (
+                                        <tr key={row.id} className="hover:bg-gray-50 transition">
+                                            <td className="px-4 py-4 text-sm text-gray-900">{row.date}</td>
+                                            <td className="px-4 py-4">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xl">{row.avatar}</span>
+                                                    <span className="text-sm font-medium text-gray-900">{row.worker}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-4 text-right font-semibold text-[var(--color-success)]">€{row.revenue.toLocaleString()}</td>
+                                            <td className="px-4 py-4 text-right font-semibold text-[var(--color-error)]">€{row.expense.toLocaleString()}</td>
+                                            <td className="px-4 py-4 text-right font-semibold text-[var(--color-success)]">€{row.profit.toLocaleString()}</td>
+                                            <td className="px-4 py-4 text-right font-semibold text-[var(--color-warning)]">€{row.tax.toLocaleString()}</td>
+                                            <td className="px-4 py-4 text-right font-semibold text-[var(--color-primary)]">€{row.savings.toLocaleString()}</td>
+                                            <td className="px-4 py-4 text-center">
+                                                <button className="text-[var(--color-primary)] hover:opacity-80 transition">
+                                                    <Edit className="w-4 h-4" />
+                                                </button>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
                                 <tfoot className="bg-gray-50 font-semibold">
                                     <tr>
-                                        <td className="px-4 py-2 text-sm">Total Fees</td>
-                                        <td className="px-4 py-2 text-right text-sm">{feeBreakdown.reduce((sum, f) => sum + f.percentage, 0).toFixed(1)}%</td>
-                                        <td className="px-4 py-2 text-right text-[var(--color-error)]">-€{feeBreakdown.reduce((sum, f) => sum + f.amount, 0).toLocaleString()}</td>
+                                        <td className="px-4 py-3 text-sm" colSpan={2}>Total</td>
+                                        <td className="px-4 py-3 text-right text-[var(--color-success)]">€{filteredMonthlyBreakdown.reduce((sum, r) => sum + r.revenue, 0).toLocaleString()}</td>
+                                        <td className="px-4 py-3 text-right text-[var(--color-error)]">€{filteredMonthlyBreakdown.reduce((sum, r) => sum + r.expense, 0).toLocaleString()}</td>
+                                        <td className="px-4 py-3 text-right text-[var(--color-success)]">€{filteredMonthlyBreakdown.reduce((sum, r) => sum + r.profit, 0).toLocaleString()}</td>
+                                        <td className="px-4 py-3 text-right text-[var(--color-warning)]">€{filteredMonthlyBreakdown.reduce((sum, r) => sum + r.tax, 0).toLocaleString()}</td>
+                                        <td className="px-4 py-3 text-right text-[var(--color-primary)]">€{filteredMonthlyBreakdown.reduce((sum, r) => sum + r.savings, 0).toLocaleString()}</td>
+                                        <td className="px-4 py-3"></td>
                                     </tr>
                                 </tfoot>
                             </table>
                         </div>
                     </Card>
-                </div>
 
-                {/* Monthly vs Weekly Analysis */}
-                <Card>
-                    <h3 className="text-lg font-semibold mb-4">Monthly vs Weekly Analysis</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="p-4 bg-[var(--color-secondary-light)] rounded-xl border border-[var(--color-secondary-light)]">
-                            <p className="text-sm font-medium text-[var(--color-secondary)] mb-1">Weekly Average</p>
-                            <h4 className="text-2xl font-bold text-gray-900">€{monthlyWeeklyAnalysis.weekly.toLocaleString()}</h4>
-                        </div>
-                        <div className="p-4 bg-[var(--color-primary-light)] rounded-xl border border-[var(--color-primary-light)]">
-                            <p className="text-sm font-medium text-[var(--color-primary)] mb-1">Monthly Total</p>
-                            <h4 className="text-2xl font-bold text-gray-900">€{monthlyWeeklyAnalysis.monthly.toLocaleString()}</h4>
-                        </div>
-                        <div className="p-4 bg-[var(--color-success-light)] rounded-xl border border-[var(--color-success-light)]">
-                            <p className="text-sm font-medium text-[var(--color-success)] mb-1">Month vs Previous</p>
-                            <h4 className="text-2xl font-bold text-[var(--color-success)]">+€{monthlyWeeklyAnalysis.difference.toLocaleString()}</h4>
-                        </div>
-                    </div>
-                </Card>
+                    {/* Charts Row - Quarterly & Monthly */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Quarterly Revenue vs Expenses */}
+                        <Card>
+                            <h3 className="text-lg font-semibold mb-4">Quarterly Revenue vs Expenses</h3>
+                            <ResponsiveContainer width="100%" height={280}>
+                                <BarChart data={quarterlyData}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                    <XAxis dataKey="quarter" />
+                                    <YAxis />
+                                    <Tooltip />
+                                    <Legend />
+                                    <Bar dataKey="revenue" fill="var(--color-success)" radius={[4, 4, 0, 0]} name="Revenue" />
+                                    <Bar dataKey="expenses" fill="var(--color-error)" radius={[4, 4, 0, 0]} name="Expenses" />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </Card>
 
-                {/* Financial Recommendations */}
-                <Card gradient="" style={getCardStyle(0)}>
-                    <div className="flex items-center gap-2 mb-4">
-                        <Lightbulb className="w-5 h-5 text-white" />
-                        <h3 className="text-lg font-semibold text-white">Financial Recommendations</h3>
+                        {/* Monthly Sales Analysis */}
+                        <Card>
+                            <h3 className="text-lg font-semibold mb-4">Monthly Sales Analysis</h3>
+                            <ResponsiveContainer width="100%" height={280}>
+                                <LineChart data={monthlySalesData}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                    <XAxis dataKey="month" />
+                                    <YAxis />
+                                    <Tooltip />
+                                    <Line type="monotone" dataKey="sales" stroke="var(--color-primary)" strokeWidth={3} dot={{ fill: "var(--color-primary)", strokeWidth: 2 }} name="Sales" />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </Card>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {recommendations.map((rec, idx) => (
-                            <div key={idx} className="p-4 bg-white rounded-xl shadow-sm">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <span className="text-xl">{rec.icon}</span>
-                                    <h4 className="font-semibold text-gray-900">{rec.title}</h4>
-                                </div>
-                                <p className="text-sm text-gray-600">{rec.description}</p>
+
+                    {/* Annual Expense Categories - Pie Chart */}
+                    <Card>
+                        <h3 className="text-lg font-semibold mb-4">Annual Expense Categories</h3>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+                            <ResponsiveContainer width="100%" height={300}>
+                                <PieChart>
+                                    <Pie
+                                        data={expenseCategories}
+                                        cx="50%"
+                                        cy="50%"
+                                        labelLine={false}
+                                        outerRadius={120}
+                                        fill="#8884d8"
+                                        dataKey="value"
+                                    >
+                                        {expenseCategories.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.color} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip />
+                                </PieChart>
+                            </ResponsiveContainer>
+                            <div className="space-y-3">
+                                {expenseCategories.map((cat, idx) => (
+                                    <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-4 h-4 rounded-full" style={{ backgroundColor: cat.color }}></div>
+                                            <span className="font-medium text-gray-700">{cat.name}</span>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="font-semibold text-gray-900">€{cat.amount.toLocaleString()}</span>
+                                            <span className="text-sm text-gray-500 ml-2">{cat.value}%</span>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
-                        ))}
+                        </div>
+                    </Card>
+
+                    {/* Quarterly Performance Comparison */}
+                    <Card>
+                        <h3 className="text-lg font-semibold mb-4">Quarterly Performance Comparison</h3>
+                        <p className="text-sm text-gray-500 mb-4">Quarterly performance numbers</p>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                            {quarterlyPerformance.map((q, idx) => (
+                                <div key={idx} className="p-4 rounded-xl" style={{ backgroundColor: `${q.color}15` }}>
+                                    <p className="text-sm font-medium text-gray-600">{q.quarter}</p>
+                                    <h4 className="text-2xl font-bold mt-1" style={{ color: q.color }}>€{q.value.toLocaleString()}</h4>
+                                    <div className="mt-2 h-2 rounded-full" style={{ backgroundColor: `${q.color}30` }}>
+                                        <div className="h-full rounded-full" style={{ width: `${(q.value / 6000) * 100}%`, backgroundColor: q.color }}></div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <ResponsiveContainer width="100%" height={250}>
+                            <BarChart data={quarterlyPerformance}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                <XAxis dataKey="quarter" />
+                                <YAxis />
+                                <Tooltip />
+                                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                                    {quarterlyPerformance.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.color} />
+                                    ))}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </Card>
+
+                    {/* Tax Summary & Payment Schedule */}
+                    <div>
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold">Tax Summary & Payment Schedule</h3>
+                            <Button variant="outline" size="sm">View All</Button>
+                        </div>
+
+                        {/* Tax Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <Card gradient="" style={getCardStyle(0)} className="text-white">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-xl">📋</span>
+                                    <p className="text-xs opacity-90">Income Tax</p>
+                                </div>
+                                <h3 className="text-2xl font-bold">€{taxSummary.incomeTax.toLocaleString()}</h3>
+                            </Card>
+                            <Card gradient="" style={getCardStyle(1)} className="text-white">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-xl">📊</span>
+                                    <p className="text-xs opacity-90">Estimated Tax</p>
+                                </div>
+                                <h3 className="text-2xl font-bold">€{taxSummary.estimatedTax.toLocaleString()}</h3>
+                            </Card>
+                            <Card gradient="" style={getCardStyle(2)} className="text-white">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-xl">💵</span>
+                                    <p className="text-xs opacity-90">Tax this Month</p>
+                                </div>
+                                <h3 className="text-2xl font-bold">€{taxSummary.taxThisMonth.toLocaleString()}</h3>
+                            </Card>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* Monthly Tax Payment Details */}
+                            <Card>
+                                <h4 className="text-md font-semibold mb-4">Monthly Tax Payment Details</h4>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Date</th>
+                                                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Description</th>
+                                                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600">Amount</th>
+                                                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-600">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {taxPaymentDetails.map((tax, idx) => (
+                                                <tr key={idx} className="hover:bg-gray-50">
+                                                    <td className="px-4 py-3 text-sm text-gray-700">{tax.date}</td>
+                                                    <td className="px-4 py-3 text-sm text-gray-900">{tax.description}</td>
+                                                    <td className="px-4 py-3 text-right font-semibold text-gray-900">€{tax.amount.toLocaleString()}</td>
+                                                    <td className="px-4 py-3 text-center">
+                                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${tax.status === 'Paid' ? 'bg-[var(--color-success-light)] text-[var(--color-success)]' : 'bg-[var(--color-warning-light)] text-[var(--color-warning)]'}`}>
+                                                            {tax.status}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </Card>
+
+                            {/* Tax Rate Comparison */}
+                            <Card>
+                                <h4 className="text-md font-semibold mb-4">Tax Rate Comparison</h4>
+                                <div className="space-y-4">
+                                    {taxRateData.map((tax, idx) => (
+                                        <div key={idx}>
+                                            <div className="flex justify-between mb-1">
+                                                <span className="text-sm font-medium text-gray-700">{tax.name}</span>
+                                                <span className="text-sm font-semibold text-gray-900">{tax.rate}%</span>
+                                            </div>
+                                            <div className="w-full bg-gray-200 rounded-full h-3">
+                                                <div className="h-3 rounded-full bg-[var(--color-primary)]" style={{ width: `${(tax.rate / 25) * 100}%` }}></div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </Card>
+                        </div>
                     </div>
-                </Card>
-            </div>
-        </MainLayout>
+
+                    {/* Purchase Trends & Fee Breakdown */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Purchase Trends */}
+                        <Card>
+                            <h3 className="text-lg font-semibold mb-4">Purchase Trends</h3>
+                            <ResponsiveContainer width="100%" height={250}>
+                                <LineChart data={purchaseTrends}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                    <XAxis dataKey="month" />
+                                    <YAxis />
+                                    <Tooltip />
+                                    <Line type="monotone" dataKey="purchases" stroke="var(--color-primary)" strokeWidth={2} dot={{ fill: "var(--color-primary)", strokeWidth: 2 }} name="Purchases" />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </Card>
+
+                        {/* Fee Breakdown */}
+                        <Card>
+                            <h3 className="text-lg font-semibold mb-4">Fee Breakdown</h3>
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">Category</th>
+                                            <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600">Percentage</th>
+                                            <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600">Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {feeBreakdown.map((fee, idx) => (
+                                            <tr key={idx} className="hover:bg-gray-50">
+                                                <td className="px-4 py-3 text-sm font-medium text-gray-900">{fee.category}</td>
+                                                <td className="px-4 py-3 text-right text-sm text-gray-600">{fee.percentage}%</td>
+                                                <td className="px-4 py-3 text-right font-semibold text-[var(--color-error)]">-€{fee.amount.toLocaleString()}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                    <tfoot className="bg-gray-50 font-semibold">
+                                        <tr>
+                                            <td className="px-4 py-2 text-sm">Total Fees</td>
+                                            <td className="px-4 py-2 text-right text-sm">{feeBreakdown.reduce((sum, f) => sum + f.percentage, 0).toFixed(1)}%</td>
+                                            <td className="px-4 py-2 text-right text-[var(--color-error)]">-€{feeBreakdown.reduce((sum, f) => sum + f.amount, 0).toLocaleString()}</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </Card>
+                    </div>
+
+                    {/* Monthly vs Weekly Analysis */}
+                    <Card>
+                        <h3 className="text-lg font-semibold mb-4">Monthly vs Weekly Analysis</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="p-4 bg-[var(--color-secondary-light)] rounded-xl border border-[var(--color-secondary-light)]">
+                                <p className="text-sm font-medium text-[var(--color-secondary)] mb-1">Weekly Average</p>
+                                <h4 className="text-2xl font-bold text-gray-900">€{monthlyWeeklyAnalysis.weekly.toLocaleString()}</h4>
+                            </div>
+                            <div className="p-4 bg-[var(--color-primary-light)] rounded-xl border border-[var(--color-primary-light)]">
+                                <p className="text-sm font-medium text-[var(--color-primary)] mb-1">Monthly Total</p>
+                                <h4 className="text-2xl font-bold text-gray-900">€{monthlyWeeklyAnalysis.monthly.toLocaleString()}</h4>
+                            </div>
+                            <div className="p-4 bg-[var(--color-success-light)] rounded-xl border border-[var(--color-success-light)]">
+                                <p className="text-sm font-medium text-[var(--color-success)] mb-1">Month vs Previous</p>
+                                <h4 className="text-2xl font-bold text-[var(--color-success)]">+€{monthlyWeeklyAnalysis.difference.toLocaleString()}</h4>
+                            </div>
+                        </div>
+                    </Card>
+
+                    {/* Financial Recommendations */}
+                    <Card gradient="" style={getCardStyle(0)}>
+                        <div className="flex items-center gap-2 mb-4">
+                            <Lightbulb className="w-5 h-5 text-white" />
+                            <h3 className="text-lg font-semibold text-white">Financial Recommendations</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {recommendations.map((rec, idx) => (
+                                <div key={idx} className="p-4 bg-white rounded-xl shadow-sm">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className="text-xl">{rec.icon}</span>
+                                        <h4 className="font-semibold text-gray-900">{rec.title}</h4>
+                                    </div>
+                                    <p className="text-sm text-gray-600">{rec.description}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </Card>
+                </div>
+            </MainLayout>
+        </ProtectedRoute>
     );
 }

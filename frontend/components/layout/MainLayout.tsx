@@ -50,7 +50,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
             <Sidebar />
             <Header />
             <DemoModeBanner />
-            <main className={`${getMarginLeft()} mt-12 p-3 md:pt-2 md:px-6 md:pb-6 transition-all duration-300`}>
+            <main className={`${getMarginLeft()} mt-12 px-5 py-3 md:pt-2 md:px-6 md:pb-6 transition-all duration-300`}>
                 {children}
             </main>
         </div>

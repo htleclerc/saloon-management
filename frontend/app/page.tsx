@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
@@ -23,7 +23,9 @@ import {
   Wallet,
   Receipt,
   ChevronRight,
+  History,
 } from "lucide-react";
+import HistoryModal, { HistoryEvent } from "@/components/ui/HistoryModal";
 import {
   BarChart,
   Bar,
@@ -85,11 +87,11 @@ const topPerformers = [
 ];
 
 const todaysSessions = [
-  { time: "09:00 AM", client: "Marie Anderson", type: "Box Braids", worker: "Orphelia", price: "€120", status: "Completed", statusColor: "bg-[var(--color-success-light)] text-[var(--color-success)]" },
-  { time: "10:30 AM", client: "Lina Davis", type: "Cornrows", worker: "Fatima", price: "€85", status: "In Progress", statusColor: "bg-blue-100 text-blue-700" },
-  { time: "12:00 PM", client: "Sophie Martin", type: "Twists", worker: "Amara", price: "€95", status: "Pending", statusColor: "bg-[var(--color-warning-light)] text-[var(--color-warning)]" },
-  { time: "02:00 PM", client: "Anna Brown", type: "Locs", worker: "Orphelia", price: "€150", status: "Pending", statusColor: "bg-[var(--color-warning-light)] text-[var(--color-warning)]" },
-  { time: "03:30 PM", client: "Lisa Wilson", type: "Braids", worker: "Naomie", price: "€110", status: "Pending", statusColor: "bg-[var(--color-warning-light)] text-[var(--color-warning)]" },
+  { id: 1, time: "09:00 AM", client: "Marie Anderson", type: "Box Braids", worker: "Isabelle", price: "€120", status: "Completed", statusColor: "bg-[var(--color-success-light)] text-[var(--color-success)]", history: [{ date: "2026-01-19 08:00", action: "Appointment Set", user: "System" }, { date: "2026-01-19 09:02", action: "Started", user: "Isabelle" }, { date: "2026-01-19 10:45", action: "Finished", user: "Isabelle" }] },
+  { id: 2, time: "10:30 AM", client: "Lina Davis", type: "Cornrows", worker: "Fatima S", price: "€85", status: "In Progress", statusColor: "bg-blue-100 text-blue-700", history: [{ date: "2026-01-19 09:15", action: "Appointment Set", user: "System" }, { date: "2026-01-19 10:35", action: "Started", user: "Fatima S" }] },
+  { id: 3, time: "12:00 PM", client: "Sophie Martin", type: "Twists", worker: "Nadine B", price: "€95", status: "Pending", statusColor: "bg-[var(--color-warning-light)] text-[var(--color-warning)]", history: [{ date: "2026-01-18 14:20", action: "Appointment Set", user: "Client" }] },
+  { id: 4, time: "02:00 PM", client: "Anna Brown", type: "Locs", worker: "Isabelle", price: "€150", status: "Pending", statusColor: "bg-[var(--color-warning-light)] text-[var(--color-warning)]", history: [] },
+  { id: 5, time: "03:30 PM", client: "Lisa Wilson", type: "Braids", worker: "Isabelle", price: "€110", status: "Pending", statusColor: "bg-[var(--color-warning-light)] text-[var(--color-warning)]", history: [] },
 ];
 
 const recentNotifications = [
@@ -100,10 +102,10 @@ const recentNotifications = [
 ];
 
 const recentActivities = [
-  { id: 1, client: "Marie Dubois", service: "Box Braids", amount: "€120", worker: "Orphelia", time: "2h ago" },
-  { id: 2, client: "Jean Martin", service: "Cornrows", amount: "€85", worker: "Fatima", time: "4h ago" },
-  { id: 3, client: "Sophie Laurent", service: "Twists", amount: "€95", worker: "Amara", time: "5h ago" },
-  { id: 4, client: "Pierre Rousseau", service: "Locs", amount: "€150", worker: "Orphelia", time: "6h ago" },
+  { id: 1, client: "Marie Dubois", service: "Box Braids", amount: "€120", worker: "Isabelle", time: "2h ago" },
+  { id: 2, client: "Jean Martin", service: "Cornrows", amount: "€85", worker: "Fatima S", time: "4h ago" },
+  { id: 3, client: "Sophie Laurent", service: "Twists", amount: "€95", worker: "Nadine B", time: "5h ago" },
+  { id: 4, client: "Pierre Rousseau", service: "Locs", amount: "€150", worker: "Isabelle", time: "6h ago" },
 ];
 
 const monthlyForecastData = [
@@ -168,22 +170,29 @@ const recentUserActivity = [
 ];
 
 import ClientDashboard from "@/components/dashboard/ClientDashboard";
-
+import WorkerDashboard from "@/components/dashboard/WorkerDashboard";
+import { useBooking } from "@/context/BookingProvider";
+import { useConfirm } from "@/context/ConfirmProvider";
+import { format } from "date-fns";
+import { useIncome } from "@/context/IncomeProvider";
+import { canPerformBookingAction } from "@/lib/permissions";
+import { UserRole } from "@/context/AuthProvider";
+import { BookingStatus } from "@/types";
 export default function Dashboard() {
   const { t } = useTranslation();
   const { getCardStyle } = useKpiCardStyle();
   const { user, hasPermission, canAddIncome, canAddExpenses, getWorkerId, isClient } = useAuth();
-
-  if (isClient) {
-    return (
-      <MainLayout>
-        <ClientDashboard />
-      </MainLayout>
-    );
-  }
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [selectedHistory, setSelectedHistory] = useState<{ title: string, subtitle: string, events: HistoryEvent[] }>({
+    title: "",
+    subtitle: "",
+    events: []
+  });
+  const { bookings, startBooking } = useBooking();
+  const { confirm } = useConfirm();
 
   const isWorker = user?.role === 'worker';
-  const workerName = user?.name || "Orphelia"; // Default for demo
+  const workerName = user?.name || "Isabelle"; // Default for demo
 
   // Filter Data for Workers
   const filteredTopPerformers = isWorker
@@ -216,6 +225,73 @@ export default function Dashboard() {
       profit: Math.round(d.revenue * 0.4 - d.expenses * 0.2)
     }))
     : profitData;
+
+  const handleStartBooking = async (bookingId: number) => {
+    const isConfirmed = await confirm({
+      title: "Démarrer le rendez-vous ?",
+      message: "Voulez-vous démarrer ce rendez-vous ? Un brouillon de revenu sera créé automatiquement.",
+      type: "info",
+      confirmText: "Démarrer",
+      cancelText: "Annuler"
+    });
+
+    if (isConfirmed) {
+      startBooking(bookingId);
+    }
+  };
+
+  const handleViewBookingHistory = (session: any) => {
+    setSelectedHistory({
+      title: `Booking History`,
+      subtitle: `Client: ${session.client} | Service: ${session.type}`,
+      events: session.history || []
+    });
+    setHistoryModalOpen(true);
+  };
+
+  // For the mockup overview table, we combine static mock data with dynamic localStorage data
+  const dynamicBookings = bookings.filter(b => b.date === new Date().toISOString().split('T')[0]);
+  const displaySessions = [
+    ...filteredTodaysSessions,
+    ...dynamicBookings.map(b => ({
+      id: b.id,
+      time: b.time,
+      client: b.clientName,
+      type: b.serviceIds.map(id => "Service " + id).join(", "),
+      worker: b.workerIds.map(id => "Worker " + id).join(", "),
+      price: "€100",
+      status: b.status,
+      statusColor: b.status === 'Started' ? 'bg-blue-100 text-blue-700' :
+        b.status === 'Confirmed' ? 'bg-green-100 text-green-700' :
+          b.status === 'Cancelled' ? 'bg-red-100 text-red-700' :
+            'bg-yellow-100 text-yellow-700'
+    }))
+  ];
+
+  if (isClient) {
+    return (
+      <MainLayout>
+        <ClientDashboard />
+      </MainLayout>
+    );
+  }
+
+  if (isWorker) {
+    return (
+      <MainLayout>
+        <WorkerDashboard
+          workerName={workerName}
+          revenueData={workerMonthlyRevenue}
+          sessions={displaySessions}
+          activities={filteredRecentActivities}
+          notifications={recentNotifications}
+          userActivities={recentUserActivity}
+          onStartBooking={handleStartBooking}
+          userRole={user?.role}
+        />
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
@@ -314,25 +390,25 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {canAddIncome() && (
               <Link href="/income/add">
-                <button className="w-full h-full flex items-center justify-center gap-3 bg-[var(--color-primary)] hover:opacity-90 text-white py-4 rounded-xl font-medium transition-all shadow-md hover:shadow-lg text-sm sm:text-base">
-                  <Plus className="w-5 h-5" />
+                <button className="w-full h-full flex items-center justify-center gap-3 bg-[var(--color-primary)] hover:opacity-90 text-white py-4 rounded-2xl font-bold transition-all shadow-lg shadow-purple-500/20 active:scale-95 text-lg">
+                  <Plus className="w-7 h-7" />
                   <span>Add Revenue</span>
                 </button>
               </Link>
             )}
             {canAddExpenses() && (
               <Link href="/expenses/add">
-                <button className="w-full h-full flex items-center justify-center gap-3 bg-[var(--color-secondary)] hover:opacity-90 text-white py-4 rounded-xl font-medium transition-all shadow-md hover:shadow-lg text-sm sm:text-base">
-                  <Wallet className="w-5 h-5" />
+                <button className="w-full h-full flex items-center justify-center gap-3 bg-[var(--color-secondary)] hover:opacity-90 text-white py-4 rounded-2xl font-bold transition-all shadow-lg shadow-pink-500/20 active:scale-95 text-lg">
+                  <Wallet className="w-7 h-7" />
                   <span>Add Expense</span>
                 </button>
               </Link>
             )}
             {hasPermission(['manager', 'admin']) && (
-              <Link href="/workers/add">
-                <button className="w-full h-full flex items-center justify-center gap-3 bg-[var(--color-warning)] hover:opacity-90 text-white py-4 rounded-xl font-medium transition-all shadow-md hover:shadow-lg text-sm sm:text-base">
-                  <Users className="w-5 h-5" />
-                  <span>Add Worker</span>
+              <Link href="/team/add">
+                <button className="w-full h-full flex items-center justify-center gap-3 bg-[var(--color-warning)] hover:opacity-90 text-white py-4 rounded-2xl font-bold transition-all shadow-lg shadow-orange-500/20 active:scale-95 text-lg">
+                  <Users className="w-7 h-7" />
+                  <span>{t("dashboard.addWorker")}</span>
                 </button>
               </Link>
             )}
@@ -420,12 +496,12 @@ export default function Dashboard() {
         {/* --- Top Performers Grid --- */}
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h3 className="font-bold text-gray-900 text-lg">{isWorker ? "My Performance" : "Top Performing Team"}</h3>
-            <Link href="/workers" className="text-sm text-[var(--color-primary)] font-medium flex items-center gap-1 hover:underline">
-              View All Workers <ChevronRight className="w-4 h-4" />
+            <h3 className="font-bold text-gray-900 text-lg">{isWorker ? t("workers.performance") : t("dashboard.topPerformers")}</h3>
+            <Link href="/team" className="text-sm text-[var(--color-primary)] font-medium flex items-center gap-1 hover:underline">
+              {t("common.viewAll")} <ChevronRight className="w-4 h-4" />
             </Link>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className={`grid grid-cols-1 md:grid-cols-2 ${filteredTopPerformers.length > 2 ? 'lg:grid-cols-4' : 'lg:grid-cols-2'} gap-4`}>
             {filteredTopPerformers.map((worker, idx) => (
               <Card key={worker.name} className={`p-4 flex flex-col gap-3 transition-all border ${idx === 0 ? "bg-[var(--color-primary-light)] border-[var(--color-primary-light)] hover:border-[var(--color-primary)] hover:shadow-lg" :
                 idx === 1 ? "bg-[var(--color-secondary-light)] border-[var(--color-secondary-light)] hover:border-[var(--color-secondary)] hover:shadow-lg" :
@@ -477,9 +553,10 @@ export default function Dashboard() {
                     <th className="text-left text-xs font-semibold text-gray-500 pb-3 pl-2">Time</th>
                     <th className="text-left text-xs font-semibold text-gray-500 pb-3">Client</th>
                     <th className="text-left text-xs font-semibold text-gray-500 pb-3">Service</th>
-                    <th className="text-left text-xs font-semibold text-gray-500 pb-3">Worker</th>
+                    {!isWorker && <th className="text-left text-xs font-semibold text-gray-500 pb-3">Worker</th>}
                     <th className="text-left text-xs font-semibold text-gray-500 pb-3">Status</th>
-                    <th className="text-right text-xs font-semibold text-gray-500 pb-3 pr-2">Price</th>
+                    <th className="text-right text-xs font-semibold text-gray-500 pb-3">Price</th>
+                    <th className="text-center text-xs font-semibold text-gray-500 pb-3 pr-2">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
@@ -500,13 +577,32 @@ export default function Dashboard() {
                         </div>
                       </td>
                       <td className="py-4 text-sm text-gray-600">{session.type}</td>
-                      <td className="py-4 text-sm text-gray-600">{session.worker}</td>
+                      {!isWorker && <td className="py-4 text-sm text-gray-600">{session.worker}</td>}
                       <td className="py-4">
-                        <span className={`text-xs font-bold px-3 py-1 rounded-full ${session.statusColor}`}>
-                          {session.status}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-xs font-bold px-3 py-1 rounded-full ${session.statusColor}`}>
+                            {session.status}
+                          </span>
+                          {canPerformBookingAction({ status: session.status as BookingStatus }, "start", user?.role as UserRole) && (
+                            <button
+                              onClick={() => (session as any).id && handleStartBooking((session as any).id)}
+                              className="text-xs bg-purple-600 text-white px-2 py-1 rounded hover:bg-purple-700 transition-colors"
+                            >
+                              Start
+                            </button>
+                          )}
+                        </div>
                       </td>
-                      <td className="py-4 pr-2 text-right font-bold text-gray-900">{session.price}</td>
+                      <td className="py-4 text-right font-bold text-gray-900">{session.price}</td>
+                      <td className="py-4 pr-2 text-center text-gray-400">
+                        <button
+                          onClick={() => handleViewBookingHistory(session)}
+                          className="p-1.5 hover:bg-white/50 rounded-lg hover:text-purple-600 transition-all"
+                          title="View History"
+                        >
+                          <History size={16} />
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -774,6 +870,14 @@ export default function Dashboard() {
           </Card>
         </div>
 
+        <HistoryModal
+          isOpen={historyModalOpen}
+          onClose={() => setHistoryModalOpen(false)}
+          title="Appointment Audit Trail"
+          itemTitle={selectedHistory.title}
+          itemSubtitle={selectedHistory.subtitle}
+          events={selectedHistory.events}
+        />
       </div>
     </MainLayout>
   );
