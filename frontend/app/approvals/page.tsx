@@ -6,6 +6,8 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
 import { Check, X, Eye, Clock, DollarSign, Receipt } from "lucide-react";
+import { useAuth } from "@/context/AuthProvider";
+import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 
 const pendingIncomes = [
     { id: 1, date: "2026-01-13", worker: "Orphelia", client: "Marie Dubois", service: "Box Braids", amount: 120, submittedBy: "Orphelia", status: "Pending" },
@@ -27,6 +29,7 @@ const approvedItems = [
 
 export default function ApprovalsPage() {
     const { getCardStyle } = useKpiCardStyle();
+    const { canModify } = useAuth();
     const [selectedTab, setSelectedTab] = useState<"incomes" | "expenses" | "history">("incomes");
     const [selectedItems, setSelectedItems] = useState<number[]>([]);
 
@@ -148,14 +151,18 @@ export default function ApprovalsPage() {
                                 {selectedItems.length} item{selectedItems.length > 1 ? "s" : ""} selected
                             </p>
                             <div className="flex gap-3">
-                                <Button variant="primary" size="md" onClick={handleBulkApprove}>
-                                    <Check className="w-5 h-5" />
-                                    Approve Selected
-                                </Button>
-                                <Button variant="danger" size="md" onClick={handleBulkReject}>
-                                    <X className="w-5 h-5" />
-                                    Reject Selected
-                                </Button>
+                                <ReadOnlyGuard>
+                                    <Button variant="primary" size="md" onClick={handleBulkApprove}>
+                                        <Check className="w-5 h-5" />
+                                        Approve Selected
+                                    </Button>
+                                </ReadOnlyGuard>
+                                <ReadOnlyGuard>
+                                    <Button variant="danger" size="md" onClick={handleBulkReject}>
+                                        <X className="w-5 h-5" />
+                                        Reject Selected
+                                    </Button>
+                                </ReadOnlyGuard>
                             </div>
                         </div>
                     </Card>
@@ -204,14 +211,18 @@ export default function ApprovalsPage() {
                                             <td className="px-4 py-4 text-sm text-gray-900">{income.submittedBy}</td>
                                             <td className="px-4 py-4">
                                                 <div className="flex items-center justify-center gap-2">
-                                                    <Button variant="primary" size="sm" onClick={() => handleApprove(income.id, "income")}>
-                                                        <Check className="w-4 h-4" />
-                                                        Approve
-                                                    </Button>
-                                                    <Button variant="danger" size="sm" onClick={() => handleReject(income.id, "income")}>
-                                                        <X className="w-4 h-4" />
-                                                        Reject
-                                                    </Button>
+                                                    <ReadOnlyGuard>
+                                                        <Button variant="primary" size="sm" onClick={() => handleApprove(income.id, "income")}>
+                                                            <Check className="w-4 h-4" />
+                                                            Approve
+                                                        </Button>
+                                                    </ReadOnlyGuard>
+                                                    <ReadOnlyGuard>
+                                                        <Button variant="danger" size="sm" onClick={() => handleReject(income.id, "income")}>
+                                                            <X className="w-4 h-4" />
+                                                            Reject
+                                                        </Button>
+                                                    </ReadOnlyGuard>
                                                 </div>
                                             </td>
                                         </tr>
@@ -269,14 +280,18 @@ export default function ApprovalsPage() {
                                             <td className="px-4 py-4 text-sm text-gray-900">{expense.submittedBy}</td>
                                             <td className="px-4 py-4">
                                                 <div className="flex items-center justify-center gap-2">
-                                                    <Button variant="primary" size="sm" onClick={() => handleApprove(expense.id, "expense")}>
-                                                        <Check className="w-4 h-4" />
-                                                        Approve
-                                                    </Button>
-                                                    <Button variant="danger" size="sm" onClick={() => handleReject(expense.id, "expense")}>
-                                                        <X className="w-4 h-4" />
-                                                        Reject
-                                                    </Button>
+                                                    <ReadOnlyGuard>
+                                                        <Button variant="primary" size="sm" onClick={() => handleApprove(expense.id, "expense")}>
+                                                            <Check className="w-4 h-4" />
+                                                            Approve
+                                                        </Button>
+                                                    </ReadOnlyGuard>
+                                                    <ReadOnlyGuard>
+                                                        <Button variant="danger" size="sm" onClick={() => handleReject(expense.id, "expense")}>
+                                                            <X className="w-4 h-4" />
+                                                            Reject
+                                                        </Button>
+                                                    </ReadOnlyGuard>
                                                 </div>
                                             </td>
                                         </tr>

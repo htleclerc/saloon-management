@@ -51,7 +51,7 @@ function getNestedValue(obj: Record<string, unknown>, path: string): string {
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-    const [language, setLanguageState] = useState<Language>("fr");
+    const [language, setLanguageState] = useState<Language>("en");
     const [mounted, setMounted] = useState(false);
 
     // Load language preference from localStorage

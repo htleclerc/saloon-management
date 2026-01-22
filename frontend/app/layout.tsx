@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Open_Sans, Inter, Roboto, Poppins } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
+import ReadOnlyBannerWrapper from "@/components/layout/ReadOnlyBannerWrapper";
 
 const openSans = Open_Sans({
   variable: "--font-opensans",
@@ -38,11 +39,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${openSans.variable} ${inter.variable} ${roboto.variable} ${poppins.variable} antialiased`}
       >
         <Providers>
+          <ReadOnlyBannerWrapper />
           {children}
         </Providers>
       </body>

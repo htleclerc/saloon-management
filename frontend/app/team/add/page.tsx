@@ -6,9 +6,13 @@ import TeamLayout from "@/components/layout/TeamLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { Save, X } from "lucide-react";
+import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
+import { useAuth } from "@/context/AuthProvider";
 
 export default function AddTeamMemberPage() {
     const router = useRouter();
+    const { canModify } = useAuth();
+    const { handleReadOnlyClick } = useReadOnlyGuard();
     const [formData, setFormData] = useState({
         firstName: "",
         lastName: "",
@@ -27,6 +31,7 @@ export default function AddTeamMemberPage() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        if (!canModify || handleReadOnlyClick()) return;
         console.log("Team member data:", formData);
         router.push("/team");
     };
@@ -55,7 +60,8 @@ export default function AddTeamMemberPage() {
                                 value={formData.firstName}
                                 onChange={handleChange}
                                 required
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
+                                disabled={!canModify}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] disabled:opacity-50"
                             />
                         </div>
                         <div>
@@ -68,7 +74,8 @@ export default function AddTeamMemberPage() {
                                 value={formData.lastName}
                                 onChange={handleChange}
                                 required
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
+                                disabled={!canModify}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] disabled:opacity-50"
                             />
                         </div>
                         <div>
@@ -81,7 +88,8 @@ export default function AddTeamMemberPage() {
                                 value={formData.email}
                                 onChange={handleChange}
                                 required
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
+                                disabled={!canModify}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] disabled:opacity-50"
                             />
                         </div>
                         <div>
@@ -94,7 +102,8 @@ export default function AddTeamMemberPage() {
                                 value={formData.phone}
                                 onChange={handleChange}
                                 required
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
+                                disabled={!canModify}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] disabled:opacity-50"
                             />
                         </div>
                         <div>
@@ -109,7 +118,8 @@ export default function AddTeamMemberPage() {
                                 min="0"
                                 max="100"
                                 required
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
+                                disabled={!canModify}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] disabled:opacity-50"
                             />
                             <p className="text-xs text-gray-500 mt-1">Percentage of income this team member keeps</p>
                         </div>
@@ -119,7 +129,8 @@ export default function AddTeamMemberPage() {
                                 name="role"
                                 value={formData.role}
                                 onChange={handleChange}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
+                                disabled={!canModify}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] disabled:opacity-50"
                             >
                                 <option>Worker</option>
                                 <option>Admin</option>
@@ -133,7 +144,8 @@ export default function AddTeamMemberPage() {
                                 name="address"
                                 value={formData.address}
                                 onChange={handleChange}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
+                                disabled={!canModify}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] disabled:opacity-50"
                             />
                         </div>
                         <div>
@@ -143,7 +155,8 @@ export default function AddTeamMemberPage() {
                                 name="city"
                                 value={formData.city}
                                 onChange={handleChange}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
+                                disabled={!canModify}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] disabled:opacity-50"
                             />
                         </div>
                         <div>
@@ -153,7 +166,8 @@ export default function AddTeamMemberPage() {
                                 name="zipCode"
                                 value={formData.zipCode}
                                 onChange={handleChange}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
+                                disabled={!canModify}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] disabled:opacity-50"
                             />
                         </div>
                         <div>
@@ -162,7 +176,8 @@ export default function AddTeamMemberPage() {
                                 name="status"
                                 value={formData.status}
                                 onChange={handleChange}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
+                                disabled={!canModify}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] disabled:opacity-50"
                             >
                                 <option>Active</option>
                                 <option>Inactive</option>
@@ -174,16 +189,19 @@ export default function AddTeamMemberPage() {
                                 name="notes"
                                 value={formData.notes}
                                 onChange={handleChange}
+                                disabled={!canModify}
                                 rows={4}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] disabled:opacity-50"
                             />
                         </div>
                     </div>
                     <div className="flex gap-4 mt-8">
-                        <Button type="submit" variant="success" size="lg" className="flex-1">
-                            <Save className="w-5 h-5" />
-                            Save Team Member
-                        </Button>
+                        <ReadOnlyGuard>
+                            <Button type="submit" variant="success" size="lg" className="flex-1">
+                                <Save className="w-5 h-5" />
+                                Save Team Member
+                            </Button>
+                        </ReadOnlyGuard>
                         <Button type="button" variant="danger" size="lg" onClick={() => router.back()}>
                             <X className="w-5 h-5" />
                             Cancel

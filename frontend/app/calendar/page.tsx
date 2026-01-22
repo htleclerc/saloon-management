@@ -21,6 +21,7 @@ import {
     X,
     Settings
 } from "lucide-react";
+import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 
 const DEFAULT_TIME_SLOTS = [
     "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
@@ -29,7 +30,7 @@ const DEFAULT_TIME_SLOTS = [
 ];
 
 export default function CalendarPage() {
-    const { user, hasPermission } = useAuth();
+    const { user, hasPermission, canModify } = useAuth();
     const {
         bookings,
         dayCapacities,
@@ -68,14 +69,17 @@ export default function CalendarPage() {
     };
 
     const toggleDayStatus = () => {
+        if (!canModify) return;
         updateDayCapacity(selectedDate, { isClosed: !capacity.isClosed });
     };
 
     const toggleOverbooking = () => {
+        if (!canModify) return;
         updateDayCapacity(selectedDate, { allowOverbooking: !capacity.allowOverbooking });
     };
 
     const adjustMaxCapacity = (delta: number) => {
+        if (!canModify) return;
         const newVal = Math.max(1, capacity.maxSlots + delta);
         updateDayCapacity(selectedDate, { maxSlots: newVal });
     };
@@ -117,21 +121,25 @@ export default function CalendarPage() {
                         </div>
 
                         <div className="flex items-center gap-2">
-                            <Button
-                                variant={capacity.isClosed ? "primary" : "outline"}
-                                className={capacity.isClosed ? "bg-red-600 hover:bg-red-700" : "text-red-600 border-red-100 hover:bg-red-50"}
-                                onClick={toggleDayStatus}
-                            >
-                                {capacity.isClosed ? <Lock className="w-4 h-4 sm:mr-2" /> : <Unlock className="w-4 h-4 sm:mr-2" />}
-                                <span className="hidden sm:inline">{capacity.isClosed ? "Day Closed" : "Close Day"}</span>
-                            </Button>
-
-                            <Link href="/appointments/book">
-                                <Button className="bg-[var(--color-primary)] hover:opacity-90">
-                                    <Plus className="w-4 h-4 sm:mr-2" />
-                                    <span className="hidden sm:inline">New Appointment</span>
+                            <ReadOnlyGuard>
+                                <Button
+                                    variant={capacity.isClosed ? "primary" : "outline"}
+                                    className={capacity.isClosed ? "bg-red-600 hover:bg-red-700" : "text-red-600 border-red-100 hover:bg-red-50"}
+                                    onClick={toggleDayStatus}
+                                >
+                                    {capacity.isClosed ? <Lock className="w-4 h-4 sm:mr-2" /> : <Unlock className="w-4 h-4 sm:mr-2" />}
+                                    <span className="hidden sm:inline">{capacity.isClosed ? "Day Closed" : "Close Day"}</span>
                                 </Button>
-                            </Link>
+                            </ReadOnlyGuard>
+
+                            <ReadOnlyGuard>
+                                <Link href="/appointments/book">
+                                    <Button className="bg-[var(--color-primary)] hover:opacity-90">
+                                        <Plus className="w-4 h-4 sm:mr-2" />
+                                        <span className="hidden sm:inline">New Appointment</span>
+                                    </Button>
+                                </Link>
+                            </ReadOnlyGuard>
                         </div>
                     </div>
                 </div>
@@ -211,16 +219,18 @@ export default function CalendarPage() {
                             >
                                 <div className="flex items-center justify-between">
                                     <span className={`font-black text-lg ${isClosed ? 'text-gray-400' : 'text-gray-900'}`}>{time}</span>
-                                    <button
-                                        onClick={() => toggleSlotClosure(selectedDate, time)}
-                                        className={`p-1.5 rounded-lg transition-all ${isClosed
-                                            ? 'bg-red-100 text-red-600'
-                                            : 'bg-gray-100 text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500'
-                                            }`}
-                                        title={isClosed ? "Open Slot" : "Close Slot"}
-                                    >
-                                        {isClosed ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
-                                    </button>
+                                    <ReadOnlyGuard>
+                                        <button
+                                            onClick={() => toggleSlotClosure(selectedDate, time)}
+                                            className={`p-1.5 rounded-lg transition-all ${isClosed
+                                                ? 'bg-red-100 text-red-600'
+                                                : 'bg-gray-100 text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500'
+                                                }`}
+                                            title={isClosed ? "Open Slot" : "Close Slot"}
+                                        >
+                                            {isClosed ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+                                        </button>
+                                    </ReadOnlyGuard>
                                 </div>
 
                                 <div className="space-y-1">

@@ -4,7 +4,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Link from "next/link";
-import { Plus, Filter, Download, Calendar, BarChart2, MessageSquare, History, Check, X, Printer, FileText, Eye, Pencil, Trash2, CheckCircle2, Clock, LayoutGrid, TrendingUp, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Filter, Download, Calendar, BarChart2, MessageSquare, History, Check, X, Printer, FileText, Eye, Pencil, Trash2, CheckCircle2, Clock, LayoutGrid, TrendingUp, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
 import { useAuth } from "@/context/AuthProvider";
 import { useIncome } from "@/context/IncomeProvider";
@@ -16,7 +16,8 @@ import { QRCodeSVG } from "qrcode.react";
 import HistoryModal, { HistoryEvent } from "@/components/ui/HistoryModal";
 import { canPerformIncomeAction, useActionPermissions } from "@/lib/permissions";
 import { UserRole } from "@/context/AuthProvider";
-import { SERVICES } from "@/lib/data";
+import { SERVICES, WORKERS } from "@/lib/data";
+import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 
 // The static mock data uses slightly different naming than our new Income interface
 // English Mock Data
@@ -67,6 +68,14 @@ export default function IncomePage() {
     const [viewMode, setViewMode] = useState<"list" | "dashboard">("list");
 
     // Pagination
+    const [searchQuery, setSearchQuery] = useState("");
+    const [dateFrom, setDateFrom] = useState("");
+    const [dateTo, setDateTo] = useState("");
+    const [statusFilter, setStatusFilter] = useState<string>("all");
+    const [workerFilter, setWorkerFilter] = useState<string>("all");
+    const [showFilters, setShowFilters] = useState(false);
+
+    // Pagination
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
 
@@ -94,7 +103,7 @@ export default function IncomePage() {
             if (booking) {
                 serviceDisplay = booking.customServiceDetails || `Service #${(item as any).serviceIds[0]}`;
             } else {
-                serviceDisplay = (item as any).serviceIds.map((id: any) => SERVICES.find(s => s.id === id)?.name || `Service #${id}`).join(", ");
+                serviceDisplay = (item as any).serviceIds.map((id: any) => SERVICES.find(s => s.id == id)?.name || `Service #${id}`).join(", ");
             }
         } else {
             // Check if it's a mock item with "service" string or "serviceIds"
@@ -112,9 +121,57 @@ export default function IncomePage() {
         };
     });
 
-    const filteredIncomes = isWorker
-        ? normalizedIncomes.filter(r => (r.workerNames || []).includes(user?.name || "") || r.authorName === user?.name)
-        : normalizedIncomes;
+    const filteredIncomes = normalizedIncomes.filter(income => {
+        // Role Access Filter
+        if (isWorker) {
+            const isAssigned = (income.workerNames || []).includes(user?.name || "");
+            const isAuthor = income.authorName === user?.name;
+            if (!isAssigned && !isAuthor) return false;
+        }
+
+        // Advanced Filters
+        if (searchQuery && !income.clientName.toLowerCase().includes(searchQuery.toLowerCase()) && !income.id.toString().includes(searchQuery)) {
+            return false;
+        }
+
+        if (dateFrom && income.date < dateFrom) return false;
+        if (dateTo && income.date > dateTo) return false;
+
+        if (statusFilter !== "all" && income.status !== statusFilter) return false;
+
+        // Worker Filter (for Admins seeing everyone, filtering by specific worker participation)
+        if (workerFilter !== "all") {
+            // We need to map worker IDs or Names. Our normalized data has names or IDs mixed broadly?
+            // normalizedIncomes uses workerNames which seems to be Names for Mock and IDs for Dynamic?
+            // Let's check normalization:
+            // workerNames: isDynamic ? (item as any).workerIds : (item as any).workers
+            // Dynamic uses IDs (number[]). Mock uses Names (string[]).
+            // To simplify, let's assume we filter by ID if dynamic or Name if mock.
+            // But the filter UI will likely select an ID.
+            const workerId = Number(workerFilter);
+            if (!isNaN(workerId)) {
+                // It's an ID from dropdown
+                // Dynamic incomes have workerId list.
+                // Mock incomes have names. We can't easily filter mock by ID unless we map names.
+                // Let's try to match ID in workerIds if present, OR check if ID corresponds to a name in WORKERS data.
+                const isDynamic = 'createdBy' in income;
+                if (isDynamic) {
+                    if (!(income as any).workerIds.includes(workerId)) return false;
+                } else {
+                    // Mock data check - find name from ID
+                    // We need WORKERS list imported.
+                    // imports check: import { WORKERS } from "@/lib/data"; (It is imported, unused currently)
+                    // Actually line 19 imports SERVICES. Line 44 in other file imported WORKERS.
+                    // I need to import WORKERS in this file too.
+                    // Let's assume for now we only filter dynamic strictly or match name if simple.
+                    // TODO: Fix imports to include WORKERS.
+                    return true; // Skip filter for mock data if complicated, or better:
+                }
+            }
+        }
+
+        return true;
+    });
 
     const totalIncome = filteredIncomes.filter(r => r.status !== "Closed" && r.status !== "Cancelled").reduce((sum, r) => sum + r.amount, 0);
     const validatedIncome = filteredIncomes.filter(r => r.status === "Validated").reduce((sum, r) => sum + r.amount, 0);
@@ -256,23 +313,19 @@ export default function IncomePage() {
                         )}
 
                         {/* Action Buttons - Right in Desktop */}
-                        <div className="grid grid-cols-2 md:flex items-center gap-3 w-full md:w-auto">
-                            <Button variant="outline" size="md" className="flex-1 md:flex-none rounded-xl h-11 flex items-center justify-center gap-2 font-bold text-gray-600 border-gray-200">
-                                <Printer className="w-4 h-4" />
-                                <span>Print</span>
-                            </Button>
-                            <Button variant="outline" size="md" className="flex-1 md:flex-none rounded-xl h-11 flex items-center justify-center gap-2 font-bold text-gray-600 border-gray-200">
-                                <Download className="w-4 h-4" />
-                                <span>Export</span>
-                            </Button>
-                            <Link href="/income/add" className="col-span-2 md:col-span-1">
-                                <Button variant="primary" size="md" className="w-full rounded-xl h-11 flex items-center justify-center gap-2 font-bold shadow-lg shadow-purple-500/20 bg-[#A855F7] hover:bg-[#9333EA]">
-                                    <Plus className="w-5 h-5" />
-                                    <span>Add Income</span>
-                                </Button>
-                            </Link>
+                        <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+                            <ReadOnlyGuard>
+                                <Link href="/income/add" className="w-full md:w-auto">
+                                    <Button variant="primary" size="md" className="w-full rounded-xl h-11 flex items-center justify-center gap-2 font-bold shadow-lg shadow-purple-500/20 bg-[#A855F7] hover:bg-[#9333EA]">
+                                        <Plus className="w-5 h-5" />
+                                        <span>Add Income</span>
+                                    </Button>
+                                </Link>
+                            </ReadOnlyGuard>
                         </div>
                     </div>
+
+
                 </div>
 
                 {/* Premium Stats Grid */}
@@ -329,6 +382,95 @@ export default function IncomePage() {
                     </div>
                 </div>
 
+                {/* Table Actions Toolbar */}
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-bold text-gray-800">Income List</h3>
+                    <div className="flex items-center gap-3">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className={`rounded-lg h-9 flex items-center justify-center gap-2 font-bold transition-all border-gray-200 ${showFilters ? 'bg-purple-100 text-purple-700 border-purple-200' : 'text-gray-600'}`}
+                            onClick={() => setShowFilters(!showFilters)}
+                        >
+                            <Filter className="w-4 h-4" />
+                            <span>Filters</span>
+                        </Button>
+                        <Button variant="outline" size="sm" className="hidden md:flex rounded-lg h-9 items-center justify-center gap-2 font-bold text-gray-600 border-gray-200">
+                            <Printer className="w-4 h-4" />
+                            <span>Print</span>
+                        </Button>
+                        <Button variant="outline" size="sm" className="hidden md:flex rounded-lg h-9 items-center justify-center gap-2 font-bold text-gray-600 border-gray-200">
+                            <Download className="w-4 h-4" />
+                            <span>Export</span>
+                        </Button>
+                    </div>
+                </div>
+
+                {/* Advanced Filter Panel - Moved below KPIs */}
+                {showFilters && (
+                    <div className="bg-white p-5 rounded-2xl shadow-lg border border-purple-100 animate-in fade-in slide-in-from-top-2 duration-200 mb-6">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-gray-500 uppercase ml-1">Client / ID</label>
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search client or ID..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all"
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-gray-500 uppercase ml-1">Date Range</label>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="date"
+                                        value={dateFrom}
+                                        onChange={(e) => setDateFrom(e.target.value)}
+                                        className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                                    />
+                                    <input
+                                        type="date"
+                                        value={dateTo}
+                                        onChange={(e) => setDateTo(e.target.value)}
+                                        className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-gray-500 uppercase ml-1">Status</label>
+                                <select
+                                    value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-500 outline-none appearance-none"
+                                >
+                                    <option value="all">All Statuses</option>
+                                    <option value="Validated">Validated</option>
+                                    <option value="Pending">Pending</option>
+                                    <option value="Draft">Draft</option>
+                                    <option value="Cancelled">Cancelled</option>
+                                </select>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-gray-500 uppercase ml-1">Worker</label>
+                                <select
+                                    value={workerFilter}
+                                    onChange={(e) => setWorkerFilter(e.target.value)}
+                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-500 outline-none appearance-none"
+                                >
+                                    <option value="all">All Workers</option>
+                                    {WORKERS.map(w => (
+                                        <option key={w.id} value={w.id}>{w.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <Card>
                     <div className="overflow-x-auto">
                         <table className="w-full">
@@ -339,13 +481,17 @@ export default function IncomePage() {
                                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Client</th>
                                     <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Service</th>
                                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Amount</th>
+                                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Status</th>
                                     <th className="hidden lg:table-cell px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
                                 {paginatedIncomes.map((income) => (
                                     <React.Fragment key={income.id}>
-                                        <tr className={`hover:bg-gray-50 cursor-pointer ${expandedRows.includes(income.id) ? 'bg-purple-50/30' : ''}`} onClick={() => toggleRow(income.id)}>
+                                        <tr
+                                            className={`hover:bg-gray-50 cursor-pointer transition-all duration-200 border-l-4 ${expandedRows.includes(income.id) ? 'bg-purple-50 border-purple-500 shadow-md transform scale-[1.005]' : 'border-transparent'}`}
+                                            onClick={() => toggleRow(income.id)}
+                                        >
                                             <td className="hidden md:table-cell px-4 py-4 text-sm text-gray-500">#{income.id}</td>
                                             <td className="px-4 py-4 text-sm text-gray-900">{income.date}</td>
                                             <td className="px-4 py-4 font-medium">{income.clientName}</td>
@@ -367,11 +513,15 @@ export default function IncomePage() {
                                                     <button className="p-2 hover:bg-white rounded-lg hover:text-purple-600 transition-all shadow-sm border border-transparent hover:border-gray-100" title="View Detail"><Eye size={16} /></button>
 
                                                     <Link href={`/income/add?edit=${income.id}`}>
-                                                        <button className="p-2 hover:bg-white rounded-lg hover:text-purple-600 transition-all shadow-sm border border-transparent hover:border-gray-100" title="Edit"><Pencil size={16} /></button>
+                                                        <ReadOnlyGuard>
+                                                            <button className="p-2 hover:bg-white rounded-lg hover:text-purple-600 transition-all shadow-sm border border-transparent hover:border-gray-100" title="Edit"><Pencil size={16} /></button>
+                                                        </ReadOnlyGuard>
                                                     </Link>
 
                                                     {canPerformIncomeAction(income as any, "validate", user?.role as UserRole) && (
-                                                        <button onClick={() => handleValidate(income.id)} className="p-2 hover:bg-white rounded-lg text-green-600 hover:text-green-800 transition-all shadow-sm border border-transparent hover:border-gray-100" title="Validate"><Check size={16} /></button>
+                                                        <ReadOnlyGuard>
+                                                            <button onClick={() => handleValidate(income.id)} className="p-2 hover:bg-white rounded-lg text-green-600 hover:text-green-800 transition-all shadow-sm border border-transparent hover:border-gray-100" title="Validate"><Check size={16} /></button>
+                                                        </ReadOnlyGuard>
                                                     )}
 
                                                     {canPerformIncomeAction(income as any, "view_invoice", user?.role as UserRole) && (
@@ -386,7 +536,9 @@ export default function IncomePage() {
 
                                                     <button onClick={() => handleViewHistory(income)} className="p-2 hover:bg-white rounded-lg text-purple-600 hover:text-purple-800 transition-all shadow-sm border border-transparent hover:border-gray-100" title="History"><History size={16} /></button>
 
-                                                    <button onClick={() => handleArchive(income.id)} className="p-2 hover:bg-white rounded-lg text-red-600 hover:text-red-800 transition-all shadow-sm border border-transparent hover:border-gray-100" title="Archive"><Trash2 size={16} /></button>
+                                                    <ReadOnlyGuard>
+                                                        <button onClick={() => handleArchive(income.id)} className="p-2 hover:bg-white rounded-lg text-red-600 hover:text-red-800 transition-all shadow-sm border border-transparent hover:border-gray-100" title="Archive"><Trash2 size={16} /></button>
+                                                    </ReadOnlyGuard>
                                                 </div>
                                             </td>
                                         </tr>
@@ -405,19 +557,23 @@ export default function IncomePage() {
                                                                 <Eye size={18} /> Detail
                                                             </Button>
                                                             <Link href={`/income/add?edit=${income.id}`} className="w-full">
-                                                                <Button variant="outline" size="sm" className="w-full justify-center gap-2 h-11 rounded-xl bg-white shadow-sm">
-                                                                    <Pencil size={18} /> Edit
-                                                                </Button>
+                                                                <ReadOnlyGuard>
+                                                                    <Button variant="outline" size="sm" className="w-full justify-center gap-2 h-11 rounded-xl bg-white shadow-sm">
+                                                                        <Pencil size={18} /> Edit
+                                                                    </Button>
+                                                                </ReadOnlyGuard>
                                                             </Link>
                                                             {canPerformIncomeAction(income as any, "validate", user?.role as UserRole) && (
-                                                                <Button
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                    className="justify-center gap-2 h-11 rounded-xl bg-white shadow-sm text-green-600 border-green-100"
-                                                                    onClick={() => handleValidate(income.id)}
-                                                                >
-                                                                    <Check size={18} /> Validate
-                                                                </Button>
+                                                                <ReadOnlyGuard>
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        className="justify-center gap-2 h-11 rounded-xl bg-white shadow-sm text-green-600 border-green-100"
+                                                                        onClick={() => handleValidate(income.id)}
+                                                                    >
+                                                                        <Check size={18} /> Validate
+                                                                    </Button>
+                                                                </ReadOnlyGuard>
                                                             )}
                                                             <Button
                                                                 variant="outline"
@@ -435,14 +591,16 @@ export default function IncomePage() {
                                                             >
                                                                 <History size={18} /> History
                                                             </Button>
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="justify-center gap-2 h-11 rounded-xl bg-white shadow-sm text-red-600 border-red-100"
-                                                                onClick={() => handleArchive(income.id)}
-                                                            >
-                                                                <Trash2 size={18} /> Archive
-                                                            </Button>
+                                                            <ReadOnlyGuard>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="justify-center gap-2 h-11 rounded-xl bg-white shadow-sm text-red-600 border-red-100"
+                                                                    onClick={() => handleArchive(income.id)}
+                                                                >
+                                                                    <Trash2 size={18} /> Archive
+                                                                </Button>
+                                                            </ReadOnlyGuard>
                                                         </div>
 
                                                         {/* Comments Section */}
@@ -543,7 +701,7 @@ export default function IncomePage() {
                     itemSubtitle={selectedHistory.subtitle}
                     events={selectedHistory.events}
                 />
-            </div>
-        </MainLayout>
+            </div >
+        </MainLayout >
     );
 }

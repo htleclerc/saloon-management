@@ -26,7 +26,7 @@ import {
 export default function DailyPage() {
     const [selectedDate, setSelectedDate] = useState("2026-01-19"); // Hardcoded to match task context if needed
     const { getCardStyle } = useKpiCardStyle();
-    const { user, hasPermission, getWorkerId } = useAuth();
+    const { user, hasPermission, getWorkerId, canModify } = useAuth();
     const { bookings, startBooking } = useBooking();
     const { confirm } = useConfirm();
 
@@ -145,7 +145,7 @@ export default function DailyPage() {
                                                     {apt.status}
                                                 </span>
                                             </div>
-                                            {(apt.status === 'Pending' || apt.status === 'Confirmed') && (
+                                            {canModify && (apt.status === 'Pending' || apt.status === 'Confirmed') && (
                                                 <Button size="sm" onClick={() => handleStart(apt.id)} className="bg-blue-600 hover:bg-blue-700 text-white gap-2">
                                                     <PlayCircle className="w-4 h-4" /> Start
                                                 </Button>

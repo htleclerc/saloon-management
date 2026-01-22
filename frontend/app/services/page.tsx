@@ -27,6 +27,7 @@ import { useAuth } from "@/context/AuthProvider";
 import Link from "next/link";
 import { canPerformServiceAction } from "@/lib/permissions";
 import { UserRole } from "@/context/AuthProvider";
+import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 
 const services = [
     {
@@ -144,12 +145,14 @@ export default function ServicesPage() {
                     </div>
                     <div className="flex w-full md:w-auto items-center justify-end">
                         {canAdd && (
-                            <Link href="/services/add?mode=advanced">
-                                <Button variant="primary" size="md" className="rounded-2xl h-14 w-14 md:h-12 md:w-auto md:px-6 flex items-center justify-center p-0 md:p-auto shadow-xl shadow-purple-500/30 active:scale-95 transition-all">
-                                    <Plus className="w-8 h-8 md:w-6 md:h-6" />
-                                    <span className="hidden md:inline ml-2 font-bold">Add Service</span>
-                                </Button>
-                            </Link>
+                            <ReadOnlyGuard>
+                                <Link href="/services/add?mode=advanced">
+                                    <Button variant="primary" size="md" className="rounded-2xl h-14 w-14 md:h-12 md:w-auto md:px-6 flex items-center justify-center p-0 md:p-auto shadow-xl shadow-purple-500/30 active:scale-95 transition-all">
+                                        <Plus className="w-8 h-8 md:w-6 md:h-6" />
+                                        <span className="hidden md:inline ml-2 font-bold">Add Service</span>
+                                    </Button>
+                                </Link>
+                            </ReadOnlyGuard>
                         )}
                     </div>
                 </div>
@@ -241,11 +244,13 @@ export default function ServicesPage() {
 
                                 <div className="flex gap-2 pt-2">
                                     {canEdit && (
-                                        <Link href={`/services/edit/${service.id}?mode=advanced`} className="flex-1">
-                                            <Button variant="outline" size="sm" className="w-full">
-                                                Edit
-                                            </Button>
-                                        </Link>
+                                        <ReadOnlyGuard>
+                                            <Link href={`/services/edit/${service.id}?mode=advanced`} className="flex-1">
+                                                <Button variant="outline" size="sm" className="w-full">
+                                                    Edit
+                                                </Button>
+                                            </Link>
+                                        </ReadOnlyGuard>
                                     )}
                                     <Link href={`/services/${service.id}`} className="flex-1">
                                         <Button variant="primary" size="sm" className="w-full">
@@ -320,11 +325,13 @@ export default function ServicesPage() {
                                                 <td className="hidden sm:table-cell px-4 py-4 text-center" onClick={(e) => e.stopPropagation()}>
                                                     <div className="flex items-center justify-center gap-2">
                                                         {canEdit && (
-                                                            <Link href={`/services/edit/${service.id}?mode=simple`}>
-                                                                <button className="p-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors shadow-sm" title="Quick Edit">
-                                                                    <Layout className="w-4 h-4" />
-                                                                </button>
-                                                            </Link>
+                                                            <ReadOnlyGuard>
+                                                                <Link href={`/services/edit/${service.id}?mode=simple`}>
+                                                                    <button className="p-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors shadow-sm" title="Quick Edit">
+                                                                        <Layout className="w-4 h-4" />
+                                                                    </button>
+                                                                </Link>
+                                                            </ReadOnlyGuard>
                                                         )}
                                                         <Link href={`/services/${service.id}`}>
                                                             <button className="p-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors shadow-sm" title="View Details">
@@ -415,11 +422,13 @@ export default function ServicesPage() {
                                     </Button>
                                 </Link>
                                 {canEdit && (
-                                    <Link href={`/services/edit/${selectedService.id}?mode=advanced`} className="block">
-                                        <Button variant="outline" className="w-full py-4 rounded-2xl font-black border-gray-100">
-                                            Settings & Media
-                                        </Button>
-                                    </Link>
+                                    <ReadOnlyGuard>
+                                        <Link href={`/services/edit/${selectedService.id}?mode=advanced`} className="block">
+                                            <Button variant="outline" className="w-full py-4 rounded-2xl font-black border-gray-100">
+                                                Settings & Media
+                                            </Button>
+                                        </Link>
+                                    </ReadOnlyGuard>
                                 )}
                                 <button
                                     className="w-full py-4 text-gray-400 font-bold text-sm hover:text-gray-600 transition-colors"

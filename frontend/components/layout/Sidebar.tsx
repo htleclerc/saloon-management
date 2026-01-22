@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useTheme, useResponsive } from "@/context/ThemeProvider";
 import {
     LayoutDashboard,
@@ -30,13 +30,17 @@ import {
     Heart,
     Compass,
     CalendarCheck,
+    Sliders,
+    CreditCard,
+    BarChart3,
+    MessageCircle,
 } from "lucide-react";
 
 const menuItems = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/" },
-    { name: "Team", icon: Users, path: "/team", roles: ['manager', 'admin'] },
     { name: "Daily", icon: TrendingUp, path: "/daily", roles: ['manager', 'admin', 'worker'] },
     { name: "Income", icon: DollarSign, path: "/income", roles: ['manager', 'admin', 'worker'] },
+    { name: "Team", icon: Users, path: "/team", roles: ['manager', 'admin'] },
     { name: "My Invoices", icon: FileText, path: "/client/invoices", roles: ['client'], strictRoles: true },
     { name: "Appointments", icon: CalendarCheck, path: "/appointments" },
     { name: "Calendar", icon: Calendar, path: "/calendar", roles: ['manager', 'admin'] },
@@ -44,21 +48,53 @@ const menuItems = [
     { name: "Expenses", icon: Receipt, path: "/expenses", roles: ['manager', 'admin'] },
     { name: "Approvals", icon: CheckSquare, path: "/approvals", roles: ['manager', 'admin'] },
     { name: "Services", icon: Scissors, path: "/services", roles: ['manager', 'admin', 'worker'] },
-    { name: "Inventory", icon: FlaskConical, path: "/settings/inventory", roles: ['manager', 'admin'] },
+    { name: "Reports", icon: FileText, path: "/reports", roles: ['manager', 'admin'] },
+    { name: "Configuration", icon: Sliders, path: "/configuration", roles: ['manager', 'admin'] },
     { name: "Favorites", icon: Heart, path: "/salons/favorites", roles: ['client'], strictRoles: true },
     { name: "Discover", icon: Compass, path: "/salons/discover", roles: ['client'], strictRoles: true },
-    { name: "Reports", icon: FileText, path: "/reports", roles: ['manager', 'admin'] },
     { name: "Settings", icon: Settings, path: "/settings" },
+];
+
+// Super Admin Menu (SaaS CEO view)
+const superAdminMenuItems = [
+    { name: "Global Dashboard", icon: LayoutDashboard, path: "/superadmin", badge: 'SaaS' },
+    { name: "Salons", icon: Building, path: "/superadmin/salons" },
+    { name: "Plans", icon: CreditCard, path: "/superadmin/plans" },
+    { name: "Users", icon: Users, path: "/superadmin/users" },
+    { name: "Analytics", icon: BarChart3, path: "/superadmin/analytics" },
+    { name: "Revenue", icon: DollarSign, path: "/superadmin/billing" },
+    { name: "Support", icon: MessageCircle, path: "/superadmin/support" },
+    { name: "System", icon: Settings, path: "/superadmin/settings" },
 ];
 
 import { useAuth } from "@/context/AuthProvider";
 
 export default function Sidebar() {
     const pathname = usePathname();
+    const router = useRouter();
     const { theme, toggleSidebar, toggleDarkMode, currentPalette, mobileMenuOpen, setMobileMenuOpen } = useTheme();
     const { isMobile, isTablet } = useResponsive();
-    const { user, hasPermission, hasExactRole, demoLogin, logout, currentTenant, switchTenant, isDemoMode, canAddIncome } = useAuth();
+    const {
+        user,
+        hasPermission,
+        hasExactRole,
+        demoLogin,
+        logout,
+        currentTenant,
+        switchTenant,
+        isDemoMode,
+        canAddIncome,
+        isSuperAdmin,
+        isReadOnlyMode
+    } = useAuth();
     const [showTenantDropdown, setShowTenantDropdown] = useState(false);
+
+    // Determine which menu to show:
+    // - Super admin on /admin routes: SHOW SUPER ADMIN MENU
+    // - Super admin on other routes (viewing salon): SHOW REGULAR MENU
+    // - Regular users: SHOW REGULAR MENU
+    const isSuperAdminRoute = pathname.startsWith('/superadmin');
+    const activeMenuItems = (isSuperAdmin && isSuperAdminRoute) ? superAdminMenuItems : menuItems;
 
     // Dynamic gradient style using CSS variables (respects custom override)
     const sidebarGradient = {
@@ -97,7 +133,7 @@ export default function Sidebar() {
                                 {currentTenant?.name || "Workshop Manager"}
                             </h1>
                             <span className="text-[10px] text-white/50 uppercase tracking-wider font-bold">
-                                {isDemoMode ? "Mode Démo" : "Workspace"}
+                                {isDemoMode ? "Demo Mode" : "Workspace"}
                             </span>
                         </div>
                     )}
@@ -128,26 +164,33 @@ export default function Sidebar() {
             {/* Navigation */}
             <nav>
                 <ul className="space-y-1">
-                    {menuItems.map((item) => {
-                        // Role-based visibility check
-                        // Use hasExactRole for strict role matching (e.g., client-only menus)
-                        // Use hasPermission for hierarchical role matching (e.g., admin can see manager menus)
-                        if (item.roles) {
-                            const hasAccess = (item as any).strictRoles
-                                ? hasExactRole(item.roles as any)
-                                : hasPermission(item.roles as any);
-                            if (!hasAccess) return null;
-                        }
+                    {activeMenuItems.map((item) => {
+                        // We only skip role filtering if we are explicitly rendering the Super Admin specific menu
+                        // Otherwise (when Super Admin uses View/Manage toggle to see normal menu), we MUST apply role checks
+                        // to prevent them from seeing Client/Worker specific items unless they have those roles.
+                        const isSuperAdminList = activeMenuItems === superAdminMenuItems;
 
-                        // Additional logic for Income - although roles should cover it
-                        if (item.name === "Income" && !canAddIncome()) {
-                            // Only hide if worker doesn't have explicit permission and is not manager/admin
-                            if (!hasPermission(['manager', 'admin'])) return null;
+                        if (!isSuperAdminList) {
+                            // Role-based visibility check for regular menu
+                            // Use has ExactRole for strict role matching (e.g., client-only menus)
+                            // Use hasPermission for hierarchical role matching (e.g., admin can see manager menus)
+                            if ('roles' in item && item.roles) {
+                                const hasAccess = (item as any).strictRoles
+                                    ? hasExactRole(item.roles as any)
+                                    : hasPermission(item.roles as any);
+                                if (!hasAccess) return null;
+                            }
+
+                            // Additional logic for Income - although roles should cover it
+                            if (item.name === "Income" && !canAddIncome()) {
+                                // Only hide if worker doesn't have explicit permission and is not manager/admin
+                                if (!hasPermission(['manager', 'admin'])) return null;
+                            }
                         }
 
                         const Icon = item.icon;
                         const isActive = pathname === item.path ||
-                            (item.path !== "/" && pathname.startsWith(item.path));
+                            (item.path !== "/" && item.path !== "/superadmin" && pathname.startsWith(item.path));
                         return (
                             <li key={item.path}>
                                 <Link
@@ -158,7 +201,12 @@ export default function Sidebar() {
                                 >
                                     <Icon className="w-5 h-5 flex-shrink-0" />
                                     {(!isCollapsed || isMobile) && (
-                                        <span className="font-medium text-sm">{item.name}</span>
+                                        <span className="font-medium text-sm flex-1">{item.name}</span>
+                                    )}
+                                    {(!isCollapsed || isMobile) && (item as any).badge && (
+                                        <span className="px-2 py-0.5 bg-amber-500 text-white text-xs font-bold rounded-full">
+                                            {(item as any).badge}
+                                        </span>
                                     )}
                                 </Link>
                             </li>
@@ -167,8 +215,8 @@ export default function Sidebar() {
                 </ul>
             </nav>
 
-            {/* Demo Role Switcher - only in demo mode */}
-            {isDemoMode && (
+            {/* Demo Role Switcher - only in demo mode and NOT on superadmin paths */}
+            {isDemoMode && !isSuperAdminRoute && (
                 <div className={`mt-auto pt-4 border-t border-white/10 ${(isCollapsed && !isMobile) ? "hidden" : "block"}`}>
                     <p className="text-xs text-white/50 mb-2 px-3 uppercase font-semibold tracking-wider">Demo Roles</p>
                     <div className="grid grid-cols-2 gap-2 px-3">
@@ -201,7 +249,7 @@ export default function Sidebar() {
             )}
 
             {/* Mobile-only: Tenant Selector, Notifications, Dark Mode */}
-            {isMobile && (
+            {isMobile && !isSuperAdminRoute && (
                 <div className="mt-4 pt-4 border-t border-white/10 space-y-3">
                     {/* Tenant Selector */}
                     {user?.tenants && user.tenants.length > 1 && (

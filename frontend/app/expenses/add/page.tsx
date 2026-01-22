@@ -6,9 +6,11 @@ import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { Save, X } from "lucide-react";
+import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 
 export default function AddExpensePage() {
     const router = useRouter();
+    const { handleReadOnlyClick } = useReadOnlyGuard();
     const [formData, setFormData] = useState({
         date: new Date().toISOString().split('T')[0],
         category: "",
@@ -25,6 +27,7 @@ export default function AddExpensePage() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        if (handleReadOnlyClick()) return;
         console.log("Expense data:", formData);
 
         if (userRole === "Worker") {

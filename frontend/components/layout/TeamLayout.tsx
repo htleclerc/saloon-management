@@ -18,6 +18,7 @@ import {
     PanelLeftClose,
     PanelLeft,
 } from "lucide-react";
+import { useAuth } from "@/context/AuthProvider";
 
 const teamMenuItems = [
     {
@@ -80,6 +81,7 @@ interface TeamLayoutProps {
 function TeamLayoutContent({ children, title, description }: TeamLayoutProps) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
+    const { isReadOnlyMode } = useAuth();
     const { theme } = useTheme();
     const { isMobile } = useResponsive();
     const [submenuCollapsed, setSubmenuCollapsed] = useState(false);
@@ -102,7 +104,14 @@ function TeamLayoutContent({ children, title, description }: TeamLayoutProps) {
         return pathname === item.path || pathname.startsWith(item.path + "/");
     };
 
-    const activeItem = teamMenuItems.find(isActive) || teamMenuItems[0];
+    const filteredMenuItems = teamMenuItems.filter(item => {
+        if (isReadOnlyMode && (item.id === "add-simple" || item.id === "add-advanced")) {
+            return false;
+        }
+        return true;
+    });
+
+    const activeItem = filteredMenuItems.find(isActive) || filteredMenuItems[0];
 
     // Horizontal layout (tabs)
     if (theme.submenuLayout === "horizontal" && !isMobile) {
@@ -118,7 +127,7 @@ function TeamLayoutContent({ children, title, description }: TeamLayoutProps) {
                             </div>
                         </div>
                         <nav className="flex overflow-x-auto hide-scrollbar">
-                            {teamMenuItems.map((item) => {
+                            {filteredMenuItems.map((item) => {
                                 const Icon = item.icon;
                                 const active = isActive(item);
                                 return (
@@ -174,7 +183,7 @@ function TeamLayoutContent({ children, title, description }: TeamLayoutProps) {
 
                         {mobileDropdownOpen && (
                             <nav className="border-t border-gray-100 p-2">
-                                {teamMenuItems.map((item) => {
+                                {filteredMenuItems.map((item) => {
                                     const Icon = item.icon;
                                     const active = isActive(item);
                                     return (
@@ -233,7 +242,7 @@ function TeamLayoutContent({ children, title, description }: TeamLayoutProps) {
                         {/* Menu */}
                         <nav className="p-2">
                             <ul className="space-y-1">
-                                {teamMenuItems.map((item) => {
+                                {filteredMenuItems.map((item) => {
                                     const Icon = item.icon;
                                     const active = isActive(item);
                                     return (

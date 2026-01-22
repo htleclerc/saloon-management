@@ -7,8 +7,11 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { Save, X } from "lucide-react";
 
+import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
+
 export default function AddClientPage() {
     const router = useRouter();
+    const { handleReadOnlyClick } = useReadOnlyGuard();
     const [formData, setFormData] = useState({
         firstName: "",
         lastName: "",
@@ -23,6 +26,7 @@ export default function AddClientPage() {
     });
 
     const handleSubmit = (e: React.FormEvent) => {
+        if (handleReadOnlyClick()) return;
         e.preventDefault();
         // TODO: Submit to API
         console.log("Client data:", formData);

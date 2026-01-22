@@ -52,6 +52,7 @@ import {
 } from "recharts";
 
 import { useAuth } from "@/context/AuthProvider";
+import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 import { useActionPermissions } from "@/lib/permissions";
 
 const teamMemberData = {
@@ -1092,14 +1093,18 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                         </div>
                         <div className="flex gap-2">
                             {(permissions.isAdmin || permissions.isManager || isOwnProfile) && (
-                                <Link href={`/team/edit-advanced/${id}`}>
-                                    <Button variant="outline" size="sm" className="bg-white/10 border-white/30 text-white hover:bg-white/20 text-xs">
-                                        <Edit className="w-3 h-3 mr-1" />Edit Profile
-                                    </Button>
-                                </Link>
+                                <ReadOnlyGuard>
+                                    <Link href={`/team/edit-advanced/${id}`}>
+                                        <Button variant="outline" size="sm" className="bg-white/10 border-white/30 text-white hover:bg-white/20 text-xs">
+                                            <Edit className="w-3 h-3 mr-1" />Edit Profile
+                                        </Button>
+                                    </Link>
+                                </ReadOnlyGuard>
                             )}
                             {canSeeFinancials && (
-                                <Button variant="primary" size="sm" className="bg-white text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-xs border-none">Download Report</Button>
+                                <ReadOnlyGuard>
+                                    <Button variant="primary" size="sm" className="bg-white text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-xs border-none">Download Report</Button>
+                                </ReadOnlyGuard>
                             )}
                         </div>
                     </div>

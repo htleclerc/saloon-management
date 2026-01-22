@@ -9,6 +9,7 @@ import Button from "@/components/ui/Button";
 import { Plus, Download, Filter, Search, Eye, Edit, Trash2, Users, UserPlus, RefreshCcw, User, ArrowUp, Upload, MessageSquare, X, Phone, Mail, MapPin, Calendar, CreditCard, FileText } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/export";
+import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 
 const clients = [
     { id: "CLI-00123", name: "Marie Dubois", phone: "+33 6 12 34 56 78", email: "marie.dubois@email.com", address: "Paris, France", type: "Regular", totalVisits: 12, totalSpent: "€1440", status: "Active" },
@@ -106,12 +107,14 @@ export default function ClientsPage() {
                         <p className="text-gray-500 mt-1">Add, modify, or delete client information</p>
                     </div>
                     <div className="flex w-full md:w-auto items-center justify-end">
-                        <Link href="/clients/add">
-                            <Button variant="primary" size="md" className="rounded-2xl h-14 w-14 md:h-12 md:w-auto md:px-6 flex items-center justify-center p-0 md:p-auto shadow-xl shadow-purple-500/30 active:scale-95 transition-all">
-                                <Plus className="w-8 h-8 md:w-6 md:h-6" />
-                                <span className="hidden md:inline ml-2 font-bold whitespace-nowrap">Add New Client</span>
-                            </Button>
-                        </Link>
+                        <ReadOnlyGuard>
+                            <Link href="/clients/add">
+                                <Button variant="primary" size="md" className="rounded-2xl h-14 w-14 md:h-12 md:w-auto md:px-6 flex items-center justify-center p-0 md:p-auto shadow-xl shadow-purple-500/30 active:scale-95 transition-all">
+                                    <Plus className="w-8 h-8 md:w-6 md:h-6" />
+                                    <span className="hidden md:inline ml-2 font-bold whitespace-nowrap">Add New Client</span>
+                                </Button>
+                            </Link>
+                        </ReadOnlyGuard>
                     </div>
                 </div>
 
@@ -203,14 +206,18 @@ export default function ClientsPage() {
                         </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <button className="flex-1 h-14 flex items-center justify-center gap-2 bg-[#10B981] hover:bg-[#059669] text-white rounded-2xl transition-all font-bold active:scale-95">
-                            <Plus className="w-6 h-6" />
-                            <span className="hidden sm:inline">Quick Generic</span>
-                        </button>
-                        <button className="flex-1 h-14 flex items-center justify-center gap-2 bg-[#EC4899] hover:bg-[#DB2777] text-white rounded-2xl transition-all font-bold active:scale-95">
-                            <Upload className="w-6 h-6" />
-                            <span className="hidden sm:inline">Import</span>
-                        </button>
+                        <ReadOnlyGuard>
+                            <button className="flex-1 h-14 flex items-center justify-center gap-2 bg-[#10B981] hover:bg-[#059669] text-white rounded-2xl transition-all font-bold active:scale-95">
+                                <Plus className="w-6 h-6" />
+                                <span className="hidden sm:inline">Quick Generic</span>
+                            </button>
+                        </ReadOnlyGuard>
+                        <ReadOnlyGuard>
+                            <button className="flex-1 h-14 flex items-center justify-center gap-2 bg-[#EC4899] hover:bg-[#DB2777] text-white rounded-2xl transition-all font-bold active:scale-95">
+                                <Upload className="w-6 h-6" />
+                                <span className="hidden sm:inline">Import</span>
+                            </button>
+                        </ReadOnlyGuard>
                     </div>
                 </div>
 
@@ -361,13 +368,19 @@ export default function ClientsPage() {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                                                <button className="p-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors">
-                                                    <Edit className="w-4 h-4" />
-                                                </button>
+                                                <ReadOnlyGuard>
+                                                    <Link href={`/clients/edit/${client.id}`}>
+                                                        <button className="p-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors">
+                                                            <Edit className="w-4 h-4" />
+                                                        </button>
+                                                    </Link>
+                                                </ReadOnlyGuard>
 
-                                                <button className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors">
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
+                                                <ReadOnlyGuard>
+                                                    <button className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors">
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </ReadOnlyGuard>
                                             </div>
                                         </td>
                                     </tr>
@@ -391,22 +404,28 @@ export default function ClientsPage() {
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <h3 className="text-lg font-semibold mb-4 text-gray-900">Bulk Actions</h3>
                     <div className="flex flex-wrap gap-4">
-                        <Button variant="secondary" size="md" className="bg-purple-100 text-purple-700 hover:bg-purple-200 border-none flex-1 md:flex-none justify-center">
-                            <Users className="w-4 h-4 mr-2" />
-                            Send Email
-                        </Button>
-                        <Button variant="secondary" size="md" className="bg-blue-100 text-blue-700 hover:bg-blue-200 border-none flex-1 md:flex-none justify-center">
-                            <MessageSquare className="w-4 h-4 mr-2" />
-                            Send SMS
-                        </Button>
+                        <ReadOnlyGuard>
+                            <Button variant="secondary" size="md" className="bg-purple-100 text-purple-700 hover:bg-purple-200 border-none flex-1 md:flex-none justify-center">
+                                <Users className="w-4 h-4 mr-2" />
+                                Send Email
+                            </Button>
+                        </ReadOnlyGuard>
+                        <ReadOnlyGuard>
+                            <Button variant="secondary" size="md" className="bg-blue-100 text-blue-700 hover:bg-blue-200 border-none flex-1 md:flex-none justify-center">
+                                <MessageSquare className="w-4 h-4 mr-2" />
+                                Send SMS
+                            </Button>
+                        </ReadOnlyGuard>
                         <Button variant="secondary" size="md" className="bg-orange-100 text-orange-700 hover:bg-orange-200 border-none flex-1 md:flex-none justify-center" onClick={handleExportSelected}>
                             <Download className="w-4 h-4 mr-2" />
                             Export Selected ({selectedClientIds.size})
                         </Button>
-                        <Button variant="danger" size="md" className="bg-red-100 text-red-700 hover:bg-red-200 border-none flex-1 md:flex-none justify-center">
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete Selected
-                        </Button>
+                        <ReadOnlyGuard>
+                            <Button variant="danger" size="md" className="bg-red-100 text-red-700 hover:bg-red-200 border-none flex-1 md:flex-none justify-center">
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete Selected
+                            </Button>
+                        </ReadOnlyGuard>
                     </div>
                 </div>
                 {/* Trend & Distribution */}
@@ -574,14 +593,20 @@ export default function ClientsPage() {
                             </div>
 
                             <div className="flex gap-3">
-                                <Button variant="primary" size="lg" className="w-full justify-center">
-                                    <Edit className="w-4 h-4 mr-2" />
-                                    Edit Profile
-                                </Button>
-                                <Button variant="outline" size="lg" className="w-full justify-center text-red-600 hover:bg-red-50 hover:border-red-200">
-                                    <Trash2 className="w-4 h-4 mr-2" />
-                                    Delete
-                                </Button>
+                                <ReadOnlyGuard>
+                                    <Link href={`/clients/edit/${selectedClient.id}`} className="w-full">
+                                        <Button variant="primary" size="lg" className="w-full justify-center">
+                                            <Edit className="w-4 h-4 mr-2" />
+                                            Edit Profile
+                                        </Button>
+                                    </Link>
+                                </ReadOnlyGuard>
+                                <ReadOnlyGuard>
+                                    <Button variant="outline" size="lg" className="w-full justify-center text-red-600 hover:bg-red-50 hover:border-red-200">
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        Delete
+                                    </Button>
+                                </ReadOnlyGuard>
                             </div>
                         </div>
                     </div>

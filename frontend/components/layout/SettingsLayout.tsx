@@ -27,7 +27,6 @@ import {
 
 const settingsMenuItems = [
     { id: "profile", name: "Profile", description: "Personal information", icon: User, path: "/settings/profile", color: "from-[var(--color-info,bg-blue-500)] to-[var(--color-info-dark,bg-blue-700)]", roles: ['client', 'worker', 'manager', 'admin'] },
-    { id: "workshop", name: "Workshop", description: "Business configuration", icon: Building2, path: "/settings/workshop", color: "from-[var(--color-primary)] to-[var(--color-primary-dark)]", roles: ['manager', 'admin'] },
     { id: "appearance", name: "Appearance", description: "Themes & fonts", icon: Palette, path: "/settings/appearance", color: "from-[var(--color-secondary)] to-[var(--color-secondary-dark)]", roles: ['client', 'worker', 'manager', 'admin'] },
     { id: "notifications", name: "Notifications", description: "Alerts & reminders", icon: Bell, path: "/settings/notifications", color: "from-[var(--color-warning)] to-[var(--color-warning-dark)]", roles: ['client', 'worker', 'manager', 'admin'] },
     { id: "security", name: "Security", description: "Passwords & 2FA", icon: Shield, path: "/settings/security", color: "from-[var(--color-error)] to-[var(--color-error-dark)]", roles: ['client', 'worker', 'manager', 'admin'] },

@@ -183,14 +183,29 @@ export function canPerformExpenseAction(
  */
 export function useActionPermissions(auth: AuthContextType) {
     const userRole = auth.user?.role as UserRole;
+    const canModify = auth.canModify;
+
+    const isMutationAction = (action: string) => {
+        return !["view", "print", "view_invoice"].includes(action);
+    };
 
     return {
-        booking: (booking: Partial<Booking> & { status: BookingStatus }, action: BookingAction, hasInvoiceId: boolean = false) =>
-            canPerformBookingAction(booking, action, userRole, hasInvoiceId),
-        income: (income: Partial<Income> & { status: IncomeStatus }, action: IncomeAction) =>
-            canPerformIncomeAction(income, action, userRole),
-        service: (action: ServiceAction) => canPerformServiceAction(action, userRole),
-        expense: (action: ExpenseAction) => canPerformExpenseAction(action, userRole),
+        booking: (booking: Partial<Booking> & { status: BookingStatus }, action: BookingAction, hasInvoiceId: boolean = false) => {
+            if (!canModify && isMutationAction(action)) return false;
+            return canPerformBookingAction(booking, action, userRole, hasInvoiceId);
+        },
+        income: (income: Partial<Income> & { status: IncomeStatus }, action: IncomeAction) => {
+            if (!canModify && isMutationAction(action)) return false;
+            return canPerformIncomeAction(income, action, userRole);
+        },
+        service: (action: ServiceAction) => {
+            if (!canModify && isMutationAction(action)) return false;
+            return canPerformServiceAction(action, userRole);
+        },
+        expense: (action: ExpenseAction) => {
+            if (!canModify && isMutationAction(action)) return false;
+            return canPerformExpenseAction(action, userRole);
+        },
         isAdmin: ["super_admin", "owner", "admin"].includes(userRole),
         isManager: ["super_admin", "owner", "admin", "manager"].includes(userRole),
         canViewFinancialDashboard: !["worker"].includes(userRole),
@@ -199,16 +214,10 @@ export function useActionPermissions(auth: AuthContextType) {
             if (["super_admin", "owner", "admin", "manager"].includes(userRole)) return true;
 
             // Workers can only see themselves
-            // Robust ID handling: 
-            // 1. Get current worker ID from auth context
-            // 2. Normalize both IDs to strings for comparison
-            // 3. Handle specific demo case ('worker_demo_1' == '1')
             const currentWorkerId = auth.getWorkerId();
-
             if (!currentWorkerId) return false;
 
             const normalizeId = (id: number | string) => String(id) === 'worker_demo_1' ? '1' : String(id);
-
             return normalizeId(targetWorkerId) === normalizeId(currentWorkerId);
         }
     };

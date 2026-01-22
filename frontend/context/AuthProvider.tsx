@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { getPlanLimits, canCreateSalon } from "@/lib/utils/subscriptionHelpers";
 
 export type UserRole = "super_admin" | "owner" | "admin" | "manager" | "worker" | "client";
 
@@ -24,6 +25,9 @@ interface Tenant {
     customSuccessColor?: string;
     customWarningColor?: string;
     customDangerColor?: string;
+    // Subscription fields
+    subscriptionPlan?: 'free' | 'starter' | 'pro' | 'enterprise' | 'custom';
+    subscriptionStatus?: 'active' | 'trial' | 'expired' | 'cancelled';
 }
 
 interface User {
@@ -38,6 +42,8 @@ interface User {
     demoCreatedAt?: string; // ISO timestamp for demo mode expiry
     workerId?: string; // Worker profile ID for filtering data
     permissions?: WorkerPermissions; // Worker-specific permissions
+    onboardingCompleted?: boolean; // Whether user has completed onboarding
+    onboardingStep?: number; // Current step for resuming onboarding
 }
 
 export interface AuthContextType {
@@ -73,6 +79,21 @@ export interface AuthContextType {
     canAddExpenses: () => boolean;
     canAddServices: () => boolean;
     getWorkerId: () => string | null;
+    // Multi-salon & subscription utilities
+    canCreateNewSalon: () => boolean;
+    getSalonLimit: () => number;
+    getCurrentSalonCount: () => number;
+    // Read-only mode for super admin
+    isReadOnlyMode: boolean;
+    enterReadOnlyMode: (salonId: string, salonName: string, ownerName: string) => void;
+    exitReadOnlyMode: () => void;
+    toggleReadOnlyMode: () => void;
+    enterManageMode: (salonId: string, salonName: string, ownerName: string) => void;
+    readOnlySalonInfo: { id: string; name: string; ownerName: string } | null;
+    // Check if super admin has manage rights on a salon
+    canManageSalon: (salonId: string) => boolean;
+    // Centralized modification check (respects Read-Only mode)
+    canModify: boolean;
 }
 
 // Role hierarchy: super_admin > owner > admin > manager > worker > client
@@ -105,6 +126,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [mounted, setMounted] = useState(false);
+    const [isReadOnlyMode, setIsReadOnlyMode] = useState(false);
+    const [readOnlySalonInfo, setReadOnlySalonInfo] = useState<{ id: string; name: string; ownerName: string } | null>(null);
 
     // Load user from localStorage on mount
     useEffect(() => {
@@ -145,29 +168,72 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     const demoLogin = (role: UserRole) => {
-        const demoTenants: Tenant[] = [
-            {
-                id: "tenant_1",
-                name: "Demo Salon",
-                slug: "demo-salon",
-                logo: "https://ui-avatars.com/api/?name=DS&background=9333ea&color=fff",
-                primaryColor: "#9333ea"
-            },
-            {
-                id: "tenant_2",
-                name: "Demo Branch",
-                slug: "demo-branch",
-                logo: "https://ui-avatars.com/api/?name=DB&background=3b82f6&color=fff",
-                primaryColor: "#3b82f6"
-            },
-            {
-                id: "tenant_3",
-                name: "Luxury Spa",
-                slug: "luxury-spa",
-                logo: "https://ui-avatars.com/api/?name=LS&background=22c55e&color=fff",
-                primaryColor: "#22c55e"
-            }
-        ];
+        let demoTenants: Tenant[] = [];
+
+        // Super admin has no salons, only access to admin panel
+        if (role === 'super_admin') {
+            demoTenants = [];
+        }
+        // Owner gets 2 demo salons with Pro plan
+        else if (role === 'owner') {
+            demoTenants = [
+                {
+                    id: "salon-elegance-paris",
+                    name: "Salon Élégance Paris",
+                    slug: "elegance-paris",
+                    logo: "https://ui-avatars.com/api/?name=Elegance+Paris&background=9333ea&color=fff",
+                    primaryColor: "#9333ea",
+                    subscriptionPlan: "pro",
+                    subscriptionStatus: "active",
+                },
+                {
+                    id: "salon-moderne-lyon",
+                    name: "Coiffure Moderne Lyon",
+                    slug: "moderne-lyon",
+                    logo: "https://ui-avatars.com/api/?name=Moderne+Lyon&background=3b82f6&color=fff",
+                    primaryColor: "#3b82f6",
+                    subscriptionPlan: "pro",
+                    subscriptionStatus: "active",
+                },
+            ];
+        }
+        // Admin and Manager get multiple tenants with Free plan
+        else if (role === 'admin' || role === 'manager') {
+            demoTenants = [
+                {
+                    id: "tenant_1",
+                    name: "Demo Salon",
+                    slug: "demo-salon",
+                    logo: "https://ui-avatars.com/api/?name=DS&background=9333ea&color=fff",
+                    primaryColor: "#9333ea",
+                    subscriptionPlan: "free",
+                    subscriptionStatus: "trial",
+                },
+                {
+                    id: "tenant_2",
+                    name: "Demo Branch",
+                    slug: "demo-branch",
+                    logo: "https://ui-avatars.com/api/?name=DB&background=3b82f6&color=fff",
+                    primaryColor: "#3b82f6",
+                    subscriptionPlan: "free",
+                    subscriptionStatus: "trial",
+                },
+            ];
+        }
+        // Worker and Client get single salon with Free plan
+        else {
+            demoTenants = [
+                {
+                    id: "tenant_1",
+                    name: "Mon Salon Demo",
+                    slug: "demo-salon",
+                    logo: "https://ui-avatars.com/api/?name=DS&background=9333ea&color=fff",
+                    primaryColor: "#9333ea",
+                    subscriptionPlan: "free",
+                    subscriptionStatus: "trial",
+                }
+            ];
+        }
 
         const getRoleName = (r: UserRole): string => {
             switch (r) {
@@ -185,8 +251,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             name: getRoleName(role),
             email: `demo.${role}@workshop.demo`,
             role: role,
-            tenantId: demoTenants[0].id,
-            tenants: role === 'super_admin' || role === 'owner' || role === 'admin' || role === 'manager' ? demoTenants : undefined,
+            tenantId: demoTenants.length > 0 ? demoTenants[0].id : "",
+            tenants: demoTenants.length > 0 ? demoTenants : undefined,
             isDemo: true,
             demoCreatedAt: new Date().toISOString(),
             avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=Demo${role}`,
@@ -312,7 +378,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Worker permission utilities
     const canAddIncome = (): boolean => {
-        if (!user) return false;
+        if (!user || isReadOnlyMode) return false;
         // Admins and managers have full permissions
         if (hasPermission(['manager', 'admin'])) return true;
         // Workers need explicit permission
@@ -320,7 +386,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     const canAddExpenses = (): boolean => {
-        if (!user) return false;
+        if (!user || isReadOnlyMode) return false;
         // Admins and managers have full permissions
         if (hasPermission(['manager', 'admin'])) return true;
         // Workers need explicit permission
@@ -328,7 +394,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     const canAddServices = (): boolean => {
-        if (!user) return false;
+        if (!user || isReadOnlyMode) return false;
         // Admins and managers have full permissions
         if (hasPermission(['manager', 'admin'])) return true;
         // Workers need explicit permission
@@ -339,6 +405,89 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!user) return null;
         // Return workerId for workers, null for other roles
         return user.workerId ?? null;
+    };
+
+    // Multi-salon & subscription utilities
+    const canCreateNewSalon = (): boolean => {
+        if (!user || !currentTenant) return false;
+        // Super admins can always create salons
+        if (isSuperAdmin) return true;
+
+        const salonCount = user.tenants?.length || 0;
+        const plan = currentTenant.subscriptionPlan || 'free';
+        const limits = getPlanLimits(plan);
+
+        return canCreateSalon(salonCount, limits.maxSalons);
+    };
+
+    const getSalonLimit = (): number => {
+        if (!currentTenant) return 1;
+        const plan = currentTenant.subscriptionPlan || 'free';
+        const limits = getPlanLimits(plan);
+        return limits.maxSalons;
+    };
+
+    const getCurrentSalonCount = (): number => {
+        return user?.tenants?.length || 0;
+    };
+
+    // Read-only mode functions
+    const enterReadOnlyMode = (salonId: string, salonName: string, ownerName: string) => {
+        setIsReadOnlyMode(true);
+        setReadOnlySalonInfo({ id: salonId, name: salonName, ownerName });
+        // Switch to the salon tenant
+        if (user && user.tenants) {
+            const tenant = user.tenants.find(t => t.id === salonId);
+            if (tenant) {
+                setUser({ ...user, tenantId: salonId });
+            }
+        }
+    };
+
+    const exitReadOnlyMode = () => {
+        setIsReadOnlyMode(false);
+        setReadOnlySalonInfo(null);
+        // Return to admin view (no specific tenant)
+        if (user) {
+            setUser({ ...user, tenantId: user.tenants?.[0]?.id || '' });
+        }
+    };
+
+    const toggleReadOnlyMode = () => {
+        setIsReadOnlyMode(prev => !prev);
+    };
+
+    const enterManageMode = (salonId: string, salonName: string, ownerName: string) => {
+        setIsReadOnlyMode(false);
+        setReadOnlySalonInfo({ id: salonId, name: salonName, ownerName });
+        // Switch to the salon tenant
+        if (user && user.tenants) {
+            setUser({ ...user, tenantId: salonId });
+        }
+    };
+
+    // Check if super admin has manage rights on a specific salon
+    // In demo mode, this is simulated by checking if the salon has the super admin as an admin user
+    // In real mode, this would check the database
+    const canManageSalon = (salonId: string): boolean => {
+        if (!user || !isSuperAdmin) return false;
+
+        // In demo mode: permit management for representative salons
+        if (isDemoMode) {
+            const manageableIds = [
+                'salon-elegance-paris',
+                'salon-retro-bordeaux',
+                'salon-zen-strasbourg',
+                'salon-vintage-lille',
+                'tenant_1' // Also the default demo salon
+            ];
+            return manageableIds.includes(salonId);
+        }
+
+        // In real mode: check if the salon is in the user's tenants (explicitly authorized)
+        const salon = user.tenants?.find(t => t.id === salonId);
+        if (!salon) return false;
+        return (salon as any).superAdminCanManage === true;
     };
 
     return (
@@ -368,6 +517,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 canAddExpenses,
                 canAddServices,
                 getWorkerId,
+                // Multi-salon & subscription utilities
+                canCreateNewSalon,
+                getSalonLimit,
+                getCurrentSalonCount,
+                // Read-only mode
+                isReadOnlyMode,
+                enterReadOnlyMode,
+                exitReadOnlyMode,
+                toggleReadOnlyMode,
+                enterManageMode,
+                readOnlySalonInfo,
+                canManageSalon,
+                // Centralized modification check
+                canModify: !isReadOnlyMode
             }}
         >
             {children}

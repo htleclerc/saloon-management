@@ -3,6 +3,9 @@
 import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
+import { canPerformServiceAction } from "@/lib/permissions";
+import { UserRole } from "@/context/AuthProvider";
+import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 import { Download, TrendingUp, TrendingDown, Calendar, Edit, ChevronDown, Lightbulb } from "lucide-react";
 import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
 import { useAuth, RequirePermission } from "@/context/AuthProvider";
@@ -141,7 +144,7 @@ const recommendations = [
 
 export default function ReportsPage() {
     const { getCardStyle } = useKpiCardStyle();
-    const { user, hasPermission, getWorkerId } = useAuth();
+    const { user, hasPermission, getWorkerId, canModify } = useAuth();
 
     const isWorker = user?.role === 'worker';
 
@@ -172,10 +175,12 @@ export default function ReportsPage() {
                                 Dec 1 - Dec 31, 2025
                                 <ChevronDown className="w-4 h-4" />
                             </Button>
-                            <Button variant="primary" size="md">
-                                <Download className="w-5 h-5" />
-                                Export Report
-                            </Button>
+                            <ReadOnlyGuard>
+                                <Button variant="primary" size="md">
+                                    <Download className="w-5 h-5" />
+                                    Export Report
+                                </Button>
+                            </ReadOnlyGuard>
                         </div>
                     </div>
 
@@ -274,9 +279,11 @@ export default function ReportsPage() {
                                             <td className="px-4 py-4 text-right font-semibold text-[var(--color-warning)]">€{row.tax.toLocaleString()}</td>
                                             <td className="px-4 py-4 text-right font-semibold text-[var(--color-primary)]">€{row.savings.toLocaleString()}</td>
                                             <td className="px-4 py-4 text-center">
-                                                <button className="text-[var(--color-primary)] hover:opacity-80 transition">
-                                                    <Edit className="w-4 h-4" />
-                                                </button>
+                                                <ReadOnlyGuard>
+                                                    <button className="text-[var(--color-primary)] hover:opacity-80 transition">
+                                                        <Edit className="w-4 h-4" />
+                                                    </button>
+                                                </ReadOnlyGuard>
                                             </td>
                                         </tr>
                                     ))}

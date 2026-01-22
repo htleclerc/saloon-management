@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -30,7 +30,7 @@ const allComments = [
     { id: 7, client: "Chloe Dubois", comment: "Nice experience, but waited 10 mins after my appointment time.", rating: 3, date: "2026-01-13", service: "Cornrows" },
 ];
 
-export default function FeedbackPage() {
+function FeedbackContent() {
     const { user } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -179,5 +179,13 @@ export default function FeedbackPage() {
                 </div>
             </MainLayout>
         </ProtectedRoute>
+    );
+}
+
+export default function FeedbackPage() {
+    return (
+        <Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div></div>}>
+            <FeedbackContent />
+        </Suspense>
     );
 }

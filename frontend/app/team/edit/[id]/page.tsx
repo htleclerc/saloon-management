@@ -6,9 +6,11 @@ import TeamLayout from "@/components/layout/TeamLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { Save, X, Trash2 } from "lucide-react";
+import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 
 export default function EditTeamMemberPage({ params }: { params: { id: string } }) {
     const router = useRouter();
+    const { handleReadOnlyClick } = useReadOnlyGuard();
     const [formData, setFormData] = useState({
         firstName: "Orphelia",
         lastName: "Smith",
@@ -26,12 +28,14 @@ export default function EditTeamMemberPage({ params }: { params: { id: string } 
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        if (handleReadOnlyClick()) return;
         console.log("Updated team member data:", formData);
         alert("Team member updated successfully!");
         router.push("/team");
     };
 
     const handleDelete = () => {
+        if (handleReadOnlyClick()) return;
         if (confirm("Are you sure you want to delete this team member? This action cannot be undone.")) {
             console.log("Deleting team member:", params.id);
             alert("Team member deleted successfully!");
@@ -52,10 +56,12 @@ export default function EditTeamMemberPage({ params }: { params: { id: string } 
                         <p className="text-gray-500 mt-1">Update team member information</p>
                     </div>
                     <div className="flex gap-3">
-                        <Button variant="danger" size="md" onClick={handleDelete}>
-                            <Trash2 className="w-5 h-5" />
-                            Delete
-                        </Button>
+                        <ReadOnlyGuard>
+                            <Button variant="danger" size="md" onClick={handleDelete}>
+                                <Trash2 className="w-5 h-5" />
+                                Delete
+                            </Button>
+                        </ReadOnlyGuard>
                         <Button variant="danger" size="md" onClick={() => router.back()}>
                             <X className="w-5 h-5" />
                             Cancel

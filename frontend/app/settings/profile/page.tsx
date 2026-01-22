@@ -5,8 +5,11 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { Save, Camera, Globe } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/context/AuthProvider";
+import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 
 export default function ProfileSettingsPage() {
+    const { canModify } = useAuth();
     const [firstName, setFirstName] = useState("Admin");
     const [lastName, setLastName] = useState("User");
     const [email, setEmail] = useState("admin@workshopmanager.com");
@@ -26,16 +29,22 @@ export default function ProfileSettingsPage() {
                         <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center text-white text-3xl font-bold">
                             AU
                         </div>
-                        <button className="absolute bottom-0 right-0 w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white shadow-lg hover:bg-purple-700 transition-colors">
-                            <Camera className="w-4 h-4" />
-                        </button>
+                        <ReadOnlyGuard>
+                            <button className="absolute bottom-0 right-0 w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white shadow-lg hover:bg-purple-700 transition-colors">
+                                <Camera className="w-4 h-4" />
+                            </button>
+                        </ReadOnlyGuard>
                     </div>
                     <div>
                         <h3 className="font-semibold text-gray-900 text-lg">Profile Photo</h3>
                         <p className="text-sm text-gray-500 mb-3">JPG, PNG or GIF. 1MB max.</p>
                         <div className="flex gap-2">
-                            <Button variant="outline" size="sm">Change photo</Button>
-                            <Button variant="outline" size="sm" className="text-red-600 hover:bg-red-50">Delete</Button>
+                            <ReadOnlyGuard>
+                                <Button variant="outline" size="sm">Change photo</Button>
+                            </ReadOnlyGuard>
+                            <ReadOnlyGuard>
+                                <Button variant="outline" size="sm" className="text-red-600 hover:bg-red-50">Delete</Button>
+                            </ReadOnlyGuard>
                         </div>
                     </div>
                 </div>
@@ -53,6 +62,7 @@ export default function ProfileSettingsPage() {
                             type="text"
                             value={firstName}
                             onChange={(e) => setFirstName(e.target.value)}
+                            readOnly={!canModify}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                         />
                     </div>
@@ -64,6 +74,7 @@ export default function ProfileSettingsPage() {
                             type="text"
                             value={lastName}
                             onChange={(e) => setLastName(e.target.value)}
+                            readOnly={!canModify}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                         />
                     </div>
@@ -75,6 +86,7 @@ export default function ProfileSettingsPage() {
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
+                            readOnly={!canModify}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                         />
                     </div>
@@ -84,6 +96,7 @@ export default function ProfileSettingsPage() {
                             type="tel"
                             value={phone}
                             onChange={(e) => setPhone(e.target.value)}
+                            readOnly={!canModify}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                         />
                     </div>
@@ -107,6 +120,7 @@ export default function ProfileSettingsPage() {
                         <select
                             value={language}
                             onChange={(e) => setLanguage(e.target.value)}
+                            disabled={!canModify}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                         >
                             <option value="fr">Français</option>
@@ -120,6 +134,7 @@ export default function ProfileSettingsPage() {
                         <select
                             value={timezone}
                             onChange={(e) => setTimezone(e.target.value)}
+                            disabled={!canModify}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                         >
                             <option value="Europe/Paris">Europe/Paris (GMT+1)</option>
@@ -134,10 +149,12 @@ export default function ProfileSettingsPage() {
             {/* Save Button */}
             <div className="flex justify-end gap-3">
                 <Button variant="outline" size="md">Cancel</Button>
-                <Button variant="primary" size="md">
-                    <Save className="w-4 h-4" />
-                    Save Changes
-                </Button>
+                <ReadOnlyGuard>
+                    <Button variant="primary" size="md">
+                        <Save className="w-4 h-4" />
+                        Save Changes
+                    </Button>
+                </ReadOnlyGuard>
             </div>
         </SettingsLayout>
     );

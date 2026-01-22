@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthProvider";
+import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 import HistoryModal, { HistoryEvent } from "@/components/ui/HistoryModal";
 import { useState } from "react";
 import {
@@ -125,10 +126,14 @@ export default function ServiceDetailPage() {
                     </div>
                     {isManager && (
                         <div className="flex items-center gap-3">
-                            <Button variant="outline">Archive Service</Button>
-                            <Link href={`/services/edit/${service.id}`}>
-                                <Button variant="primary">Edit Service</Button>
-                            </Link>
+                            <ReadOnlyGuard>
+                                <Button variant="outline">Archive Service</Button>
+                            </ReadOnlyGuard>
+                            <ReadOnlyGuard>
+                                <Link href={`/services/edit/${service.id}`}>
+                                    <Button variant="primary">Edit Service</Button>
+                                </Link>
+                            </ReadOnlyGuard>
                         </div>
                     )}
                 </div>

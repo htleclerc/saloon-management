@@ -1,17 +1,21 @@
 "use client";
 
+import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import MainLayout from "@/components/layout/MainLayout";
 import Button from "@/components/ui/Button";
 import { ArrowLeft } from "lucide-react";
 import ServiceForm from "@/components/services/ServiceForm";
+import { useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 
-export default function AddServicePage() {
+function AddServiceContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const mode = (searchParams.get("mode") as "simple" | "advanced") || "advanced";
+    const { handleReadOnlyClick } = useReadOnlyGuard();
 
     const handleSubmit = (data: any) => {
+        if (handleReadOnlyClick()) return;
         console.log("Creating service:", data);
         // In a real app, send to API
         router.push("/services");
@@ -43,5 +47,13 @@ export default function AddServicePage() {
                 />
             </div>
         </MainLayout>
+    );
+}
+
+export default function AddServicePage() {
+    return (
+        <Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div></div>}>
+            <AddServiceContent />
+        </Suspense>
     );
 }

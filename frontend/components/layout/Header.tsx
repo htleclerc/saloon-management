@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect, Fragment } from "react";
-import { Bell, User, Search, Sun, Moon, Globe, ChevronDown, ChevronRight, Home, Menu, Building, FlaskConical, Settings, LogOut, X } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { Bell, User, Search, Sun, Moon, Globe, ChevronDown, ChevronRight, Home, Menu, Building, FlaskConical, Settings, LogOut, X, Plus } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTheme, useResponsive } from "@/context/ThemeProvider";
 import { useAuth } from "@/context/AuthProvider";
@@ -11,8 +11,9 @@ import NotificationsPanel, { Notification } from "./NotificationsPanel";
 
 export default function Header() {
     const pathname = usePathname();
+    const router = useRouter();
     const { theme, updateTheme, toggleDarkMode, mobileMenuOpen, setMobileMenuOpen } = useTheme();
-    const { user, isDemoMode, currentTenant, switchTenant, logout } = useAuth();
+    const { user, isDemoMode, currentTenant, switchTenant, logout, canCreateNewSalon, getSalonLimit, getCurrentSalonCount, isReadOnlyMode, readOnlySalonInfo } = useAuth();
     const { t, language, setLanguage } = useTranslation();
     const { isMobile, isTablet } = useResponsive();
     const [langDropdownOpen, setLangDropdownOpen] = useState(false);
@@ -206,8 +207,19 @@ export default function Header() {
         return "left-64";
     };
 
+    // Dynamic header styles based on mode (View vs Manage)
+    const getHeaderStyles = () => {
+        if (isReadOnlyMode && readOnlySalonInfo) {
+            return "bg-[var(--color-warning-light)] border-[var(--color-warning-light)] shadow-sm";
+        }
+        if (!isReadOnlyMode && readOnlySalonInfo) {
+            return "bg-[var(--color-primary-light)] border-[var(--color-primary-light)] shadow-sm";
+        }
+        return "bg-white border-gray-200";
+    };
+
     return (
-        <header className={`fixed top-0 ${getLeftPosition()} right-0 h-16 bg-white border-b border-gray-200 z-40 transition-all duration-300`}>
+        <header className={`fixed ${isReadOnlyMode ? 'top-16' : 'top-0'} ${getLeftPosition()} right-0 h-16 ${getHeaderStyles()} border-b z-40 transition-all duration-300`}>
             <div className="h-full px-5 md:px-6 flex items-center justify-between gap-4">
 
                 {/* Mobile Menu Button */}
@@ -303,8 +315,8 @@ export default function Header() {
                         </div>
                     )}
 
-                    {/* Tenant Selector - for users with multiple tenants (hidden on mobile) */}
-                    {user?.tenants && user.tenants.length > 1 && !isMobile && (
+                    {/* Tenant Selector - for users with multiple tenants (hidden on mobile and superadmin) */}
+                    {user?.tenants && user.tenants.length > 1 && !isMobile && !pathname.startsWith('/superadmin') && (
                         <div className="relative" ref={tenantDropdownRef}>
                             <button
                                 onClick={() => setTenantDropdownOpen(!tenantDropdownOpen)}
@@ -351,6 +363,45 @@ export default function Header() {
                                             )}
                                         </button>
                                     ))}
+
+                                    {/* Separator */}
+                                    <div className="border-t border-gray-200 my-2"></div>
+
+                                    {/* New Salon Option */}
+                                    <button
+                                        onClick={() => {
+                                            setTenantDropdownOpen(false);
+                                            if (!canCreateNewSalon()) {
+                                                // Redirect to upgrade page
+                                                router.push('/settings/billing/upgrade');
+                                            } else {
+                                                // Set flag to reset onboarding on next load
+                                                localStorage.setItem('reset_onboarding', 'true');
+                                                // Navigate to beginning of onboarding flow with step=1 to force restart
+                                                router.push('/onboarding/setup?step=1');
+                                            }
+                                        }}
+                                        className={`w-full px-3 py-2.5 flex items-center gap-3 text-left transition-colors ${canCreateNewSalon()
+                                            ? 'hover:bg-purple-50 text-purple-600'
+                                            : 'opacity-50 cursor-not-allowed text-gray-400'
+                                            }`}
+                                    >
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${canCreateNewSalon()
+                                            ? 'bg-gradient-to-br from-purple-500 to-pink-500'
+                                            : 'bg-gray-200'
+                                            }`}>
+                                            <Plus className="w-4 h-4 text-white" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="font-medium text-sm">Nouveau Salon</div>
+                                            <div className="text-xs text-gray-500">
+                                                {canCreateNewSalon()
+                                                    ? `${getCurrentSalonCount()} / ${getSalonLimit()} salons`
+                                                    : `Limite atteinte (${getSalonLimit()} max)`
+                                                }
+                                            </div>
+                                        </div>
+                                    </button>
                                 </div>
                             )}
                         </div>
@@ -404,36 +455,38 @@ export default function Header() {
                         )}
                     </button>
 
-                    {/* Notifications */}
-                    <div className="relative" ref={notificationsRef}>
-                        <button
-                            onClick={() => setNotificationsOpen(!notificationsOpen)}
-                            className="relative p-2 hover:bg-gray-100 rounded-lg transition"
-                            title={t("header.notifications")}
-                        >
-                            <Bell className="w-5 h-5 text-gray-600" />
-                            {notifications.filter(n => !n.isRead).length > 0 && (
-                                <span className="absolute top-1 right-1 flex items-center justify-center min-w-[16px] h-[16px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white shadow-sm">
-                                    {notifications.filter(n => !n.isRead).length > 99 ? '99+' : notifications.filter(n => !n.isRead).length}
-                                </span>
-                            )}
-                        </button>
+                    {/* Notifications - Hidden for Super Admin Global View */}
+                    {!pathname.startsWith('/superadmin') && (
+                        <div className="relative" ref={notificationsRef}>
+                            <button
+                                onClick={() => setNotificationsOpen(!notificationsOpen)}
+                                className="relative p-2 hover:bg-gray-100 rounded-lg transition"
+                                title={t("header.notifications")}
+                            >
+                                <Bell className="w-5 h-5 text-gray-600" />
+                                {notifications.filter(n => !n.isRead).length > 0 && (
+                                    <span className="absolute top-1 right-1 flex items-center justify-center min-w-[16px] h-[16px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white shadow-sm">
+                                        {notifications.filter(n => !n.isRead).length > 99 ? '99+' : notifications.filter(n => !n.isRead).length}
+                                    </span>
+                                )}
+                            </button>
 
-                        {notificationsOpen && (
-                            <NotificationsPanel
-                                notifications={notifications}
-                                onMarkAsRead={(id) => {
-                                    setNotifications(prev => prev.map(n =>
-                                        n.id === id ? { ...n, isRead: true } : n
-                                    ));
-                                }}
-                                onMarkAllAsRead={() => {
-                                    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-                                }}
-                                onClose={() => setNotificationsOpen(false)}
-                            />
-                        )}
-                    </div>
+                            {notificationsOpen && (
+                                <NotificationsPanel
+                                    notifications={notifications}
+                                    onMarkAsRead={(id) => {
+                                        setNotifications(prev => prev.map(n =>
+                                            n.id === id ? { ...n, isRead: true } : n
+                                        ));
+                                    }}
+                                    onMarkAllAsRead={() => {
+                                        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+                                    }}
+                                    onClose={() => setNotificationsOpen(false)}
+                                />
+                            )}
+                        </div>
+                    )}
 
                     {/* User Profile with Dropdown */}
                     <div className="relative" ref={profileDropdownRef}>

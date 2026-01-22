@@ -29,10 +29,14 @@ Créer l'architecture de providers flexible permettant de switcher entre 3 modes
 
 ### 1. Conception & Data Model
 - [ ] `docs/MCD.md` - Modèle Conceptuel de Données (validé par le Front)
+- [ ] `docs/PROCESS_QUALITY.md` - Standards Qualité & Canevas (FAIT)
 - [ ] `frontend/lib/providers/types.ts` - Interfaces IDataProvider
-- [ ] Extension de `frontend/types/index.ts` si nécessaire
 
-### 2. Context Provider
+### 2. Architecture RG (Centralisée)
+- [ ] `frontend/lib/domain/rules/` - Initialisation structure
+- [ ] Création Hook `useFormValidator`
+
+### 3. Context Provider
 - [ ] `frontend/context/DataModeProvider.tsx` - Context React pour mode switching
 
 ### 3. Factory

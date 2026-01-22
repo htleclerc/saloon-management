@@ -12,6 +12,7 @@ import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/export";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { useAuth, UserRole } from "@/context/AuthProvider";
 import { canPerformExpenseAction } from "@/lib/permissions";
+import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 
 const expenseCategories = [
     { name: "Office Rental", color: "bg-[var(--color-primary)]", amount: 2500, icon: "🏢" },
@@ -86,12 +87,14 @@ export default function ExpensesPage() {
                                 PDF
                             </Button>
                             {canAdd && (
-                                <Link href="/expenses/add">
-                                    <Button variant="primary" size="md" className="rounded-2xl h-14 w-14 md:h-12 md:w-auto md:px-6 flex items-center justify-center p-0 md:p-auto shadow-xl shadow-purple-500/30 active:scale-95 transition-all">
-                                        <Plus className="w-8 h-8 md:w-6 md:h-6" />
-                                        <span className="hidden md:inline ml-2 text-sm font-bold">Add Expense</span>
-                                    </Button>
-                                </Link>
+                                <ReadOnlyGuard>
+                                    <Link href="/expenses/add">
+                                        <Button variant="primary" size="md" className="rounded-2xl h-14 w-14 md:h-12 md:w-auto md:px-6 flex items-center justify-center p-0 md:p-auto shadow-xl shadow-purple-500/30 active:scale-95 transition-all">
+                                            <Plus className="w-8 h-8 md:w-6 md:h-6" />
+                                            <span className="hidden md:inline ml-2 text-sm font-bold">Add Expense</span>
+                                        </Button>
+                                    </Link>
+                                </ReadOnlyGuard>
                             )}
                         </div>
                     </div>
@@ -198,16 +201,20 @@ export default function ExpensesPage() {
                                             <td className="px-4 py-4 text-center">
                                                 <div className="flex items-center justify-center gap-2">
                                                     {canEdit && (
-                                                        <Link href={`/expenses/edit/${expense.id}`}>
-                                                            <button className="p-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors shadow-sm" title="Edit">
-                                                                <Edit size={16} />
-                                                            </button>
-                                                        </Link>
+                                                        <ReadOnlyGuard>
+                                                            <Link href={`/expenses/edit/${expense.id}`}>
+                                                                <button className="p-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors shadow-sm" title="Edit">
+                                                                    <Edit size={16} />
+                                                                </button>
+                                                            </Link>
+                                                        </ReadOnlyGuard>
                                                     )}
                                                     {canDelete && (
-                                                        <button className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors shadow-sm" title="Delete">
-                                                            <Trash2 size={16} />
-                                                        </button>
+                                                        <ReadOnlyGuard>
+                                                            <button className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors shadow-sm" title="Delete">
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        </ReadOnlyGuard>
                                                     )}
                                                 </div>
                                             </td>

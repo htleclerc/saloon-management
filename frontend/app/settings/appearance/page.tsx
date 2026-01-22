@@ -22,6 +22,7 @@ import {
     Type,
     Layers,
 } from "lucide-react";
+import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 
 const fonts = [
     { id: "Open Sans", name: "Open Sans", sample: "Aa" },
@@ -51,7 +52,7 @@ const submenuLayouts: { id: SubmenuLayout; name: string; description: string; ic
 export default function AppearanceSettingsPage() {
     const { theme, updateTheme } = useTheme();
     const { t } = useTranslation();
-    const { currentTenant, updateTenantColors } = useAuth();
+    const { currentTenant, updateTenantColors, canModify } = useAuth();
     const [localTheme, setLocalTheme] = useState(theme);
     const [customPrimaryColor, setCustomPrimaryColor] = useState<string>("");
     const [customSecondaryColor, setCustomSecondaryColor] = useState<string>("");
@@ -76,6 +77,7 @@ export default function AppearanceSettingsPage() {
     }, [theme, currentTenant]);
 
     const handleApply = () => {
+        if (!canModify) return;
         updateTheme(localTheme);
         // Save custom colors to tenant only if override is enabled
         if (useCustomOverride) {
@@ -102,6 +104,7 @@ export default function AppearanceSettingsPage() {
     };
 
     const handleReset = () => {
+        if (!canModify) return;
         const defaultSettings = {
             submenuLayout: "vertical" as SubmenuLayout,
             designType: "modern" as DesignType,
@@ -143,6 +146,7 @@ export default function AppearanceSettingsPage() {
                             <button
                                 key={palette.id}
                                 onClick={() => setLocalTheme({ ...localTheme, colorPaletteId: palette.id })}
+                                disabled={!canModify}
                                 className={`relative p-3 rounded-xl border-2 transition-all duration-200 ${isSelected
                                     ? "border-gray-900 shadow-lg ring-1 ring-gray-900"
                                     : "border-gray-200 hover:border-gray-300 hover:shadow-md"
@@ -190,6 +194,7 @@ export default function AppearanceSettingsPage() {
                             type="checkbox"
                             checked={useCustomOverride}
                             onChange={(e) => setUseCustomOverride(e.target.checked)}
+                            disabled={!canModify}
                             className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
                         />
                         <div>
@@ -207,6 +212,7 @@ export default function AppearanceSettingsPage() {
                                     type="color"
                                     value={customPrimaryColor || selectedPalette.primary}
                                     onChange={(e) => setCustomPrimaryColor(e.target.value)}
+                                    disabled={!canModify}
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                 />
                                 <div className="h-10 rounded-lg border-2 border-gray-200 flex items-center gap-2 px-3 cursor-pointer hover:border-purple-300 transition">
@@ -222,7 +228,8 @@ export default function AppearanceSettingsPage() {
                             {customPrimaryColor && (
                                 <button
                                     onClick={() => setCustomPrimaryColor("")}
-                                    className="text-xs text-purple-600 hover:text-purple-700"
+                                    disabled={!canModify}
+                                    className="text-xs text-purple-600 hover:text-purple-700 disabled:opacity-50"
                                 >
                                     Reset to default
                                 </button>
@@ -237,6 +244,7 @@ export default function AppearanceSettingsPage() {
                                     type="color"
                                     value={customSecondaryColor || selectedPalette.secondary}
                                     onChange={(e) => setCustomSecondaryColor(e.target.value)}
+                                    disabled={!canModify}
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                 />
                                 <div className="h-10 rounded-lg border-2 border-gray-200 flex items-center gap-2 px-3 cursor-pointer hover:border-purple-300 transition">
@@ -252,7 +260,8 @@ export default function AppearanceSettingsPage() {
                             {customSecondaryColor && (
                                 <button
                                     onClick={() => setCustomSecondaryColor("")}
-                                    className="text-xs text-purple-600 hover:text-purple-700"
+                                    disabled={!canModify}
+                                    className="text-xs text-purple-600 hover:text-purple-700 disabled:opacity-50"
                                 >
                                     Reset to default
                                 </button>
@@ -296,6 +305,7 @@ export default function AppearanceSettingsPage() {
                                 <button
                                     key={mode.id}
                                     onClick={() => setSemanticMode(mode.id as any)}
+                                    disabled={!canModify}
                                     className={`p-4 rounded-xl border-2 text-left transition-all duration-200 ${isSelected
                                         ? "border-emerald-500 bg-emerald-50 shadow-md"
                                         : "border-gray-200 hover:border-emerald-200 hover:shadow-md"
@@ -321,6 +331,7 @@ export default function AppearanceSettingsPage() {
                                         type="color"
                                         value={customSuccessColor || "#22c55e"}
                                         onChange={(e) => setCustomSuccessColor(e.target.value)}
+                                        disabled={!canModify}
                                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                     />
                                     <div className="h-10 rounded-lg border-2 border-gray-200 flex items-center gap-2 px-3 bg-white">
@@ -336,6 +347,7 @@ export default function AppearanceSettingsPage() {
                                         type="color"
                                         value={customWarningColor || "#f59e0b"}
                                         onChange={(e) => setCustomWarningColor(e.target.value)}
+                                        disabled={!canModify}
                                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                     />
                                     <div className="h-10 rounded-lg border-2 border-gray-200 flex items-center gap-2 px-3 bg-white">
@@ -351,6 +363,7 @@ export default function AppearanceSettingsPage() {
                                         type="color"
                                         value={customDangerColor || "#ef4444"}
                                         onChange={(e) => setCustomDangerColor(e.target.value)}
+                                        disabled={!canModify}
                                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                     />
                                     <div className="h-10 rounded-lg border-2 border-gray-200 flex items-center gap-2 px-3 bg-white">
@@ -403,6 +416,7 @@ export default function AppearanceSettingsPage() {
                             <button
                                 key={type.id}
                                 onClick={() => setLocalTheme({ ...localTheme, designType: type.id })}
+                                disabled={!canModify}
                                 className={`p-4 rounded-xl border-2 text-left transition-all duration-200 ${isSelected
                                     ? "border-purple-500 bg-purple-50 shadow-md"
                                     : "border-gray-200 hover:border-purple-200 hover:shadow-md"
@@ -440,6 +454,7 @@ export default function AppearanceSettingsPage() {
                             <button
                                 key={layout.id}
                                 onClick={() => setLocalTheme({ ...localTheme, submenuLayout: layout.id })}
+                                disabled={!canModify}
                                 className={`p-4 rounded-xl border-2 text-left transition-all duration-200 ${isSelected
                                     ? "border-purple-500 bg-purple-50 shadow-md"
                                     : "border-gray-200 hover:border-purple-200 hover:shadow-md"
@@ -480,6 +495,7 @@ export default function AppearanceSettingsPage() {
                             <button
                                 key={mode.name}
                                 onClick={() => setLocalTheme({ ...localTheme, darkMode: mode.id })}
+                                disabled={!canModify}
                                 className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all duration-200 ${isSelected
                                     ? "border-purple-500 bg-purple-50 text-purple-700 shadow-md"
                                     : "border-gray-200 hover:border-purple-200 text-gray-600 hover:shadow-md"
@@ -512,6 +528,7 @@ export default function AppearanceSettingsPage() {
                             <button
                                 key={font.id}
                                 onClick={() => setLocalTheme({ ...localTheme, fontFamily: font.id })}
+                                disabled={!canModify}
                                 className={`p-4 rounded-xl border-2 text-center transition-all duration-200 ${isSelected
                                     ? "border-purple-500 bg-purple-50 shadow-md"
                                     : "border-gray-200 hover:border-purple-200 hover:shadow-md"
@@ -549,6 +566,7 @@ export default function AppearanceSettingsPage() {
                             <button
                                 key={size.id}
                                 onClick={() => setLocalTheme({ ...localTheme, fontSize: size.id })}
+                                disabled={!canModify}
                                 className={`flex-1 flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-200 ${isSelected
                                     ? "border-purple-500 bg-purple-50 shadow-md"
                                     : "border-gray-200 hover:border-purple-200 hover:shadow-md"
@@ -587,7 +605,8 @@ export default function AppearanceSettingsPage() {
                             step="0.05"
                             value={localTheme.transparency || 0.95}
                             onChange={(e) => setLocalTheme({ ...localTheme, transparency: parseFloat(e.target.value) })}
-                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                            disabled={!canModify}
+                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600 disabled:opacity-50"
                         />
                         <p className="text-xs text-gray-500 mt-1">Adjust the transparency level of cards (glass effect)</p>
                     </div>
@@ -602,6 +621,7 @@ export default function AppearanceSettingsPage() {
                                 type="checkbox"
                                 checked={localTheme.compactMode}
                                 onChange={(e) => setLocalTheme({ ...localTheme, compactMode: e.target.checked })}
+                                disabled={!canModify}
                                 className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
                             />
                         </label>
@@ -614,6 +634,7 @@ export default function AppearanceSettingsPage() {
                                 type="checkbox"
                                 checked={localTheme.animations}
                                 onChange={(e) => setLocalTheme({ ...localTheme, animations: e.target.checked })}
+                                disabled={!canModify}
                                 className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
                             />
                         </label>
@@ -623,14 +644,18 @@ export default function AppearanceSettingsPage() {
 
             {/* Action Buttons */}
             <div className="flex gap-3 justify-end">
-                <Button variant="outline" size="md" onClick={handleReset}>
-                    <RotateCcw className="w-4 h-4" />
-                    Reset
-                </Button>
-                <Button variant="primary" size="md" onClick={handleApply}>
-                    <Check className="w-4 h-4" />
-                    {t("common.apply")}
-                </Button>
+                <ReadOnlyGuard>
+                    <Button variant="outline" size="md" onClick={handleReset}>
+                        <RotateCcw className="w-4 h-4" />
+                        Reset
+                    </Button>
+                </ReadOnlyGuard>
+                <ReadOnlyGuard>
+                    <Button variant="primary" size="md" onClick={handleApply}>
+                        <Check className="w-4 h-4" />
+                        {t("common.apply")}
+                    </Button>
+                </ReadOnlyGuard>
             </div>
         </SettingsLayout>
     );

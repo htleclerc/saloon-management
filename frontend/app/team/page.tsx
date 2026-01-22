@@ -26,6 +26,8 @@ import {
     Cell,
 } from "recharts";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
+
 
 const workers = [
     { id: 1, name: "Orphelia", avatar: "O", status: "Active", sharingKey: 70, totalRevenue: "€45,830", totalSalary: "€32,081", monthRevenue: "€4,990", monthSalary: "€3,423", yearRevenue: "€52,450", yearSalary: "€36,715", clients: 187, rating: 4.9, services: 203, color: "from-[var(--color-primary)] to-[var(--color-primary-dark)]" },
@@ -326,11 +328,13 @@ function TeamPageContent() {
                                         </button>
                                     </Link>
                                     <RequirePermission role={['manager', 'admin']}>
-                                        <Link href={`/team/edit/${worker.id}`} className="flex-1">
-                                            <button className="w-full py-1 md:py-2 text-[10px] md:text-xs font-medium text-[var(--color-secondary)] bg-[var(--color-secondary-light)] rounded md:rounded-lg hover:opacity-80 transition flex items-center justify-center gap-0.5 md:gap-1">
-                                                <Edit className="w-2.5 h-2.5 md:w-3.5 md:h-3.5" /> Edit
-                                            </button>
-                                        </Link>
+                                        <ReadOnlyGuard>
+                                            <Link href={`/team/edit/${worker.id}`} className="flex-1">
+                                                <button className="w-full py-1 md:py-2 text-[10px] md:text-xs font-medium text-[var(--color-secondary)] bg-[var(--color-secondary-light)] rounded md:rounded-lg hover:opacity-80 transition flex items-center justify-center gap-0.5 md:gap-1">
+                                                    <Edit className="w-2.5 h-2.5 md:w-3.5 md:h-3.5" /> Edit
+                                                </button>
+                                            </Link>
+                                        </ReadOnlyGuard>
                                     </RequirePermission>
                                 </div>
                             </div>
@@ -455,11 +459,13 @@ function TeamPageContent() {
                                                     </button>
                                                 </Link>
                                                 <RequirePermission role={['manager', 'admin']}>
-                                                    <Link href={`/team/edit/${worker.id}`}>
-                                                        <button className="p-2 hover:bg-[var(--color-secondary-light)] rounded-lg transition text-[var(--color-secondary)]">
-                                                            <Edit className="w-4 h-4" />
-                                                        </button>
-                                                    </Link>
+                                                    <ReadOnlyGuard>
+                                                        <Link href={`/team/edit/${worker.id}`}>
+                                                            <button className="p-2 hover:bg-[var(--color-secondary-light)] rounded-lg transition text-[var(--color-secondary)]">
+                                                                <Edit className="w-4 h-4" />
+                                                            </button>
+                                                        </Link>
+                                                    </ReadOnlyGuard>
                                                 </RequirePermission>
                                             </div>
                                         </td>
@@ -641,7 +647,7 @@ function TeamPageContent() {
                                         <td className="px-4 py-4 text-center"><span className="text-gray-900 font-medium">{worker.clients}</span><br /><span className="text-xs text-gray-500">clients</span></td>
                                         <td className="px-4 py-4 text-center"><div className="flex items-center justify-center gap-1"><Star className="w-4 h-4 text-[var(--color-warning)] fill-[var(--color-warning)]" /><span className="font-semibold text-gray-900">{worker.rating}</span></div></td>
                                         <td className="px-4 py-4 text-center"><span className={`px-2 py-1 rounded-full text-xs font-medium ${worker.status === "Active" ? "bg-[var(--color-success-light)] text-[var(--color-success)]" : "bg-[var(--color-error-light)] text-[var(--color-error)]"}`}>{worker.status}</span></td>
-                                        <td className="px-4 py-4"><div className="flex items-center justify-center gap-2"><Link href={`/team/detail/${worker.id}`}><button className="p-2 hover:bg-[var(--color-primary-light)] rounded-lg transition text-[var(--color-primary)]"><Eye className="w-4 h-4" /></button></Link><RequirePermission role={['manager', 'admin']}><Link href={`/team/edit/${worker.id}`}><button className="p-2 hover:bg-[var(--color-secondary-light)] rounded-lg transition text-[var(--color-secondary)]"><Edit className="w-4 h-4" /></button></Link></RequirePermission></div></td>
+                                        <td className="px-4 py-4"><div className="flex items-center justify-center gap-2"><Link href={`/team/detail/${worker.id}`}><button className="p-2 hover:bg-[var(--color-primary-light)] rounded-lg transition text-[var(--color-primary)]"><Eye className="w-4 h-4" /></button></Link><RequirePermission role={['manager', 'admin']}><ReadOnlyGuard><Link href={`/team/edit/${worker.id}`}><button className="p-2 hover:bg-[var(--color-secondary-light)] rounded-lg transition text-[var(--color-secondary)]"><Edit className="w-4 h-4" /></button></Link></ReadOnlyGuard></RequirePermission></div></td>
                                     </tr>
                                 ))
                             ) : (
@@ -1001,18 +1007,22 @@ function TeamPageContent() {
                     </div>
                     <div className="flex w-full md:w-auto items-center justify-end gap-3">
                         <RequirePermission role={['manager', 'admin']}>
-                            <Link href="/team/add">
-                                <Button variant="outline" size="md" className="rounded-2xl h-14 w-14 md:h-12 md:w-auto md:px-6 flex items-center justify-center p-0 md:p-auto shadow-sm active:scale-95 transition-all">
-                                    <Plus className="w-8 h-8 md:w-6 md:h-6" />
-                                    <span className="hidden md:inline ml-2 text-sm font-bold whitespace-nowrap">Quick Add</span>
-                                </Button>
-                            </Link>
-                            <Link href="/team/add-advanced">
-                                <Button variant="primary" size="md" className="rounded-2xl h-14 w-14 md:h-12 md:w-auto md:px-6 flex items-center justify-center p-0 md:p-auto shadow-xl shadow-purple-500/30 active:scale-95 transition-all">
-                                    <Plus className="w-8 h-8 md:w-6 md:h-6" />
-                                    <span className="hidden md:inline ml-2 text-sm font-bold whitespace-nowrap">Complete Form</span>
-                                </Button>
-                            </Link>
+                            <ReadOnlyGuard>
+                                <Link href="/team/add">
+                                    <Button variant="outline" size="md" className="rounded-2xl h-14 w-14 md:h-12 md:w-auto md:px-6 flex items-center justify-center p-0 md:p-auto shadow-sm active:scale-95 transition-all">
+                                        <Plus className="w-8 h-8 md:w-6 md:h-6" />
+                                        <span className="hidden md:inline ml-2 text-sm font-bold whitespace-nowrap">Quick Add</span>
+                                    </Button>
+                                </Link>
+                            </ReadOnlyGuard>
+                            <ReadOnlyGuard>
+                                <Link href="/team/add-advanced">
+                                    <Button variant="primary" size="md" className="rounded-2xl h-14 w-14 md:h-12 md:w-auto md:px-6 flex items-center justify-center p-0 md:p-auto shadow-xl shadow-purple-500/30 active:scale-95 transition-all">
+                                        <Plus className="w-8 h-8 md:w-6 md:h-6" />
+                                        <span className="hidden md:inline ml-2 text-sm font-bold whitespace-nowrap">Complete Form</span>
+                                    </Button>
+                                </Link>
+                            </ReadOnlyGuard>
                         </RequirePermission>
                     </div>
                 </div>

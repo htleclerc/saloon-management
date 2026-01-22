@@ -10,6 +10,7 @@
 export interface Worker {
     id: number;
     name: string;
+    email?: string; // Optional email for worker contact
     avatar: string;
     status: 'Active' | 'Inactive';
     sharingKey: number;
@@ -57,6 +58,8 @@ export interface Service {
     name: string;
     price: number;
     duration: string;
+    category?: string; // Optional category for service organization (e.g., 'Hair', 'Nails', 'Personnalisé')
+    icon?: string; // Optional icon name for UI display
 }
 
 // ============================================================
@@ -95,6 +98,13 @@ export interface Product {
 export interface UsedProduct {
     productId: number;
     quantity: number;
+}
+
+export interface ExpenseCategory {
+    id: number;
+    name: string;
+    color: string;
+    icon?: string;
 }
 
 // ============================================================
@@ -215,4 +225,117 @@ export interface Income {
     hasInvoice: boolean;
     invoiceUrl?: string;
     paymentMethod?: string;
+    promoCodeId?: number;
+    discountAmount?: number;
+    usedProducts?: UsedProduct[];
 }
+
+// ============================================================
+// Configuration Types
+// ============================================================
+
+export interface PromoCode {
+    id: number;
+    code: string;
+    type: 'percentage' | 'fixed';
+    value: number;
+    isActive: boolean;
+    usageCount: number;
+    endDate?: string;
+    affectWorkerShare?: boolean; // If true, discount reduces worker commission basis
+}
+
+export type TipsDistributionRule = 'EQUAL_ALL' | 'EQUAL_WORKERS' | 'SALON_KEY' | 'POOL' | 'CUSTOM_PERCENTAGE';
+
+export interface TipsConfiguration {
+    rule: TipsDistributionRule;
+    salonPercentage?: number; // Used if rule is CUSTOM_PERCENTAGE or SALON_KEY context
+    isActive: boolean;
+}
+
+// ============================================================
+// Onboarding Types
+// ============================================================
+
+export interface OnboardingConfig {
+    salonType: string | null;
+    salonDetails: SalonDetails | null;
+    services: Service[];
+    products: Product[];
+    expenseCategories: ExpenseCategory[]; // New for 8-step onboarding
+    clients: Client[];
+    workers: Omit<Worker, 'id' | 'totalRevenue' | 'totalSalary' | 'clients' | 'rating' | 'services' | 'monthRevenue' | 'monthSalary' | 'yearRevenue' | 'yearSalary'>[];
+    currentStep: number;
+    isComplete: boolean;
+}
+
+export interface SalonDetails {
+    name: string;
+    address: string;
+    phone: string;
+    email: string;
+    website?: string;
+    logo?: string;
+    openingHours: OpeningHours[];
+    timezone: string;
+}
+
+export interface OpeningHours {
+    day: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+    isOpen: boolean;
+    openTime: string; // HH:mm format
+    closeTime: string; // HH:mm format
+}
+
+// CSV Import types
+export interface CSVImportResult<T> {
+    data: T[];
+    errors: CSVImportError[];
+    validCount: number;
+    errorCount: number;
+}
+
+export interface CSVImportError {
+    row: number;
+    field: string;
+    error: string;
+    value: unknown;
+}
+
+export type OnboardingStep =
+    | 'salon-type'
+    | 'salon-details'
+    | 'services'
+    | 'products'
+    | 'clients'
+    | 'team'
+    | 'review'
+    | 'success';
+
+// ============================================================
+// Subscription & Plan Types
+// ============================================================
+
+export type SubscriptionPlan = 'free' | 'starter' | 'pro' | 'enterprise' | 'custom';
+
+export interface SubscriptionLimits {
+    maxSalons: number; // Maximum number of salons allowed
+    maxWorkers: number; // Maximum workers per salon
+    maxBookingsPerMonth: number; // Monthly booking limit
+    hasAdvancedReports: boolean; // Access to advanced reporting
+    hasAPIAccess: boolean; // Access to API integration
+}
+
+// Super admin configurable plan definition
+export interface PlanConfig {
+    id: string; // 'free' | 'starter' | 'pro' | 'enterprise'
+    name: string; // Display name
+    price: number; // Monthly price in euros
+    currency: string; // 'EUR'
+    limits: SubscriptionLimits;
+    features: string[]; // List of feature descriptions
+    isActive: boolean; // Can be purchased/assigned
+    isDefault: boolean; // Default for new users
+    displayOrder: number; // Order in pricing page
+}
+

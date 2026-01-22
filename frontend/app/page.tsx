@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -175,13 +176,24 @@ import { useBooking } from "@/context/BookingProvider";
 import { useConfirm } from "@/context/ConfirmProvider";
 import { format } from "date-fns";
 import { useIncome } from "@/context/IncomeProvider";
-import { canPerformBookingAction } from "@/lib/permissions";
+import { canPerformBookingAction, useActionPermissions } from "@/lib/permissions";
 import { UserRole } from "@/context/AuthProvider";
 import { BookingStatus } from "@/types";
+import OnboardingGuard from "@/components/guards/OnboardingGuard";
+
 export default function Dashboard() {
   const { t } = useTranslation();
   const { getCardStyle } = useKpiCardStyle();
-  const { user, hasPermission, canAddIncome, canAddExpenses, getWorkerId, isClient } = useAuth();
+  const { user, hasPermission, canAddIncome, canAddExpenses, getWorkerId, isClient, isSuperAdmin, isReadOnlyMode, readOnlySalonInfo, canModify } = useAuth();
+  const router = useRouter();
+  const permissions = useActionPermissions({ user, hasPermission, canAddIncome, canAddExpenses, getWorkerId, isClient, isSuperAdmin, isReadOnlyMode, readOnlySalonInfo, canModify } as any);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (isSuperAdmin && pathname === "/" && !readOnlySalonInfo) {
+      router.push("/superadmin");
+    }
+  }, [isSuperAdmin, pathname, router, readOnlySalonInfo]);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [selectedHistory, setSelectedHistory] = useState<{ title: string, subtitle: string, events: HistoryEvent[] }>({
     title: "",
@@ -249,7 +261,7 @@ export default function Dashboard() {
     setHistoryModalOpen(true);
   };
 
-  // For the mockup overview table, we combine static mock data with dynamic localStorage data
+  // For the mockup overview table, we combine static mock data with dynamic localStor age data
   const dynamicBookings = bookings.filter(b => b.date === new Date().toISOString().split('T')[0]);
   const displaySessions = [
     ...filteredTodaysSessions,
@@ -270,615 +282,621 @@ export default function Dashboard() {
 
   if (isClient) {
     return (
-      <MainLayout>
-        <ClientDashboard />
-      </MainLayout>
+      <OnboardingGuard>
+        <MainLayout>
+          <ClientDashboard />
+        </MainLayout>
+      </OnboardingGuard>
     );
   }
 
   if (isWorker) {
     return (
-      <MainLayout>
-        <WorkerDashboard
-          workerName={workerName}
-          revenueData={workerMonthlyRevenue}
-          sessions={displaySessions}
-          activities={filteredRecentActivities}
-          notifications={recentNotifications}
-          userActivities={recentUserActivity}
-          onStartBooking={handleStartBooking}
-          userRole={user?.role}
-        />
-      </MainLayout>
+      <OnboardingGuard>
+        <MainLayout>
+          <WorkerDashboard
+            workerName={workerName}
+            revenueData={workerMonthlyRevenue}
+            sessions={displaySessions}
+            activities={filteredRecentActivities}
+            notifications={recentNotifications}
+            userActivities={recentUserActivity}
+            onStartBooking={handleStartBooking}
+            userRole={user?.role}
+          />
+        </MainLayout>
+      </OnboardingGuard>
     );
   }
 
   return (
-    <MainLayout>
-      <div className="space-y-6 md:space-y-8">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-gray-500 text-sm md:text-base mt-1">Welcome back! Here's what's happening today.</p>
-          </div>
-          {/* Date Picker or Filters could go here */}
-        </div>
-
-        {/* --- Stats Gradient Cards --- */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Revenue */}
-          <div
-            className="rounded-2xl p-6 text-white shadow-lg relative overflow-hidden transition-transform hover:scale-[1.01]"
-            style={getCardStyle(0)}
-          >
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-white/80 text-sm font-medium mb-1">{isWorker ? "My Revenue" : "Total Income"}</p>
-                <h3 className="text-2xl sm:text-3xl font-bold">€{isWorker ? "18,356" : "45,890"}</h3>
-                <p className="text-xs text-white/70 mt-2 flex items-center gap-1">
-                  <span className="bg-white/20 px-1.5 py-0.5 rounded text-white font-semibold">+12%</span> vs last month
-                </p>
-              </div>
-              <div className="bg-white/20 p-3 rounded-full">
-                <DollarSign className="w-6 h-6 text-white" />
-              </div>
-            </div>
-          </div>
-
-          {/* Expenses */}
-          <div
-            className="rounded-2xl p-6 text-white shadow-lg relative overflow-hidden transition-transform hover:scale-[1.01]"
-            style={getCardStyle(1)}
-          >
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-white/80 text-sm font-medium mb-1">{isWorker ? "My Contribution to Expenses" : "Total Expenses"}</p>
-                <h3 className="text-2xl sm:text-3xl font-bold">€{isWorker ? "5,690" : "28,450"}</h3>
-                <p className="text-xs text-white/70 mt-2 flex items-center gap-1">
-                  <span className="bg-white/20 px-1.5 py-0.5 rounded text-white font-semibold">+2.5%</span> vs last month
-                </p>
-              </div>
-              <div className="bg-white/20 p-3 rounded-full">
-                <Wallet className="w-6 h-6 text-white" />
-              </div>
-            </div>
-          </div>
-
-          {/* Net Profit */}
-          <div
-            className="rounded-2xl p-6 text-white shadow-lg relative overflow-hidden transition-transform hover:scale-[1.01]"
-            style={getCardStyle(2)}
-          >
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-white/80 text-sm font-medium mb-1">{isWorker ? "My Profit Contribution" : "Net Profit"}</p>
-                <h3 className="text-2xl sm:text-3xl font-bold">€{isWorker ? "12,666" : "17,440"}</h3>
-                <p className="text-xs text-white/70 mt-2 flex items-center gap-1">
-                  <span className="bg-white/20 px-1.5 py-0.5 rounded text-white font-semibold">+5.4%</span> vs last month
-                </p>
-              </div>
-              <div className="bg-white/20 p-3 rounded-full">
-                <TrendingUp className="w-6 h-6 text-white" />
-              </div>
-            </div>
-          </div>
-
-          {/* Clients/Workers */}
-          <div
-            className="rounded-2xl p-6 text-white shadow-lg relative overflow-hidden transition-transform hover:scale-[1.01]"
-            style={getCardStyle(3)}
-          >
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-white/80 text-sm font-medium mb-1">{isWorker ? "My Total Clients" : "Total Clients"}</p>
-                <h3 className="text-2xl sm:text-3xl font-bold">{isWorker ? "114" : "287"}</h3>
-                <p className="text-xs text-white/70 mt-2 flex items-center gap-1">
-                  <span className="bg-white/20 px-1.5 py-0.5 rounded text-white font-semibold">+8%</span> vs last month
-                </p>
-              </div>
-              <div className="bg-white/20 p-3 rounded-full">
-                <Users className="w-6 h-6 text-white" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* --- Quick Actions --- */}
-        <div>
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {canAddIncome() && (
-              <Link href="/income/add">
-                <button className="w-full h-full flex items-center justify-center gap-3 bg-[var(--color-primary)] hover:opacity-90 text-white py-4 rounded-2xl font-bold transition-all shadow-lg shadow-purple-500/20 active:scale-95 text-lg">
-                  <Plus className="w-7 h-7" />
-                  <span>Add Revenue</span>
-                </button>
-              </Link>
-            )}
-            {canAddExpenses() && (
-              <Link href="/expenses/add">
-                <button className="w-full h-full flex items-center justify-center gap-3 bg-[var(--color-secondary)] hover:opacity-90 text-white py-4 rounded-2xl font-bold transition-all shadow-lg shadow-pink-500/20 active:scale-95 text-lg">
-                  <Wallet className="w-7 h-7" />
-                  <span>Add Expense</span>
-                </button>
-              </Link>
-            )}
-            {hasPermission(['manager', 'admin']) && (
-              <Link href="/team/add">
-                <button className="w-full h-full flex items-center justify-center gap-3 bg-[var(--color-warning)] hover:opacity-90 text-white py-4 rounded-2xl font-bold transition-all shadow-lg shadow-orange-500/20 active:scale-95 text-lg">
-                  <Users className="w-7 h-7" />
-                  <span>{t("dashboard.addWorker")}</span>
-                </button>
-              </Link>
-            )}
-          </div>
-        </div>
-
-        {/* --- Charts Section --- */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Monthly Revenue Chart */}
-          <Card className="p-6 border-t-4 border-[var(--color-primary)] bg-[var(--color-primary-light)]">
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h3 className="font-bold text-gray-900">Monthly Revenue</h3>
-                <p className="text-xs text-gray-500">Year 2026</p>
-              </div>
-              <span className="bg-[var(--color-primary-light)] text-[var(--color-primary)] text-xs font-bold px-2 py-1 rounded">Yearly</span>
-            </div>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={workerMonthlyRevenue}>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f3f4f6" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-                <Tooltip cursor={{ fill: 'var(--color-primary-light)', opacity: 0.5 }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
-                <Bar dataKey="value" fill="var(--color-primary)" radius={[4, 4, 4, 4]} barSize={20} />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
-
-          {/* Monthly Expenses Chart */}
-          <Card className="p-6 border-t-4 border-[var(--color-secondary)] bg-[var(--color-secondary-light)]">
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h3 className="font-bold text-gray-900">Monthly Expenses</h3>
-                <p className="text-xs text-gray-500">Year 2026</p>
-              </div>
-              <span className="bg-[var(--color-secondary-light)] text-[var(--color-secondary)] text-xs font-bold px-2 py-1 rounded">Yearly</span>
-            </div>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={workerMonthlyExpenses}>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f3f4f6" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-                <Tooltip cursor={{ fill: 'var(--color-secondary-light)', opacity: 0.5 }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
-                <Bar dataKey="value" fill="var(--color-secondary)" radius={[4, 4, 4, 4]} barSize={20} />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
-        </div>
-
-        {/* --- Profit Analysis (Full Width) --- */}
-        <Card className="p-6 border-t-4 border-[var(--color-warning)] bg-[var(--color-warning-light)]">
-          <div className="flex justify-between items-center mb-6">
+    <OnboardingGuard>
+      <MainLayout>
+        <div className="space-y-6 md:space-y-8">
+          {/* Header */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <h3 className="font-bold text-gray-900">Profit Analysis</h3>
-              <p className="text-xs text-gray-500">Revenue vs Expenses (2026)</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Dashboard</h1>
+              <p className="text-gray-500 text-sm md:text-base mt-1">Welcome back! Here's what's happening today.</p>
             </div>
-            <div className="flex gap-2">
-              <span className="text-xs font-medium px-2 py-1 bg-gray-100 rounded text-gray-600">Monthly</span>
-            </div>
+            {/* Date Picker or Filters could go here */}
           </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={workerProfitData}>
-              <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f3f4f6" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-              <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }} />
-              <Line type="monotone" dataKey="revenue" stroke="var(--color-primary)" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
-              <Line type="monotone" dataKey="expenses" stroke="var(--color-secondary)" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
-              <Line type="monotone" dataKey="profit" stroke="var(--color-warning)" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
-            </LineChart>
-          </ResponsiveContainer>
-          <div className="flex justify-center gap-6 mt-4">
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <div className="w-3 h-3 rounded-full bg-[var(--color-primary)]"></div> Revenue
-            </div>
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <div className="w-3 h-3 rounded-full bg-[var(--color-secondary)]"></div> Expenses
-            </div>
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <div className="w-3 h-3 rounded-full bg-[var(--color-warning)]"></div> Profit
-            </div>
-          </div>
-        </Card>
 
-        {/* --- Top Performers Grid --- */}
-        <div>
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-bold text-gray-900 text-lg">{isWorker ? t("workers.performance") : t("dashboard.topPerformers")}</h3>
-            <Link href="/team" className="text-sm text-[var(--color-primary)] font-medium flex items-center gap-1 hover:underline">
-              {t("common.viewAll")} <ChevronRight className="w-4 h-4" />
-            </Link>
-          </div>
-          <div className={`grid grid-cols-1 md:grid-cols-2 ${filteredTopPerformers.length > 2 ? 'lg:grid-cols-4' : 'lg:grid-cols-2'} gap-4`}>
-            {filteredTopPerformers.map((worker, idx) => (
-              <Card key={worker.name} className={`p-4 flex flex-col gap-3 transition-all border ${idx === 0 ? "bg-[var(--color-primary-light)] border-[var(--color-primary-light)] hover:border-[var(--color-primary)] hover:shadow-lg" :
-                idx === 1 ? "bg-[var(--color-secondary-light)] border-[var(--color-secondary-light)] hover:border-[var(--color-secondary)] hover:shadow-lg" :
-                  idx === 2 ? "bg-[var(--color-warning-light)] border-[var(--color-warning-light)] hover:border-[var(--color-warning)] hover:shadow-lg" :
-                    "bg-[var(--color-success-light)] border-[var(--color-success-light)] hover:border-[var(--color-success)] hover:shadow-lg"
-                }`}>
-                <div className="flex items-start justify-between">
-                  <div className="flex gap-3">
-                    <div className={`w-12 h-12 rounded-full ${worker.bg} flex items-center justify-center ${worker.text} font-bold text-lg`}>
-                      {worker.avatar}
-                    </div>
-                    <div>
-                      <p className="font-bold text-gray-900">{worker.name}</p>
-                      <p className="text-xs text-gray-500">{worker.role}</p>
-                    </div>
-                  </div>
+          {/* --- Stats Gradient Cards --- */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Revenue */}
+            <div
+              className="rounded-2xl p-6 text-white shadow-lg relative overflow-hidden transition-transform hover:scale-[1.01]"
+              style={getCardStyle(0)}
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-white/80 text-sm font-medium mb-1">{isWorker ? "My Revenue" : "Total Income"}</p>
+                  <h3 className="text-2xl sm:text-3xl font-bold">€{isWorker ? "18,356" : "45,890"}</h3>
+                  <p className="text-xs text-white/70 mt-2 flex items-center gap-1">
+                    <span className="bg-white/20 px-1.5 py-0.5 rounded text-white font-semibold">+12%</span> vs last month
+                  </p>
                 </div>
-                <div className="mt-2 pt-3 border-t border-gray-50 flex justify-between items-center">
-                  <div>
-                    <p className="text-xs text-gray-400">Revenue</p>
-                    <p className="font-bold text-gray-900">€{worker.revenue.toLocaleString()}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-gray-400">Rating</p>
-                    <div className="flex text-yellow-500 text-xs">
-                      {"★".repeat(Math.round(worker.rating))}
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        {/* --- Middle Section: Services & Expense Categories --- */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Today's Services */}
-          <Card className="lg:col-span-2 p-6 bg-white hover:bg-gray-50/50 transition-colors">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="font-bold text-gray-900">{isWorker ? "My Services Today" : "Today's Services"}</h3>
-              <div className="flex gap-2">
-                <span className="bg-[var(--color-primary-light)] text-[var(--color-primary)] text-xs font-bold px-3 py-1 rounded-full">5 / 12 Completed</span>
-              </div>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="text-left text-xs font-semibold text-gray-500 pb-3 pl-2">Time</th>
-                    <th className="text-left text-xs font-semibold text-gray-500 pb-3">Client</th>
-                    <th className="text-left text-xs font-semibold text-gray-500 pb-3">Service</th>
-                    {!isWorker && <th className="text-left text-xs font-semibold text-gray-500 pb-3">Worker</th>}
-                    <th className="text-left text-xs font-semibold text-gray-500 pb-3">Status</th>
-                    <th className="text-right text-xs font-semibold text-gray-500 pb-3">Price</th>
-                    <th className="text-center text-xs font-semibold text-gray-500 pb-3 pr-2">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {filteredTodaysSessions.map((session, index) => (
-                    <tr key={index} className={`transition-colors ${index % 5 === 0 ? "bg-[var(--color-primary-light)] hover:opacity-80" :
-                      index % 5 === 1 ? "bg-[var(--color-secondary-light)] hover:opacity-80" :
-                        index % 5 === 2 ? "bg-[var(--color-warning-light)] hover:opacity-80" :
-                          index % 5 === 3 ? "bg-[var(--color-success-light)] hover:opacity-80" :
-                            "bg-blue-50/20 hover:opacity-80"
-                      }`}>
-                      <td className="py-4 pl-2 text-sm font-medium text-gray-900">{session.time}</td>
-                      <td className="py-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-600">
-                            {session.client.charAt(0)}
-                          </div>
-                          <span className="text-sm text-gray-700 font-medium">{session.client}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 text-sm text-gray-600">{session.type}</td>
-                      {!isWorker && <td className="py-4 text-sm text-gray-600">{session.worker}</td>}
-                      <td className="py-4">
-                        <div className="flex items-center gap-2">
-                          <span className={`text-xs font-bold px-3 py-1 rounded-full ${session.statusColor}`}>
-                            {session.status}
-                          </span>
-                          {canPerformBookingAction({ status: session.status as BookingStatus }, "start", user?.role as UserRole) && (
-                            <button
-                              onClick={() => (session as any).id && handleStartBooking((session as any).id)}
-                              className="text-xs bg-purple-600 text-white px-2 py-1 rounded hover:bg-purple-700 transition-colors"
-                            >
-                              Start
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-4 text-right font-bold text-gray-900">{session.price}</td>
-                      <td className="py-4 pr-2 text-center text-gray-400">
-                        <button
-                          onClick={() => handleViewBookingHistory(session)}
-                          className="p-1.5 hover:bg-white/50 rounded-lg hover:text-purple-600 transition-all"
-                          title="View History"
-                        >
-                          <History size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-
-          {!isWorker && (
-            <Card className="p-6">
-              <h3 className="font-bold text-gray-900 mb-6">Cost Distribution</h3>
-              <div className="relative h-48 mb-4">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={expenseCategories}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={50}
-                      outerRadius={70}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
-                      {expenseCategories.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="text-center">
-                    <p className="text-xl font-bold text-gray-900">€23K</p>
-                    <p className="text-xs text-gray-500">Expenses</p>
-                  </div>
+                <div className="bg-white/20 p-3 rounded-full">
+                  <DollarSign className="w-6 h-6 text-white" />
                 </div>
               </div>
-              <div className="space-y-3">
-                {expenseCategories.map((cat) => (
-                  <div key={cat.name} className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color }}></div>
-                      <span className="text-gray-600">{cat.name}</span>
-                    </div>
-                    <span className="font-bold text-gray-900">€{cat.value.toLocaleString()}</span>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
-        </div>
-
-        {/* --- Bottom Section: Notifications & Activities --- */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Weekly Attendance */}
-          <Card className="p-6">
-            <h3 className="font-bold text-gray-900 mb-6">Weekly Attendance</h3>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={weeklyAttendanceData}>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f3f4f6" />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
-                <Bar dataKey="value1" fill="var(--color-primary)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="value2" fill="var(--color-secondary)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="value3" fill="var(--color-warning)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="value4" fill="var(--color-success)" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
-
-          {/* Recent Activities */}
-          <Card className="p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <Receipt className="w-5 h-5 text-[var(--color-warning)]" />
-              <h3 className="font-bold text-gray-900">Recent Activities</h3>
             </div>
-            <div className="space-y-4">
-              {filteredRecentActivities.slice(0, 4).map((activity, idx) => (
-                <div key={activity.id} className={`flex items-center justify-between p-3 rounded-lg transition-colors border ${idx === 0 ? "bg-[var(--color-primary-light)] border-[var(--color-primary-light)] hover:opacity-80" :
-                  idx === 1 ? "bg-[var(--color-secondary-light)] border-[var(--color-secondary-light)] hover:opacity-80" :
-                    idx === 2 ? "bg-[var(--color-warning-light)] border-[var(--color-warning-light)] hover:opacity-80" :
-                      "bg-[var(--color-success-light)] border-[var(--color-success-light)] hover:opacity-80"
-                  }`}>
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)] rounded-full flex items-center justify-center text-white font-bold text-xs">
-                      {activity.client.charAt(0)}
-                    </div>
-                    <div>
-                      <p className="font-bold text-gray-900 text-sm">{activity.client}</p>
-                      <p className="text-xs text-gray-500">{activity.service} • {activity.worker}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-gray-900 text-sm">{activity.amount}</p>
-                    <p className="text-xs text-gray-400">{activity.time}</p>
-                  </div>
+
+            {/* Expenses */}
+            <div
+              className="rounded-2xl p-6 text-white shadow-lg relative overflow-hidden transition-transform hover:scale-[1.01]"
+              style={getCardStyle(1)}
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-white/80 text-sm font-medium mb-1">{isWorker ? "My Contribution to Expenses" : "Total Expenses"}</p>
+                  <h3 className="text-2xl sm:text-3xl font-bold">€{isWorker ? "5,690" : "28,450"}</h3>
+                  <p className="text-xs text-white/70 mt-2 flex items-center gap-1">
+                    <span className="bg-white/20 px-1.5 py-0.5 rounded text-white font-semibold">+2.5%</span> vs last month
+                  </p>
                 </div>
-              ))}
+                <div className="bg-white/20 p-3 rounded-full">
+                  <Wallet className="w-6 h-6 text-white" />
+                </div>
+              </div>
             </div>
-          </Card>
-        </div>
 
-        {!isWorker && (
+            {/* Net Profit */}
+            <div
+              className="rounded-2xl p-6 text-white shadow-lg relative overflow-hidden transition-transform hover:scale-[1.01]"
+              style={getCardStyle(2)}
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-white/80 text-sm font-medium mb-1">{isWorker ? "My Profit Contribution" : "Net Profit"}</p>
+                  <h3 className="text-2xl sm:text-3xl font-bold">€{isWorker ? "12,666" : "17,440"}</h3>
+                  <p className="text-xs text-white/70 mt-2 flex items-center gap-1">
+                    <span className="bg-white/20 px-1.5 py-0.5 rounded text-white font-semibold">+5.4%</span> vs last month
+                  </p>
+                </div>
+                <div className="bg-white/20 p-3 rounded-full">
+                  <TrendingUp className="w-6 h-6 text-white" />
+                </div>
+              </div>
+            </div>
+
+            {/* Clients/Workers */}
+            <div
+              className="rounded-2xl p-6 text-white shadow-lg relative overflow-hidden transition-transform hover:scale-[1.01]"
+              style={getCardStyle(3)}
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-white/80 text-sm font-medium mb-1">{isWorker ? "My Total Clients" : "Total Clients"}</p>
+                  <h3 className="text-2xl sm:text-3xl font-bold">{isWorker ? "114" : "287"}</h3>
+                  <p className="text-xs text-white/70 mt-2 flex items-center gap-1">
+                    <span className="bg-white/20 px-1.5 py-0.5 rounded text-white font-semibold">+8%</span> vs last month
+                  </p>
+                </div>
+                <div className="bg-white/20 p-3 rounded-full">
+                  <Users className="w-6 h-6 text-white" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* --- Quick Actions --- */}
+          <div>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {canAddIncome() && (
+                <Link href="/income/add">
+                  <button className="w-full h-full flex items-center justify-center gap-3 bg-[var(--color-primary)] hover:opacity-90 text-white py-4 rounded-2xl font-bold transition-all shadow-lg shadow-purple-500/20 active:scale-95 text-lg">
+                    <Plus className="w-7 h-7" />
+                    <span>Add Revenue</span>
+                  </button>
+                </Link>
+              )}
+              {canAddExpenses() && (
+                <Link href="/expenses/add">
+                  <button className="w-full h-full flex items-center justify-center gap-3 bg-[var(--color-secondary)] hover:opacity-90 text-white py-4 rounded-2xl font-bold transition-all shadow-lg shadow-pink-500/20 active:scale-95 text-lg">
+                    <Wallet className="w-7 h-7" />
+                    <span>Add Expense</span>
+                  </button>
+                </Link>
+              )}
+              {hasPermission(['manager', 'admin']) && canModify && (
+                <Link href="/team/add">
+                  <button className="w-full h-full flex items-center justify-center gap-3 bg-[var(--color-warning)] hover:opacity-90 text-white py-4 rounded-2xl font-bold transition-all shadow-lg shadow-orange-500/20 active:scale-95 text-lg">
+                    <Users className="w-7 h-7" />
+                    <span>{t("dashboard.addWorker")}</span>
+                  </button>
+                </Link>
+              )}
+            </div>
+          </div>
+
+          {/* --- Charts Section --- */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Monthly Forecast */}
-            <Card className="p-6">
+            {/* Monthly Revenue Chart */}
+            <Card className="p-6 border-t-4 border-[var(--color-primary)] bg-[var(--color-primary-light)]">
               <div className="flex justify-between items-center mb-6">
                 <div>
-                  <h3 className="font-bold text-gray-900">Monthly Forecast and Stats</h3>
-                  <p className="text-xs text-gray-500">Based on last 4 years</p>
+                  <h3 className="font-bold text-gray-900">Monthly Revenue</h3>
+                  <p className="text-xs text-gray-500">Year 2026</p>
                 </div>
-                <div className="flex gap-2">
-                  <button className="text-xs px-3 py-1 bg-gray-100 rounded-full text-gray-600 font-medium">Daily</button>
-                  <button className="text-xs px-3 py-1 bg-white border border-gray-200 rounded-full text-gray-400">Weekly</button>
-                  <button className="text-xs px-3 py-1 bg-white border border-gray-200 rounded-full text-gray-400">Monthly</button>
-                </div>
+                <span className="bg-[var(--color-primary-light)] text-[var(--color-primary)] text-xs font-bold px-2 py-1 rounded">Yearly</span>
               </div>
               <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={monthlyForecastData}>
+                <BarChart data={workerMonthlyRevenue}>
                   <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f3f4f6" />
-                  <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-                  <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
-                  <Bar dataKey="value1" stackId="a" fill="var(--color-primary)" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="value2" stackId="a" fill="var(--color-secondary)" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="value3" stackId="a" fill="var(--color-warning)" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="value4" stackId="a" fill="var(--color-success)" radius={[4, 4, 0, 0]} />
+                  <Tooltip cursor={{ fill: 'var(--color-primary-light)', opacity: 0.5 }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
+                  <Bar dataKey="value" fill="var(--color-primary)" radius={[4, 4, 4, 4]} barSize={20} />
                 </BarChart>
               </ResponsiveContainer>
             </Card>
 
-            {/* Top 10 Revenue Generators */}
-            <Card className="p-6">
+            {/* Monthly Expenses Chart */}
+            <Card className="p-6 border-t-4 border-[var(--color-secondary)] bg-[var(--color-secondary-light)]">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="font-bold text-gray-900">Top 10 Revenue Generators</h3>
-                <button className="text-[var(--color-primary)] text-sm font-medium hover:underline">View All</button>
+                <div>
+                  <h3 className="font-bold text-gray-900">Monthly Expenses</h3>
+                  <p className="text-xs text-gray-500">Year 2026</p>
+                </div>
+                <span className="bg-[var(--color-secondary-light)] text-[var(--color-secondary)] text-xs font-bold px-2 py-1 rounded">Yearly</span>
+              </div>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={workerMonthlyExpenses}>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f3f4f6" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
+                  <Tooltip cursor={{ fill: 'var(--color-secondary-light)', opacity: 0.5 }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
+                  <Bar dataKey="value" fill="var(--color-secondary)" radius={[4, 4, 4, 4]} barSize={20} />
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
+          </div>
+
+          {/* --- Profit Analysis (Full Width) --- */}
+          <Card className="p-6 border-t-4 border-[var(--color-warning)] bg-[var(--color-warning-light)]">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h3 className="font-bold text-gray-900">Profit Analysis</h3>
+                <p className="text-xs text-gray-500">Revenue vs Expenses (2026)</p>
+              </div>
+              <div className="flex gap-2">
+                <span className="text-xs font-medium px-2 py-1 bg-gray-100 rounded text-gray-600">Monthly</span>
+              </div>
+            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={workerProfitData}>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f3f4f6" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
+                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }} />
+                <Line type="monotone" dataKey="revenue" stroke="var(--color-primary)" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
+                <Line type="monotone" dataKey="expenses" stroke="var(--color-secondary)" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
+                <Line type="monotone" dataKey="profit" stroke="var(--color-warning)" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
+              </LineChart>
+            </ResponsiveContainer>
+            <div className="flex justify-center gap-6 mt-4">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="w-3 h-3 rounded-full bg-[var(--color-primary)]"></div> Revenue
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="w-3 h-3 rounded-full bg-[var(--color-secondary)]"></div> Expenses
+              </div>
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="w-3 h-3 rounded-full bg-[var(--color-warning)]"></div> Profit
+              </div>
+            </div>
+          </Card>
+
+          {/* --- Top Performers Grid --- */}
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-bold text-gray-900 text-lg">{isWorker ? t("workers.performance") : t("dashboard.topPerformers")}</h3>
+              <Link href="/team" className="text-sm text-[var(--color-primary)] font-medium flex items-center gap-1 hover:underline">
+                {t("common.viewAll")} <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
+            <div className={`grid grid-cols-1 md:grid-cols-2 ${filteredTopPerformers.length > 2 ? 'lg:grid-cols-4' : 'lg:grid-cols-2'} gap-4`}>
+              {filteredTopPerformers.map((worker, idx) => (
+                <Card key={worker.name} className={`p-4 flex flex-col gap-3 transition-all border ${idx === 0 ? "bg-[var(--color-primary-light)] border-[var(--color-primary-light)] hover:border-[var(--color-primary)] hover:shadow-lg" :
+                  idx === 1 ? "bg-[var(--color-secondary-light)] border-[var(--color-secondary-light)] hover:border-[var(--color-secondary)] hover:shadow-lg" :
+                    idx === 2 ? "bg-[var(--color-warning-light)] border-[var(--color-warning-light)] hover:border-[var(--color-warning)] hover:shadow-lg" :
+                      "bg-[var(--color-success-light)] border-[var(--color-success-light)] hover:border-[var(--color-success)] hover:shadow-lg"
+                  }`}>
+                  <div className="flex items-start justify-between">
+                    <div className="flex gap-3">
+                      <div className={`w-12 h-12 rounded-full ${worker.bg} flex items-center justify-center ${worker.text} font-bold text-lg`}>
+                        {worker.avatar}
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900">{worker.name}</p>
+                        <p className="text-xs text-gray-500">{worker.role}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-2 pt-3 border-t border-gray-50 flex justify-between items-center">
+                    <div>
+                      <p className="text-xs text-gray-400">Revenue</p>
+                      <p className="font-bold text-gray-900">€{worker.revenue.toLocaleString()}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-gray-400">Rating</p>
+                      <div className="flex text-yellow-500 text-xs">
+                        {"★".repeat(Math.round(worker.rating))}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          {/* --- Middle Section: Services & Expense Categories --- */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Today's Services */}
+            <Card className="lg:col-span-2 p-6 bg-white hover:bg-gray-50/50 transition-colors">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="font-bold text-gray-900">{isWorker ? "My Services Today" : "Today's Services"}</h3>
+                <div className="flex gap-2">
+                  <span className="bg-[var(--color-primary-light)] text-[var(--color-primary)] text-xs font-bold px-3 py-1 rounded-full">5 / 12 Completed</span>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-100">
+                      <th className="text-left text-xs font-semibold text-gray-500 pb-3 pl-2">Time</th>
+                      <th className="text-left text-xs font-semibold text-gray-500 pb-3">Client</th>
+                      <th className="text-left text-xs font-semibold text-gray-500 pb-3">Service</th>
+                      {!isWorker && <th className="text-left text-xs font-semibold text-gray-500 pb-3">Worker</th>}
+                      <th className="text-left text-xs font-semibold text-gray-500 pb-3">Status</th>
+                      <th className="text-right text-xs font-semibold text-gray-500 pb-3">Price</th>
+                      <th className="text-center text-xs font-semibold text-gray-500 pb-3 pr-2">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {filteredTodaysSessions.map((session, index) => (
+                      <tr key={index} className={`transition-colors ${index % 5 === 0 ? "bg-[var(--color-primary-light)] hover:opacity-80" :
+                        index % 5 === 1 ? "bg-[var(--color-secondary-light)] hover:opacity-80" :
+                          index % 5 === 2 ? "bg-[var(--color-warning-light)] hover:opacity-80" :
+                            index % 5 === 3 ? "bg-[var(--color-success-light)] hover:opacity-80" :
+                              "bg-blue-50/20 hover:opacity-80"
+                        }`}>
+                        <td className="py-4 pl-2 text-sm font-medium text-gray-900">{session.time}</td>
+                        <td className="py-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-600">
+                              {session.client.charAt(0)}
+                            </div>
+                            <span className="text-sm text-gray-700 font-medium">{session.client}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 text-sm text-gray-600">{session.type}</td>
+                        {!isWorker && <td className="py-4 text-sm text-gray-600">{session.worker}</td>}
+                        <td className="py-4">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs font-bold px-3 py-1 rounded-full ${session.statusColor}`}>
+                              {session.status}
+                            </span>
+                            {permissions.booking({ status: session.status as BookingStatus }, "start") && (
+                              <button
+                                onClick={() => (session as any).id && handleStartBooking((session as any).id)}
+                                className="text-xs bg-purple-600 text-white px-2 py-1 rounded hover:bg-purple-700 transition-colors"
+                              >
+                                Start
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-4 text-right font-bold text-gray-900">{session.price}</td>
+                        <td className="py-4 pr-2 text-center text-gray-400">
+                          <button
+                            onClick={() => handleViewBookingHistory(session)}
+                            className="p-1.5 hover:bg-white/50 rounded-lg hover:text-purple-600 transition-all"
+                            title="View History"
+                          >
+                            <History size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+
+            {!isWorker && (
+              <Card className="p-6">
+                <h3 className="font-bold text-gray-900 mb-6">Cost Distribution</h3>
+                <div className="relative h-48 mb-4">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={expenseCategories}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={70}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {expenseCategories.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="text-center">
+                      <p className="text-xl font-bold text-gray-900">€23K</p>
+                      <p className="text-xs text-gray-500">Expenses</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {expenseCategories.map((cat) => (
+                    <div key={cat.name} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color }}></div>
+                        <span className="text-gray-600">{cat.name}</span>
+                      </div>
+                      <span className="font-bold text-gray-900">€{cat.value.toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+          </div>
+
+          {/* --- Bottom Section: Notifications & Activities --- */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Weekly Attendance */}
+            <Card className="p-6">
+              <h3 className="font-bold text-gray-900 mb-6">Weekly Attendance</h3>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={weeklyAttendanceData}>
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f3f4f6" />
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
+                  <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
+                  <Bar dataKey="value1" fill="var(--color-primary)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="value2" fill="var(--color-secondary)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="value3" fill="var(--color-warning)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="value4" fill="var(--color-success)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
+
+            {/* Recent Activities */}
+            <Card className="p-6">
+              <div className="flex items-center gap-2 mb-6">
+                <Receipt className="w-5 h-5 text-[var(--color-warning)]" />
+                <h3 className="font-bold text-gray-900">Recent Activities</h3>
               </div>
               <div className="space-y-4">
-                {topRevenueGenerators.map((item, idx) => (
-                  <div key={idx} className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-700">{item.name}</span>
-                      <span className="text-sm font-bold text-gray-900">€{item.value.toLocaleString()}</span>
+                {filteredRecentActivities.slice(0, 4).map((activity, idx) => (
+                  <div key={activity.id} className={`flex items-center justify-between p-3 rounded-lg transition-colors border ${idx === 0 ? "bg-[var(--color-primary-light)] border-[var(--color-primary-light)] hover:opacity-80" :
+                    idx === 1 ? "bg-[var(--color-secondary-light)] border-[var(--color-secondary-light)] hover:opacity-80" :
+                      idx === 2 ? "bg-[var(--color-warning-light)] border-[var(--color-warning-light)] hover:opacity-80" :
+                        "bg-[var(--color-success-light)] border-[var(--color-success-light)] hover:opacity-80"
+                    }`}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)] rounded-full flex items-center justify-center text-white font-bold text-xs">
+                        {activity.client.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900 text-sm">{activity.client}</p>
+                        <p className="text-xs text-gray-500">{activity.service} • {activity.worker}</p>
+                      </div>
                     </div>
-                    <div className="w-full bg-gray-100 rounded-full h-2">
-                      <div
-                        className="h-2 rounded-full transition-all"
-                        style={{
-                          width: `${(item.value / 15420) * 100}%`,
-                          backgroundColor: item.color
-                        }}
-                      />
+                    <div className="text-right">
+                      <p className="font-bold text-gray-900 text-sm">{activity.amount}</p>
+                      <p className="text-xs text-gray-400">{activity.time}</p>
                     </div>
                   </div>
                 ))}
               </div>
             </Card>
           </div>
-        )}
 
-        {!isWorker && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="p-6 border-t-4 border-[var(--color-primary)] bg-[var(--color-primary-light)]">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">Bookings</p>
-                  <h2 className="text-4xl font-bold text-gray-900">847</h2>
-                  <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
-                    <TrendingUp className="w-3 h-3" />
-                    +11% increase
-                  </p>
+          {!isWorker && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Monthly Forecast */}
+              <Card className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h3 className="font-bold text-gray-900">Monthly Forecast and Stats</h3>
+                    <p className="text-xs text-gray-500">Based on last 4 years</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button className="text-xs px-3 py-1 bg-gray-100 rounded-full text-gray-600 font-medium">Daily</button>
+                    <button className="text-xs px-3 py-1 bg-white border border-gray-200 rounded-full text-gray-400">Weekly</button>
+                    <button className="text-xs px-3 py-1 bg-white border border-gray-200 rounded-full text-gray-400">Monthly</button>
+                  </div>
                 </div>
-                <div className="bg-[var(--color-primary-light)] p-3 rounded-lg">
-                  <Calendar className="w-6 h-6 text-[var(--color-primary)]" />
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={monthlyForecastData}>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f3f4f6" />
+                    <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
+                    <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
+                    <Bar dataKey="value1" stackId="a" fill="var(--color-primary)" radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="value2" stackId="a" fill="var(--color-secondary)" radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="value3" stackId="a" fill="var(--color-warning)" radius={[0, 0, 0, 0]} />
+                    <Bar dataKey="value4" stackId="a" fill="var(--color-success)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Card>
+
+              {/* Top 10 Revenue Generators */}
+              <Card className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="font-bold text-gray-900">Top 10 Revenue Generators</h3>
+                  <button className="text-[var(--color-primary)] text-sm font-medium hover:underline">View All</button>
                 </div>
+                <div className="space-y-4">
+                  {topRevenueGenerators.map((item, idx) => (
+                    <div key={idx} className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-gray-700">{item.name}</span>
+                        <span className="text-sm font-bold text-gray-900">€{item.value.toLocaleString()}</span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-2">
+                        <div
+                          className="h-2 rounded-full transition-all"
+                          style={{
+                            width: `${(item.value / 15420) * 100}%`,
+                            backgroundColor: item.color
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {!isWorker && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="p-6 border-t-4 border-[var(--color-primary)] bg-[var(--color-primary-light)]">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">Bookings</p>
+                    <h2 className="text-4xl font-bold text-gray-900">847</h2>
+                    <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                      <TrendingUp className="w-3 h-3" />
+                      +11% increase
+                    </p>
+                  </div>
+                  <div className="bg-[var(--color-primary-light)] p-3 rounded-lg">
+                    <Calendar className="w-6 h-6 text-[var(--color-primary)]" />
+                  </div>
+                </div>
+              </Card>
+
+              <Card className="p-6 border-t-4 border-[var(--color-secondary)] bg-[var(--color-secondary-light)]">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">Members</p>
+                    <h2 className="text-4xl font-bold text-gray-900">42</h2>
+                    <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                      <TrendingUp className="w-3 h-3" />
+                      +3% increase
+                    </p>
+                  </div>
+                  <div className="bg-[var(--color-secondary-light)] p-3 rounded-lg">
+                    <Users className="w-6 h-6 text-[var(--color-secondary)]" />
+                  </div>
+                </div>
+              </Card>
+
+              <Card className="p-6 border-t-4 border-[var(--color-warning)] bg-[var(--color-warning-light)]">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">Occupancy Rate</p>
+                    <h2 className="text-4xl font-bold text-gray-900">75%</h2>
+                    <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                      <TrendingUp className="w-3 h-3" />
+                      +5% increase
+                    </p>
+                  </div>
+                  <div className="bg-[var(--color-warning-light)] p-3 rounded-lg">
+                    <Briefcase className="w-6 h-6 text-[var(--color-warning)]" />
+                  </div>
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {/* --- Weekly Attendance & Recent User Activity --- */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Recent Notifications */}
+            <Card className="p-6">
+              <div className="flex items-center gap-2 mb-6">
+                <Bell className="w-5 h-5 text-[var(--color-primary)]" />
+                <h3 className="font-bold text-gray-900">Recent Notifications</h3>
+              </div>
+              <div className="space-y-4">
+                {recentNotifications.map((notif, idx) => {
+                  const Icon = notif.icon;
+                  return (
+                    <div key={idx} className={`flex items-start gap-3 p-3 rounded-xl transition-colors border ${notif.type === "success" ? "bg-green-50/80 border-green-100 hover:bg-green-100/80" :
+                      notif.type === "warning" ? "bg-yellow-50/80 border-yellow-100 hover:bg-yellow-100/80" :
+                        "bg-blue-50/80 border-blue-100 hover:bg-blue-100/80"
+                      }`}>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${notif.type === "success" ? "bg-green-100 text-green-600" :
+                        notif.type === "warning" ? "bg-yellow-100 text-yellow-600" :
+                          "bg-blue-100 text-blue-600"
+                        }`}>
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">{notif.message}</p>
+                        <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                          <Clock className="w-3 h-3" />
+                          {notif.time}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </Card>
 
-            <Card className="p-6 border-t-4 border-[var(--color-secondary)] bg-[var(--color-secondary-light)]">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">Members</p>
-                  <h2 className="text-4xl font-bold text-gray-900">42</h2>
-                  <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
-                    <TrendingUp className="w-3 h-3" />
-                    +3% increase
-                  </p>
-                </div>
-                <div className="bg-[var(--color-secondary-light)] p-3 rounded-lg">
-                  <Users className="w-6 h-6 text-[var(--color-secondary)]" />
+            {/* Recent User Activity & Alerts */}
+            <Card className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="font-bold text-gray-900">Recent User Activity & Alerts</h3>
+                <div className="flex gap-2">
+                  <button className="text-xs px-3 py-1 bg-[var(--color-primary)] text-white rounded-full font-medium">Filters</button>
+                  <button className="text-xs px-3 py-1 bg-white border border-gray-200 rounded-full text-gray-600">Archive</button>
+                  <button className="text-xs px-3 py-1 bg-white border border-gray-200 rounded-full text-gray-600">Delete</button>
                 </div>
               </div>
-            </Card>
-
-            <Card className="p-6 border-t-4 border-[var(--color-warning)] bg-[var(--color-warning-light)]">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-sm text-gray-500 mb-1">Occupancy Rate</p>
-                  <h2 className="text-4xl font-bold text-gray-900">75%</h2>
-                  <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
-                    <TrendingUp className="w-3 h-3" />
-                    +5% increase
-                  </p>
-                </div>
-                <div className="bg-[var(--color-warning-light)] p-3 rounded-lg">
-                  <Briefcase className="w-6 h-6 text-[var(--color-warning)]" />
-                </div>
+              <div className="space-y-3">
+                {recentUserActivity.map((activity, idx) => (
+                  <div key={idx} className={`p-4 rounded-xl border ${activity.color} transition-all hover:shadow-md`}>
+                    <p className="text-sm font-medium text-gray-900 mb-1">{activity.action}</p>
+                    <p className="text-xs text-gray-500">{activity.time}</p>
+                  </div>
+                ))}
               </div>
             </Card>
           </div>
-        )}
 
-        {/* --- Weekly Attendance & Recent User Activity --- */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Recent Notifications */}
-          <Card className="p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <Bell className="w-5 h-5 text-[var(--color-primary)]" />
-              <h3 className="font-bold text-gray-900">Recent Notifications</h3>
-            </div>
-            <div className="space-y-4">
-              {recentNotifications.map((notif, idx) => {
-                const Icon = notif.icon;
-                return (
-                  <div key={idx} className={`flex items-start gap-3 p-3 rounded-xl transition-colors border ${notif.type === "success" ? "bg-green-50/80 border-green-100 hover:bg-green-100/80" :
-                    notif.type === "warning" ? "bg-yellow-50/80 border-yellow-100 hover:bg-yellow-100/80" :
-                      "bg-blue-50/80 border-blue-100 hover:bg-blue-100/80"
-                    }`}>
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${notif.type === "success" ? "bg-green-100 text-green-600" :
-                      notif.type === "warning" ? "bg-yellow-100 text-yellow-600" :
-                        "bg-blue-100 text-blue-600"
-                      }`}>
-                      <Icon className="w-4 h-4" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900">{notif.message}</p>
-                      <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                        <Clock className="w-3 h-3" />
-                        {notif.time}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
-
-          {/* Recent User Activity & Alerts */}
-          <Card className="p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="font-bold text-gray-900">Recent User Activity & Alerts</h3>
-              <div className="flex gap-2">
-                <button className="text-xs px-3 py-1 bg-[var(--color-primary)] text-white rounded-full font-medium">Filters</button>
-                <button className="text-xs px-3 py-1 bg-white border border-gray-200 rounded-full text-gray-600">Archive</button>
-                <button className="text-xs px-3 py-1 bg-white border border-gray-200 rounded-full text-gray-600">Delete</button>
-              </div>
-            </div>
-            <div className="space-y-3">
-              {recentUserActivity.map((activity, idx) => (
-                <div key={idx} className={`p-4 rounded-xl border ${activity.color} transition-all hover:shadow-md`}>
-                  <p className="text-sm font-medium text-gray-900 mb-1">{activity.action}</p>
-                  <p className="text-xs text-gray-500">{activity.time}</p>
-                </div>
-              ))}
-            </div>
-          </Card>
+          <HistoryModal
+            isOpen={historyModalOpen}
+            onClose={() => setHistoryModalOpen(false)}
+            title="Appointment Audit Trail"
+            itemTitle={selectedHistory.title}
+            itemSubtitle={selectedHistory.subtitle}
+            events={selectedHistory.events}
+          />
         </div>
-
-        <HistoryModal
-          isOpen={historyModalOpen}
-          onClose={() => setHistoryModalOpen(false)}
-          title="Appointment Audit Trail"
-          itemTitle={selectedHistory.title}
-          itemSubtitle={selectedHistory.subtitle}
-          events={selectedHistory.events}
-        />
-      </div>
-    </MainLayout>
+      </MainLayout>
+    </OnboardingGuard>
   );
 }

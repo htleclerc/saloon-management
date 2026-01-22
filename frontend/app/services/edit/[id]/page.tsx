@@ -5,6 +5,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import Button from "@/components/ui/Button";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import ServiceForm from "@/components/services/ServiceForm";
+import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 
 export default function EditServicePage() {
     const params = useParams();
@@ -12,6 +13,7 @@ export default function EditServicePage() {
     const searchParams = useSearchParams();
     const id = params.id as string;
     const mode = (searchParams.get("mode") as "simple" | "advanced") || "advanced";
+    const { handleReadOnlyClick } = useReadOnlyGuard();
 
     // In a real app, fetch this from API
     const initialData = {
@@ -29,12 +31,14 @@ export default function EditServicePage() {
     };
 
     const handleSubmit = (data: any) => {
+        if (handleReadOnlyClick()) return;
         console.log("Updating service:", data);
         // In a real app, send to API
         router.push("/services");
     };
 
     const handleArchive = () => {
+        if (handleReadOnlyClick()) return;
         console.log("Archiving service:", id);
         // In a real app, send to API (soft delete)
         router.push("/services");
@@ -54,10 +58,12 @@ export default function EditServicePage() {
                             <p className="text-gray-500 mt-1">Modifying service ID: #{id}</p>
                         </div>
                     </div>
-                    <Button variant="danger" size="md" onClick={handleArchive} className="rounded-xl px-6">
-                        <Trash2 className="w-5 h-5" />
-                        Archive Service
-                    </Button>
+                    <ReadOnlyGuard>
+                        <Button variant="danger" size="md" onClick={handleArchive} className="rounded-xl px-6">
+                            <Trash2 className="w-5 h-5" />
+                            Archive Service
+                        </Button>
+                    </ReadOnlyGuard>
                 </div>
 
                 <ServiceForm

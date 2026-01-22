@@ -17,6 +17,8 @@ import {
     Check,
     Save,
 } from "lucide-react";
+import { useAuth } from "@/context/AuthProvider";
+import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 
 const steps = [
     { id: 1, name: "Personal", icon: User, description: "Personal information" },
@@ -39,6 +41,8 @@ const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export default function AddAdvancedTeamMemberPage() {
     const router = useRouter();
+    const { canModify } = useAuth();
+    const { handleReadOnlyClick } = useReadOnlyGuard();
     const [currentStep, setCurrentStep] = useState(1);
     const stepperRef = useRef<HTMLDivElement>(null);
 
@@ -112,6 +116,7 @@ export default function AddAdvancedTeamMemberPage() {
     };
 
     const handleSubmit = () => {
+        if (!canModify || handleReadOnlyClick()) return;
         console.log("Advanced team member data:", {
             firstName, lastName, email, phone, address, city, zipCode, birthDate, gender,
             role, employeeType, startDate, contractEndDate, sharingKey, baseSalary,
@@ -138,14 +143,18 @@ export default function AddAdvancedTeamMemberPage() {
                     <div className="w-24 h-24 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center text-gray-500 text-2xl font-bold">
                         {firstName && lastName ? `${firstName[0]}${lastName[0]}`.toUpperCase() : "?"}
                     </div>
-                    <button className="absolute bottom-0 right-0 w-8 h-8 bg-[var(--color-primary)] rounded-full flex items-center justify-center text-white shadow-lg hover:opacity-90 transition-opacity">
+                    <button
+                        className="absolute bottom-0 right-0 w-8 h-8 bg-[var(--color-primary)] rounded-full flex items-center justify-center text-white shadow-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+                        disabled={!canModify}
+                        onClick={() => handleReadOnlyClick()}
+                    >
                         <Camera className="w-4 h-4" />
                     </button>
                 </div>
                 <div>
                     <p className="font-medium text-gray-900 text-sm">Profile Picture</p>
                     <p className="text-xs text-gray-500 mb-2">JPG, PNG. Max 2MB</p>
-                    <Button variant="outline" size="sm">Choose a photo</Button>
+                    <Button variant="outline" size="sm" onClick={() => handleReadOnlyClick()} disabled={!canModify}>Choose a photo</Button>
                 </div>
             </div>
 
@@ -158,7 +167,8 @@ export default function AddAdvancedTeamMemberPage() {
                         type="text"
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
+                        disabled={!canModify}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm disabled:opacity-50"
                         placeholder="First Name"
                     />
                 </div>
@@ -170,7 +180,8 @@ export default function AddAdvancedTeamMemberPage() {
                         type="text"
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
+                        disabled={!canModify}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm disabled:opacity-50"
                         placeholder="Last Name"
                     />
                 </div>
@@ -182,7 +193,8 @@ export default function AddAdvancedTeamMemberPage() {
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
+                        disabled={!canModify}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm disabled:opacity-50"
                         placeholder="email@example.com"
                     />
                 </div>
@@ -194,7 +206,8 @@ export default function AddAdvancedTeamMemberPage() {
                         type="tel"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
+                        disabled={!canModify}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm disabled:opacity-50"
                         placeholder="+33 6 12 34 56 78"
                     />
                 </div>
@@ -204,7 +217,8 @@ export default function AddAdvancedTeamMemberPage() {
                         type="text"
                         value={address}
                         onChange={(e) => setAddress(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
+                        disabled={!canModify}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm disabled:opacity-50"
                         placeholder="123 Street Address"
                     />
                 </div>
@@ -214,7 +228,8 @@ export default function AddAdvancedTeamMemberPage() {
                         type="text"
                         value={city}
                         onChange={(e) => setCity(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
+                        disabled={!canModify}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm disabled:opacity-50"
                         placeholder="City"
                     />
                 </div>
@@ -224,7 +239,8 @@ export default function AddAdvancedTeamMemberPage() {
                         type="text"
                         value={zipCode}
                         onChange={(e) => setZipCode(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
+                        disabled={!canModify}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm disabled:opacity-50"
                         placeholder="Zip Code"
                     />
                 </div>
@@ -234,7 +250,8 @@ export default function AddAdvancedTeamMemberPage() {
                         type="date"
                         value={birthDate}
                         onChange={(e) => setBirthDate(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
+                        disabled={!canModify}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm disabled:opacity-50"
                     />
                 </div>
                 <div>
@@ -242,7 +259,8 @@ export default function AddAdvancedTeamMemberPage() {
                     <select
                         value={gender}
                         onChange={(e) => setGender(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
+                        disabled={!canModify}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm disabled:opacity-50"
                     >
                         <option value="female">Female</option>
                         <option value="male">Male</option>
@@ -271,7 +289,8 @@ export default function AddAdvancedTeamMemberPage() {
                     <select
                         value={role}
                         onChange={(e) => setRole(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
+                        disabled={!canModify}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm disabled:opacity-50"
                     >
                         <option value="Team Member">Team Member</option>
                         <option value="Manager">Manager</option>
@@ -283,7 +302,8 @@ export default function AddAdvancedTeamMemberPage() {
                     <select
                         value={employeeType}
                         onChange={(e) => setEmployeeType(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
+                        disabled={!canModify}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm disabled:opacity-50"
                     >
                         <option value="full-time">Full-time</option>
                         <option value="part-time">Part-time</option>
@@ -296,7 +316,8 @@ export default function AddAdvancedTeamMemberPage() {
                         type="date"
                         value={startDate}
                         onChange={(e) => setStartDate(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
+                        disabled={!canModify}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm disabled:opacity-50"
                     />
                 </div>
                 <div>
@@ -305,7 +326,8 @@ export default function AddAdvancedTeamMemberPage() {
                         type="date"
                         value={contractEndDate}
                         onChange={(e) => setContractEndDate(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
+                        disabled={!canModify}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm disabled:opacity-50"
                     />
                 </div>
             </div>
@@ -321,7 +343,8 @@ export default function AddAdvancedTeamMemberPage() {
                     max="100"
                     value={sharingKey}
                     onChange={(e) => setSharingKey(parseInt(e.target.value))}
-                    className="w-full h-2 bg-[var(--color-primary-light)] opacity-70 rounded-lg appearance-none cursor-pointer accent-[var(--color-primary)]"
+                    disabled={!canModify}
+                    className="w-full h-2 bg-[var(--color-primary-light)] opacity-70 rounded-lg appearance-none cursor-pointer accent-[var(--color-primary)] disabled:opacity-30"
                 />
                 <div className="flex justify-between text-xs text-gray-500 mt-1">
                     <span>0% (Company)</span>
@@ -338,7 +361,8 @@ export default function AddAdvancedTeamMemberPage() {
                     type="number"
                     value={baseSalary}
                     onChange={(e) => setBaseSalary(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                    disabled={!canModify}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm disabled:opacity-50"
                     placeholder="0.00"
                 />
             </div>
@@ -367,7 +391,8 @@ export default function AddAdvancedTeamMemberPage() {
                             <button
                                 key={service.id}
                                 type="button"
-                                onClick={() => toggleService(service.id)}
+                                onClick={() => { if (!canModify) handleReadOnlyClick(); else toggleService(service.id); }}
+                                disabled={!canModify}
                                 className={`p-3 rounded-xl border-2 text-left transition-all ${isSelected
                                     ? "border-[var(--color-primary)] bg-[var(--color-primary-light)]"
                                     : "border-gray-200 hover:border-[var(--color-primary-light)]"
@@ -394,7 +419,8 @@ export default function AddAdvancedTeamMemberPage() {
                     <select
                         value={experienceLevel}
                         onChange={(e) => setExperienceLevel(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
+                        disabled={!canModify}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm disabled:opacity-50"
                     >
                         <option value="beginner">Beginner (0-2 years)</option>
                         <option value="intermediate">Intermediate (2-5 years)</option>
@@ -407,7 +433,8 @@ export default function AddAdvancedTeamMemberPage() {
                         type="text"
                         value={specialties}
                         onChange={(e) => setSpecialties(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
+                        disabled={!canModify}
+                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm disabled:opacity-50"
                         placeholder="Ex: African braids, coloring..."
                     />
                 </div>
@@ -438,7 +465,8 @@ export default function AddAdvancedTeamMemberPage() {
                             <input
                                 type="checkbox"
                                 checked={schedule[day].active}
-                                onChange={() => toggleDay(day)}
+                                onChange={() => { if (!canModify) handleReadOnlyClick(); else toggleDay(day); }}
+                                disabled={!canModify}
                                 className="w-4 h-4 text-[var(--color-primary)] rounded focus:ring-[var(--color-primary-light)]"
                             />
                             <span className={`font-medium text-sm ${schedule[day].active ? "text-[var(--color-primary)]" : "text-gray-500"}`}>
@@ -451,14 +479,16 @@ export default function AddAdvancedTeamMemberPage() {
                                     type="time"
                                     value={schedule[day].start}
                                     onChange={(e) => updateScheduleTime(day, "start", e.target.value)}
-                                    className="px-2 py-1.5 md:px-3 md:py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 w-24 md:w-auto"
+                                    disabled={!canModify}
+                                    className="px-2 py-1.5 md:px-3 md:py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 w-24 md:w-auto disabled:opacity-50"
                                 />
                                 <span className="text-gray-400 text-xs md:text-sm">to</span>
                                 <input
                                     type="time"
                                     value={schedule[day].end}
                                     onChange={(e) => updateScheduleTime(day, "end", e.target.value)}
-                                    className="px-2 py-1.5 md:px-3 md:py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 w-24 md:w-auto"
+                                    disabled={!canModify}
+                                    className="px-2 py-1.5 md:px-3 md:py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 w-24 md:w-auto disabled:opacity-50"
                                 />
                             </div>
                         )}
@@ -615,10 +645,12 @@ export default function AddAdvancedTeamMemberPage() {
                         <ChevronRight className="w-4 h-4" />
                     </Button>
                 ) : (
-                    <Button variant="primary" size="md" onClick={handleSubmit} className="w-full md:w-auto">
-                        <Save className="w-4 h-4" />
-                        Create Team Member
-                    </Button>
+                    <ReadOnlyGuard>
+                        <Button variant="primary" size="md" onClick={handleSubmit} className="w-full md:w-auto">
+                            <Save className="w-4 h-4" />
+                            Create Team Member
+                        </Button>
+                    </ReadOnlyGuard>
                 )}
             </div>
         </TeamLayout>

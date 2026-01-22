@@ -4,6 +4,8 @@ import SettingsLayout from "@/components/layout/SettingsLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { Plug, Check, ExternalLink, Calendar, CreditCard, MessageSquare, Cloud } from "lucide-react";
+import { useAuth } from "@/context/AuthProvider";
+import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 
 const integrations = [
     {
@@ -95,15 +97,21 @@ export default function IntegrationsSettingsPage() {
                                     <div className="flex items-center justify-between">
                                         <p className="text-xs text-gray-600">{integration.account}</p>
                                         <div className="flex gap-2">
-                                            <Button variant="outline" size="sm" className="text-xs">Configurer</Button>
-                                            <Button variant="danger" size="sm" className="text-xs">Déconnecter</Button>
+                                            <ReadOnlyGuard>
+                                                <Button variant="outline" size="sm" className="text-xs">Configurer</Button>
+                                            </ReadOnlyGuard>
+                                            <ReadOnlyGuard>
+                                                <Button variant="danger" size="sm" className="text-xs">Déconnecter</Button>
+                                            </ReadOnlyGuard>
                                         </div>
                                     </div>
                                 ) : (
-                                    <Button variant="success" size="sm" className="w-full">
-                                        <Plug className="w-4 h-4" />
-                                        Connecter
-                                    </Button>
+                                    <ReadOnlyGuard>
+                                        <Button variant="success" size="sm" className="w-full">
+                                            <Plug className="w-4 h-4" />
+                                            Connecter
+                                        </Button>
+                                    </ReadOnlyGuard>
                                 )}
                             </div>
                         );
@@ -118,9 +126,11 @@ export default function IntegrationsSettingsPage() {
                         <h3 className="font-semibold text-gray-900 text-lg">Accès API</h3>
                         <p className="text-xs text-gray-500">Gérez vos clés API pour les intégrations personnalisées</p>
                     </div>
-                    <Button variant="outline" size="sm">
-                        Générer une clé
-                    </Button>
+                    <ReadOnlyGuard>
+                        <Button variant="outline" size="sm">
+                            Générer une clé
+                        </Button>
+                    </ReadOnlyGuard>
                 </div>
                 <div className="p-4 bg-gray-50 rounded-xl">
                     <div className="flex items-center justify-between mb-2">
@@ -130,7 +140,9 @@ export default function IntegrationsSettingsPage() {
                         </div>
                         <div className="flex gap-2">
                             <Button variant="outline" size="sm" className="text-xs">Copier</Button>
-                            <Button variant="danger" size="sm" className="text-xs">Révoquer</Button>
+                            <ReadOnlyGuard>
+                                <Button variant="danger" size="sm" className="text-xs">Révoquer</Button>
+                            </ReadOnlyGuard>
                         </div>
                     </div>
                     <code className="block p-3 bg-gray-900 text-green-400 rounded-lg text-xs font-mono">

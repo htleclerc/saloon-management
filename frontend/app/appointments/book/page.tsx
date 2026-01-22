@@ -1,22 +1,15 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import { ArrowLeft, ArrowRight, Calendar, Clock, User, Check, X, Plus, Search, Scissors, Heart, AlertCircle, HelpCircle } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calendar, Clock, User, Check, X, Plus, Search, Scissors, Heart, AlertCircle, HelpCircle, ChevronRight } from "lucide-react";
 
-// Mock data
-const services = [
-    { id: 1, name: "Box Braids", description: "Classic box braids with extensions", duration: "3-4 hours", price: "€120", image: "🎀", category: "Braids" },
-    { id: 2, name: "Cornrows", description: "Traditional cornrow braiding", duration: "2-3 hours", price: "€85", image: "🌾", category: "Braids" },
-    { id: 3, name: "Twists", description: "Beautiful twist hairstyle", duration: "2.5-3 hours", price: "€95", image: "🌀", category: "Braids" },
-    { id: 4, name: "Locs", description: "Professional locs maintenance", duration: "3-5 hours", price: "€150", image: "🔗", category: "Locs" },
-    { id: 5, name: "Hair Treatment", description: "Deep conditioning treatment", duration: "1-2 hours", price: "€75", image: "💆", category: "Treatment" },
-    { id: 6, name: "Senegalese Twists", description: "Elegant Senegalese twist style", duration: "4-5 hours", price: "€135", image: "✨", category: "Braids" },
-    { id: 7, name: "Other", description: "Custom service", duration: "Variable", price: "To be defined", image: "🎨", category: "Other" },
-];
+// Local services array removed in favor of ServiceProvider
+import { useServices } from "@/context/ServiceProvider";
+import { CLIENTS } from "@/lib/data";
 
 const salons = [
     { id: "tenant_1", name: "Demo Salon", servicesOffered: [1, 2, 5] },
@@ -41,10 +34,12 @@ const timeSlots = [
 import { useAuth } from "@/context/AuthProvider";
 import { useBooking } from "@/context/BookingProvider";
 import { BookingStatus, Client } from "@/types";
+import { useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 
-export default function BookAppointmentPage() {
+function BookAppointmentContent() {
     const { user, isClient, isAdmin, isWorker } = useAuth();
     const { getAvailableSlots, addBooking, updateBooking, bookings } = useBooking();
+    const { handleReadOnlyClick } = useReadOnlyGuard();
     const router = useRouter();
     const searchParams = useSearchParams();
     const urlSalonId = searchParams.get("salonId");
@@ -54,7 +49,7 @@ export default function BookAppointmentPage() {
     const [selectedSalon, setSelectedSalon] = useState<any>(null);
     const [selectedServices, setSelectedServices] = useState<any[]>([]);
     const [selectedWorkers, setSelectedWorkers] = useState<any[]>([]);
-    const [selectedDate, setSelectedDate] = useState("");
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [selectedTime, setSelectedTime] = useState("");
     const [initialBooking, setInitialBooking] = useState<any>(null);
     const [serviceDetails, setServiceDetails] = useState("");
@@ -69,6 +64,48 @@ export default function BookAppointmentPage() {
         email: user?.email || "",
         isAnonymous: false
     });
+
+    // Service & Admin State
+    const { services, addService } = useServices();
+    const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
+    const [serviceSearch, setServiceSearch] = useState("");
+    const [newServiceName, setNewServiceName] = useState("");
+    const [newServicePrice, setNewServicePrice] = useState("");
+    const [newServiceDuration, setNewServiceDuration] = useState("");
+
+    // Pagination for Clients
+    const [visibleClientsCount, setVisibleClientsCount] = useState(10);
+
+    const filteredServices = services.filter(s => s.name.toLowerCase().includes(serviceSearch.toLowerCase()));
+
+    // Logic: Show first 12, then "View All" button
+    const SERVICES_LIMIT = 12;
+    const showModalTrigger = services.length > SERVICES_LIMIT;
+    const visibleServices = services.slice(0, SERVICES_LIMIT);
+
+    const handleSaveNewService = () => {
+        if (handleReadOnlyClick()) return;
+        if (!newServiceName || !newServicePrice) {
+            // Simple alert or toast if we had access, but for now just return
+            alert("Name and Price are required");
+            return;
+        }
+        addService({
+            name: newServiceName,
+            price: Number(newServicePrice),
+            duration: newServiceDuration || "Variable",
+            category: "Custom",
+            description: "Added via Admin Interface"
+        });
+        setNewServiceName("");
+        setNewServicePrice("");
+        setNewServiceDuration("");
+        // Deselect "Other" if you want, or keep it.
+        // For now, let's just clear inputs.
+    };
+
+    // Virtual "Other" Service ID for UI handling
+    const OTHER_SERVICE_ID = 9999;
 
     // Derive favorites from booking history
     const favoriteSalonIds = useMemo(() => {
@@ -102,11 +139,26 @@ export default function BookAppointmentPage() {
             });
     }, [salonSearch, favoriteSalonIds, step, isAdmin]); // Re-run if step/admin changes
 
-    // Extract unique clients from bookings
+    // Extract unique clients from bookings and merge with Mock CLIENTS
     const existingClients = useMemo(() => {
         const clientMap = new Map();
+
+        // 1. Add Mock Clients first
+        CLIENTS.forEach(c => {
+            clientMap.set(c.id, {
+                id: c.id,
+                name: c.name,
+                email: c.email,
+                phone: c.phone
+            });
+        });
+
+        // 2. Add Booking Clients (overriding or adding new ones)
         bookings.forEach(b => {
             if (b.clientId && b.clientId !== 'anonymous' && b.clientName) {
+                // Use a synthetic ID if string, or keep number if number
+                // For this map, we need a consistent key. 
+                // Currently mock IDs are numbers. Booking IDs are numbers.
                 clientMap.set(b.clientId, {
                     id: b.clientId,
                     name: b.clientName,
@@ -246,6 +298,7 @@ export default function BookAppointmentPage() {
     };
 
     const handleSubmit = () => {
+        if (handleReadOnlyClick()) return;
         const totalDuration = selectedServices.reduce((sum, s) => {
             let mins = 60;
             if (s.duration && s.duration.toLowerCase().includes('hour')) {
@@ -294,6 +347,7 @@ export default function BookAppointmentPage() {
     };
 
     const handleUpdateCurrentStep = () => {
+        if (handleReadOnlyClick()) return;
         const editId = searchParams.get("edit");
         if (!editId || !isEditMode) return;
 
@@ -331,7 +385,12 @@ export default function BookAppointmentPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-[var(--color-primary-light)] via-white to-gray-50/30">
+        <div
+            className="min-h-screen"
+            style={{
+                background: "linear-gradient(135deg, var(--color-primary-light) 0%, #ffffff 50%, #f9fafb 100%)"
+            }}
+        >
             <div className="max-w-6xl mx-auto px-4 py-8">
                 {/* Header */}
                 <div className="mb-8">
@@ -379,107 +438,165 @@ export default function BookAppointmentPage() {
                 </div>
 
                 {/* Step 0: Select Client (Admin/Worker only) */}
-                {(step === 0 || step === -1) && !isClient && (
+                {(step === 0) && !isClient && (
                     <Card className="p-8">
                         <h2 className="text-2xl font-bold text-gray-900 mb-6 font-primary">Who is the client?</h2>
                         <div className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <button
-                                    onClick={() => setClientInfo({ ...clientInfo, isAnonymous: true, name: "Anonymous Client" })}
-                                    className={`p-6 rounded-xl border-2 transition-all ${clientInfo.isAnonymous ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)]' : 'border-gray-100 hover:border-[var(--color-primary-light)]'}`}
-                                >
-                                    <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                        <X className="w-6 h-6 text-gray-400" />
-                                    </div>
-                                    <p className="font-bold">Anonymous</p>
-                                </button>
-                                <button
-                                    onClick={() => setClientInfo({ ...clientInfo, isAnonymous: false, name: "" })}
-                                    className={`p-6 rounded-xl border-2 transition-all ${!clientInfo.isAnonymous && clientInfo.name === "" ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)]' : 'border-gray-100 hover:border-[var(--color-primary-light)]'}`}
-                                >
-                                    <div className="w-12 h-12 bg-[var(--color-primary-light)] rounded-full flex items-center justify-center mx-auto mb-3 text-[var(--color-primary)]">
-                                        <Plus className="w-6 h-6" />
-                                    </div>
-                                    <p className="font-bold">New Client</p>
-                                </button>
-                                <button
-                                    onClick={() => setStep(-1)} // Toggle search mode
-                                    className={`p-6 rounded-xl border-2 transition-all ${step === -1 ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)]' : 'border-gray-100 hover:border-[var(--color-primary-light)]'}`}
-                                >
-                                    <div className="w-12 h-12 bg-[var(--color-primary-light)] rounded-full flex items-center justify-center mx-auto mb-3 text-[var(--color-primary)]">
-                                        <Search className="w-6 h-6" />
-                                    </div>
-                                    <p className="font-bold">Search Client</p>
-                                </button>
+                            {/* Two Buttons Side-by-Side */}
+                            <div className="flex flex-col gap-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <button
+                                        onClick={() => setClientInfo({ ...clientInfo, isAnonymous: true, name: "Anonymous Client" })}
+                                        className={`p-4 rounded-xl border-2 transition-all flex items-center justify-center gap-3 ${clientInfo.isAnonymous ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)]' : 'border-gray-100 hover:border-[var(--color-primary-light)]'}`}
+                                    >
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${clientInfo.isAnonymous ? 'bg-[var(--color-primary)] text-white' : 'bg-gray-100 text-gray-400 group-hover:bg-[var(--color-primary-light)] group-hover:text-[var(--color-primary)]'}`}>
+                                            <X className="w-5 h-5" />
+                                        </div>
+                                        <div className="text-left">
+                                            <span className="font-bold text-sm block">Anonymous</span>
+                                        </div>
+                                        {clientInfo.isAnonymous && <Check className="w-5 h-5 text-[var(--color-primary)] ml-auto" />}
+                                    </button>
+
+                                    <button
+                                        onClick={() => setClientInfo({ ...clientInfo, isAnonymous: false, name: "" })}
+                                        className={`p-4 rounded-xl border-2 transition-all flex items-center justify-center gap-3 ${!clientInfo.isAnonymous && clientInfo.name === "" ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)]' : 'border-gray-100 hover:border-[var(--color-primary-light)]'}`}
+                                    >
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${!clientInfo.isAnonymous && clientInfo.name === "" ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-primary-light)] text-[var(--color-primary)]'}`}>
+                                            <Plus className="w-5 h-5" />
+                                        </div>
+                                        <div className="text-left">
+                                            <span className="font-bold text-sm block">New Client</span>
+                                        </div>
+                                        {!clientInfo.isAnonymous && clientInfo.name === "" && <Check className="w-5 h-5 text-[var(--color-primary)] ml-auto" />}
+                                    </button>
+                                </div>
+
+                                {/* Dynamic Content Area (Full Width) */}
+                                <div>
+                                    {/* Anonymous Warning */}
+                                    {clientInfo.isAnonymous && (
+                                        <div className="p-4 bg-orange-50 text-orange-700 rounded-xl border border-orange-100 flex items-start gap-3 animate-in fade-in slide-in-from-top-2">
+                                            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                                            <div className="flex-1">
+                                                <p className="font-bold text-sm">Warning: Anonymous Booking</p>
+                                                <p className="text-xs mt-1 opacity-90">This appointment will not be linked to any client history. You won't be able to track loyalty points or past preferences.</p>
+                                            </div>
+                                            <Button size="sm" onClick={() => setStep(1)} className="bg-orange-600 hover:bg-orange-700 text-white border-none shadow-none">
+                                                Continue
+                                            </Button>
+                                        </div>
+                                    )}
+
+                                    {/* New Client Form */}
+                                    {!clientInfo.isAnonymous && clientInfo.name === "" && (
+                                        <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 animate-in fade-in slide-in-from-top-2">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <label className="text-sm font-bold text-gray-700">Full Name <span className="text-red-500">*</span></label>
+                                                    <input
+                                                        type="text"
+                                                        value={clientInfo.name}
+                                                        onChange={(e) => setClientInfo({ ...clientInfo, name: e.target.value })}
+                                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--color-primary-light)] outline-none bg-white"
+                                                        placeholder="e.g. Marie Dubois"
+                                                        autoFocus
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-sm font-bold text-gray-700">Phone</label>
+                                                    <input
+                                                        type="tel"
+                                                        value={clientInfo.phone}
+                                                        onChange={(e) => setClientInfo({ ...clientInfo, phone: e.target.value })}
+                                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--color-primary-light)] outline-none bg-white"
+                                                        placeholder="06 00 00 00 00"
+                                                    />
+                                                </div>
+                                                <div className="col-span-full flex justify-end">
+                                                    <Button
+                                                        onClick={() => setStep(1)}
+                                                        disabled={!clientInfo.name}
+                                                        className="w-full sm:w-auto"
+                                                    >
+                                                        Continue to Salon Selection
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
-                            {step === -1 && (
-                                <div className="space-y-4 animate-in fade-in slide-in-from-top-4">
-                                    <div className="relative">
-                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                        <input
-                                            type="text"
-                                            placeholder="Search by name, email, or phone..."
-                                            className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--color-primary-light)] outline-none"
-                                            value={clientSearch}
-                                            onChange={(e) => setClientSearch(e.target.value)}
-                                        />
-                                    </div>
-                                    <div className="max-h-60 overflow-y-auto space-y-2">
-                                        {filteredClients.length === 0 ? (
-                                            <p className="text-center py-4 text-gray-500 text-sm italic">No matching clients found</p>
-                                        ) : (
-                                            filteredClients.map(c => (
+                            {/* Divider with Text */}
+                            <div className="relative py-2">
+                                <div className="absolute inset-0 flex items-center">
+                                    <span className="w-full border-t border-gray-200" />
+                                </div>
+                                <div className="relative flex justify-center text-xs uppercase">
+                                    <span className="bg-white px-2 text-gray-500 font-bold tracking-wider">Or select existing</span>
+                                </div>
+                            </div>
+
+                            {/* Inline Search and List */}
+                            <div className="space-y-4">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search by name, email, or phone..."
+                                        className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--color-primary-light)] outline-none transition-shadow"
+                                        value={clientSearch}
+                                        onChange={(e) => {
+                                            setClientSearch(e.target.value);
+                                            setVisibleClientsCount(10); // Reset pagination
+                                        }}
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    {filteredClients.length === 0 ? (
+                                        <div className="text-center py-8 text-gray-500 border-2 border-dashed border-gray-100 rounded-xl">
+                                            <p className="text-sm font-medium">No matching clients found</p>
+                                            <p className="text-xs mt-1">Try a different search or create a New Client above</p>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            {filteredClients.slice(0, visibleClientsCount).map(c => (
                                                 <button
                                                     key={c.id}
                                                     onClick={() => {
                                                         setClientInfo({ name: c.name, email: c.email || "", phone: c.phone || "", isAnonymous: false });
-                                                        setStep(0);
+                                                        setStep(1);
                                                     }}
-                                                    className="w-full flex items-center justify-between p-4 hover:bg-[var(--color-primary-light)] rounded-xl border border-gray-100 transition-colors"
+                                                    className="w-full flex items-center justify-between p-3 hover:bg-[var(--color-primary-light)] rounded-xl border border-gray-100 transition-all group text-left"
                                                 >
-                                                    <div className="text-left font-primary">
-                                                        <p className="font-bold text-gray-900">{c.name}</p>
-                                                        <p className="text-[10px] text-gray-500 uppercase tracking-wider">{c.email || "No email"} • {c.phone || "No phone"}</p>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-full bg-purple-100 text-[var(--color-primary)] flex items-center justify-center font-bold text-sm">
+                                                            {c.name.charAt(0)}
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-bold text-gray-900 group-hover:text-[var(--color-primary)] transition-colors">{c.name}</p>
+                                                            <p className="text-[10px] text-gray-500 uppercase tracking-wider">{c.email || c.phone || "No contact info"}</p>
+                                                        </div>
                                                     </div>
-                                                    <Button size="sm" variant="outline" className="text-[10px] uppercase font-bold">Select</Button>
+                                                    <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-[var(--color-primary)] transition-colors" />
                                                 </button>
-                                            ))
-                                        )}
-                                    </div>
-                                    <button
-                                        onClick={() => setStep(0)}
-                                        className="text-sm font-bold text-[var(--color-primary)] px-2"
-                                    >
-                                        ← Back to selection
-                                    </button>
-                                </div>
-                            )}
+                                            ))}
 
-                            {!clientInfo.isAnonymous && step !== -1 && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-4">
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-bold text-gray-700">Full Name</label>
-                                        <input
-                                            type="text"
-                                            value={clientInfo.name}
-                                            onChange={(e) => setClientInfo({ ...clientInfo, name: e.target.value })}
-                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--color-primary-light)] outline-none"
-                                            placeholder="e.g. Marie Dubois"
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-bold text-gray-700">Phone</label>
-                                        <input
-                                            type="tel"
-                                            value={clientInfo.phone}
-                                            onChange={(e) => setClientInfo({ ...clientInfo, phone: e.target.value })}
-                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--color-primary-light)] outline-none"
-                                            placeholder="06 00 00 00 00"
-                                        />
-                                    </div>
+                                            {/* Show More Button */}
+                                            {filteredClients.length > visibleClientsCount && (
+                                                <button
+                                                    onClick={() => setVisibleClientsCount(prev => prev + 10)}
+                                                    className="w-full py-3 text-sm font-bold text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] rounded-xl transition-colors border border-transparent hover:border-[var(--color-primary-light)]"
+                                                >
+                                                    Show more clients ({filteredClients.length - visibleClientsCount} remaining)
+                                                </button>
+                                            )}
+                                        </>
+                                    )}
                                 </div>
-                            )}
+                            </div>
                         </div>
                     </Card>
                 )}
@@ -551,13 +668,19 @@ export default function BookAppointmentPage() {
                     <Card className="p-4 sm:p-8">
                         <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6">Select services</h2>
                         <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                            {services.map((service) => {
+                            {(showModalTrigger ? visibleServices : services).map((service) => {
                                 const isSelected = selectedServices.find(s => s.id === service.id);
                                 const isFavorite = favoriteServiceIds.includes(service.id);
                                 return (
                                     <div
                                         key={service.id}
-                                        onClick={() => toggleService(service)}
+                                        onClick={() => {
+                                            if (isSelected) {
+                                                setSelectedServices(selectedServices.filter(s => s.id !== service.id));
+                                            } else {
+                                                setSelectedServices([...selectedServices, service]);
+                                            }
+                                        }}
                                         className={`p-6 rounded-xl border-2 cursor-pointer transition-all relative ${isSelected
                                             ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)] shadow-lg'
                                             : 'border-gray-100 hover:border-[var(--color-primary-light)] hover:shadow-md'
@@ -573,34 +696,167 @@ export default function BookAppointmentPage() {
                                                 <Heart className="w-5 h-5 fill-current" />
                                             </div>
                                         )}
-                                        <div className="text-5xl mb-4">{service.image}</div>
+                                        <div className="text-3xl mb-4">{service.image || "✂️"}</div>
                                         <div className="flex items-center gap-2 mb-2">
-                                            <h3 className="text-lg font-bold text-gray-900">{service.name}</h3>
+                                            <h3 className="text-lg font-bold text-gray-900 line-clamp-1">{service.name}</h3>
                                             {isFavorite && <span className="text-[10px] bg-pink-100 text-pink-600 px-1.5 py-0.5 rounded-full font-bold uppercase">Fav</span>}
                                         </div>
-                                        <p className="text-sm text-gray-600 mb-3">{service.description}</p>
+                                        <p className="text-sm text-gray-600 mb-3 line-clamp-2">{service.category || "General"}</p>
                                         <div className="flex items-center justify-between text-sm">
                                             <span className="text-[var(--color-primary)] font-semibold flex items-center gap-1">
                                                 <Clock className="w-4 h-4" /> {service.duration}
                                             </span>
-                                            <span className="text-gray-900 font-bold text-lg">{service.price}</span>
+                                            <span className="text-gray-900 font-bold text-lg">€{service.price}</span>
                                         </div>
                                     </div>
                                 );
                             })}
+
+                            {/* Modal Trigger Card */}
+                            {showModalTrigger && (
+                                <button
+                                    onClick={() => setIsServiceModalOpen(true)}
+                                    className="p-6 rounded-xl border-2 border-dashed border-purple-300 bg-purple-50/50 text-purple-700 flex flex-col items-center justify-center gap-2 hover:bg-purple-100 transition-all font-bold group"
+                                >
+                                    <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                                        <Search className="w-6 h-6 text-purple-600" />
+                                    </div>
+                                    <span>View all {services.length} services...</span>
+                                </button>
+                            )}
+
+                            {/* Custom "Other" Service Card */}
+                            <div
+                                onClick={() => {
+                                    const isSelected = selectedServices.find(s => s.id === OTHER_SERVICE_ID);
+                                    if (isSelected) {
+                                        setSelectedServices(selectedServices.filter(s => s.id !== OTHER_SERVICE_ID));
+                                    } else {
+                                        setSelectedServices([...selectedServices, { id: OTHER_SERVICE_ID, name: "Custom Service", price: "Pending", duration: "Variable" }]);
+                                    }
+                                }}
+                                className={`p-6 rounded-xl border-2 cursor-pointer transition-all relative ${selectedServices.find(s => s.id === OTHER_SERVICE_ID)
+                                    ? 'border-orange-500 bg-orange-50 shadow-lg'
+                                    : 'border-dashed border-gray-300 hover:border-orange-300 hover:bg-orange-50/30'
+                                    }`}
+                            >
+                                {selectedServices.find(s => s.id === OTHER_SERVICE_ID) && (
+                                    <div className="absolute top-4 right-4 bg-orange-500 text-white rounded-full p-1 animate-in zoom-in">
+                                        <Check className="w-4 h-4" />
+                                    </div>
+                                )}
+                                <div className="text-3xl mb-4">🎨</div>
+                                <h3 className="text-lg font-bold text-gray-900 mb-2">Other / Custom</h3>
+                                <p className="text-sm text-gray-600 mb-3">Service not listed?</p>
+                                <span className="text-orange-600 font-bold text-sm">Describe details below</span>
+                            </div>
                         </div>
 
-                        {selectedServices.find(s => s.id === 7) && (
-                            <div className="mt-6 p-4 bg-[var(--color-primary-light)] rounded-xl animate-in zoom-in-95">
-                                <label className="block text-sm font-bold text-gray-700 mb-2">
-                                    Custom service details *
-                                </label>
-                                <textarea
-                                    value={serviceDetails}
-                                    onChange={(e) => setServiceDetails(e.target.value)}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[var(--color-primary-light)] outline-none min-h-[100px]"
-                                    placeholder="Describe what you want..."
-                                />
+                        {selectedServices.find(s => s.id === OTHER_SERVICE_ID) && (
+                            <div className="mt-6 p-6 bg-orange-50 border border-orange-100 rounded-xl animate-in zoom-in-95 space-y-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                                        Custom service details *
+                                    </label>
+                                    <textarea
+                                        value={serviceDetails}
+                                        onChange={(e) => setServiceDetails(e.target.value)}
+                                        className="w-full px-4 py-3 border border-orange-200 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none min-h-[100px]"
+                                        placeholder="Describe what you want (Style, Length, Color...)"
+                                    />
+                                </div>
+
+                                {/* Admin Add to Catalog */}
+                                {isAdmin && (
+                                    <div className="pt-4 border-t border-orange-200">
+                                        <p className="text-xs font-bold text-orange-800 mb-3 flex items-center gap-2">
+                                            <Plus className="w-4 h-4" /> Quick Add to Catalog (Admin Only)
+                                        </p>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                                            <input
+                                                placeholder="Service Name"
+                                                className="px-3 py-2 text-xs border rounded-lg md:col-span-2"
+                                                value={newServiceName}
+                                                onChange={e => setNewServiceName(e.target.value)}
+                                            />
+                                            <input
+                                                placeholder="Price (€)"
+                                                type="number"
+                                                className="px-3 py-2 text-xs border rounded-lg"
+                                                value={newServicePrice}
+                                                onChange={e => setNewServicePrice(e.target.value)}
+                                            />
+                                            <input
+                                                placeholder="Duration (e.g. 2h)"
+                                                className="px-3 py-2 text-xs border rounded-lg"
+                                                value={newServiceDuration}
+                                                onChange={e => setNewServiceDuration(e.target.value)}
+                                            />
+                                        </div>
+                                        <Button size="sm" variant="outline" className="bg-white border-orange-200 text-orange-700 hover:bg-orange-100" onClick={handleSaveNewService}>
+                                            Save Service to Catalog
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Large Selection Modal */}
+                        {isServiceModalOpen && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+                                    <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-white z-10">
+                                        <h3 className="font-bold text-xl">All Services</h3>
+                                        <button onClick={() => setIsServiceModalOpen(false)} className="p-2 hover:bg-gray-100 rounded-full"><X className="w-5 h-5" /></button>
+                                    </div>
+                                    <div className="p-4 border-b border-gray-100 bg-gray-50">
+                                        <div className="relative">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                                            <input
+                                                autoFocus
+                                                placeholder="Search services..."
+                                                className="w-full pl-9 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-purple-500"
+                                                value={serviceSearch}
+                                                onChange={e => setServiceSearch(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="overflow-y-auto p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        {filteredServices.map(service => {
+                                            const isSelected = selectedServices.find(s => s.id === service.id);
+                                            return (
+                                                <div
+                                                    key={service.id}
+                                                    onClick={() => {
+                                                        if (isSelected) {
+                                                            setSelectedServices(selectedServices.filter(s => s.id !== service.id));
+                                                        } else {
+                                                            setSelectedServices([...selectedServices, service]);
+                                                        }
+                                                    }}
+                                                    className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition-all ${isSelected ? 'border-purple-500 bg-purple-50 shadow-sm' : 'border-gray-100 hover:border-purple-200 hover:bg-purple-50/50'}`}
+                                                >
+                                                    <div>
+                                                        <p className="font-bold text-gray-900">{service.name}</p>
+                                                        <p className="text-xs text-gray-500">{service.duration}</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="font-bold text-purple-600">€{service.price}</span>
+                                                        {isSelected && <Check className="w-5 h-5 text-purple-600 fill-purple-100" />}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                        {filteredServices.length === 0 && (
+                                            <div className="col-span-full text-center py-10 text-gray-500">
+                                                <p>No services found.</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end">
+                                        <Button onClick={() => setIsServiceModalOpen(false)}>Done ({selectedServices.length} selected)</Button>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </Card>
@@ -695,9 +951,9 @@ export default function BookAppointmentPage() {
 
                                 {/* Desktop Information Panel */}
                                 <div className="hidden lg:block animate-in fade-in slide-in-from-bottom-4 duration-700">
-                                    <div className="p-6 bg-gradient-to-br from-[var(--color-warning-light)] to-white border border-[var(--color-warning-light)] rounded-2xl shadow-sm space-y-4">
+                                    <div className="p-6 bg-gray-50/50 border border-gray-100 rounded-2xl shadow-sm space-y-4">
                                         <div className="flex items-center gap-3 text-[var(--color-warning)]">
-                                            <div className="bg-[var(--color-warning-light)] p-2 rounded-lg">
+                                            <div className="bg-orange-100 p-2 rounded-lg">
                                                 <AlertCircle className="w-5 h-5" />
                                             </div>
                                             <h4 className="font-bold text-sm uppercase tracking-widest">Flexible Scheduling</h4>
@@ -884,11 +1140,11 @@ export default function BookAppointmentPage() {
                                 </div>
                                 <div className="pt-4 border-t border-white/20 mb-6">
                                     <p className="text-[8px] sm:text-[10px] opacity-60 uppercase font-black tracking-tighter mb-1">Estimated Total</p>
-                                    <p className="text-3xl sm:text-4xl font-black">${selectedServices.reduce((sum, s) => sum + (parseInt(s.price.replace('€', '')) || 0), 0)}</p>
+                                    <p className="text-3xl sm:text-4xl font-black">€{selectedServices.reduce((sum, s) => sum + (Number(s.price) || 0), 0)}</p>
                                 </div>
                                 <Button
                                     onClick={handleSubmit}
-                                    className="w-full bg-white text-[var(--color-primary)] hover:bg-white/90 font-black uppercase py-4 sm:py-6 rounded-xl sm:rounded-2xl shadow-xl transition-all hover:scale-[1.02] active:scale-95 text-sm sm:text-base"
+                                    className="w-full !bg-none bg-white text-[var(--color-primary)] hover:bg-gray-50 font-black uppercase py-4 sm:py-6 rounded-xl sm:rounded-2xl shadow-xl border-4 border-white/20 hover:border-white transition-all hover:scale-[1.02] active:scale-95 text-sm sm:text-base"
                                 >
                                     Confirm
                                 </Button>
@@ -938,5 +1194,13 @@ export default function BookAppointmentPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function BookAppointmentPage() {
+    return (
+        <Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-primary)]"></div></div>}>
+            <BookAppointmentContent />
+        </Suspense>
     );
 }

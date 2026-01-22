@@ -4,6 +4,8 @@ import SettingsLayout from "@/components/layout/SettingsLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { CreditCard, Download, CheckCircle, Star, TrendingUp, Zap } from "lucide-react";
+import { useAuth } from "@/context/AuthProvider";
+import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 
 const invoices = [
     { id: "INV-2026-001", date: "01/01/2026", amount: "€29.00", status: "Payée" },
@@ -28,12 +30,16 @@ export default function BillingSettingsPage() {
                         <h3 className="text-2xl font-bold mb-1">Workshop Pro</h3>
                         <p className="text-purple-200 text-sm mb-4">€29/mois • Renouvelé le 01/02/2026</p>
                         <div className="flex gap-3">
-                            <Button variant="outline" size="sm" className="bg-white/10 border-white/30 text-white hover:bg-white/20">
-                                Changer de plan
-                            </Button>
-                            <Button variant="outline" size="sm" className="bg-white/10 border-white/30 text-white hover:bg-white/20">
-                                Annuler l'abonnement
-                            </Button>
+                            <ReadOnlyGuard>
+                                <Button variant="outline" size="sm" className="bg-white/10 border-white/30 text-white hover:bg-white/20">
+                                    Changer de plan
+                                </Button>
+                            </ReadOnlyGuard>
+                            <ReadOnlyGuard>
+                                <Button variant="outline" size="sm" className="bg-white/10 border-white/30 text-white hover:bg-white/20">
+                                    Annuler l'abonnement
+                                </Button>
+                            </ReadOnlyGuard>
                         </div>
                     </div>
                     <div className="text-right">
@@ -104,7 +110,9 @@ export default function BillingSettingsPage() {
                             <p className="text-xs text-gray-500">Gérez vos cartes de paiement</p>
                         </div>
                     </div>
-                    <Button variant="outline" size="sm">Ajouter une carte</Button>
+                    <ReadOnlyGuard>
+                        <Button variant="outline" size="sm">Ajouter une carte</Button>
+                    </ReadOnlyGuard>
                 </div>
                 <div className="p-4 bg-gray-50 rounded-xl flex items-center justify-between">
                     <div className="flex items-center gap-4">
@@ -120,7 +128,9 @@ export default function BillingSettingsPage() {
                         <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full font-medium">
                             Par défaut
                         </span>
-                        <Button variant="outline" size="sm">Modifier</Button>
+                        <ReadOnlyGuard>
+                            <Button variant="outline" size="sm">Modifier</Button>
+                        </ReadOnlyGuard>
                     </div>
                 </div>
             </Card>

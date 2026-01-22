@@ -13,6 +13,7 @@ import { useBooking } from "@/context/BookingProvider";
 import { BookingStatus } from "@/types";
 import { useRouter } from "next/navigation";
 import AppointmentDetailModal from "@/components/booking/AppointmentDetailModal";
+import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 
 // Helper for labels
 const servicesList = [
@@ -65,6 +66,7 @@ const exportColumns: ExportColumn[] = [
 export default function AppointmentsPage() {
     const { getCardStyle } = useKpiCardStyle();
     const { bookings, updateBookingStatus, cancelBooking, approveReschedule, rejectReschedule } = useBooking();
+    const { handleReadOnlyClick } = useReadOnlyGuard();
     const router = useRouter();
     const [detailModal, setDetailModal] = useState<{ open: boolean; appointment: any | null }>({ open: false, appointment: null });
     const [searchTerm, setSearchTerm] = useState("");
@@ -75,7 +77,7 @@ export default function AppointmentsPage() {
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
     const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
 
-    const { user, hasPermission, canAddServices } = useAuth();
+    const { user, hasPermission, canAddServices, canModify } = useAuth();
     const isWorker = user?.role === 'worker';
     const isClient = user?.role === 'client';
     const isAdminOrManager = hasPermission(['manager', 'admin']);
@@ -186,11 +188,13 @@ export default function AppointmentsPage() {
 
     // Handle bulk actions
     const handleBulkDelete = () => {
+        if (handleReadOnlyClick()) return;
         alert(`Would delete ${selectedItems.size} appointments: ${Array.from(selectedItems).join(", ")}`);
         setSelectedItems(new Set());
     };
 
     const handleBulkStatusChange = (status: string) => {
+        if (handleReadOnlyClick()) return;
         alert(`Would change status to "${status}" for ${selectedItems.size} appointments`);
         setSelectedItems(new Set());
     };
@@ -246,6 +250,7 @@ export default function AppointmentsPage() {
     };
 
     const handleCancel = (id: number) => {
+        if (handleReadOnlyClick()) return;
         if (confirm("Are you sure you want to cancel this appointment?")) {
             cancelBooking(id, "Cancelled from appointments list");
             setDetailModal({ open: false, appointment: null });
@@ -261,7 +266,7 @@ export default function AppointmentsPage() {
                         <h1 className="text-3xl font-bold text-gray-900">Appointments</h1>
                         <p className="text-gray-500 mt-1">Manage and track all appointments</p>
                     </div>
-                    {(canAddServices() || isClient) && (
+                    {(canAddServices() || isClient) && canModify && (
                         <div className="w-full md:w-auto flex justify-end">
                             <Link href="/appointments/book">
                                 <Button variant="primary" size="md" className="rounded-2xl h-14 w-14 md:h-12 md:w-auto md:px-6 flex items-center justify-center p-0 md:p-auto shadow-xl shadow-purple-500/30 active:scale-95 transition-all">
@@ -679,7 +684,7 @@ export default function AppointmentsPage() {
                                                     <Button
                                                         variant="success"
                                                         size="sm"
-                                                        onClick={() => updateBookingStatus(apt.id, 'Confirmed')}
+                                                        onClick={() => { if (!handleReadOnlyClick()) updateBookingStatus(apt.id, 'Confirmed') }}
                                                         className="w-10 h-10 p-0 flex items-center justify-center shadow-sm"
                                                         disabled={apt.status !== 'Pending'}
                                                         title="Valider"
@@ -691,7 +696,7 @@ export default function AppointmentsPage() {
                                                     <Button
                                                         variant="success"
                                                         size="sm"
-                                                        onClick={() => approveReschedule(apt.id)}
+                                                        onClick={() => { if (!handleReadOnlyClick()) approveReschedule(apt.id) }}
                                                         className="w-10 h-10 p-0 flex items-center justify-center shadow-sm"
                                                         title="Approve Reschedule"
                                                     >
@@ -702,7 +707,7 @@ export default function AppointmentsPage() {
                                                     <Button
                                                         variant="danger"
                                                         size="sm"
-                                                        onClick={() => rejectReschedule(apt.id, "Rejected by client")}
+                                                        onClick={() => { if (!handleReadOnlyClick()) rejectReschedule(apt.id, "Rejected by client") }}
                                                         className="w-10 h-10 p-0 flex items-center justify-center shadow-sm"
                                                         title="Reject Reschedule"
                                                     >
