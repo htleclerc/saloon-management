@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { useResponsive } from "@/context/ThemeProvider";
+import { useTranslation } from "@/i18n";
 import {
     Calendar,
     Clock,
@@ -20,7 +21,7 @@ import {
     FileText,
     Download
 } from "lucide-react";
-import { Booking, Service } from "@/types";
+import { Booking, Service, BookingInteraction, BookingComment } from "@/types";
 import { QRCodeSVG } from "qrcode.react";
 import { jsPDF } from "jspdf";
 import { UserRole } from "@/context/AuthProvider";
@@ -57,6 +58,7 @@ export default function AppointmentDetailModal({
 }: AppointmentDetailModalProps) {
     const [showFullHistory, setShowFullHistory] = useState(false);
     const { isMobile } = useResponsive();
+    const { t } = useTranslation();
 
     // Body scroll lock
     useEffect(() => {
@@ -115,7 +117,11 @@ export default function AppointmentDetailModal({
                                 appointment.status === 'Cancelled' ? <X className="w-5 h-5" /> :
                                     <Clock className="w-5 h-5" />}
                         </div>
-                        <span className="font-bold uppercase tracking-widest text-sm">Appointment {appointment.status}</span>
+                        <span className="font-bold uppercase tracking-widest text-sm">
+                            {t("appointments.statusBanner", {
+                                status: t(`appointments.${appointment.status.charAt(0).toLowerCase()}${appointment.status.slice(1)}`)
+                            })}
+                        </span>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
                         <X className="w-5 h-5" />
@@ -126,7 +132,7 @@ export default function AppointmentDetailModal({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-4">
                             <div className="space-y-1">
-                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">When</p>
+                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t("appointments.when")}</p>
                                 <div className="flex items-center gap-3 text-gray-900">
                                     <Calendar className="w-5 h-5 text-[var(--color-primary)]" />
                                     <span className="text-lg font-bold">{appointment.date}</span>
@@ -138,26 +144,26 @@ export default function AppointmentDetailModal({
                             </div>
 
                             <div className="space-y-1">
-                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Where</p>
+                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t("appointments.where")}</p>
                                 <p className="text-lg font-bold text-gray-900">{salonName}</p>
-                                <p className="text-sm text-gray-500 italic">Central location, easy access</p>
+                                <p className="text-sm text-gray-500 italic">{t("appointments.centralLocation")}</p>
                             </div>
 
                             <div className="space-y-1">
-                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Client</p>
+                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t("appointments.client")}</p>
                                 <p className="text-lg font-bold text-gray-900">{appointment.clientName}</p>
                                 {appointment.clientPhone && <p className="text-sm text-gray-500">{appointment.clientPhone}</p>}
                             </div>
                         </div>
 
                         <div className="space-y-4 border-l border-gray-100 md:pl-6">
-                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Services</p>
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t("appointments.services")}</p>
                             <div className="space-y-2">
-                                {appointment.serviceIds.map((sid: number) => {
+                                {appointment.serviceIds?.map((sid: number) => {
                                     const service = servicesList.find(s => s.id === sid);
                                     return (
                                         <div key={sid} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                                            <span className="font-medium text-gray-700">{service?.name || "Service"}</span>
+                                            <span className="font-medium text-gray-700">{service?.name || t("common.service")}</span>
                                             <span className="font-bold text-[var(--color-primary)]">€{service?.price || 0}</span>
                                         </div>
                                     );
@@ -170,34 +176,34 @@ export default function AppointmentDetailModal({
                                     className="flex items-center gap-2 text-xs font-bold text-[var(--color-primary)] hover:opacity-80 transition-opacity mt-3"
                                 >
                                     <Users className="w-3.5 h-3.5" />
-                                    Manage Team
+                                    {t("appointments.manageTeam")}
                                 </button>
                             )}
                         </div>
                     </div>
 
                     {/* Interaction History (Staff only) */}
-                    {isStaff && appointment.interactionHistory.length > 0 && (
+                    {isStaff && appointment.interactionHistory && appointment.interactionHistory.length > 0 && (
                         <div className="space-y-2 relative">
                             <div className="flex items-center justify-between">
-                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Audit Trail</p>
+                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{t("appointments.auditTrail")}</p>
                                 {(appointment.interactionHistory.length > 5 || isMobile) && (
                                     <button
                                         onClick={() => setShowFullHistory(true)}
                                         className="text-xs font-bold text-[var(--color-primary)] hover:opacity-80 flex items-center gap-1 transition-opacity"
                                     >
                                         <History className="w-3 h-3" />
-                                        {isMobile ? "View History" : "View All"}
+                                        {isMobile ? t("appointments.viewHistory") : t("appointments.viewAll")}
                                     </button>
                                 )}
                             </div>
 
                             {!isMobile && (
                                 <div className="space-y-2">
-                                    {appointment.interactionHistory.slice(-5).reverse().map((interaction) => (
+                                    {appointment.interactionHistory.slice(-5).reverse().map((interaction: BookingInteraction) => (
                                         <div key={interaction.id} className="text-xs flex justify-between gap-4 border-b border-gray-50 pb-1">
                                             <span className="text-gray-500">{new Date(interaction.timestamp).toLocaleString()}</span>
-                                            <span className="font-medium text-gray-700">{interaction.action} by {interaction.user}</span>
+                                            <span className="font-medium text-gray-700">{interaction.action} {t("appointments.by")} {interaction.user}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -213,13 +219,13 @@ export default function AppointmentDetailModal({
                                     <FileText className="w-5 h-5 text-blue-600" />
                                 </div>
                                 <div>
-                                    <h4 className="font-bold text-blue-900 text-sm italic">Service Invoice Available</h4>
-                                    <p className="text-[10px] text-blue-500 uppercase font-bold tracking-tight">Status: Ready to Download</p>
+                                    <h4 className="font-bold text-blue-900 text-sm italic">{t("appointments.serviceInvoiceAvailable")}</h4>
+                                    <p className="text-[10px] text-blue-500 uppercase font-bold tracking-tight">{t("appointments.statusReady")}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-4">
                                 <Button size="sm" variant="outline" className="border-blue-200 text-blue-700 hover:bg-white text-xs px-3">
-                                    <Download className="w-3.5 h-3.5 mr-2" /> PDF Invoice
+                                    <Download className="w-3.5 h-3.5 mr-2" /> {t("appointments.pdfInvoice")}
                                 </Button>
                                 <div className="bg-white p-1 rounded shadow-sm">
                                     <QRCodeSVG value={`https://saloon.app/client/invoices/${appointment.incomeId}`} size={48} />
@@ -229,14 +235,14 @@ export default function AppointmentDetailModal({
                     )}
 
                     {/* Staff Comments */}
-                    {appointment.comments.length > 0 && (
+                    {appointment.comments && appointment.comments.length > 0 && (
                         <div className="bg-[var(--color-primary-light)] p-4 rounded-xl space-y-3">
                             <h4 className="flex items-center gap-2 font-bold text-[var(--color-primary)]">
                                 <MessageSquare className="w-4 h-4" />
-                                {isAdmin ? "Internal Comments" : "Messages from the team"}
+                                {isAdmin ? t("appointments.internalComments") : t("appointments.messagesFromTeam")}
                             </h4>
                             <div className="space-y-3">
-                                {appointment.comments.map((comment) => (
+                                {appointment.comments.map((comment: BookingComment) => (
                                     <div key={comment.id} className="bg-white p-3 rounded-lg shadow-sm border border-[var(--color-primary-light)]">
                                         <div className="flex items-center justify-between mb-1">
                                             <span className="font-bold text-xs text-[var(--color-primary)]">{comment.user}</span>
@@ -260,8 +266,8 @@ export default function AppointmentDetailModal({
                                         <History className="w-5 h-5 text-[var(--color-primary)]" />
                                     </div>
                                     <div>
-                                        <h3 className="font-bold text-gray-900">Audit Trail</h3>
-                                        <p className="text-xs text-gray-500">Full chronological history</p>
+                                        <h3 className="font-bold text-gray-900">{t("appointments.auditTrail")}</h3>
+                                        <p className="text-xs text-gray-500">{t("appointments.fullHistory")}</p>
                                     </div>
                                 </div>
                                 <button
@@ -272,7 +278,7 @@ export default function AppointmentDetailModal({
                                 </button>
                             </div>
                             <div className="flex-1 overflow-y-auto space-y-4 pr-2 scrollbar-thin scrollbar-thumb-gray-200">
-                                {appointment.interactionHistory.slice().reverse().map((interaction) => (
+                                {appointment.interactionHistory?.slice().reverse().map((interaction: BookingInteraction) => (
                                     <div key={interaction.id} className="flex gap-4 border-b border-gray-50 pb-3">
                                         <div className="text-[10px] text-gray-400 font-mono w-24 flex-shrink-0 pt-0.5">
                                             {new Date(interaction.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
@@ -282,7 +288,7 @@ export default function AppointmentDetailModal({
                                                 {interaction.action}
                                             </p>
                                             <p className="text-[10px] mt-1 font-bold text-[var(--color-primary)] uppercase tracking-wider">
-                                                By {interaction.user}
+                                                {t("appointments.By")} {interaction.user}
                                             </p>
                                         </div>
                                     </div>
@@ -294,7 +300,7 @@ export default function AppointmentDetailModal({
                                     className="w-full border-[var(--color-primary-light)] text-[var(--color-primary)] font-bold py-3"
                                     onClick={() => setShowFullHistory(false)}
                                 >
-                                    Back to Appointment details
+                                    {t("appointments.backToDetails")}
                                 </Button>
                             </div>
                         </div>
@@ -310,15 +316,15 @@ export default function AppointmentDetailModal({
                                     onClick={() => onApproveReschedule && onApproveReschedule(appointment.id)}
                                 >
                                     <CheckCircle className="w-4 h-4" />
-                                    Approve Reschedule
+                                    {t("appointments.approveReschedule")}
                                 </Button>
                                 <Button
                                     variant="danger"
                                     className="flex-1 gap-2 font-bold"
-                                    onClick={() => onRejectReschedule && onRejectReschedule(appointment.id, "Rejected by client")}
+                                    onClick={() => onRejectReschedule && onRejectReschedule(appointment.id, t("appointments.rejectedByClient"))}
                                 >
                                     <X className="w-4 h-4" />
-                                    Reject
+                                    {t("appointments.reject")}
                                 </Button>
                             </>
                         )}
@@ -331,7 +337,7 @@ export default function AppointmentDetailModal({
                                 disabled={!canConfirm}
                             >
                                 <CheckCircle className="w-4 h-4" />
-                                {!canConfirm ? "Action unavailable" : "Confirm Appointment"}
+                                {!canConfirm ? t("appointments.actionUnavailable") : t("appointments.confirmAppointment")}
                             </Button>
                         )}
                         {canEdit && (
@@ -342,7 +348,7 @@ export default function AppointmentDetailModal({
                                 disabled={!canEdit}
                             >
                                 <Edit className="w-4 h-4" />
-                                {isAdmin ? "Edit Appointment" : "Modify Appointment"}
+                                {isAdmin ? t("appointments.editAppointment") : t("appointments.modifyAppointment")}
                             </Button>
                         )}
                         {canCancel && (
@@ -353,14 +359,14 @@ export default function AppointmentDetailModal({
                                 disabled={!canCancel}
                             >
                                 <Trash2 className="w-4 h-4" />
-                                {isAdmin ? "Cancel Appointment" : "Cancel Booking"}
+                                {isAdmin ? t("appointments.cancelAppointment") : t("appointments.cancelBooking")}
                             </Button>
                         )}
                     </div>
 
                     <div className="flex items-center gap-2 justify-center text-xs text-gray-400 italic">
                         <AlertCircle className="w-3 h-3" />
-                        {isAdmin ? "Changes are logged for audit purposes." : "Cancellations must be made at least 24h in advance."}
+                        {isAdmin ? t("appointments.changesLogged") : t("appointments.cancellation24h")}
                     </div>
                 </div>
             </Card>

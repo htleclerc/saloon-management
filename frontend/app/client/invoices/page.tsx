@@ -4,13 +4,21 @@ import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { FileText, Download } from "lucide-react";
-import { useIncome } from "@/context/IncomeProvider";
 import { useAuth } from "@/context/AuthProvider";
 import { jsPDF } from "jspdf";
 
+import React, { useState, useEffect } from "react";
+import { incomeService } from "@/lib/services";
+
 export default function ClientInvoicesPage() {
-    const { incomes } = useIncome();
-    const { user } = useAuth();
+    const [incomes, setIncomes] = useState<any[]>([]);
+    const { user, activeSalonId } = useAuth();
+
+    useEffect(() => {
+        if (activeSalonId) {
+            incomeService.getAll(Number(activeSalonId)).then(setIncomes);
+        }
+    }, [activeSalonId]);
 
     const clientInvoices = incomes.filter(inc =>
         inc.status === 'Validated' &&

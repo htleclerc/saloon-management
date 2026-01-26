@@ -23,14 +23,14 @@ export default function AddExpensePage() {
     });
 
     // Check user role - in real app, get from auth context
-    const userRole = "Worker"; // or "Admin"
+    const userRole = "worker"; // or "admin"
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (handleReadOnlyClick()) return;
         console.log("Expense data:", formData);
 
-        if (userRole === "Worker") {
+        if (userRole === "worker") {
             alert("Expense submitted for admin approval!");
         } else {
             alert("Expense added successfully!");
@@ -185,7 +185,7 @@ export default function AddExpensePage() {
                             </div>
 
                             {/* Status Info - Show only for Workers */}
-                            {userRole === "Worker" && (
+                            {userRole === "worker" && (
                                 <div className="md:col-span-2">
                                     <div className="bg-[var(--color-warning-light)] border border-[var(--color-warning-light)] rounded-lg p-4">
                                         <div className="flex items-center gap-2">
@@ -205,7 +205,7 @@ export default function AddExpensePage() {
                         <div className="flex gap-4 mt-8">
                             <Button type="submit" variant="success" size="lg" className="flex-1">
                                 <Save className="w-5 h-5" />
-                                {userRole === "Worker" ? "Submit for Approval" : "Save Expense"}
+                                {userRole === "worker" ? "Submit for Approval" : "Save Expense"}
                             </Button>
                             <Button type="button" variant="danger" size="lg" onClick={() => router.back()}>
                                 <X className="w-5 h-5" />

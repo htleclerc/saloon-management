@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import { useTips } from "@/context/TipsProvider";
 import { useAuth } from "@/context/AuthProvider";
 import { TipsDistributionRule } from "@/types";
 import { Check, Coins, Users, Building2, PieChart, Wallet } from "lucide-react";
@@ -42,11 +41,35 @@ const options: { id: TipsDistributionRule; label: string; description: string; i
     }
 ];
 
+import { tipsService } from "@/lib/services";
+import type { TipsConfiguration } from "@/types";
+import { useEffect } from "react";
+
 export default function TipsConfigPage() {
-    const { configuration, updateConfiguration } = useTips();
-    const { canModify } = useAuth();
+    const [configuration, setConfiguration] = useState<TipsConfiguration>({
+        rule: 'EQUAL_WORKERS',
+        salonPercentage: 0,
+        isActive: true
+    });
+    const { canModify, activeSalonId } = useAuth();
     const [salonPct, setSalonPct] = useState(configuration.salonPercentage || 0);
     const { handleReadOnlyClick } = useReadOnlyGuard();
+
+    useEffect(() => {
+        if (activeSalonId) {
+            tipsService.getConfiguration(Number(activeSalonId)).then(setConfiguration);
+        }
+    }, [activeSalonId]);
+
+    const updateConfiguration = async (updates: Partial<TipsConfiguration>) => {
+        if (!activeSalonId) return;
+        try {
+            await tipsService.updateConfiguration(Number(activeSalonId), updates);
+            setConfiguration(prev => ({ ...prev, ...updates }));
+        } catch (e) {
+            console.error(e);
+        }
+    };
 
     const handleSave = () => {
         if (handleReadOnlyClick()) return;

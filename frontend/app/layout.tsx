@@ -3,6 +3,7 @@ import { Open_Sans, Inter, Roboto, Poppins } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
 import ReadOnlyBannerWrapper from "@/components/layout/ReadOnlyBannerWrapper";
+import CommandPaletteProvider from "@/components/ai/CommandPaletteProvider";
 
 const openSans = Open_Sans({
   variable: "--font-opensans",
@@ -46,6 +47,7 @@ export default function RootLayout({
         <Providers>
           <ReadOnlyBannerWrapper />
           {children}
+          <CommandPaletteProvider />
         </Providers>
       </body>
     </html>

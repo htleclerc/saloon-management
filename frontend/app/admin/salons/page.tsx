@@ -10,17 +10,18 @@ import {
     Search, Filter, ArrowUpDown, Users, Calendar, Shield
 } from 'lucide-react';
 
-interface Salon {
-    id: string;
-    name: string;
-    owner: string;
-    ownerEmail: string;
-    plan: 'free' | 'pro' | 'enterprise';
-    status: 'active' | 'trial' | 'suspended' | 'expired';
+interface SalonWithStats extends Salon {
     users: number;
-    createdAt: string;
     lastActivity: string;
+    ownerName?: string;
+    ownerEmail?: string;
+    // UI adaptation fields
+    plan: string;
+    status: string;
 }
+
+import { salonService } from '@/lib/services';
+import type { Salon } from '@/types';
 
 export default function AdminSalonsPage() {
     const { isSuperAdmin, enterReadOnlyMode, canManageSalon, exitReadOnlyMode, user, switchTenant } = useAuth();
@@ -38,63 +39,34 @@ export default function AdminSalonsPage() {
     if (!isSuperAdmin) return null;
 
     // Mock data - will be replaced with real API
-    const mockSalons: Salon[] = [
-        {
-            id: 'salon-1',
-            name: 'Salon Élégance Paris',
-            owner: 'Marie Dubois',
-            ownerEmail: 'marie@elegance-paris.fr',
-            plan: 'pro',
-            status: 'active',
-            users: 12,
-            createdAt: '2024-01-15',
-            lastActivity: 'Il y a 2 heures'
-        },
-        {
-            id: 'salon-2',
-            name: 'Beauty Lounge Lyon',
-            owner: 'Sophie Martin',
-            ownerEmail: 'sophie@beauty-lounge.fr',
-            plan: 'free',
-            status: 'trial',
-            users: 3,
-            createdAt: '2024-03-20',
-            lastActivity: 'Il y a 1 jour'
-        },
-        {
-            id: 'salon-3',
-            name: 'Premium Spa Nice',
-            owner: 'Jean Dupont',
-            ownerEmail: 'jean@premium-spa.fr',
-            plan: 'enterprise',
-            status: 'active',
-            users: 45,
-            createdAt: '2023-11-10',
-            lastActivity: 'Il y a 30 minutes'
-        },
-        {
-            id: 'salon-4',
-            name: 'Coiffure Moderne',
-            owner: 'Claire Bernard',
-            ownerEmail: 'claire@coiffure-moderne.fr',
-            plan: 'pro',
-            status: 'active',
-            users: 18,
-            createdAt: '2024-02-05',
-            lastActivity: 'Il y a 3 heures'
-        },
-        {
-            id: 'test-lab-salon',
-            name: '🧪 Test Lab (Gérable par Super Admin)',
-            owner: 'Admin Test',
-            ownerEmail: 'admin@test-lab.fr',
-            plan: 'enterprise',
-            status: 'active',
-            users: 5,
-            createdAt: '2024-01-01',
-            lastActivity: 'Il y a 1 heure'
-        },
-    ];
+    const [salons, setSalons] = useState<SalonWithStats[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const loadSalons = async () => {
+            if (!isSuperAdmin) return;
+            try {
+                const data = await salonService.getAll();
+                // Augment with stats (mock or real)
+                const enhanced: SalonWithStats[] = data.map(s => ({
+                    ...s,
+                    // id is number from base Salon, no need to touch it
+                    users: Math.floor(Math.random() * 20) + 1, // Mock user count for now
+                    lastActivity: new Date(s.updatedAt).toLocaleDateString(),
+                    plan: s.subscriptionPlan || 'free',
+                    status: s.subscriptionStatus || 'active',
+                    ownerName: s.createdBy || 'Unknown',
+                    ownerEmail: s.email || 'no-email@example.com'
+                }));
+                setSalons(enhanced);
+            } catch (error) {
+                console.error("Failed to fetch salons", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        loadSalons();
+    }, [isSuperAdmin]);
 
     const getPlanBadge = (plan: string) => {
         const styles = {
@@ -115,31 +87,31 @@ export default function AdminSalonsPage() {
         return styles[status as keyof typeof styles] || styles.active;
     };
 
-    const handleViewSalon = (salon: Salon) => {
+    const handleViewSalon = (salon: SalonWithStats) => {
         // Enter read-only mode for this salon
-        enterReadOnlyMode(salon.id, salon.name, salon.owner);
+        enterReadOnlyMode(salon.id.toString(), salon.name, salon.ownerName || 'Unknown');
         router.push('/');
     };
 
-    const handleManageSalon = (salon: Salon) => {
+    const handleManageSalon = (salon: SalonWithStats) => {
         // Check if super admin has manage rights
-        if (!canManageSalon(salon.id)) {
-            alert(`❌ Accès refusé\n\nVous n'avez pas les droits de gestion sur ce salon.\n\nPour obtenir l'accès, demandez au propriétaire (${salon.owner}) de vous ajouter comme administrateur.`);
+        if (!canManageSalon(salon.id.toString())) {
+            alert(`❌ Accès refusé\n\nVous n'avez pas les droits de gestion sur ce salon.\n\nPour obtenir l'accès, demandez au propriétaire (${salon.ownerName}) de vous ajouter comme administrateur.`);
             return;
         }
 
         // Exit read-only mode and switch to this salon as admin
         exitReadOnlyMode();
-        switchTenant(salon.id);
+        switchTenant(salon.id.toString());
         router.push('/');
     };
 
-    const filteredSalons = mockSalons.filter(salon => {
+    const filteredSalons = salons.filter(salon => {
         const matchesSearch = salon.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            salon.owner.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            salon.ownerEmail.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesPlan = filterPlan === 'all' || salon.plan === filterPlan;
-        const matchesStatus = filterStatus === 'all' || salon.status === filterStatus;
+            (salon.ownerName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (salon.ownerEmail || '').toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesPlan = filterPlan === 'all' || salon.subscriptionPlan === filterPlan || salon.plan === filterPlan;
+        const matchesStatus = filterStatus === 'all' || salon.subscriptionStatus === filterStatus || salon.status === filterStatus;
         return matchesSearch && matchesPlan && matchesStatus;
     });
 
@@ -244,12 +216,12 @@ export default function AdminSalonsPage() {
                                             </div>
                                         </td>
                                         <td className="py-3 px-4">
-                                            <p className="font-medium text-gray-900">{salon.owner}</p>
+                                            <p className="font-medium text-gray-900">{salon.ownerName}</p>
                                             <p className="text-xs text-gray-500">{salon.ownerEmail}</p>
                                         </td>
                                         <td className="py-3 px-4">
                                             <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getPlanBadge(salon.plan)}`}>
-                                                {salon.plan.toUpperCase()}
+                                                {(salon.plan || 'free').toUpperCase()}
                                             </span>
                                         </td>
                                         <td className="py-3 px-4">
@@ -266,7 +238,7 @@ export default function AdminSalonsPage() {
                                         <td className="py-3 px-4">
                                             <div className="flex items-center gap-2">
                                                 <Calendar className="w-4 h-4 text-gray-400" />
-                                                <span className="text-sm text-gray-600">{salon.createdAt}</span>
+                                                <span className="text-sm text-gray-600">{new Date(salon.createdAt).toLocaleDateString()}</span>
                                             </div>
                                         </td>
                                         <td className="py-3 px-4">
@@ -286,17 +258,17 @@ export default function AdminSalonsPage() {
                                                 {/* Manage button - Only if super admin has rights */}
                                                 <button
                                                     onClick={() => handleManageSalon(salon)}
-                                                    className={`p-2 rounded-lg transition-colors group ${canManageSalon(salon.id)
+                                                    className={`p-2 rounded-lg transition-colors group ${canManageSalon(salon.id.toString())
                                                         ? 'hover:bg-green-50'
                                                         : 'hover:bg-gray-100 opacity-50'
                                                         }`}
                                                     title={
-                                                        canManageSalon(salon.id)
+                                                        canManageSalon(salon.id.toString())
                                                             ? "Gérer en tant qu'administrateur"
                                                             : "Vous n'avez pas les droits de gestion sur ce salon"
                                                     }
                                                 >
-                                                    <Shield className={`w-5 h-5 group-hover:scale-110 transition-transform ${canManageSalon(salon.id)
+                                                    <Shield className={`w-5 h-5 group-hover:scale-110 transition-transform ${canManageSalon(salon.id.toString())
                                                         ? 'text-green-600'
                                                         : 'text-gray-400'
                                                         }`} />

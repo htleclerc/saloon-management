@@ -26,16 +26,16 @@ import {
 } from "lucide-react";
 
 const settingsMenuItems = [
-    { id: "profile", name: "Profile", description: "Personal information", icon: User, path: "/settings/profile", color: "from-[var(--color-info,bg-blue-500)] to-[var(--color-info-dark,bg-blue-700)]", roles: ['client', 'worker', 'manager', 'admin'] },
-    { id: "appearance", name: "Appearance", description: "Themes & fonts", icon: Palette, path: "/settings/appearance", color: "from-[var(--color-secondary)] to-[var(--color-secondary-dark)]", roles: ['client', 'worker', 'manager', 'admin'] },
-    { id: "notifications", name: "Notifications", description: "Alerts & reminders", icon: Bell, path: "/settings/notifications", color: "from-[var(--color-warning)] to-[var(--color-warning-dark)]", roles: ['client', 'worker', 'manager', 'admin'] },
-    { id: "security", name: "Security", description: "Passwords & 2FA", icon: Shield, path: "/settings/security", color: "from-[var(--color-error)] to-[var(--color-error-dark)]", roles: ['client', 'worker', 'manager', 'admin'] },
-    { id: "users", name: "User Management", description: "Team & roles", icon: Users, path: "/settings/users", color: "from-[var(--color-success)] to-[var(--color-success-dark)]", roles: ['admin'] },
-    { id: "billing", name: "Billing", description: "Payments & invoices", icon: CreditCard, path: "/settings/billing", color: "from-[var(--color-info,bg-blue-500)] opacity-80 to-[var(--color-info-dark,bg-blue-700)]", roles: ['admin'] },
-    { id: "integrations", name: "Integrations", description: "Third-party services", icon: Link2, path: "/settings/integrations", color: "from-[var(--color-primary)] opacity-80 to-[var(--color-primary-dark)]", roles: ['manager', 'admin'] },
-    { id: "analytics", name: "Analytics", description: "Reports & data", icon: BarChart3, path: "/settings/analytics", color: "from-[var(--color-info,bg-blue-500)] to-[var(--color-info-dark,bg-blue-700)]", roles: ['manager', 'admin'] },
-    { id: "emails", name: "Emails", description: "Email templates", icon: Mail, path: "/settings/emails", color: "from-[var(--color-warning-light)] to-[var(--color-warning)]", roles: ['manager', 'admin'] },
-    { id: "advanced", name: "Advanced", description: "Advanced options", icon: Settings, path: "/settings/advanced", color: "from-gray-500 to-gray-600", roles: ['admin'] },
+    { id: "profile", name: "Profile", description: "Personal information", icon: User, path: "/settings/profile", color: "from-[var(--color-info,bg-blue-500)] to-[var(--color-info-dark,bg-blue-700)]", roles: ['client', 'worker', 'manager', 'owner', 'super_admin'] },
+    { id: "appearance", name: "Appearance", description: "Themes & fonts", icon: Palette, path: "/settings/appearance", color: "from-[var(--color-secondary)] to-[var(--color-secondary-dark)]", roles: ['client', 'worker', 'manager', 'owner', 'super_admin'] },
+    { id: "notifications", name: "Notifications", description: "Alerts & reminders", icon: Bell, path: "/settings/notifications", color: "from-[var(--color-warning)] to-[var(--color-warning-dark)]", roles: ['client', 'worker', 'manager', 'owner', 'super_admin'] },
+    { id: "security", name: "Security", description: "Passwords & 2FA", icon: Shield, path: "/settings/security", color: "from-[var(--color-error)] to-[var(--color-error-dark)]", roles: ['client', 'worker', 'manager', 'owner', 'super_admin'] },
+    { id: "users", name: "User Management", description: "Team & roles", icon: Users, path: "/settings/users", color: "from-[var(--color-success)] to-[var(--color-success-dark)]", roles: ['owner', 'super_admin'] },
+    { id: "billing", name: "Billing", description: "Payments & invoices", icon: CreditCard, path: "/settings/billing", color: "from-[var(--color-info,bg-blue-500)] opacity-80 to-[var(--color-info-dark,bg-blue-700)]", roles: ['owner', 'super_admin'] },
+    { id: "integrations", name: "Integrations", description: "Third-party services", icon: Link2, path: "/settings/integrations", color: "from-[var(--color-primary)] opacity-80 to-[var(--color-primary-dark)]", roles: ['manager', 'owner', 'super_admin'] },
+    { id: "analytics", name: "Analytics", description: "Reports & data", icon: BarChart3, path: "/settings/analytics", color: "from-[var(--color-info,bg-blue-500)] to-[var(--color-info-dark,bg-blue-700)]", roles: ['manager', 'owner', 'super_admin'] },
+    { id: "emails", name: "Emails", description: "Email templates", icon: Mail, path: "/settings/emails", color: "from-[var(--color-warning-light)] to-[var(--color-warning)]", roles: ['manager', 'owner', 'super_admin'] },
+    { id: "advanced", name: "Advanced", description: "Advanced options", icon: Settings, path: "/settings/advanced", color: "from-gray-500 to-gray-600", roles: ['owner', 'super_admin'] },
 ];
 
 interface SettingsLayoutProps {

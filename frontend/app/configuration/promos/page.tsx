@@ -1,16 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import { usePromoCode } from "@/context/PromoCodeProvider";
 import { useAuth } from "@/context/AuthProvider";
 import { Plus, Trash2, Tag, Check, X, Pencil } from "lucide-react";
 import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
+import { promoCodeService } from "@/lib/services";
 
 export default function PromosPage() {
-    const { promoCodes, addPromoCode, updatePromoCode, deletePromoCode } = usePromoCode();
-    const { canModify } = useAuth();
+    const [promoCodes, setPromoCodes] = useState<any[]>([]);
+    const { canModify, activeSalonId } = useAuth();
     const { handleReadOnlyClick } = useReadOnlyGuard();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
@@ -21,6 +21,45 @@ export default function PromosPage() {
     const [value, setValue] = useState(0);
     const [endDate, setEndDate] = useState("");
     const [affectWorkerShare, setAffectWorkerShare] = useState(true);
+
+    // Load Promos
+    const loadPromos = () => {
+        if (activeSalonId) {
+            promoCodeService.getAll(Number(activeSalonId)).then(setPromoCodes);
+        }
+    };
+
+    useEffect(() => {
+        loadPromos();
+    }, [activeSalonId]);
+
+    const addPromoCode = async (data: any) => {
+        if (!activeSalonId) return;
+        try {
+            await promoCodeService.create({ ...data, salonId: Number(activeSalonId) });
+            loadPromos();
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const updatePromoCode = async (id: number, data: any) => {
+        try {
+            await promoCodeService.update(id, data);
+            loadPromos();
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const deletePromoCode = async (id: number) => {
+        try {
+            await promoCodeService.delete(id);
+            loadPromos();
+        } catch (e) {
+            console.error(e);
+        }
+    };
 
     const handleOpenModal = (promo?: any) => {
         if (handleReadOnlyClick()) return;

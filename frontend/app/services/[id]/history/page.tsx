@@ -46,7 +46,7 @@ export default function ServiceHistoryPage() {
     const params = useParams();
     const router = useRouter();
     const serviceId = parseInt(params.id as string);
-    const { isAdmin } = useAuth();
+    const { isSuperAdmin, isOwner } = useAuth();
 
     const [filter, setFilter] = useState("all");
     const [searchTerm, setSearchTerm] = useState("");
@@ -91,7 +91,7 @@ export default function ServiceHistoryPage() {
     };
 
     return (
-        <ProtectedRoute requiredRole={["admin", "owner"]}>
+        <ProtectedRoute requiredRole={["super_admin", "owner"]}>
             <MainLayout>
                 <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     {/* Header */}

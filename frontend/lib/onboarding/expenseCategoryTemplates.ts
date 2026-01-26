@@ -3,8 +3,11 @@ import type { ExpenseCategory } from '@/types';
 /**
  * Get default expense categories based on salon type
  */
-export function getExpenseCategoryTemplates(salonType: string): ExpenseCategory[] {
-    const commonCategories: ExpenseCategory[] = [
+/**
+ * Get default expense categories based on salon type
+ */
+export function getExpenseCategoryTemplates(salonType: string): Partial<ExpenseCategory>[] {
+    const commonCategories: Partial<ExpenseCategory>[] = [
         { id: 1, name: 'Loyer', color: '#3b82f6', icon: 'building' },
         { id: 2, name: 'Électricité', color: '#eab308', icon: 'zap' },
         { id: 3, name: 'Eau', color: '#06b6d4', icon: 'droplet' },
@@ -16,7 +19,7 @@ export function getExpenseCategoryTemplates(salonType: string): ExpenseCategory[
     ];
 
     // Specific categories by salon type
-    const specificCategories: Record<string, ExpenseCategory[]> = {
+    const specificCategories: Record<string, Partial<ExpenseCategory>[]> = {
         braids: [
             { id: 9, name: 'Extensions & Mèches', color: '#ec4899', icon: 'package' },
             { id: 10, name: 'Produits capillaires', color: '#a855f7', icon: 'spray-can' },
@@ -61,7 +64,7 @@ export function getExpenseCategoryTemplates(salonType: string): ExpenseCategory[
 /**
  * Generate CSV template for expense categories
  */
-export function getExpenseCategoriesCSVTemplate(categories: ExpenseCategory[]): string {
+export function getExpenseCategoriesCSVTemplate(categories: Partial<ExpenseCategory>[]): string {
     const headers = 'name,color,icon';
     const rows = categories.map(cat =>
         `${cat.name},${cat.color},${cat.icon || 'tag'}`
@@ -73,7 +76,7 @@ export function getExpenseCategoriesCSVTemplate(categories: ExpenseCategory[]): 
 /**
  * Download CSV template with pre-filled data
  */
-export function downloadExpenseCategoriesCSV(categories: ExpenseCategory[], filename: string = 'categories_depenses.csv') {
+export function downloadExpenseCategoriesCSV(categories: Partial<ExpenseCategory>[], filename: string = 'categories_depenses.csv') {
     const csv = getExpenseCategoriesCSVTemplate(categories);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');

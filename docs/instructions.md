@@ -4,6 +4,10 @@
 
 Système de gestion complet pour un salon de coiffure spécialisé dans les tresses (braids) avec gestion des salaires, revenus, dépenses et profits. Système multi-tenant permettant la gestion de plusieurs salons avec leurs propres utilisateurs et données.
 
+> [!NOTE]
+> **Status**: Cleanup & Optimization (Pre-Phase 3)
+> **Goal**: Strict type safety, no `any`, full i18n, and robust documentation.
+
 ## Fonctionnalités principales
 
 ### 1. Gestion des Braiders (Coiffeuses)
@@ -103,7 +107,7 @@ Catégories de dépenses :
    - Peut associer un braider à un utilisateur
    - Accès à toutes les données du salon
 
-2. **Administrateur (Admin)**
+2. **Manager**
    - Accès à la plupart des fonctionnalités
    - Peut gérer les braiders, revenus, dépenses
    - Ne peut pas gérer les utilisateurs
@@ -407,7 +411,7 @@ The Income system implements a sophisticated multi-step validation workflow to e
 7. **Expenses** (`/expenses`) : Gestion des dépenses par catégorie (owner/admin uniquement)
 8. **Services** (`/services`) : Gestion du catalogue de services
 9. **Reports** (`/reports`) : Vue d'ensemble annuelle avec calculs automatiques (owner/admin uniquement)
-10. **Settings** (`/settings`) : Configuration de l'application
+10. **Settings** (`/settings`) : Configuration de l'application (le sous-menu horizontal est activé par défaut)
 11. **User Management** (`/settings/users`) : Gestion des utilisateurs (propriétaire uniquement)
 
 ### Fonctionnalités avancées
@@ -456,3 +460,32 @@ The Income system implements a sophisticated multi-step validation workflow to e
 - **Protection des données** : Les workers ne voient que leurs propres données
 - **Gestion centralisée** : Seul le propriétaire peut gérer les utilisateurs
 - **Comptes anonymes** : Conversion automatique en compte réel si email fourni
+
+## Tech Stack & Rules
+
+- **Framework**: Next.js 14 (App Router)
+- **Language**: TypeScript (Strict Mode)
+- **Styling**: Tailwind CSS 4
+- **State**: React 19 / Context API
+- **DB (Local)**: LocalStorage + Supabase (mock)
+- **i18n**: Fully implemented (Fr/En/Es)
+
+### Coding Standards
+1. **No `any`**: Use proper types from `@/types`
+2. **No Hardcoded Strings**: Use `t()` for all text
+3. **No Hardcoded Colors**: Use `bg-primary`, `text-destructive` etc.
+4. **DDD**: Domain Driven Design for Services/Providers
+5. **Atomic Commits**: Small, meaningful changes
+
+## User Rules Recap (Memory)
+1. **Context & AGENT.md**: Always follow global context.
+2. **Language**: English for code (vars/files), French/i18n for text.
+3. **Data**: No hardcoded data in views. Use mocks/providers.
+4. **Colors**: Use ThemeProvider/Tailwind tokens.
+5. **Business Rules**: Always verify against this doc.
+6. **Instructions**: Update this file regularly.
+7. **DDD**: Architecture best practices.
+8. **Modularity**: Reusable components.
+9. **Recap**: `docs/recap.md` for prompt history.
+10. **Startup**: Build & Restart on open.
+11. **Enums/Codes**: Use codes (e.g., `VALIDATED`) not strings (`Validated`).

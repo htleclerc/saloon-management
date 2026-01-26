@@ -4,6 +4,7 @@ import { Shield, Eye, Settings, X, SquarePen } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useTheme, useResponsive } from '@/context/ThemeProvider';
 import { useAuth } from '@/context/AuthProvider';
+import { useTranslation } from '@/i18n';
 
 interface ReadOnlyBannerProps {
     salonName: string;
@@ -14,6 +15,7 @@ export default function ReadOnlyBanner({ salonName, ownerName }: ReadOnlyBannerP
     const router = useRouter();
     const { theme } = useTheme();
     const { isMobile, isTablet } = useResponsive();
+    const { t } = useTranslation();
 
     const {
         isReadOnlyMode,
@@ -52,7 +54,7 @@ export default function ReadOnlyBanner({ salonName, ownerName }: ReadOnlyBannerP
                                         title="Switch to Manage Mode"
                                     >
                                         <SquarePen className="w-3.5 h-3.5 text-white" />
-                                        <span className="text-[10px] font-black uppercase tracking-wider">Manage</span>
+                                        <span className="text-[10px] font-black uppercase tracking-wider">{t("common.switchToManage")}</span>
                                     </button>
                                 )}
                             </div>
@@ -65,7 +67,7 @@ export default function ReadOnlyBanner({ salonName, ownerName }: ReadOnlyBannerP
                                     title="Switch to View Only"
                                 >
                                     <Eye className="w-3.5 h-3.5 text-white" />
-                                    <span className="text-[10px] font-black uppercase tracking-wider">View</span>
+                                    <span className="text-[10px] font-black uppercase tracking-wider">{t("common.switchToView")}</span>
                                 </button>
                             </div>
                         )}
@@ -74,19 +76,19 @@ export default function ReadOnlyBanner({ salonName, ownerName }: ReadOnlyBannerP
                 <div>
                     <div className="flex items-center gap-2 text-sm md:text-base">
                         <span className="font-bold tracking-tight">
-                            {isReadOnlyMode ? 'READ-ONLY MODE' : 'MANAGE MODE'}
+                            {isReadOnlyMode ? t("common.readOnlyModeText") : t("common.manageModeText")}
                         </span>
                         <span className="hidden sm:inline opacity-40">|</span>
-                        <span className="hidden sm:inline font-bold text-purple-200">SUPER ADMIN</span>
+                        <span className="hidden sm:inline font-bold text-purple-200">{t("common.superAdminText")}</span>
                         <span className="hidden sm:inline opacity-40">|</span>
-                        <span className="hidden sm:inline">Salon: <strong>{salonName}</strong></span>
+                        <span className="hidden sm:inline">{t("common.salon")}: <strong>{salonName}</strong></span>
                         <span className="hidden md:inline opacity-40">|</span>
-                        <span className="hidden md:inline text-purple-100 uppercase text-xs">Owner: {ownerName}</span>
+                        <span className="hidden md:inline text-purple-100 uppercase text-xs">{t("common.owner")}: {ownerName}</span>
                     </div>
                     <p className="text-xs text-purple-100 mt-0.5 hidden sm:block">
                         {isReadOnlyMode
-                            ? 'Browsing salon state - No modifications allowed'
-                            : 'Full administrative access - Modifications enabled'}
+                            ? t("common.readOnlyDesc")
+                            : t("common.manageDesc")}
                     </p>
                 </div>
             </div>
@@ -95,7 +97,7 @@ export default function ReadOnlyBanner({ salonName, ownerName }: ReadOnlyBannerP
                 className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition-colors flex-shrink-0 border border-white/20"
             >
                 <X className="w-4 h-4" />
-                <span className="hidden sm:inline font-medium text-sm">Exit</span>
+                <span className="hidden sm:inline font-medium text-sm">{t("common.exit")}</span>
             </button>
         </div>
     );

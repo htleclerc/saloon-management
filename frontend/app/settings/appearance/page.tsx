@@ -106,7 +106,7 @@ export default function AppearanceSettingsPage() {
     const handleReset = () => {
         if (!canModify) return;
         const defaultSettings = {
-            submenuLayout: "vertical" as SubmenuLayout,
+            submenuLayout: "horizontal" as SubmenuLayout,
             designType: "modern" as DesignType,
             colorPaletteId: "purple-pink",
             fontFamily: "Open Sans",
@@ -261,7 +261,7 @@ export default function AppearanceSettingsPage() {
                                 <button
                                     onClick={() => setCustomSecondaryColor("")}
                                     disabled={!canModify}
-                                    className="text-xs text-purple-600 hover:text-purple-700 disabled:opacity-50"
+                                    className="text-xs text-primary hover:text-primary-dark disabled:opacity-50"
                                 >
                                     Reset to default
                                 </button>
@@ -307,13 +307,13 @@ export default function AppearanceSettingsPage() {
                                     onClick={() => setSemanticMode(mode.id as any)}
                                     disabled={!canModify}
                                     className={`p-4 rounded-xl border-2 text-left transition-all duration-200 ${isSelected
-                                        ? "border-emerald-500 bg-emerald-50 shadow-md"
-                                        : "border-gray-200 hover:border-emerald-200 hover:shadow-md"
+                                        ? "border-success bg-success-light shadow-md"
+                                        : "border-gray-200 hover:border-success-light hover:shadow-md"
                                         }`}
                                 >
                                     <div className="flex items-center justify-between mb-1">
                                         <p className="font-bold text-gray-900 text-sm">{mode.name}</p>
-                                        {isSelected && <Check className="w-4 h-4 text-emerald-600" />}
+                                        {isSelected && <Check className="w-4 h-4 text-success" />}
                                     </div>
                                     <p className="text-[10px] text-gray-500">{mode.description}</p>
                                 </button>
@@ -418,13 +418,13 @@ export default function AppearanceSettingsPage() {
                                 onClick={() => setLocalTheme({ ...localTheme, designType: type.id })}
                                 disabled={!canModify}
                                 className={`p-4 rounded-xl border-2 text-left transition-all duration-200 ${isSelected
-                                    ? "border-purple-500 bg-purple-50 shadow-md"
-                                    : "border-gray-200 hover:border-purple-200 hover:shadow-md"
+                                    ? "border-primary bg-primary-light shadow-md"
+                                    : "border-gray-200 hover:border-primary-light hover:shadow-md"
                                     }`}
                             >
                                 <div className="flex items-center justify-between mb-2">
-                                    <Icon className={`w-5 h-5 ${isSelected ? "text-purple-600" : "text-gray-400"}`} />
-                                    {isSelected && <Check className="w-4 h-4 text-purple-600" />}
+                                    <Icon className={`w-5 h-5 ${isSelected ? "text-primary" : "text-gray-400"}`} />
+                                    {isSelected && <Check className="w-4 h-4 text-primary" />}
                                 </div>
                                 <p className="font-medium text-gray-900 text-sm">{type.name}</p>
                                 <p className="text-xs text-gray-500">{type.description}</p>
@@ -456,13 +456,13 @@ export default function AppearanceSettingsPage() {
                                 onClick={() => setLocalTheme({ ...localTheme, submenuLayout: layout.id })}
                                 disabled={!canModify}
                                 className={`p-4 rounded-xl border-2 text-left transition-all duration-200 ${isSelected
-                                    ? "border-purple-500 bg-purple-50 shadow-md"
-                                    : "border-gray-200 hover:border-purple-200 hover:shadow-md"
+                                    ? "border-primary bg-primary-light shadow-md"
+                                    : "border-gray-200 hover:border-primary-light hover:shadow-md"
                                     }`}
                             >
                                 <div className="flex items-center justify-between mb-2">
-                                    <Icon className={`w-5 h-5 ${isSelected ? "text-purple-600" : "text-gray-400"}`} />
-                                    {isSelected && <Check className="w-4 h-4 text-purple-600" />}
+                                    <Icon className={`w-5 h-5 ${isSelected ? "text-primary" : "text-gray-400"}`} />
+                                    {isSelected && <Check className="w-4 h-4 text-primary" />}
                                 </div>
                                 <p className="font-medium text-gray-900 text-sm">{layout.name}</p>
                                 <p className="text-xs text-gray-500">{layout.description}</p>
@@ -497,8 +497,8 @@ export default function AppearanceSettingsPage() {
                                 onClick={() => setLocalTheme({ ...localTheme, darkMode: mode.id })}
                                 disabled={!canModify}
                                 className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all duration-200 ${isSelected
-                                    ? "border-purple-500 bg-purple-50 text-purple-700 shadow-md"
-                                    : "border-gray-200 hover:border-purple-200 text-gray-600 hover:shadow-md"
+                                    ? "border-primary bg-primary-light text-primary shadow-md"
+                                    : "border-gray-200 hover:border-primary-light text-gray-600 hover:shadow-md"
                                     }`}
                             >
                                 <Icon className="w-4 h-4" />
@@ -530,8 +530,8 @@ export default function AppearanceSettingsPage() {
                                 onClick={() => setLocalTheme({ ...localTheme, fontFamily: font.id })}
                                 disabled={!canModify}
                                 className={`p-4 rounded-xl border-2 text-center transition-all duration-200 ${isSelected
-                                    ? "border-purple-500 bg-purple-50 shadow-md"
-                                    : "border-gray-200 hover:border-purple-200 hover:shadow-md"
+                                    ? "border-primary bg-primary-light shadow-md"
+                                    : "border-gray-200 hover:border-primary-light hover:shadow-md"
                                     }`}
                             >
                                 <span
@@ -568,8 +568,8 @@ export default function AppearanceSettingsPage() {
                                 onClick={() => setLocalTheme({ ...localTheme, fontSize: size.id })}
                                 disabled={!canModify}
                                 className={`flex-1 flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-200 ${isSelected
-                                    ? "border-purple-500 bg-purple-50 shadow-md"
-                                    : "border-gray-200 hover:border-purple-200 hover:shadow-md"
+                                    ? "border-primary bg-primary-light shadow-md"
+                                    : "border-gray-200 hover:border-primary-light hover:shadow-md"
                                     }`}
                             >
                                 <span className="font-medium text-gray-900 text-sm">{size.name}</span>
@@ -635,7 +635,7 @@ export default function AppearanceSettingsPage() {
                                 checked={localTheme.animations}
                                 onChange={(e) => setLocalTheme({ ...localTheme, animations: e.target.checked })}
                                 disabled={!canModify}
-                                className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
+                                className="w-5 h-5 text-primary rounded focus:ring-primary"
                             />
                         </label>
                     </div>

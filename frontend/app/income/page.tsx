@@ -7,10 +7,10 @@ import Link from "next/link";
 import { Plus, Filter, Download, Calendar, BarChart2, MessageSquare, History, Check, X, Printer, FileText, Eye, Pencil, Trash2, CheckCircle2, Clock, LayoutGrid, TrendingUp, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
 import { useAuth } from "@/context/AuthProvider";
-import { useIncome } from "@/context/IncomeProvider";
 import { useBooking } from "@/context/BookingProvider";
+import { incomeService, serviceService } from "@/lib/services";
 import { useConfirm } from "@/context/ConfirmProvider";
-import React, { useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { jsPDF } from "jspdf";
 import { QRCodeSVG } from "qrcode.react";
 import HistoryModal, { HistoryEvent } from "@/components/ui/HistoryModal";
@@ -18,49 +18,17 @@ import { canPerformIncomeAction, useActionPermissions } from "@/lib/permissions"
 import { UserRole } from "@/context/AuthProvider";
 import { SERVICES, WORKERS } from "@/lib/data";
 import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
-
-// The static mock data uses slightly different naming than our new Income interface
-// English Mock Data
-const mockIncomes = [
-    {
-        id: 1,
-        date: "2026-01-12",
-        client: "Marie Dubois",
-        service: "Box Braids",
-        workers: ["Orphelia"],
-        author: "Admin",
-        amount: 120,
-        status: "Validated",
-        history: [
-            { date: "2026-01-12 09:00", action: "Created", user: "Admin", comment: "" },
-            { date: "2026-01-12 10:30", action: "Validated", user: "Admin", comment: "Auto-validated by admin" }
-        ],
-        comments: []
-    },
-    {
-        id: 2,
-        date: "2026-01-12",
-        client: "Jean Martin",
-        service: "Cornrows",
-        workers: ["Worker 2", "Orphelia"],
-        author: "Worker 2",
-        amount: 85,
-        status: "Pending",
-        history: [
-            { date: "2026-01-12 11:15", action: "Created", user: "Worker 2", comment: "" }
-        ],
-        comments: [
-            { date: "2026-01-12 11:20", user: "Worker 2", text: "Difficult client, but everything went well." }
-        ]
-    }
-];
+import { useTranslation } from "@/i18n";
 
 export default function IncomePage() {
     const { getCardStyle } = useKpiCardStyle();
     const auth = useAuth();
-    const { user, isWorker } = auth;
-    const { incomes: dynamicIncomes, validateIncome, addComment } = useIncome();
+    const { user, isWorker, activeSalonId } = auth;
+    const { t } = useTranslation();
+    // Real Data State
+    const [incomes, setIncomes] = useState<any[]>([]);
     const { bookings } = useBooking();
+    const [services, setServices] = useState<any[]>([]);
     const { confirm } = useConfirm();
     const [expandedRows, setExpandedRows] = useState<number[]>([]);
     const [commentText, setCommentText] = useState<Record<number, string>>({});
@@ -74,6 +42,22 @@ export default function IncomePage() {
     const [statusFilter, setStatusFilter] = useState<string>("all");
     const [workerFilter, setWorkerFilter] = useState<string>("all");
     const [showFilters, setShowFilters] = useState(false);
+
+    const loadIncomes = async () => {
+        if (!activeSalonId) return;
+        try {
+            const data = await incomeService.getAll(Number(activeSalonId));
+            const servicesData = await serviceService.getAll(Number(activeSalonId));
+            setServices(servicesData);
+            setIncomes(data);
+        } catch (error) {
+            console.error("Failed to load incomes", error);
+        }
+    };
+
+    useEffect(() => {
+        loadIncomes();
+    }, [activeSalonId]);
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -92,86 +76,62 @@ export default function IncomePage() {
         );
     };
 
-    // Unified interface helper to bridge mock data and dynamic state data
-    const normalizedIncomes = [...mockIncomes, ...dynamicIncomes].map(item => {
-        const isDynamic = 'createdBy' in item;
+    // Normalize incomes with service and worker names
+    const normalizedIncomes = useMemo(() =>
+        incomes.map(income => {
+            // Get service names
+            const serviceNames = income.serviceIds
+                .map((id: number) => services.find(s => s.id === id)?.name || `Service #${id}`)
+                .join(", ");
 
-        // Helper to find service name if it's dynamic
-        let serviceDisplay = "";
-        if (isDynamic) {
-            const booking = bookings.find(b => (item as any).bookingIds.includes(b.id));
-            if (booking) {
-                serviceDisplay = booking.customServiceDetails || `Service #${(item as any).serviceIds[0]}`;
-            } else {
-                serviceDisplay = (item as any).serviceIds.map((id: any) => SERVICES.find(s => s.id == id)?.name || `Service #${id}`).join(", ");
+            // Get worker names
+            const workerNames = income.workerIds
+                .map((id: number) => WORKERS.find(w => w.id === id)?.name || `Worker #${id}`)
+                .join(", ");
+
+            return {
+                ...income,
+                serviceDisplay: serviceNames || "No service",
+                workerDisplay: workerNames || "Unassigned",
+            };
+        }),
+        [incomes, services]
+    );
+
+    const filteredIncomes = useMemo(() =>
+        normalizedIncomes.filter(income => {
+            // Role Access Filter
+            if (isWorker) {
+                const isAssigned = income.workerIds.includes(Number(user?.id) || 0);
+                const isAuthor = income.createdBy === user?.name;
+                if (!isAssigned && !isAuthor) return false;
             }
-        } else {
-            // Check if it's a mock item with "service" string or "serviceIds"
-            serviceDisplay = (item as any).service || "Unknown Service";
-        }
 
-        return {
-            ...item,
-            clientName: isDynamic ? (item as any).clientName : (item as any).client,
-            workerNames: isDynamic ? (item as any).workerIds : (item as any).workers,
-            serviceDisplay: serviceDisplay,
-            authorName: isDynamic ? (item as any).createdBy : (item as any).author,
-            id: item.id,
-            status: item.status as any
-        };
-    });
-
-    const filteredIncomes = normalizedIncomes.filter(income => {
-        // Role Access Filter
-        if (isWorker) {
-            const isAssigned = (income.workerNames || []).includes(user?.name || "");
-            const isAuthor = income.authorName === user?.name;
-            if (!isAssigned && !isAuthor) return false;
-        }
-
-        // Advanced Filters
-        if (searchQuery && !income.clientName.toLowerCase().includes(searchQuery.toLowerCase()) && !income.id.toString().includes(searchQuery)) {
-            return false;
-        }
-
-        if (dateFrom && income.date < dateFrom) return false;
-        if (dateTo && income.date > dateTo) return false;
-
-        if (statusFilter !== "all" && income.status !== statusFilter) return false;
-
-        // Worker Filter (for Admins seeing everyone, filtering by specific worker participation)
-        if (workerFilter !== "all") {
-            // We need to map worker IDs or Names. Our normalized data has names or IDs mixed broadly?
-            // normalizedIncomes uses workerNames which seems to be Names for Mock and IDs for Dynamic?
-            // Let's check normalization:
-            // workerNames: isDynamic ? (item as any).workerIds : (item as any).workers
-            // Dynamic uses IDs (number[]). Mock uses Names (string[]).
-            // To simplify, let's assume we filter by ID if dynamic or Name if mock.
-            // But the filter UI will likely select an ID.
-            const workerId = Number(workerFilter);
-            if (!isNaN(workerId)) {
-                // It's an ID from dropdown
-                // Dynamic incomes have workerId list.
-                // Mock incomes have names. We can't easily filter mock by ID unless we map names.
-                // Let's try to match ID in workerIds if present, OR check if ID corresponds to a name in WORKERS data.
-                const isDynamic = 'createdBy' in income;
-                if (isDynamic) {
-                    if (!(income as any).workerIds.includes(workerId)) return false;
-                } else {
-                    // Mock data check - find name from ID
-                    // We need WORKERS list imported.
-                    // imports check: import { WORKERS } from "@/lib/data"; (It is imported, unused currently)
-                    // Actually line 19 imports SERVICES. Line 44 in other file imported WORKERS.
-                    // I need to import WORKERS in this file too.
-                    // Let's assume for now we only filter dynamic strictly or match name if simple.
-                    // TODO: Fix imports to include WORKERS.
-                    return true; // Skip filter for mock data if complicated, or better:
-                }
+            // Search Filter
+            if (searchQuery &&
+                !income.clientName.toLowerCase().includes(searchQuery.toLowerCase()) &&
+                !income.id.toString().includes(searchQuery)) {
+                return false;
             }
-        }
 
-        return true;
-    });
+            // Date Filters
+            if (dateFrom && income.date < dateFrom) return false;
+            if (dateTo && income.date > dateTo) return false;
+
+            // Status Filter
+            if (statusFilter !== "all" && income.status !== statusFilter) return false;
+
+            // Worker Filter
+            if (workerFilter !== "all") {
+                const workerId = Number(workerFilter);
+                if (!income.workerIds.includes(workerId)) return false;
+            }
+
+            return true;
+        }),
+        [normalizedIncomes, isWorker, user, searchQuery, dateFrom, dateTo, statusFilter, workerFilter]
+    );
+
 
     const totalIncome = filteredIncomes.filter(r => r.status !== "Closed" && r.status !== "Cancelled").reduce((sum, r) => sum + r.amount, 0);
     const validatedIncome = filteredIncomes.filter(r => r.status === "Validated").reduce((sum, r) => sum + r.amount, 0);
@@ -190,7 +150,12 @@ export default function IncomePage() {
             cancelText: "Cancel"
         });
         if (isConfirmed) {
-            validateIncome(id, "Validated via Management UI");
+            try {
+                await incomeService.validate(id);
+                loadIncomes();
+            } catch (error) {
+                console.error("Failed to validate income", error);
+            }
         }
     };
 
@@ -277,7 +242,8 @@ export default function IncomePage() {
 
     const handleAddComment = (id: number) => {
         if (!commentText[id]) return;
-        addComment(id, commentText[id]);
+        // addComment(id, commentText[id]);
+        console.warn("Comment adding via service not implemented yet");
         setCommentText(prev => ({ ...prev, [id]: "" }));
     };
 
@@ -287,8 +253,8 @@ export default function IncomePage() {
                 {/* Standardized Header */}
                 <div className="flex flex-col gap-4 md:gap-6">
                     <div>
-                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Income Management</h1>
-                        <p className="text-gray-500 mt-1 text-sm md:text-base">Track and manage all income streams</p>
+                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{t("income.management")}</h1>
+                        <p className="text-gray-500 mt-1 text-sm md:text-base">{t("income.subtitle")}</p>
                     </div>
 
                     <div className="flex flex-col md:flex-row items-center justify-between gap-4">
@@ -299,14 +265,14 @@ export default function IncomePage() {
                                     className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold rounded-lg transition-all bg-[var(--color-primary-light)] text-[var(--color-primary)] shadow-sm"
                                 >
                                     <LayoutGrid size={18} />
-                                    <span>Simple List</span>
+                                    <span>{t("common.simpleList")}</span>
                                 </button>
                                 <Link href="/income/dashboard" className="flex-1 md:flex-none">
                                     <button
                                         className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold text-gray-500 hover:bg-gray-50 rounded-lg transition-all"
                                     >
                                         <BarChart2 size={18} />
-                                        <span>Advanced View</span>
+                                        <span>{t("common.advancedView")}</span>
                                     </button>
                                 </Link>
                             </div>
@@ -318,7 +284,7 @@ export default function IncomePage() {
                                 <Link href="/income/add" className="w-full md:w-auto">
                                     <Button variant="primary" size="md" className="w-full rounded-xl h-11 flex items-center justify-center gap-2 font-bold shadow-lg shadow-purple-500/20 bg-[#A855F7] hover:bg-[#9333EA]">
                                         <Plus className="w-5 h-5" />
-                                        <span>Add Income</span>
+                                        <span>{t("income.addIncome")}</span>
                                     </Button>
                                 </Link>
                             </ReadOnlyGuard>
@@ -342,7 +308,7 @@ export default function IncomePage() {
                                 </div>
                                 <span className="text-xs font-bold bg-white/20 backdrop-blur-md px-2 py-1 rounded-full">+12.5%</span>
                             </div>
-                            <p className="text-white/80 text-sm font-medium">Total Income</p>
+                            <p className="text-white/80 text-sm font-medium">{t("income.totalIncome")}</p>
                             <h3 className="text-3xl font-bold mt-1">€{totalIncome.toLocaleString()}</h3>
                         </div>
                     </div>
@@ -357,9 +323,9 @@ export default function IncomePage() {
                                 <div className="p-3 bg-white/20 backdrop-blur-md rounded-2xl">
                                     <CheckCircle2 className="w-6 h-6" />
                                 </div>
-                                <span className="text-xs font-bold bg-white/20 backdrop-blur-md px-2 py-1 rounded-full">Secure</span>
+                                <span className="text-xs font-bold bg-white/20 backdrop-blur-md px-2 py-1 rounded-full">{t("income.secure")}</span>
                             </div>
-                            <p className="text-white/80 text-sm font-medium">Validated</p>
+                            <p className="text-white/80 text-sm font-medium">{t("income.validated")}</p>
                             <h3 className="text-3xl font-bold mt-1">€{validatedIncome.toLocaleString()}</h3>
                         </div>
                     </div>
@@ -374,9 +340,9 @@ export default function IncomePage() {
                                 <div className="p-3 bg-white/20 backdrop-blur-md rounded-2xl">
                                     <Clock className="w-6 h-6" />
                                 </div>
-                                <span className="text-xs font-bold bg-white/20 backdrop-blur-md px-2 py-1 rounded-full">Pending</span>
+                                <span className="text-xs font-bold bg-white/20 backdrop-blur-md px-2 py-1 rounded-full">{t("common.pending")}</span>
                             </div>
-                            <p className="text-white/80 text-sm font-medium">Pending/Draft</p>
+                            <p className="text-white/80 text-sm font-medium">{t("income.pendingDraft")}</p>
                             <h3 className="text-3xl font-bold mt-1">€{pendingIncome.toLocaleString()}</h3>
                         </div>
                     </div>
@@ -384,7 +350,7 @@ export default function IncomePage() {
 
                 {/* Table Actions Toolbar */}
                 <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-bold text-gray-800">Income List</h3>
+                    <h3 className="text-lg font-bold text-gray-800">{t("income.list")}</h3>
                     <div className="flex items-center gap-3">
                         <Button
                             variant="outline"
@@ -393,15 +359,15 @@ export default function IncomePage() {
                             onClick={() => setShowFilters(!showFilters)}
                         >
                             <Filter className="w-4 h-4" />
-                            <span>Filters</span>
+                            <span>{t("common.filters")}</span>
                         </Button>
                         <Button variant="outline" size="sm" className="hidden md:flex rounded-lg h-9 items-center justify-center gap-2 font-bold text-gray-600 border-gray-200">
                             <Printer className="w-4 h-4" />
-                            <span>Print</span>
+                            <span>{t("common.print")}</span>
                         </Button>
                         <Button variant="outline" size="sm" className="hidden md:flex rounded-lg h-9 items-center justify-center gap-2 font-bold text-gray-600 border-gray-200">
                             <Download className="w-4 h-4" />
-                            <span>Export</span>
+                            <span>{t("common.export")}</span>
                         </Button>
                     </div>
                 </div>
@@ -411,12 +377,12 @@ export default function IncomePage() {
                     <div className="bg-white p-5 rounded-2xl shadow-lg border border-purple-100 animate-in fade-in slide-in-from-top-2 duration-200 mb-6">
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div className="space-y-1">
-                                <label className="text-xs font-bold text-gray-500 uppercase ml-1">Client / ID</label>
+                                <label className="text-xs font-bold text-gray-500 uppercase ml-1">{t("common.client")} / {t("common.id")}</label>
                                 <div className="relative">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                                     <input
                                         type="text"
-                                        placeholder="Search client or ID..."
+                                        placeholder={t("income.searchPlaceholder")}
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                         className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all"
@@ -424,7 +390,7 @@ export default function IncomePage() {
                                 </div>
                             </div>
                             <div className="space-y-1">
-                                <label className="text-xs font-bold text-gray-500 uppercase ml-1">Date Range</label>
+                                <label className="text-xs font-bold text-gray-500 uppercase ml-1">{t("common.dateRange")}</label>
                                 <div className="flex gap-2">
                                     <input
                                         type="date"
@@ -441,13 +407,13 @@ export default function IncomePage() {
                                 </div>
                             </div>
                             <div className="space-y-1">
-                                <label className="text-xs font-bold text-gray-500 uppercase ml-1">Status</label>
+                                <label className="text-xs font-bold text-gray-500 uppercase ml-1">{t("common.status")}</label>
                                 <select
                                     value={statusFilter}
                                     onChange={(e) => setStatusFilter(e.target.value)}
                                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-500 outline-none appearance-none"
                                 >
-                                    <option value="all">All Statuses</option>
+                                    <option value="all">{t("common.allStatuses")}</option>
                                     <option value="Validated">Validated</option>
                                     <option value="Pending">Pending</option>
                                     <option value="Draft">Draft</option>
@@ -455,13 +421,13 @@ export default function IncomePage() {
                                 </select>
                             </div>
                             <div className="space-y-1">
-                                <label className="text-xs font-bold text-gray-500 uppercase ml-1">Worker</label>
+                                <label className="text-xs font-bold text-gray-500 uppercase ml-1">{t("common.worker")}</label>
                                 <select
                                     value={workerFilter}
                                     onChange={(e) => setWorkerFilter(e.target.value)}
                                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-500 outline-none appearance-none"
                                 >
-                                    <option value="all">All Workers</option>
+                                    <option value="all">{t("common.allWorkers")}</option>
                                     {WORKERS.map(w => (
                                         <option key={w.id} value={w.id}>{w.name}</option>
                                     ))}
@@ -476,13 +442,13 @@ export default function IncomePage() {
                         <table className="w-full">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">ID</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Client</th>
-                                    <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Service</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Amount</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Status</th>
-                                    <th className="hidden lg:table-cell px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Actions</th>
+                                    <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("common.id")}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("common.date")}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("common.client")}</th>
+                                    <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("common.service")}</th>
+                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">{t("common.amount")}</th>
+                                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">{t("common.status")}</th>
+                                    <th className="hidden lg:table-cell px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">{t("common.actions")}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -554,12 +520,12 @@ export default function IncomePage() {
                                                                 className="justify-center gap-2 h-11 rounded-xl bg-white shadow-sm"
                                                                 onClick={() => { }}
                                                             >
-                                                                <Eye size={18} /> Detail
+                                                                <Eye size={18} /> {t("common.detail")}
                                                             </Button>
                                                             <Link href={`/income/add?edit=${income.id}`} className="w-full">
                                                                 <ReadOnlyGuard>
                                                                     <Button variant="outline" size="sm" className="w-full justify-center gap-2 h-11 rounded-xl bg-white shadow-sm">
-                                                                        <Pencil size={18} /> Edit
+                                                                        <Pencil size={18} /> {t("common.edit")}
                                                                     </Button>
                                                                 </ReadOnlyGuard>
                                                             </Link>
@@ -571,7 +537,7 @@ export default function IncomePage() {
                                                                         className="justify-center gap-2 h-11 rounded-xl bg-white shadow-sm text-green-600 border-green-100"
                                                                         onClick={() => handleValidate(income.id)}
                                                                     >
-                                                                        <Check size={18} /> Validate
+                                                                        <Check size={18} /> {t("income.validated")}
                                                                     </Button>
                                                                 </ReadOnlyGuard>
                                                             )}
@@ -581,7 +547,7 @@ export default function IncomePage() {
                                                                 className="justify-center gap-2 h-11 rounded-xl bg-white shadow-sm text-blue-600 border-blue-100"
                                                                 onClick={() => handleDownloadInvoice(income)}
                                                             >
-                                                                <FileText size={18} /> Invoice
+                                                                <FileText size={18} /> {t("income.invoice")}
                                                             </Button>
                                                             <Button
                                                                 variant="outline"
@@ -589,7 +555,7 @@ export default function IncomePage() {
                                                                 className="justify-center gap-2 h-11 rounded-xl bg-white shadow-sm text-purple-600 border-purple-100"
                                                                 onClick={() => handleViewHistory(income)}
                                                             >
-                                                                <History size={18} /> History
+                                                                <History size={18} /> {t("common.history")}
                                                             </Button>
                                                             <ReadOnlyGuard>
                                                                 <Button
@@ -598,7 +564,7 @@ export default function IncomePage() {
                                                                     className="justify-center gap-2 h-11 rounded-xl bg-white shadow-sm text-red-600 border-red-100"
                                                                     onClick={() => handleArchive(income.id)}
                                                                 >
-                                                                    <Trash2 size={18} /> Archive
+                                                                    <Trash2 size={18} /> {t("common.delete")}
                                                                 </Button>
                                                             </ReadOnlyGuard>
                                                         </div>
@@ -607,7 +573,7 @@ export default function IncomePage() {
                                                         <div className="bg-white rounded-3xl border border-gray-100 shadow-xl shadow-gray-200/50 overflow-hidden">
                                                             <div className="bg-gradient-to-r from-purple-50 to-white px-6 py-4 flex items-center justify-between border-b border-gray-100">
                                                                 <h4 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                                                                    <MessageSquare size={16} className="text-[var(--color-primary)]" /> Comments & Notes
+                                                                    <MessageSquare size={16} className="text-[var(--color-primary)]" /> {t("common.comments")}
                                                                 </h4>
                                                                 <span className="text-[10px] font-bold text-[var(--color-primary)] bg-[var(--color-primary-light)] px-2 py-1 rounded-full uppercase tracking-wider">
                                                                     {income.comments?.length || 0} notes
@@ -617,7 +583,7 @@ export default function IncomePage() {
                                                             <div className="p-6">
                                                                 <div className="space-y-4 mb-6">
                                                                     {income.comments && income.comments.length > 0 ? (
-                                                                        income.comments.map((c, i) => (
+                                                                        income.comments.map((c: any, i: number) => (
                                                                             <div key={i} className="flex gap-4">
                                                                                 <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-[var(--color-primary-light)] to-purple-50 flex items-center justify-center text-[var(--color-primary)] font-bold text-sm shrink-0 shadow-sm border border-purple-100">
                                                                                     {c.user.charAt(0)}
@@ -635,7 +601,7 @@ export default function IncomePage() {
                                                                         ))
                                                                     ) : (
                                                                         <div className="text-center py-8 text-gray-400 italic text-sm bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
-                                                                            No comments yet for this transaction.
+                                                                            {t("common.noComments")}
                                                                         </div>
                                                                     )}
                                                                 </div>
@@ -644,7 +610,7 @@ export default function IncomePage() {
                                                                     <input
                                                                         type="text"
                                                                         className="flex-1 text-sm bg-white border border-gray-200 rounded-xl px-4 py-3 h-12 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent outline-none transition-all shadow-sm"
-                                                                        placeholder="Add a quick note..."
+                                                                        placeholder={t("common.addNotePlaceholder")}
                                                                         value={commentText[income.id] || ""}
                                                                         onChange={e => setCommentText(prev => ({ ...prev, [income.id]: e.target.value }))}
                                                                         onKeyDown={e => e.key === 'Enter' && handleAddComment(income.id)}
@@ -654,7 +620,7 @@ export default function IncomePage() {
                                                                         className="h-12 px-8 rounded-xl font-bold bg-[var(--color-primary)] hover:opacity-90 transition-all shadow-lg shadow-purple-200 active:scale-95"
                                                                         onClick={() => handleAddComment(income.id)}
                                                                     >
-                                                                        Post
+                                                                        {t("common.post")}
                                                                     </Button>
                                                                 </div>
                                                             </div>
@@ -681,7 +647,7 @@ export default function IncomePage() {
                             >
                                 <ChevronLeft size={20} className="text-gray-600" />
                             </button>
-                            <span className="text-sm font-semibold text-gray-700">Page {currentPage} of {totalPages}</span>
+                            <span className="text-sm font-semibold text-gray-700">{t("common.pageOf", { current: currentPage, total: totalPages })}</span>
                             <button
                                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                 disabled={currentPage === totalPages}

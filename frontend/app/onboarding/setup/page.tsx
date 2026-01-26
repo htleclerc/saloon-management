@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
     ArrowLeft,
@@ -34,6 +34,7 @@ import {
     getServicesCSVTemplate,
     getProductsCSVTemplate,
     getClientsCSVTemplate,
+    salonTypes,
 } from '@/lib/onboarding/templates';
 import {
     getExpenseCategoryTemplates,
@@ -41,20 +42,17 @@ import {
 } from '@/lib/onboarding/expenseCategoryTemplates';
 import { validateServiceRow, validateProductRow, validateClientRow } from '@/lib/utils/csvParser';
 import type { Service, Product, Client, SalonDetails, ExpenseCategory } from '@/types';
+import { salonService } from '@/lib/services/SalonService';
+import { serviceService } from '@/lib/services/ServiceService';
+import { productService } from '@/lib/services/ProductService';
+import { clientService } from '@/lib/services/ClientService';
+import { workerService } from '@/lib/services/WorkerService';
+import { expenseService } from '@/lib/services/ExpenseService';
 
-const salonTypes = [
-    { id: 'braids', label: 'Braids & Locs', icon: Sparkles, color: 'from-purple-500 to-pink-500' },
-    { id: 'hair', label: 'Salon de coiffure', icon: Scissors, color: 'from-pink-500 to-rose-500' },
-    { id: 'nails', label: "Institut d'ongles", icon: Sparkles, color: 'from-rose-500 to-orange-500' },
-    { id: 'barber', label: 'Barbier', icon: Scissors, color: 'from-blue-500 to-indigo-500' },
-    { id: 'beauty', label: 'Institut de beauté', icon: Heart, color: 'from-teal-500 to-emerald-500' },
-    { id: 'spa', label: 'Spa & Wellness', icon: Sparkles, color: 'from-cyan-500 to-blue-500' },
-];
-
-export default function EnhancedSetupPage() {
+function SetupPageContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { login, updateUser } = useAuth();
+    const { login, updateUser, user } = useAuth();
     const {
         config,
         currentStep,
@@ -78,7 +76,7 @@ export default function EnhancedSetupPage() {
         canProceedToNext,
     } = useOnboarding();
 
-    // Force step from URL parameter if provided (only once on mount)
+    // Force step from URL parameter if provided
     const hasProcessedUrlStep = useRef(false);
     useEffect(() => {
         if (hasProcessedUrlStep.current) return;
@@ -127,31 +125,15 @@ export default function EnhancedSetupPage() {
     const [newClientEmail, setNewClientEmail] = useState("");
     const [newClientPhone, setNewClientPhone] = useState("");
 
-
     // Step 7: Team state  
     const [newWorkerName, setNewWorkerName] = useState("");
     const [newWorkerEmail, setNewWorkerEmail] = useState("");
 
     const handleSalonTypeSelect = (typeId: string) => {
-        console.log('🎯 Selecting salon type:', typeId);
         setSalonType(typeId);
-
-        // Auto-load service templates
-        const serviceTemplates = getServiceTemplates(typeId);
-        console.log('📋 Services loaded:', serviceTemplates.length);
-        setServices(serviceTemplates);
-
-        // Auto-load product templates
-        const productTemplates = getProductTemplates(typeId);
-        console.log('📦 Products loaded:', productTemplates.length);
-        setProducts(productTemplates);
-
-        // Auto-load expense category templates
-        const categoryTemplates = getExpenseCategoryTemplates(typeId);
-        console.log('💰 Categories loaded:', categoryTemplates.length);
-        setExpenseCategories(categoryTemplates);
-
-        console.log('✅ All templates loaded, checking canProceed...');
+        setServices(getServiceTemplates(typeId) as Service[]);
+        setProducts(getProductTemplates(typeId) as Product[]);
+        setExpenseCategories(getExpenseCategoryTemplates(typeId) as any);
     };
 
     const handleSalonDetailsNext = () => {
@@ -184,29 +166,120 @@ export default function EnhancedSetupPage() {
             addWorker({
                 name: newWorkerName,
                 email: newWorkerEmail,
-                avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${newWorkerName}`,
+                avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${newWorkerName}`,
                 status: 'Active',
                 sharingKey: 40,
                 color: '#8B5CF6',
-            });
+                salonId: 0,
+                userId: 0,
+                phone: '',
+                bio: '',
+                specialties: [],
+                isActive: true
+            } as any);
             setNewWorkerName("");
             setNewWorkerEmail("");
         }
     };
 
-    const handleComplete = () => {
-        completeOnboarding();
+    const handleComplete = async () => {
+        try {
+            // 1. Create/Update Salon
+            let salonId = user?.id ? (await salonService.getMySalons(Number(user.id)))[0]?.id || 0 : 0;
 
-        // Create user account
-        const savedName = localStorage.getItem("signup_name") || salonForm.name || "New Owner";
-        const savedEmail = localStorage.getItem("signup_email") || salonForm.email || "owner@salon.com";
+            if (!salonId && salonForm.name) {
+                // Determine subscription plan based on salon type? Defaulting to 'starter' or similar logic
+                const newSalon = await salonService.create({
+                    name: salonForm.name,
+                    slug: salonForm.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+                    country: 'FR',
+                    timezone: salonForm.timezone || 'Europe/Paris',
+                    currency: 'EUR',
+                    subscriptionPlan: 'free',
+                    subscriptionStatus: 'active',
+                    isActive: true
+                });
+                salonId = newSalon.id;
+            } else if (salonId && salonForm.name) {
+                await salonService.updateSettings(salonId, {
+                    // Update settings if needed, though salonService.update is for salon details
+                });
+                await salonService.update(salonId, {
+                    name: salonForm.name,
+                    address: salonForm.address,
+                    phone: salonForm.phone,
+                    email: salonForm.email,
+                    website: salonForm.website,
+                });
+            }
 
-        updateUser({ onboardingCompleted: true });
+            if (!salonId) throw new Error("Failed to create or retrieve salon");
 
-        localStorage.removeItem("signup_name");
-        localStorage.removeItem("signup_email");
+            // 2. Persist Services
+            const servicePromises = config.services.map(service =>
+                serviceService.create({
+                    ...service,
+                    salonId,
+                    isActive: true
+                })
+            );
 
-        router.push("/");
+            // 3. Persist Products
+            const productPromises = config.products.map(product =>
+                productService.create({
+                    ...product,
+                    salonId,
+                    isActive: true,
+                    isLinkedToService: false
+                })
+            );
+
+            // 4. Persist Expense Categories
+            const categoryPromises = config.expenseCategories.map(cat =>
+                expenseService.createCategory({
+                    ...cat,
+                    salonId,
+                    isActive: true
+                })
+            );
+
+            // 5. Persist Clients
+            const clientPromises = config.clients.map(client =>
+                clientService.create({
+                    ...client,
+                    salonId,
+                    isActive: true
+                })
+            );
+
+            // 6. Persist Workers
+            const workerPromises = config.workers.map(worker =>
+                workerService.create({
+                    ...worker,
+                    salonId,
+                    isActive: true
+                })
+            );
+
+            // Execute all persistence in parallel
+            await Promise.all([
+                ...servicePromises,
+                ...productPromises,
+                ...categoryPromises,
+                ...clientPromises,
+                ...workerPromises
+            ]);
+
+            completeOnboarding();
+
+            // specific user update
+            updateUser({ onboardingCompleted: true });
+
+            router.push("/");
+        } catch (error) {
+            console.error("Onboarding persistence failed:", error);
+            // Handle error (maybe show toast)
+        }
     };
 
     const stepLabels = [
@@ -445,7 +518,7 @@ export default function EnhancedSetupPage() {
                                                 <div className="flex-1 min-w-0">
                                                     <p className="font-bold text-gray-900 mb-1 flex items-center gap-2">
                                                         {service.name}
-                                                        {service.category === 'Personnalisé' && (
+                                                        {(service as any).category === 'Personnalisé' && (
                                                             <span className="text-xs px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded">
                                                                 Custom
                                                             </span>
@@ -516,12 +589,14 @@ export default function EnhancedSetupPage() {
                                             if (newServiceName && newServicePrice && newServiceDuration) {
                                                 addService({
                                                     id: Date.now(),
+                                                    salonId: 0, // Placeholder
                                                     name: newServiceName,
                                                     price: parseFloat(newServicePrice),
-                                                    duration: newServiceDuration,
+                                                    duration: parseInt(newServiceDuration),
                                                     category: 'Personnalisé',
                                                     icon: 'Sparkles',
-                                                });
+                                                    isActive: true
+                                                } as any);
                                                 setNewServiceName('');
                                                 setNewServicePrice('');
                                                 setNewServiceDuration('');
@@ -661,11 +736,13 @@ export default function EnhancedSetupPage() {
                                             if (newProductName && newProductPrice && newProductStock) {
                                                 addProduct({
                                                     id: Date.now(),
+                                                    salonId: 0, // Placeholder
                                                     name: newProductName,
                                                     price: parseFloat(newProductPrice),
                                                     stock: parseInt(newProductStock),
                                                     category: 'Personnalisé',
-                                                });
+                                                    isActive: true
+                                                } as any);
                                                 setNewProductName('');
                                                 setNewProductPrice('');
                                                 setNewProductStock('');
@@ -723,8 +800,8 @@ export default function EnhancedSetupPage() {
                                                         checked={isSelected}
                                                         onChange={(e) => {
                                                             if (e.target.checked) {
-                                                                addExpenseCategory(category);
-                                                            } else {
+                                                                addExpenseCategory(category as any);
+                                                            } else if (category.id) {
                                                                 removeExpenseCategory(category.id);
                                                             }
                                                         }}
@@ -734,7 +811,7 @@ export default function EnhancedSetupPage() {
                                                         <div className="flex items-center gap-2">
                                                             <div
                                                                 className="w-3 h-3 rounded-full flex-shrink-0"
-                                                                style={{ backgroundColor: category.color }}
+                                                                style={{ backgroundColor: category.color || '#ccc' }}
                                                             />
                                                             <span className="font-medium text-sm text-gray-900 truncate">
                                                                 {category.name}
@@ -793,7 +870,7 @@ export default function EnhancedSetupPage() {
                                                         id: Date.now(),
                                                         name: newCategoryName,
                                                         color: newCategoryColor,
-                                                    });
+                                                    } as any);
                                                     setNewCategoryName('');
                                                     setNewCategoryColor('#8B5CF6');
                                                 }
@@ -918,9 +995,21 @@ export default function EnhancedSetupPage() {
                                             if (newClientName && newClientEmail) {
                                                 const newClient: Client = {
                                                     id: Date.now(),
+                                                    salonId: 0, // Placeholder
+                                                    userId: undefined,
                                                     name: newClientName,
                                                     email: newClientEmail,
-                                                    phone: newClientPhone || '',
+                                                    phone: newClientPhone || "",
+                                                    address: undefined,
+                                                    city: undefined,
+                                                    postalCode: undefined,
+                                                    birthDate: undefined,
+                                                    notes: undefined,
+                                                    isActive: true,
+                                                    createdAt: new Date(),
+                                                    updatedAt: new Date(),
+                                                    createdBy: 'system',
+                                                    updatedBy: 'system'
                                                 };
                                                 setClients([...config.clients, newClient]);
                                                 setNewClientName('');
@@ -1170,5 +1259,17 @@ export default function EnhancedSetupPage() {
                 description="Téléchargez le modèle CSV, remplissez-le avec vos clients et importez-le ici"
             />
         </OnboardingLayout>
+    );
+}
+
+export default function EnhancedSetupPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex items-center justify-center min-h-screen bg-gray-50">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8B5CF6]"></div>
+            </div>
+        }>
+            <SetupPageContent />
+        </Suspense>
     );
 }

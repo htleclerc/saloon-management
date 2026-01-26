@@ -4,14 +4,21 @@ import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { FileText, Download, Search, Calendar, ArrowLeft } from "lucide-react";
-import { useIncome } from "@/context/IncomeProvider";
+import { incomeService } from "@/lib/services";
+import { useAuth } from "@/context/AuthProvider";
 import { jsPDF } from "jspdf";
-
-import { useSearchParams } from "next/navigation";
 import React, { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 
 function InvoicesContent() {
-    const { incomes } = useIncome();
+    const { activeSalonId } = useAuth();
+    const [incomes, setIncomes] = React.useState<any[]>([]);
+
+    React.useEffect(() => {
+        if (activeSalonId) {
+            incomeService.getAll(Number(activeSalonId)).then(setIncomes);
+        }
+    }, [activeSalonId]);
     const searchParams = useSearchParams();
     const searchId = searchParams.get('search');
 

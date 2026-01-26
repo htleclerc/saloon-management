@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
 import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
@@ -24,97 +24,27 @@ import {
     Search
 } from "lucide-react";
 import { useAuth } from "@/context/AuthProvider";
+import { useTranslation } from "@/i18n";
 import Link from "next/link";
 import { canPerformServiceAction } from "@/lib/permissions";
 import { UserRole } from "@/context/AuthProvider";
 import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
-
-const services = [
-    {
-        id: 1,
-        name: "Box Braids",
-        description: "Traditional box braids with various sizes",
-        price: 120,
-        duration: "3-4 hours",
-        image: "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=400",
-        rating: 4.9,
-        popularity: 95,
-        color: "from-purple-500 to-purple-700",
-    },
-    {
-        id: 2,
-        name: "Cornrows",
-        description: "Classic cornrow braiding style",
-        price: 85,
-        duration: "2-3 hours",
-        image: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=400",
-        rating: 4.8,
-        popularity: 88,
-        color: "from-pink-500 to-pink-700",
-    },
-    {
-        id: 3,
-        name: "Senegalese Twists",
-        description: "Rope twists with synthetic hair",
-        price: 110,
-        duration: "3-4 hours",
-        image: "https://images.unsplash.com/photo-1589710751893-f9a6770ad71b?w=400",
-        rating: 4.7,
-        popularity: 82,
-        color: "from-orange-500 to-orange-700",
-    },
-    {
-        id: 4,
-        name: "Locs",
-        description: "Dreadlock installation and maintenance",
-        price: 150,
-        duration: "4-5 hours",
-        image: "https://images.unsplash.com/photo-1531891437562-4301cf35b7e4?w=400",
-        rating: 4.9,
-        popularity: 75,
-        color: "from-teal-500 to-teal-700",
-    },
-    {
-        id: 5,
-        name: "Goddess Braids",
-        description: "Thick, stylish goddess braids",
-        price: 130,
-        duration: "2-3 hours",
-        image: "https://images.unsplash.com/photo-1560869713-7d0a29430803?w=400",
-        rating: 4.8,
-        popularity: 78,
-        color: "from-blue-500 to-blue-700",
-    },
-    {
-        id: 6,
-        name: "Twists",
-        description: "Various twist styles",
-        price: 95,
-        duration: "2-3 hours",
-        image: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=400",
-        rating: 4.6,
-        popularity: 85,
-        color: "from-indigo-500 to-indigo-700",
-        status: "active",
-    },
-    {
-        id: 7,
-        name: "Old Style",
-        description: "Archived style",
-        price: 50,
-        duration: "1 hour",
-        image: "",
-        rating: 4.0,
-        popularity: 10,
-        color: "from-gray-500 to-gray-700",
-        status: "archived",
-    }
-];
+import { serviceService } from "@/lib/services";
 
 export default function ServicesPage() {
     const [searchTerm, setSearchTerm] = useState("");
+    const [services, setServices] = useState<any[]>([]);
     const { getCardStyle } = useKpiCardStyle();
-    const { user } = useAuth();
+    const { user, activeSalonId } = useAuth();
+    const { t } = useTranslation();
+
+    useMemo(() => {
+        if (activeSalonId) {
+            serviceService.getAll(Number(activeSalonId)).then(setServices);
+        }
+    }, [activeSalonId]);
+
+    // const { services } = useServices(); // Removed
     const canAdd = canPerformServiceAction("add", user?.role as UserRole);
     const canEdit = canPerformServiceAction("edit", user?.role as UserRole);
     const isManager = ["manager", "admin", "owner", "super_admin"].includes(user?.role || "");
@@ -122,16 +52,34 @@ export default function ServicesPage() {
     // Mobile Modal State
     const [selectedService, setSelectedService] = useState<any>(null);
 
-    // Filter out archived services
-    const activeServices = services.filter(s => (s as any).status !== 'archived');
+    // Enrich services with display properties
+    const enrichedServices = useMemo(() =>
+        services.map((service, idx) => ({
+            ...service,
+            description: service.description || `Professional ${service.name} service`,
+            image: service.image || `https://images.unsplash.com/photo-${1580618672591 + idx}?w=400`,
+            rating: 4.5 + (idx % 5) * 0.1,
+            popularity: 70 + (idx % 30),
+            color: idx % 2 === 0 ? "from-[var(--color-primary)] to-[var(--color-primary-dark)]" : "from-[var(--color-secondary)] to-[var(--color-secondary-dark)]",
+            price: typeof service.price === 'string' ? parseFloat(service.price) : service.price
+        })),
+        [services]
+    );
 
-    const totalServices = activeServices.length;
-    const avgPrice = Math.round(activeServices.reduce((sum, s) => sum + s.price, 0) / activeServices.length);
-    const mostPopular = activeServices.reduce((max, s) => (s.popularity > max.popularity ? s : max), activeServices[0]);
+    const totalServices = enrichedServices.length;
+    const avgPrice = enrichedServices.length > 0
+        ? Math.round(enrichedServices.reduce((sum, s) => sum + (typeof s.price === 'number' ? s.price : 0), 0) / enrichedServices.length)
+        : 0;
+    const mostPopular = enrichedServices.length > 0
+        ? enrichedServices.reduce((max, s) => (s.popularity > max.popularity ? s : max), enrichedServices[0])
+        : { name: "N/A", popularity: 0 };
 
-    const displayServices = activeServices.filter(s =>
-        s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.description.toLowerCase().includes(searchTerm.toLowerCase())
+    const displayServices = useMemo(() =>
+        enrichedServices.filter(s =>
+            s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            s.description?.toLowerCase().includes(searchTerm.toLowerCase())
+        ),
+        [enrichedServices, searchTerm]
     );
 
     return (
@@ -140,16 +88,16 @@ export default function ServicesPage() {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">Service Management</h1>
-                        <p className="text-gray-500 mt-1">Manage your workshop services and pricing</p>
+                        <h1 className="text-3xl font-bold text-gray-900">{t("services.management")}</h1>
+                        <p className="text-gray-500 mt-1">{t("services.subtitle")}</p>
                     </div>
                     <div className="flex w-full md:w-auto items-center justify-end">
                         {canAdd && (
                             <ReadOnlyGuard>
                                 <Link href="/services/add?mode=advanced">
-                                    <Button variant="primary" size="md" className="rounded-2xl h-14 w-14 md:h-12 md:w-auto md:px-6 flex items-center justify-center p-0 md:p-auto shadow-xl shadow-purple-500/30 active:scale-95 transition-all">
+                                    <Button variant="primary" size="md" className="rounded-2xl h-14 w-14 md:h-12 md:w-auto md:px-6 flex items-center justify-center p-0 md:p-auto shadow-xl shadow-primary/30 active:scale-95 transition-all">
                                         <Plus className="w-8 h-8 md:w-6 md:h-6" />
-                                        <span className="hidden md:inline ml-2 font-bold">Add Service</span>
+                                        <span className="hidden md:inline ml-2 font-bold">{t("services.addService")}</span>
                                     </Button>
                                 </Link>
                             </ReadOnlyGuard>
@@ -160,19 +108,19 @@ export default function ServicesPage() {
                 {/* Summary Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <Card className="text-white" style={getCardStyle(0)}>
-                        <p className="text-sm opacity-90 mb-1">Total Services</p>
+                        <p className="text-sm opacity-90 mb-1">{t("services.total")}</p>
                         <h3 className="text-3xl font-bold">{totalServices}</h3>
-                        <p className="text-sm opacity-80 mt-1">Active services</p>
+                        <p className="text-sm opacity-80 mt-1">{t("services.active")}</p>
                     </Card>
                     <Card className="text-white" style={getCardStyle(1)}>
-                        <p className="text-sm opacity-90 mb-1">Average Price</p>
+                        <p className="text-sm opacity-90 mb-1">{t("services.avgPrice")}</p>
                         <h3 className="text-3xl font-bold">€{avgPrice}</h3>
                         <p className="text-sm opacity-80 mt-1">Across all services</p>
                     </Card>
                     <Card className="text-white" style={getCardStyle(2)}>
-                        <p className="text-sm opacity-90 mb-1">Most Popular</p>
+                        <p className="text-sm opacity-90 mb-1">{t("services.mostPopular")}</p>
                         <h3 className="text-2xl font-bold">{mostPopular.name}</h3>
-                        <p className="text-sm opacity-80 mt-1">{mostPopular.popularity}% popularity</p>
+                        <p className="text-sm opacity-80 mt-1">{mostPopular.popularity}% {t("services.popularity")}</p>
                     </Card>
                 </div>
 
@@ -181,10 +129,10 @@ export default function ServicesPage() {
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                     <input
                         type="text"
-                        placeholder="Search services..."
+                        placeholder={t("services.searchPlaceholder")}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-12 pr-4 py-4 bg-white border-none shadow-xl shadow-gray-200/50 rounded-2xl text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                        className="w-full pl-12 pr-4 py-4 bg-white border-none shadow-xl shadow-gray-200/50 rounded-2xl text-sm focus:ring-2 focus:ring-primary outline-none"
                     />
                 </div>
 
@@ -218,18 +166,18 @@ export default function ServicesPage() {
                                         <span className="text-sm text-gray-600">{service.duration}</span>
                                     </div>
                                     <div className="flex items-center gap-1">
-                                        <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                                        <Star className="w-4 h-4 text-warning fill-warning" />
                                         <span className="text-sm font-semibold text-gray-900">{service.rating}</span>
                                     </div>
                                 </div>
 
                                 <div className="flex items-center justify-between pt-3 border-t border-gray-200">
                                     <div className="flex items-center gap-2">
-                                        <DollarSign className="w-5 h-5 text-purple-600" />
-                                        <span className="text-2xl font-bold text-purple-600">€{service.price}</span>
+                                        <DollarSign className="w-5 h-5 text-primary" />
+                                        <span className="text-2xl font-bold text-primary">€{service.price}</span>
                                     </div>
                                     <div className="text-right">
-                                        <p className="text-xs text-gray-500">Popularity</p>
+                                        <p className="text-xs text-gray-500">{t("services.popularity")}</p>
                                         <div className="flex items-center gap-1">
                                             <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
                                                 <div
@@ -247,14 +195,14 @@ export default function ServicesPage() {
                                         <ReadOnlyGuard>
                                             <Link href={`/services/edit/${service.id}?mode=advanced`} className="flex-1">
                                                 <Button variant="outline" size="sm" className="w-full">
-                                                    Edit
+                                                    {t("common.edit")}
                                                 </Button>
                                             </Link>
                                         </ReadOnlyGuard>
                                     )}
                                     <Link href={`/services/${service.id}`} className="flex-1">
                                         <Button variant="primary" size="sm" className="w-full">
-                                            View Details
+                                            {t("common.view")}
                                         </Button>
                                     </Link>
                                 </div>
@@ -266,21 +214,21 @@ export default function ServicesPage() {
                 {/* Service Statistics - Admin/Manager Only */}
                 {isManager && (
                     <Card>
-                        <h3 className="text-lg font-semibold mb-4 text-gray-900 border-b border-gray-100 pb-4">Service Statistics (This Month)</h3>
+                        <h3 className="text-lg font-semibold mb-4 text-gray-900 border-b border-gray-100 pb-4">{t("services.statsMonth")}</h3>
                         <div className="overflow-x-auto">
                             <table className="w-full">
                                 <thead className="bg-gray-50">
                                     <tr>
-                                        <th className="px-4 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-widest">Service</th>
-                                        <th className="hidden lg:table-cell px-4 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-widest">Duration</th>
-                                        <th className="hidden sm:table-cell px-4 py-4 text-right text-xs font-black text-gray-400 uppercase tracking-widest">Price</th>
-                                        <th className="hidden md:table-cell px-4 py-4 text-center text-xs font-black text-gray-400 uppercase tracking-widest">Rating</th>
-                                        <th className="hidden xl:table-cell px-4 py-4 text-right text-xs font-black text-gray-400 uppercase tracking-widest">Bookings</th>
-                                        <th className="px-4 py-4 text-right text-xs font-black text-gray-400 uppercase tracking-widest">Revenue</th>
-                                        <th className="hidden sm:table-cell px-4 py-4 text-center text-xs font-black text-gray-400 uppercase tracking-widest">Actions</th>
+                                        <th className="px-4 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-widest">{t("services.name")}</th>
+                                        <th className="hidden lg:table-cell px-4 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-widest">{t("services.duration")}</th>
+                                        <th className="hidden sm:table-cell px-4 py-4 text-right text-xs font-black text-gray-400 uppercase tracking-widest">{t("services.price")}</th>
+                                        <th className="hidden md:table-cell px-4 py-4 text-center text-xs font-black text-gray-400 uppercase tracking-widest">{t("services.rating")}</th>
+                                        <th className="hidden xl:table-cell px-4 py-4 text-right text-xs font-black text-gray-400 uppercase tracking-widest">{t("services.bookings")}</th>
+                                        <th className="px-4 py-4 text-right text-xs font-black text-gray-400 uppercase tracking-widest">{t("services.revenue")}</th>
+                                        <th className="hidden sm:table-cell px-4 py-4 text-center text-xs font-black text-gray-400 uppercase tracking-widest">{t("common.actions")}</th>
                                         {/* Mobile replacements */}
-                                        <th className="sm:hidden px-4 py-4 text-center text-xs font-black text-gray-400 uppercase tracking-widest">Rating</th>
-                                        <th className="sm:hidden px-4 py-4 text-right text-xs font-black text-gray-400 uppercase tracking-widest">Usage</th>
+                                        <th className="sm:hidden px-4 py-4 text-center text-xs font-black text-gray-400 uppercase tracking-widest">{t("services.rating")}</th>
+                                        <th className="sm:hidden px-4 py-4 text-right text-xs font-black text-gray-400 uppercase tracking-widest">{t("services.usage")}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
@@ -313,21 +261,21 @@ export default function ServicesPage() {
                                                 <td className="hidden lg:table-cell px-4 py-4 text-sm text-gray-600 font-medium">{service.duration}</td>
                                                 <td className="hidden sm:table-cell px-4 py-4 text-right font-bold text-purple-600 text-sm">€{service.price}</td>
                                                 <td className="hidden md:table-cell px-4 py-4 text-center">
-                                                    <div className="flex items-center justify-center gap-1 bg-yellow-50 px-2 py-1 rounded-lg w-fit mx-auto">
-                                                        <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
-                                                        <span className="font-bold text-yellow-700 text-xs">{service.rating}</span>
+                                                    <div className="flex items-center justify-center gap-1 bg-warning-light px-2 py-1 rounded-lg w-fit mx-auto">
+                                                        <Star className="w-3.5 h-3.5 text-warning fill-warning" />
+                                                        <span className="font-bold text-warning text-xs">{service.rating}</span>
                                                     </div>
                                                 </td>
                                                 <td className="hidden xl:table-cell px-4 py-4 text-right font-bold text-gray-600 text-sm">{bookings}</td>
                                                 <td className="px-4 py-4 text-right">
-                                                    <span className="font-black text-green-600 text-sm italic">€{revenue.toLocaleString()}</span>
+                                                    <span className="font-black text-success text-sm italic">€{revenue.toLocaleString()}</span>
                                                 </td>
                                                 <td className="hidden sm:table-cell px-4 py-4 text-center" onClick={(e) => e.stopPropagation()}>
                                                     <div className="flex items-center justify-center gap-2">
                                                         {canEdit && (
                                                             <ReadOnlyGuard>
                                                                 <Link href={`/services/edit/${service.id}?mode=simple`}>
-                                                                    <button className="p-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors shadow-sm" title="Quick Edit">
+                                                                    <button className="p-2 bg-primary-light text-primary rounded-lg hover:bg-primary-light/80 transition-colors shadow-sm" title="Quick Edit">
                                                                         <Layout className="w-4 h-4" />
                                                                     </button>
                                                                 </Link>
@@ -342,8 +290,8 @@ export default function ServicesPage() {
                                                 </td>
                                                 {/* Mobile Only: Rating & Bookings */}
                                                 <td className="sm:hidden px-4 py-4 text-center">
-                                                    <div className="flex items-center justify-center gap-1 text-yellow-600 font-bold text-xs">
-                                                        <Star className="w-3 h-3 fill-yellow-500" />
+                                                    <div className="flex items-center justify-center gap-1 text-warning font-bold text-xs">
+                                                        <Star className="w-3 h-3 fill-warning" />
                                                         {service.rating}
                                                     </div>
                                                 </td>
@@ -394,38 +342,38 @@ export default function ServicesPage() {
                             </div>
 
                             <div className="grid grid-cols-2 gap-4 mb-8">
-                                <div className="p-4 bg-purple-50 rounded-2xl">
-                                    <p className="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-1">Price</p>
-                                    <p className="text-lg font-black text-purple-600">€{selectedService.price}</p>
+                                <div className="p-4 bg-primary-light rounded-2xl">
+                                    <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-1">{t("services.price")}</p>
+                                    <p className="text-lg font-black text-primary">€{selectedService.price}</p>
                                 </div>
-                                <div className="p-4 bg-blue-50 rounded-2xl">
-                                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Duration</p>
-                                    <p className="text-lg font-black text-blue-600">{selectedService.duration}</p>
+                                <div className="p-4 bg-info-light rounded-2xl">
+                                    <p className="text-[10px] font-black text-info uppercase tracking-widest mb-1">{t("services.duration")}</p>
+                                    <p className="text-lg font-black text-info">{selectedService.duration}</p>
                                 </div>
-                                <div className="p-4 bg-yellow-50 rounded-2xl">
-                                    <p className="text-[10px] font-black text-yellow-400 uppercase tracking-widest mb-1">Rating</p>
+                                <div className="p-4 bg-warning-light rounded-2xl">
+                                    <p className="text-[10px] font-black text-warning uppercase tracking-widest mb-1">{t("services.rating")}</p>
                                     <div className="flex items-center gap-1">
-                                        <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                                        <p className="text-lg font-black text-yellow-600">{selectedService.rating}</p>
+                                        <Star className="w-4 h-4 text-warning fill-warning" />
+                                        <p className="text-lg font-black text-warning">{selectedService.rating}</p>
                                     </div>
                                 </div>
-                                <div className="p-4 bg-green-50 rounded-2xl">
-                                    <p className="text-[10px] font-black text-green-400 uppercase tracking-widest mb-1">Bookings</p>
-                                    <p className="text-lg font-black text-green-600">{Math.round(selectedService.popularity * 2)}</p>
+                                <div className="p-4 bg-success-light rounded-2xl">
+                                    <p className="text-[10px] font-black text-success uppercase tracking-widest mb-1">{t("services.bookings")}</p>
+                                    <p className="text-lg font-black text-success">{Math.round(selectedService.popularity * 2)}</p>
                                 </div>
                             </div>
 
                             <div className="space-y-3">
                                 <Link href={`/services/${selectedService.id}`} className="block">
-                                    <Button variant="primary" className="w-full py-4 rounded-2xl font-black shadow-lg shadow-purple-500/20">
-                                        View Full Portfolio
+                                    <Button variant="primary" className="w-full py-4 rounded-2xl font-black shadow-lg shadow-primary/20">
+                                        {t("services.viewFull")}
                                     </Button>
                                 </Link>
                                 {canEdit && (
                                     <ReadOnlyGuard>
                                         <Link href={`/services/edit/${selectedService.id}?mode=advanced`} className="block">
                                             <Button variant="outline" className="w-full py-4 rounded-2xl font-black border-gray-100">
-                                                Settings & Media
+                                                {t("services.settingsMedia")}
                                             </Button>
                                         </Link>
                                     </ReadOnlyGuard>
@@ -434,7 +382,7 @@ export default function ServicesPage() {
                                     className="w-full py-4 text-gray-400 font-bold text-sm hover:text-gray-600 transition-colors"
                                     onClick={() => setSelectedService(null)}
                                 >
-                                    Close Details
+                                    {t("services.closeDetails")}
                                 </button>
                             </div>
                         </div>

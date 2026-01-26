@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthProvider";
+import { useTranslation } from "@/i18n";
 import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 import HistoryModal, { HistoryEvent } from "@/components/ui/HistoryModal";
 import { useState } from "react";
@@ -83,7 +84,10 @@ const serviceUsageHistory: HistoryEvent[] = [
 export default function ServiceDetailPage() {
     const params = useParams();
     const serviceId = parseInt(params.id as string);
-    const { isAdmin, isManager, isOwner, isLoading } = useAuth();
+    const { isManager, isOwner, isLoading } = useAuth();
+    // Use isManager for admin-like features as it includes owner/super_admin
+    const isAdmin = isManager;
+    const { t } = useTranslation();
     const [historyModalOpen, setHistoryModalOpen] = useState(false);
 
     // Find service (in real app, fetch from API)
@@ -127,11 +131,11 @@ export default function ServiceDetailPage() {
                     {isManager && (
                         <div className="flex items-center gap-3">
                             <ReadOnlyGuard>
-                                <Button variant="outline">Archive Service</Button>
+                                <Button variant="outline">{t("services.archive")}</Button>
                             </ReadOnlyGuard>
                             <ReadOnlyGuard>
                                 <Link href={`/services/edit/${service.id}`}>
-                                    <Button variant="primary">Edit Service</Button>
+                                    <Button variant="primary">{t("services.editService")}</Button>
                                 </Link>
                             </ReadOnlyGuard>
                         </div>
@@ -161,7 +165,7 @@ export default function ServiceDetailPage() {
                         {/* Info & Gallery Description Area */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="space-y-6">
-                                <h3 className="text-xl font-bold text-gray-900">About this Service</h3>
+                                <h3 className="text-xl font-bold text-gray-900">{t("services.about")}</h3>
                                 <p className="text-gray-600 leading-relaxed">
                                     {service.description}
                                 </p>
@@ -174,7 +178,7 @@ export default function ServiceDetailPage() {
                             <div className="space-y-6">
                                 <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                                     <ImageIcon className="w-5 h-5 text-[var(--color-primary)]" />
-                                    Style Gallery
+                                    {t("services.gallery")}
                                 </h3>
                                 <div className="grid grid-cols-3 gap-3">
                                     {service.gallery.map((img, idx) => (
@@ -191,9 +195,9 @@ export default function ServiceDetailPage() {
 
                         <div className="pt-4">
                             <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-xl font-bold text-gray-900 italic">Recent Customer Reviews</h3>
+                                <h3 className="text-xl font-bold text-gray-900 italic">{t("services.recentReviews")}</h3>
                                 <Link href={`/team/feedback?serviceName=${encodeURIComponent(service.name)}`}>
-                                    <button className="text-[var(--color-primary)] text-sm font-bold hover:underline">See all reviews</button>
+                                    <button className="text-[var(--color-primary)] text-sm font-bold hover:underline">{t("services.seeAllReviews")}</button>
                                 </Link>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -228,11 +232,11 @@ export default function ServiceDetailPage() {
                                 <Card className="p-6 border-none shadow-xl shadow-purple-500/10 bg-gradient-to-br from-purple-500 to-purple-700 text-white rounded-[2rem]">
                                     <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
                                         <DollarSign className="w-5 h-5 bg-white/20 p-1 rounded-full" />
-                                        Financial Insights
+                                        {t("services.financialInsights")}
                                     </h3>
                                     <div className="space-y-6">
                                         <div>
-                                            <p className="text-white/70 text-sm">Monthly Revenue</p>
+                                            <p className="text-white/70 text-sm">{t("services.monthlyRevenue")}</p>
                                             <div className="flex items-end gap-2">
                                                 <h4 className="text-3xl font-black italic">€22,800</h4>
                                                 <span className="text-green-400 text-xs font-black pb-1">↑ 15%</span>
@@ -241,11 +245,11 @@ export default function ServiceDetailPage() {
                                         <div className="h-px bg-white/20 w-full"></div>
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
-                                                <p className="text-white/70 text-xs font-bold uppercase tracking-wider mb-1">Bookings</p>
+                                                <p className="text-white/70 text-xs font-bold uppercase tracking-wider mb-1">{t("services.bookings")}</p>
                                                 <p className="text-xl font-black italic">190</p>
                                             </div>
                                             <div>
-                                                <p className="text-white/70 text-xs font-bold uppercase tracking-wider mb-1">Margin</p>
+                                                <p className="text-white/70 text-xs font-bold uppercase tracking-wider mb-1">{t("services.margin")}</p>
                                                 <p className="text-xl font-black italic">68%</p>
                                             </div>
                                         </div>
@@ -258,7 +262,7 @@ export default function ServiceDetailPage() {
                                             >
                                                 <span className="font-bold flex items-center gap-2">
                                                     <History className="w-4 h-4" />
-                                                    View Usage History
+                                                    {t("services.viewHistory")}
                                                 </span>
                                                 <ChevronRight className="w-5 h-5" />
                                             </Button>
@@ -269,7 +273,7 @@ export default function ServiceDetailPage() {
                                 {/* Revenue Chart */}
                                 <Card className="p-6 border-none shadow-xl shadow-gray-200/50 bg-white rounded-[2rem]">
                                     <div className="flex justify-between items-center mb-6">
-                                        <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest">Growth Trend</h3>
+                                        <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest">{t("services.growthTrend")}</h3>
                                         <TrendingUp className="w-4 h-4 text-green-500" />
                                     </div>
                                     <div className="h-48">
@@ -290,7 +294,7 @@ export default function ServiceDetailPage() {
                                 {/* Recent History Activity - Admin Only (Moved here) */}
                                 <Card className="p-6 border-none shadow-xl shadow-gray-200/50 bg-white rounded-[2rem] flex flex-col flex-1">
                                     <div className="flex justify-between items-center mb-6">
-                                        <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest">Recent Usage Activity</h3>
+                                        <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest">{t("services.recentActivity")}</h3>
                                         <History className="w-4 h-4 text-[var(--color-primary)]" />
                                     </div>
                                     <div className="space-y-4">
@@ -314,7 +318,7 @@ export default function ServiceDetailPage() {
                                     <div className="mt-auto pt-6">
                                         <Link href={`/services/${service.id}/history`}>
                                             <button className="w-full py-4 text-xs font-black text-[var(--color-primary)] uppercase tracking-widest hover:bg-[var(--color-primary-light)] rounded-2xl transition-colors border-2 border-dashed border-[var(--color-primary-light)]">
-                                                View Full Audit Log
+                                                {t("services.viewAudit")}
                                             </button>
                                         </Link>
                                     </div>
@@ -323,8 +327,8 @@ export default function ServiceDetailPage() {
                         ) : (
                             <Card className="p-6 border-none shadow-xl shadow-gray-200/50 bg-white rounded-[2rem] space-y-8">
                                 <div className="space-y-2">
-                                    <h3 className="text-lg font-bold text-gray-900">Performance</h3>
-                                    <p className="text-sm text-gray-500">Your results for this service</p>
+                                    <h3 className="text-lg font-bold text-gray-900">{t("services.performance")}</h3>
+                                    <p className="text-sm text-gray-500">{t("services.yourResults")}</p>
                                 </div>
                                 <div className="space-y-4">
                                     <div className="p-4 bg-[var(--color-primary-light)] rounded-2xl flex items-center justify-between">

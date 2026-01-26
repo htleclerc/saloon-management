@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { AlertTriangle, AlertCircle, Info, CheckCircle, X } from 'lucide-react';
 import Button from './Button';
 import { ConfirmType } from '@/context/ConfirmProvider';
+import { useTranslation } from '@/i18n';
 
 interface ConfirmModalProps {
     isOpen: boolean;
@@ -58,6 +59,11 @@ export default function ConfirmModal({
     const [isColorsSame, setIsColorsSame] = useState(false);
     const config = typeConfigs[type];
     const Icon = config.icon;
+    const { t } = useTranslation();
+
+    // Use translation defaults if not provided
+    const finalConfirmText = confirmText || t("common.confirm");
+    const finalCancelText = cancelText || t("common.cancel");
 
     useEffect(() => {
         // Check if brand colors are identical
@@ -123,14 +129,14 @@ export default function ConfirmModal({
                             onClick={onCancel}
                             className={`flex-1 font-bold ${type !== 'warning' ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-none' : ''}`}
                         >
-                            {cancelText}
+                            {finalCancelText}
                         </Button>
                         <Button
                             variant={config.btnVariant}
                             onClick={onConfirm}
                             className="flex-1 shadow-lg"
                         >
-                            {confirmText}
+                            {finalConfirmText}
                         </Button>
                     </div>
                 </div>

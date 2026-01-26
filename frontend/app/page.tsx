@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import MainLayout from "@/components/layout/MainLayout";
@@ -25,6 +25,7 @@ import {
   Receipt,
   ChevronRight,
   History,
+  Loader2,
 } from "lucide-react";
 import HistoryModal, { HistoryEvent } from "@/components/ui/HistoryModal";
 import {
@@ -35,216 +36,82 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  LineChart,
-  Line,
   PieChart,
   Pie,
   Cell,
 } from "recharts";
-
-// --- Mock Data ---
-
-const monthlyRevenueData = [
-  { name: "Jan", value: 45 }, { name: "Feb", value: 52 }, { name: "Mar", value: 49 },
-  { name: "Apr", value: 63 }, { name: "May", value: 58 }, { name: "Jun", value: 72 },
-  { name: "Jul", value: 68 }, { name: "Aug", value: 75 }, { name: "Sep", value: 82 },
-  { name: "Oct", value: 88 }, { name: "Nov", value: 79 }, { name: "Dec", value: 85 }
-];
-
-const monthlyExpensesData = [
-  { name: "Jan", value: 28 }, { name: "Feb", value: 32 }, { name: "Mar", value: 35 },
-  { name: "Apr", value: 38 }, { name: "May", value: 42 }, { name: "Jun", value: 45 },
-  { name: "Jul", value: 40 }, { name: "Aug", value: 48 }, { name: "Sep", value: 52 },
-  { name: "Oct", value: 55 }, { name: "Nov", value: 50 }, { name: "Dec", value: 58 }
-];
-
-const profitData = [
-  { name: "Jan", revenue: 40, expenses: 25, profit: 15 },
-  { name: "Feb", revenue: 45, expenses: 30, profit: 15 },
-  { name: "Mar", revenue: 42, expenses: 28, profit: 14 },
-  { name: "Apr", revenue: 55, expenses: 35, profit: 20 },
-  { name: "May", revenue: 50, expenses: 38, profit: 12 },
-  { name: "Jun", revenue: 65, expenses: 42, profit: 23 },
-  { name: "Jul", revenue: 60, expenses: 38, profit: 22 },
-  { name: "Aug", revenue: 68, expenses: 45, profit: 23 },
-  { name: "Sep", revenue: 75, expenses: 50, profit: 25 },
-  { name: "Oct", revenue: 80, expenses: 52, profit: 28 },
-  { name: "Nov", revenue: 72, expenses: 48, profit: 24 },
-  { name: "Dec", revenue: 78, expenses: 55, profit: 23 },
-];
-
-const expenseCategories = [
-  { name: "Staff Salary", value: 12450, color: "#8B5CF6" },
-  { name: "Office Rental", value: 5200, color: "#EC4899" },
-  { name: "Beauty Supply", value: 3850, color: "#F59E0B" },
-  { name: "Utilities", value: 1800, color: "#10B981" },
-];
-
-const topPerformers = [
-  { name: "Isabelle", role: "Hair Stylist", revenue: 4250, clients: 42, rating: 4.9, avatar: "I", bg: "bg-[var(--color-primary-light)]", text: "text-[var(--color-primary)]" },
-  { name: "Fatima S", role: "Nail Artist", revenue: 3890, clients: 38, rating: 4.8, avatar: "F", bg: "bg-[var(--color-secondary-light)]", text: "text-[var(--color-secondary)]" },
-  { name: "Nadine B", role: "Colorist", revenue: 3560, clients: 35, rating: 4.8, avatar: "N", bg: "bg-[var(--color-warning-light)]", text: "text-[var(--color-warning)]" },
-  { name: "Yasmine M", role: "Stylist", revenue: 3120, clients: 31, rating: 4.7, avatar: "Y", bg: "bg-[var(--color-success-light)]", text: "text-[var(--color-success)]" },
-];
-
-const todaysSessions = [
-  { id: 1, time: "09:00 AM", client: "Marie Anderson", type: "Box Braids", worker: "Isabelle", price: "€120", status: "Completed", statusColor: "bg-[var(--color-success-light)] text-[var(--color-success)]", history: [{ date: "2026-01-19 08:00", action: "Appointment Set", user: "System" }, { date: "2026-01-19 09:02", action: "Started", user: "Isabelle" }, { date: "2026-01-19 10:45", action: "Finished", user: "Isabelle" }] },
-  { id: 2, time: "10:30 AM", client: "Lina Davis", type: "Cornrows", worker: "Fatima S", price: "€85", status: "In Progress", statusColor: "bg-blue-100 text-blue-700", history: [{ date: "2026-01-19 09:15", action: "Appointment Set", user: "System" }, { date: "2026-01-19 10:35", action: "Started", user: "Fatima S" }] },
-  { id: 3, time: "12:00 PM", client: "Sophie Martin", type: "Twists", worker: "Nadine B", price: "€95", status: "Pending", statusColor: "bg-[var(--color-warning-light)] text-[var(--color-warning)]", history: [{ date: "2026-01-18 14:20", action: "Appointment Set", user: "Client" }] },
-  { id: 4, time: "02:00 PM", client: "Anna Brown", type: "Locs", worker: "Isabelle", price: "€150", status: "Pending", statusColor: "bg-[var(--color-warning-light)] text-[var(--color-warning)]", history: [] },
-  { id: 5, time: "03:30 PM", client: "Lisa Wilson", type: "Braids", worker: "Isabelle", price: "€110", status: "Pending", statusColor: "bg-[var(--color-warning-light)] text-[var(--color-warning)]", history: [] },
-];
-
-const recentNotifications = [
-  { type: "success", message: "New appointment booked by Marie A.", time: "5 min ago", icon: CheckCircle },
-  { type: "warning", message: "Low stock alert: Hair products", time: "15 min ago", icon: AlertTriangle },
-  { type: "info", message: "Fatima completed 5 sessions today", time: "1 hour ago", icon: Users },
-  { type: "info", message: "New client registration: Sophie L.", time: "2 hours ago", icon: Users },
-];
-
-const recentActivities = [
-  { id: 1, client: "Marie Dubois", service: "Box Braids", amount: "€120", worker: "Isabelle", time: "2h ago" },
-  { id: 2, client: "Jean Martin", service: "Cornrows", amount: "€85", worker: "Fatima S", time: "4h ago" },
-  { id: 3, client: "Sophie Laurent", service: "Twists", amount: "€95", worker: "Nadine B", time: "5h ago" },
-  { id: 4, client: "Pierre Rousseau", service: "Locs", amount: "€150", worker: "Isabelle", time: "6h ago" },
-];
-
-const monthlyForecastData = [
-  { day: "Mon", value1: 60, value2: 45, value3: 70, value4: 55 },
-  { day: "Tue", value1: 55, value2: 50, value3: 65, value4: 60 },
-  { day: "Wed", value1: 70, value2: 60, value3: 75, value4: 65 },
-  { day: "Thu", value1: 65, value2: 55, value3: 70, value4: 70 },
-  { day: "Fri", value1: 80, value2: 70, value3: 85, value4: 75 },
-  { day: "Sat", value1: 75, value2: 65, value3: 80, value4: 80 },
-  { day: "Sun", value1: 60, value2: 50, value3: 65, value4: 60 },
-];
-
-const weeklyAttendanceData = [
-  { month: "Jan", value1: 50, value2: 40, value3: 60, value4: 55 },
-  { month: "Feb", value1: 55, value2: 45, value3: 65, value4: 60 },
-  { month: "Mar", value1: 60, value2: 50, value3: 70, value4: 65 },
-  { month: "Apr", value1: 65, value2: 55, value3: 75, value4: 70 },
-  { month: "May", value1: 70, value2: 60, value3: 80, value4: 75 },
-  { month: "Jun", value1: 75, value2: 65, value3: 85, value4: 80 },
-  { month: "Jul", value1: 55, value2: 45, value3: 65, value4: 60 },
-  { month: "Aug", value1: 60, value2: 50, value3: 70, value4: 65 },
-  { month: "Sep", value1: 65, value2: 55, value3: 75, value4: 70 },
-  { month: "Oct", value1: 70, value2: 60, value3: 80, value4: 75 },
-  { month: "Nov", value1: 60, value2: 50, value3: 70, value4: 65 },
-  { month: "Dec", value1: 65, value2: 55, value3: 75, value4: 70 },
-];
-
-const topRevenueGenerators = [
-  { name: "Alice W.", value: 15420, color: "var(--color-primary)" },
-  { name: "Box braids", value: 12345, color: "var(--color-secondary)" },
-  { name: "Hair Coloring", value: 9876, color: "var(--color-warning)" },
-  { name: "Dr Robert (stylist)", value: 8543, color: "var(--color-success)" },
-  { name: "Cornrows", value: 7654, color: "var(--color-primary-light)" },
-  { name: "Anna Stylist", value: 6432, color: "var(--color-error)" },
-];
-
-const recentUserActivity = [
-  {
-    user: "Alice W.",
-    action: "New user Alice W. created a new page SALOON in Section 3.",
-    time: "Just now",
-    color: "bg-blue-50/80 border border-blue-100"
-  },
-  {
-    user: "Dr Robert",
-    action: "Dr Robert created a new page WORKSPACE in Section 2.",
-    time: "In last 30 minutes",
-    color: "bg-pink-50/80 border border-pink-100"
-  },
-  {
-    user: "Alice W.",
-    action: "Alice W. has left 10 annotations for you on some files.",
-    time: "12:47 PM 12 Feb 2025",
-    color: "bg-orange-50/80 border border-orange-100"
-  },
-  {
-    user: "Dr Robert",
-    action: "Dr Robert has left 6 annotations.",
-    time: "Today at 12:24",
-    color: "bg-[var(--color-primary-light)] border border-[var(--color-primary-light)]"
-  },
-];
 
 import ClientDashboard from "@/components/dashboard/ClientDashboard";
 import WorkerDashboard from "@/components/dashboard/WorkerDashboard";
 import { useBooking } from "@/context/BookingProvider";
 import { useConfirm } from "@/context/ConfirmProvider";
 import { format } from "date-fns";
-import { useIncome } from "@/context/IncomeProvider";
-import { canPerformBookingAction, useActionPermissions } from "@/lib/permissions";
-import { UserRole } from "@/context/AuthProvider";
-import { BookingStatus } from "@/types";
+import { useActionPermissions } from "@/lib/permissions";
+import { BookingStatus, SalonStats, DashboardAnalytics } from "@/types";
 import OnboardingGuard from "@/components/guards/OnboardingGuard";
+import { salonService } from "@/lib/services/SalonService";
+import { statsService } from "@/lib/services/StatsService";
 
 export default function Dashboard() {
   const { t } = useTranslation();
   const { getCardStyle } = useKpiCardStyle();
-  const { user, hasPermission, canAddIncome, canAddExpenses, getWorkerId, isClient, isSuperAdmin, isReadOnlyMode, readOnlySalonInfo, canModify } = useAuth();
+  const { user, isClient, isSuperAdmin, canModify, activeSalonId } = useAuth();
   const router = useRouter();
-  const permissions = useActionPermissions({ user, hasPermission, canAddIncome, canAddExpenses, getWorkerId, isClient, isSuperAdmin, isReadOnlyMode, readOnlySalonInfo, canModify } as any);
   const pathname = usePathname();
-
-  useEffect(() => {
-    if (isSuperAdmin && pathname === "/" && !readOnlySalonInfo) {
-      router.push("/superadmin");
-    }
-  }, [isSuperAdmin, pathname, router, readOnlySalonInfo]);
-  const [historyModalOpen, setHistoryModalOpen] = useState(false);
-  const [selectedHistory, setSelectedHistory] = useState<{ title: string, subtitle: string, events: HistoryEvent[] }>({
-    title: "",
-    subtitle: "",
-    events: []
-  });
   const { bookings, startBooking } = useBooking();
   const { confirm } = useConfirm();
+  const auth = useAuth();
+  const permissions = useActionPermissions(auth as any);
+
+  const [loading, setLoading] = useState(true);
+  const [salonStats, setSalonStats] = useState<SalonStats | null>(null);
+  const [analytics, setAnalytics] = useState<DashboardAnalytics | null>(null);
+
+  useEffect(() => {
+    if (isSuperAdmin && pathname === "/" && !auth.readOnlySalonInfo) {
+      router.push("/superadmin");
+      return;
+    }
+
+    async function loadDashboardData() {
+      if (!activeSalonId) return;
+      setLoading(true);
+      try {
+        const salonId = Number(activeSalonId);
+
+        // Parallel loading of stats and analytics
+        const [stats, analyticsData] = await Promise.all([
+          salonService.getStats(salonId),
+          statsService.getDashboardAnalytics(salonId)
+        ]);
+
+        setSalonStats(stats);
+        setAnalytics(analyticsData);
+      } catch (error) {
+        console.error("Error loading dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadDashboardData();
+  }, [isSuperAdmin, pathname, router, auth.readOnlySalonInfo, activeSalonId]);
+
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [selectedHistory, setSelectedHistory] = useState<{ title: string, subtitle: string, events: HistoryEvent[] }>({
+    title: "", subtitle: "", events: []
+  });
 
   const isWorker = user?.role === 'worker';
-  const workerName = user?.name || "Isabelle"; // Default for demo
-
-  // Filter Data for Workers
-  const filteredTopPerformers = isWorker
-    ? topPerformers.filter(p => p.name === workerName || p.name === "Isabelle") // Show themselves or a relevant subset
-    : topPerformers;
-
-  const filteredTodaysSessions = isWorker
-    ? todaysSessions.filter(s => s.worker === workerName)
-    : todaysSessions;
-
-  const filteredRecentActivities = isWorker
-    ? recentActivities.filter(a => a.worker === workerName)
-    : recentActivities;
-
-  // For charts and KPIs, in a real app we'd fetch worker-specific totals.
-  // In demo mode, we'll scale them down or use subsets.
-  const workerMonthlyRevenue = isWorker
-    ? monthlyRevenueData.map(d => ({ ...d, value: Math.round(d.value * 0.4) }))
-    : monthlyRevenueData;
-
-  const workerMonthlyExpenses = isWorker
-    ? monthlyExpensesData.map(d => ({ ...d, value: Math.round(d.value * 0.2) }))
-    : monthlyExpensesData;
-
-  const workerProfitData = isWorker
-    ? profitData.map(d => ({
-      ...d,
-      revenue: Math.round(d.revenue * 0.4),
-      expenses: Math.round(d.expenses * 0.2),
-      profit: Math.round(d.revenue * 0.4 - d.expenses * 0.2)
-    }))
-    : profitData;
+  const workerName = user?.name || t("common.worker");
 
   const handleStartBooking = async (bookingId: number) => {
     const isConfirmed = await confirm({
-      title: "Démarrer le rendez-vous ?",
-      message: "Voulez-vous démarrer ce rendez-vous ? Un brouillon de revenu sera créé automatiquement.",
+      title: t("dialogs.confirmStartBooking") || "Start Appointment?",
+      message: t("dialogs.confirmStartBookingMsg") || "Do you want to start this appointment? A draft income will be created automatically.",
       type: "info",
-      confirmText: "Démarrer",
-      cancelText: "Annuler"
+      confirmText: t("common.confirm"),
+      cancelText: t("common.cancel")
     });
 
     if (isConfirmed) {
@@ -254,31 +121,37 @@ export default function Dashboard() {
 
   const handleViewBookingHistory = (session: any) => {
     setSelectedHistory({
-      title: `Booking History`,
-      subtitle: `Client: ${session.client} | Service: ${session.type}`,
+      title: t("appointments.viewHistory"),
+      subtitle: `${t("common.client")}: ${session.clientName || session.clientId} | ${t("common.service")}: ${session.type || '#' + session.id}`,
       events: session.history || []
     });
     setHistoryModalOpen(true);
   };
 
-  // For the mockup overview table, we combine static mock data with dynamic localStor age data
-  const dynamicBookings = bookings.filter(b => b.date === new Date().toISOString().split('T')[0]);
-  const displaySessions = [
-    ...filteredTodaysSessions,
-    ...dynamicBookings.map(b => ({
-      id: b.id,
-      time: b.time,
-      client: b.clientName,
-      type: b.serviceIds.map(id => "Service " + id).join(", "),
-      worker: b.workerIds.map(id => "Worker " + id).join(", "),
-      price: "€100",
-      status: b.status,
-      statusColor: b.status === 'Started' ? 'bg-blue-100 text-blue-700' :
-        b.status === 'Confirmed' ? 'bg-green-100 text-green-700' :
-          b.status === 'Cancelled' ? 'bg-red-100 text-red-700' :
-            'bg-yellow-100 text-yellow-700'
-    }))
-  ];
+  // Filter Data for Today
+  const today = format(new Date(), "yyyy-MM-dd");
+  const todaysBookings = useMemo(() => {
+    return (Array.isArray(bookings) ? bookings : []).filter(b => b.date === today);
+  }, [bookings, today]);
+
+  // Handle chart fallbacks
+  const displayRevenueTrend = useMemo(() => {
+    if (analytics?.revenueTrend && analytics.revenueTrend.length > 0) return analytics.revenueTrend;
+    return [
+      { name: "Jan", value: 0 }, { name: "Feb", value: 0 }, { name: "Mar", value: 0 },
+      { name: "Apr", value: 0 }, { name: "May", value: 0 }, { name: "Jun", value: 0 },
+    ];
+  }, [analytics]);
+
+  const displayExpenseCategories = useMemo(() => {
+    if (analytics?.expenseDistribution && analytics.expenseDistribution.length > 0) {
+      return analytics.expenseDistribution.map(item => ({
+        ...item,
+        name: t(item.key)
+      }));
+    }
+    return [];
+  }, [analytics, t]);
 
   if (isClient) {
     return (
@@ -296,11 +169,20 @@ export default function Dashboard() {
         <MainLayout>
           <WorkerDashboard
             workerName={workerName}
-            revenueData={workerMonthlyRevenue}
-            sessions={displaySessions}
-            activities={filteredRecentActivities}
-            notifications={recentNotifications}
-            userActivities={recentUserActivity}
+            revenueData={displayRevenueTrend}
+            sessions={todaysBookings.map((b: any) => ({
+              id: b.id,
+              time: b.time,
+              client: b.clientName || `Client #${b.clientId}`,
+              type: t("common.service"),
+              status: b.status,
+              statusColor: b.status === "Finished" ? "bg-green-100 text-green-700" : b.status === "Started" ? "bg-blue-100 text-blue-700" : "bg-yellow-100 text-yellow-700",
+              price: b.totalPrice ? `€${b.totalPrice}` : "€--",
+              worker: workerName
+            }))}
+            activities={[]}
+            notifications={[]}
+            userActivities={[]}
             onStartBooking={handleStartBooking}
             userRole={user?.role}
           />
@@ -309,123 +191,125 @@ export default function Dashboard() {
     );
   }
 
+  if (loading && activeSalonId) {
+    return (
+      <MainLayout>
+        <div className="flex flex-col items-center justify-center min-h-[400px]">
+          <Loader2 className="w-10 h-10 text-[var(--color-primary)] animate-spin mb-4" />
+          <p className="text-gray-500 italic animate-pulse">{t("dashboard.loadingDashboard")}</p>
+        </div>
+      </MainLayout>
+    );
+  }
+
   return (
     <OnboardingGuard>
       <MainLayout>
-        <div className="space-y-6 md:space-y-8">
+        <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500">
           {/* Header */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Dashboard</h1>
-              <p className="text-gray-500 text-sm md:text-base mt-1">Welcome back! Here's what's happening today.</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight">{t("dashboard.title")}</h1>
+              <p className="text-gray-500 text-sm md:text-base mt-1">
+                {t("dashboard.welcomeUser", { name: user?.name || t("common.name") })}
+              </p>
             </div>
-            {/* Date Picker or Filters could go here */}
+            <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-2xl shadow-sm border border-gray-100">
+              <Calendar className="w-4 h-4 text-[var(--color-primary)]" />
+              <span className="text-sm font-bold text-gray-700">{format(new Date(), "EEEE d MMMM")}</span>
+            </div>
           </div>
 
           {/* --- Stats Gradient Cards --- */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Revenue */}
-            <div
-              className="rounded-2xl p-6 text-white shadow-lg relative overflow-hidden transition-transform hover:scale-[1.01]"
-              style={getCardStyle(0)}
-            >
+            <div className="rounded-2xl p-6 text-white shadow-lg relative overflow-hidden transition-all hover:scale-[1.02] hover:shadow-purple-500/20" style={getCardStyle(0)}>
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-white/80 text-sm font-medium mb-1">{isWorker ? "My Revenue" : "Total Income"}</p>
-                  <h3 className="text-2xl sm:text-3xl font-bold">€{isWorker ? "18,356" : "45,890"}</h3>
-                  <p className="text-xs text-white/70 mt-2 flex items-center gap-1">
-                    <span className="bg-white/20 px-1.5 py-0.5 rounded text-white font-semibold">+12%</span> vs last month
+                  <p className="text-white/80 text-xs font-bold uppercase tracking-wider mb-1">{t("dashboard.totalRevenueDesc")}</p>
+                  <h3 className="text-2xl sm:text-3xl font-black">€{salonStats?.monthRevenue?.toLocaleString() || "0"}</h3>
+                  <p className="text-xs text-white/90 mt-2 flex items-center gap-1 bg-white/20 w-fit px-2 py-0.5 rounded-full">
+                    <TrendingUp className="w-3 h-3" /> {t("dashboard.revenueGrowth")}
                   </p>
                 </div>
-                <div className="bg-white/20 p-3 rounded-full">
-                  <DollarSign className="w-6 h-6 text-white" />
-                </div>
+                <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm shadow-inner"><DollarSign className="w-6 h-6 text-white" /></div>
               </div>
             </div>
 
             {/* Expenses */}
-            <div
-              className="rounded-2xl p-6 text-white shadow-lg relative overflow-hidden transition-transform hover:scale-[1.01]"
-              style={getCardStyle(1)}
-            >
+            <div className="rounded-2xl p-6 text-white shadow-lg relative overflow-hidden transition-all hover:scale-[1.02] hover:shadow-pink-500/20" style={getCardStyle(1)}>
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-white/80 text-sm font-medium mb-1">{isWorker ? "My Contribution to Expenses" : "Total Expenses"}</p>
-                  <h3 className="text-2xl sm:text-3xl font-bold">€{isWorker ? "5,690" : "28,450"}</h3>
-                  <p className="text-xs text-white/70 mt-2 flex items-center gap-1">
-                    <span className="bg-white/20 px-1.5 py-0.5 rounded text-white font-semibold">+2.5%</span> vs last month
+                  <p className="text-white/80 text-xs font-bold uppercase tracking-wider mb-1">{t("dashboard.expenses")}</p>
+                  <h3 className="text-2xl sm:text-3xl font-black">€{salonStats?.totalExpenses?.toLocaleString() || "0"}</h3>
+                  <p className="text-xs text-white/90 mt-2 flex items-center gap-1 bg-white/20 w-fit px-2 py-0.5 rounded-full">
+                    <TrendingDown className="w-3 h-3" /> {t("dashboard.expenseStable")}
                   </p>
                 </div>
-                <div className="bg-white/20 p-3 rounded-full">
-                  <Wallet className="w-6 h-6 text-white" />
-                </div>
+                <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm shadow-inner"><Wallet className="w-6 h-6 text-white" /></div>
               </div>
             </div>
 
             {/* Net Profit */}
-            <div
-              className="rounded-2xl p-6 text-white shadow-lg relative overflow-hidden transition-transform hover:scale-[1.01]"
-              style={getCardStyle(2)}
-            >
+            <div className="rounded-2xl p-6 text-white shadow-lg relative overflow-hidden transition-all hover:scale-[1.02] hover:shadow-orange-500/20" style={getCardStyle(2)}>
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-white/80 text-sm font-medium mb-1">{isWorker ? "My Profit Contribution" : "Net Profit"}</p>
-                  <h3 className="text-2xl sm:text-3xl font-bold">€{isWorker ? "12,666" : "17,440"}</h3>
-                  <p className="text-xs text-white/70 mt-2 flex items-center gap-1">
-                    <span className="bg-white/20 px-1.5 py-0.5 rounded text-white font-semibold">+5.4%</span> vs last month
+                  <p className="text-white/80 text-xs font-bold uppercase tracking-wider mb-1">{t("dashboard.netProfit")}</p>
+                  <h3 className="text-2xl sm:text-3xl font-black">€{((salonStats?.monthRevenue || 0) - (salonStats?.totalExpenses || 0)).toLocaleString()}</h3>
+                  <p className="text-xs text-white/90 mt-2 flex items-center gap-1 bg-white/20 w-fit px-2 py-0.5 rounded-full">
+                    <TrendingUp className="w-3 h-3" /> {t("dashboard.optimalPerformance")}
                   </p>
                 </div>
-                <div className="bg-white/20 p-3 rounded-full">
-                  <TrendingUp className="w-6 h-6 text-white" />
-                </div>
+                <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm shadow-inner"><TrendingUp className="w-6 h-6 text-white" /></div>
               </div>
             </div>
 
-            {/* Clients/Workers */}
-            <div
-              className="rounded-2xl p-6 text-white shadow-lg relative overflow-hidden transition-transform hover:scale-[1.01]"
-              style={getCardStyle(3)}
-            >
+            {/* Clients */}
+            <div className="rounded-2xl p-6 text-white shadow-lg relative overflow-hidden transition-all hover:scale-[1.02] hover:shadow-green-500/20" style={getCardStyle(3)}>
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-white/80 text-sm font-medium mb-1">{isWorker ? "My Total Clients" : "Total Clients"}</p>
-                  <h3 className="text-2xl sm:text-3xl font-bold">{isWorker ? "114" : "287"}</h3>
-                  <p className="text-xs text-white/70 mt-2 flex items-center gap-1">
-                    <span className="bg-white/20 px-1.5 py-0.5 rounded text-white font-semibold">+8%</span> vs last month
+                  <p className="text-white/80 text-xs font-bold uppercase tracking-wider mb-1">{t("dashboard.totalWorkers")}</p>
+                  <h3 className="text-2xl sm:text-3xl font-black">{salonStats?.totalClients || "0"}</h3>
+                  <p className="text-xs text-white/90 mt-2 flex items-center gap-1 bg-white/20 w-fit px-2 py-0.5 rounded-full">
+                    <Users className="w-3 h-3" /> {t("dashboard.newClients")}
                   </p>
                 </div>
-                <div className="bg-white/20 p-3 rounded-full">
-                  <Users className="w-6 h-6 text-white" />
-                </div>
+                <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm shadow-inner"><Users className="w-6 h-6 text-white" /></div>
               </div>
             </div>
           </div>
 
           {/* --- Quick Actions --- */}
           <div>
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {canAddIncome() && (
-                <Link href="/income/add">
-                  <button className="w-full h-full flex items-center justify-center gap-3 bg-[var(--color-primary)] hover:opacity-90 text-white py-4 rounded-2xl font-bold transition-all shadow-lg shadow-purple-500/20 active:scale-95 text-lg">
+            <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <div className="w-1.5 h-6 bg-[var(--color-primary)] rounded-full"></div>
+              {t("dashboard.quickActions")}
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {permissions.isManager && (
+                <Link href="/income/add" className="group">
+                  <button className="w-full flex items-center justify-center gap-3 bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white py-5 rounded-2xl font-black transition-all shadow-xl shadow-purple-500/20 active:scale-95 text-lg overflow-hidden relative">
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-bl-full transition-transform group-hover:scale-125"></div>
                     <Plus className="w-7 h-7" />
-                    <span>Add Revenue</span>
+                    <span>{t("dashboard.newIncome")}</span>
                   </button>
                 </Link>
               )}
-              {canAddExpenses() && (
-                <Link href="/expenses/add">
-                  <button className="w-full h-full flex items-center justify-center gap-3 bg-[var(--color-secondary)] hover:opacity-90 text-white py-4 rounded-2xl font-bold transition-all shadow-lg shadow-pink-500/20 active:scale-95 text-lg">
+              {permissions.isManager && (
+                <Link href="/expenses/add" className="group">
+                  <button className="w-full flex items-center justify-center gap-3 bg-[var(--color-secondary)] hover:bg-[var(--color-secondary-dark)] text-white py-5 rounded-2xl font-black transition-all shadow-xl shadow-pink-500/20 active:scale-95 text-lg overflow-hidden relative">
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-bl-full transition-transform group-hover:scale-125"></div>
                     <Wallet className="w-7 h-7" />
-                    <span>Add Expense</span>
+                    <span>{t("dashboard.newExpense")}</span>
                   </button>
                 </Link>
               )}
-              {hasPermission(['manager', 'admin']) && canModify && (
-                <Link href="/team/add">
-                  <button className="w-full h-full flex items-center justify-center gap-3 bg-[var(--color-warning)] hover:opacity-90 text-white py-4 rounded-2xl font-bold transition-all shadow-lg shadow-orange-500/20 active:scale-95 text-lg">
+              {permissions.isManager && canModify && (
+                <Link href="/team/add" className="group">
+                  <button className="w-full flex items-center justify-center gap-3 bg-[var(--color-warning)] hover:bg-[var(--color-warning-dark)] text-white py-5 rounded-2xl font-black transition-all shadow-xl shadow-orange-500/20 active:scale-95 text-lg overflow-hidden relative">
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-bl-full transition-transform group-hover:scale-125"></div>
                     <Users className="w-7 h-7" />
-                    <span>{t("dashboard.addWorker")}</span>
+                    <span>{t("dashboard.addMember")}</span>
                   </button>
                 </Link>
               )}
@@ -433,465 +317,211 @@ export default function Dashboard() {
           </div>
 
           {/* --- Charts Section --- */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Monthly Revenue Chart */}
-            <Card className="p-6 border-t-4 border-[var(--color-primary)] bg-[var(--color-primary-light)]">
+            <Card className="p-8 border-none bg-white shadow-md hover:shadow-xl transition-shadow group">
               <div className="flex justify-between items-center mb-6">
                 <div>
-                  <h3 className="font-bold text-gray-900">Monthly Revenue</h3>
-                  <p className="text-xs text-gray-500">Year 2026</p>
+                  <h3 className="font-bold text-gray-900 text-lg group-hover:text-[var(--color-primary)] transition-colors">{t("dashboard.revenueTrend")}</h3>
+                  <p className="text-xs text-gray-400 font-medium italic">{t("dashboard.monthlyEvolution")}</p>
                 </div>
-                <span className="bg-[var(--color-primary-light)] text-[var(--color-primary)] text-xs font-bold px-2 py-1 rounded">Yearly</span>
+                <div className="p-2 bg-[var(--color-primary-light)] rounded-xl"><DollarSign className="w-5 h-5 text-[var(--color-primary)]" /></div>
               </div>
               <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={workerMonthlyRevenue}>
+                <BarChart data={displayRevenueTrend}>
                   <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f3f4f6" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-                  <Tooltip cursor={{ fill: 'var(--color-primary-light)', opacity: 0.5 }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
-                  <Bar dataKey="value" fill="var(--color-primary)" radius={[4, 4, 4, 4]} barSize={20} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF', fontWeight: 600 }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF', fontWeight: 600 }} />
+                  <Tooltip
+                    cursor={{ fill: 'var(--color-primary-light)', opacity: 0.4 }}
+                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', padding: '12px' }}
+                  />
+                  <Bar dataKey="value" fill="var(--color-primary)" radius={[6, 6, 6, 6]} barSize={24} />
                 </BarChart>
               </ResponsiveContainer>
             </Card>
 
-            {/* Monthly Expenses Chart */}
-            <Card className="p-6 border-t-4 border-[var(--color-secondary)] bg-[var(--color-secondary-light)]">
+            {/* Cost Distribution Chart */}
+            <Card className="p-8 border-none bg-white shadow-md hover:shadow-xl transition-shadow group">
               <div className="flex justify-between items-center mb-6">
                 <div>
-                  <h3 className="font-bold text-gray-900">Monthly Expenses</h3>
-                  <p className="text-xs text-gray-500">Year 2026</p>
+                  <h3 className="font-bold text-gray-900 text-lg group-hover:text-[var(--color-secondary)] transition-colors">{t("dashboard.costDistribution")}</h3>
+                  <p className="text-xs text-gray-400 font-medium italic">{t("dashboard.distributionByCategory")}</p>
                 </div>
-                <span className="bg-[var(--color-secondary-light)] text-[var(--color-secondary)] text-xs font-bold px-2 py-1 rounded">Yearly</span>
+                <div className="p-2 bg-[var(--color-secondary-light)] rounded-xl"><Receipt className="w-5 h-5 text-[var(--color-secondary)]" /></div>
               </div>
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={workerMonthlyExpenses}>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f3f4f6" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-                  <Tooltip cursor={{ fill: 'var(--color-secondary-light)', opacity: 0.5 }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
-                  <Bar dataKey="value" fill="var(--color-secondary)" radius={[4, 4, 4, 4]} barSize={20} />
-                </BarChart>
-              </ResponsiveContainer>
-            </Card>
-          </div>
-
-          {/* --- Profit Analysis (Full Width) --- */}
-          <Card className="p-6 border-t-4 border-[var(--color-warning)] bg-[var(--color-warning-light)]">
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h3 className="font-bold text-gray-900">Profit Analysis</h3>
-                <p className="text-xs text-gray-500">Revenue vs Expenses (2026)</p>
-              </div>
-              <div className="flex gap-2">
-                <span className="text-xs font-medium px-2 py-1 bg-gray-100 rounded text-gray-600">Monthly</span>
-              </div>
-            </div>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={workerProfitData}>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f3f4f6" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-                <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)' }} />
-                <Line type="monotone" dataKey="revenue" stroke="var(--color-primary)" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
-                <Line type="monotone" dataKey="expenses" stroke="var(--color-secondary)" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
-                <Line type="monotone" dataKey="profit" stroke="var(--color-warning)" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
-              </LineChart>
-            </ResponsiveContainer>
-            <div className="flex justify-center gap-6 mt-4">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <div className="w-3 h-3 rounded-full bg-[var(--color-primary)]"></div> Revenue
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <div className="w-3 h-3 rounded-full bg-[var(--color-secondary)]"></div> Expenses
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <div className="w-3 h-3 rounded-full bg-[var(--color-warning)]"></div> Profit
-              </div>
-            </div>
-          </Card>
-
-          {/* --- Top Performers Grid --- */}
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-gray-900 text-lg">{isWorker ? t("workers.performance") : t("dashboard.topPerformers")}</h3>
-              <Link href="/team" className="text-sm text-[var(--color-primary)] font-medium flex items-center gap-1 hover:underline">
-                {t("common.viewAll")} <ChevronRight className="w-4 h-4" />
-              </Link>
-            </div>
-            <div className={`grid grid-cols-1 md:grid-cols-2 ${filteredTopPerformers.length > 2 ? 'lg:grid-cols-4' : 'lg:grid-cols-2'} gap-4`}>
-              {filteredTopPerformers.map((worker, idx) => (
-                <Card key={worker.name} className={`p-4 flex flex-col gap-3 transition-all border ${idx === 0 ? "bg-[var(--color-primary-light)] border-[var(--color-primary-light)] hover:border-[var(--color-primary)] hover:shadow-lg" :
-                  idx === 1 ? "bg-[var(--color-secondary-light)] border-[var(--color-secondary-light)] hover:border-[var(--color-secondary)] hover:shadow-lg" :
-                    idx === 2 ? "bg-[var(--color-warning-light)] border-[var(--color-warning-light)] hover:border-[var(--color-warning)] hover:shadow-lg" :
-                      "bg-[var(--color-success-light)] border-[var(--color-success-light)] hover:border-[var(--color-success)] hover:shadow-lg"
-                  }`}>
-                  <div className="flex items-start justify-between">
-                    <div className="flex gap-3">
-                      <div className={`w-12 h-12 rounded-full ${worker.bg} flex items-center justify-center ${worker.text} font-bold text-lg`}>
-                        {worker.avatar}
-                      </div>
-                      <div>
-                        <p className="font-bold text-gray-900">{worker.name}</p>
-                        <p className="text-xs text-gray-500">{worker.role}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-2 pt-3 border-t border-gray-50 flex justify-between items-center">
-                    <div>
-                      <p className="text-xs text-gray-400">Revenue</p>
-                      <p className="font-bold text-gray-900">€{worker.revenue.toLocaleString()}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-gray-400">Rating</p>
-                      <div className="flex text-yellow-500 text-xs">
-                        {"★".repeat(Math.round(worker.rating))}
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </div>
-
-          {/* --- Middle Section: Services & Expense Categories --- */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Today's Services */}
-            <Card className="lg:col-span-2 p-6 bg-white hover:bg-gray-50/50 transition-colors">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="font-bold text-gray-900">{isWorker ? "My Services Today" : "Today's Services"}</h3>
-                <div className="flex gap-2">
-                  <span className="bg-[var(--color-primary-light)] text-[var(--color-primary)] text-xs font-bold px-3 py-1 rounded-full">5 / 12 Completed</span>
-                </div>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-100">
-                      <th className="text-left text-xs font-semibold text-gray-500 pb-3 pl-2">Time</th>
-                      <th className="text-left text-xs font-semibold text-gray-500 pb-3">Client</th>
-                      <th className="text-left text-xs font-semibold text-gray-500 pb-3">Service</th>
-                      {!isWorker && <th className="text-left text-xs font-semibold text-gray-500 pb-3">Worker</th>}
-                      <th className="text-left text-xs font-semibold text-gray-500 pb-3">Status</th>
-                      <th className="text-right text-xs font-semibold text-gray-500 pb-3">Price</th>
-                      <th className="text-center text-xs font-semibold text-gray-500 pb-3 pr-2">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {filteredTodaysSessions.map((session, index) => (
-                      <tr key={index} className={`transition-colors ${index % 5 === 0 ? "bg-[var(--color-primary-light)] hover:opacity-80" :
-                        index % 5 === 1 ? "bg-[var(--color-secondary-light)] hover:opacity-80" :
-                          index % 5 === 2 ? "bg-[var(--color-warning-light)] hover:opacity-80" :
-                            index % 5 === 3 ? "bg-[var(--color-success-light)] hover:opacity-80" :
-                              "bg-blue-50/20 hover:opacity-80"
-                        }`}>
-                        <td className="py-4 pl-2 text-sm font-medium text-gray-900">{session.time}</td>
-                        <td className="py-4">
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-600">
-                              {session.client.charAt(0)}
-                            </div>
-                            <span className="text-sm text-gray-700 font-medium">{session.client}</span>
-                          </div>
-                        </td>
-                        <td className="py-4 text-sm text-gray-600">{session.type}</td>
-                        {!isWorker && <td className="py-4 text-sm text-gray-600">{session.worker}</td>}
-                        <td className="py-4">
-                          <div className="flex items-center gap-2">
-                            <span className={`text-xs font-bold px-3 py-1 rounded-full ${session.statusColor}`}>
-                              {session.status}
-                            </span>
-                            {permissions.booking({ status: session.status as BookingStatus }, "start") && (
-                              <button
-                                onClick={() => (session as any).id && handleStartBooking((session as any).id)}
-                                className="text-xs bg-purple-600 text-white px-2 py-1 rounded hover:bg-purple-700 transition-colors"
-                              >
-                                Start
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-4 text-right font-bold text-gray-900">{session.price}</td>
-                        <td className="py-4 pr-2 text-center text-gray-400">
-                          <button
-                            onClick={() => handleViewBookingHistory(session)}
-                            className="p-1.5 hover:bg-white/50 rounded-lg hover:text-purple-600 transition-all"
-                            title="View History"
-                          >
-                            <History size={16} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-
-            {!isWorker && (
-              <Card className="p-6">
-                <h3 className="font-bold text-gray-900 mb-6">Cost Distribution</h3>
-                <div className="relative h-48 mb-4">
+              <div className="flex flex-col md:flex-row items-center gap-8">
+                <div className="w-full md:w-1/2 relative h-48">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={expenseCategories}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={50}
-                        outerRadius={70}
-                        paddingAngle={5}
+                        data={displayExpenseCategories}
+                        cx="50%" cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={8}
                         dataKey="value"
                       >
-                        {expenseCategories.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        {displayExpenseCategories.map((entry: any, index: number) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
                         ))}
                       </Pie>
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div className="text-center">
-                      <p className="text-xl font-bold text-gray-900">€23K</p>
-                      <p className="text-xs text-gray-500">Expenses</p>
+                      <p className="text-2xl font-black text-gray-900">€{salonStats?.totalExpenses?.toLocaleString() || "0"}</p>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">{t("dashboard.totalExpenses")}</p>
                     </div>
                   </div>
                 </div>
-                <div className="space-y-3">
-                  {expenseCategories.map((cat) => (
-                    <div key={cat.name} className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color }}></div>
-                        <span className="text-gray-600">{cat.name}</span>
+                <div className="w-full md:w-1/2 space-y-4">
+                  {displayExpenseCategories.map((cat: any) => (
+                    <div key={cat.name} className="flex items-center justify-between text-sm group/item">
+                      <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: cat.color }}></div>
+                        <span className="text-gray-600 font-medium group-hover/item:text-gray-900 transition-colors uppercase text-[11px] tracking-wide">{cat.name}</span>
                       </div>
-                      <span className="font-bold text-gray-900">€{cat.value.toLocaleString()}</span>
+                      <span className="font-bold text-gray-900 tracking-tight">€{cat.value.toLocaleString()}</span>
                     </div>
                   ))}
                 </div>
-              </Card>
-            )}
+              </div>
+            </Card>
           </div>
 
-          {/* --- Bottom Section: Notifications & Activities --- */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Weekly Attendance */}
-            <Card className="p-6">
-              <h3 className="font-bold text-gray-900 mb-6">Weekly Attendance</h3>
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={weeklyAttendanceData}>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f3f4f6" />
-                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-                  <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
-                  <Bar dataKey="value1" fill="var(--color-primary)" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="value2" fill="var(--color-secondary)" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="value3" fill="var(--color-warning)" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="value4" fill="var(--color-success)" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </Card>
-
-            {/* Recent Activities */}
-            <Card className="p-6">
-              <div className="flex items-center gap-2 mb-6">
-                <Receipt className="w-5 h-5 text-[var(--color-warning)]" />
-                <h3 className="font-bold text-gray-900">Recent Activities</h3>
-              </div>
-              <div className="space-y-4">
-                {filteredRecentActivities.slice(0, 4).map((activity, idx) => (
-                  <div key={activity.id} className={`flex items-center justify-between p-3 rounded-lg transition-colors border ${idx === 0 ? "bg-[var(--color-primary-light)] border-[var(--color-primary-light)] hover:opacity-80" :
-                    idx === 1 ? "bg-[var(--color-secondary-light)] border-[var(--color-secondary-light)] hover:opacity-80" :
-                      idx === 2 ? "bg-[var(--color-warning-light)] border-[var(--color-warning-light)] hover:opacity-80" :
-                        "bg-[var(--color-success-light)] border-[var(--color-success-light)] hover:opacity-80"
-                    }`}>
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-secondary)] rounded-full flex items-center justify-center text-white font-bold text-xs">
-                        {activity.client.charAt(0)}
+          {/* --- Top Performers --- */}
+          {analytics?.topPerformers && analytics.topPerformers.length > 0 && (
+            <div>
+              <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <div className="w-1.5 h-6 bg-[var(--color-secondary)] rounded-full"></div>
+                {t("dashboard.topPerformers")}
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {analytics.topPerformers.map((worker, idx) => (
+                  <Card key={idx} className="p-6 border-none bg-white shadow-md hover:shadow-xl transition-all group overflow-hidden relative">
+                    <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
+                      <TrendingUp className="w-12 h-12" />
+                    </div>
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className={`w-12 h-12 rounded-2xl ${worker.bg} ${worker.text} flex items-center justify-center font-black shadow-inner`}>
+                        {worker.avatar}
                       </div>
                       <div>
-                        <p className="font-bold text-gray-900 text-sm">{activity.client}</p>
-                        <p className="text-xs text-gray-500">{activity.service} • {activity.worker}</p>
+                        <h4 className="font-bold text-gray-900 group-hover:text-[var(--color-primary)] transition-colors">{worker.name}</h4>
+                        <p className="text-xs text-gray-500 font-medium italic">{worker.role}</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold text-gray-900 text-sm">{activity.amount}</p>
-                      <p className="text-xs text-gray-400">{activity.time}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          </div>
-
-          {!isWorker && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Monthly Forecast */}
-              <Card className="p-6">
-                <div className="flex justify-between items-center mb-6">
-                  <div>
-                    <h3 className="font-bold text-gray-900">Monthly Forecast and Stats</h3>
-                    <p className="text-xs text-gray-500">Based on last 4 years</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button className="text-xs px-3 py-1 bg-gray-100 rounded-full text-gray-600 font-medium">Daily</button>
-                    <button className="text-xs px-3 py-1 bg-white border border-gray-200 rounded-full text-gray-400">Weekly</button>
-                    <button className="text-xs px-3 py-1 bg-white border border-gray-200 rounded-full text-gray-400">Monthly</button>
-                  </div>
-                </div>
-                <ResponsiveContainer width="100%" height={250}>
-                  <BarChart data={monthlyForecastData}>
-                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f3f4f6" />
-                    <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-                    <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }} />
-                    <Bar dataKey="value1" stackId="a" fill="var(--color-primary)" radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="value2" stackId="a" fill="var(--color-secondary)" radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="value3" stackId="a" fill="var(--color-warning)" radius={[0, 0, 0, 0]} />
-                    <Bar dataKey="value4" stackId="a" fill="var(--color-success)" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </Card>
-
-              {/* Top 10 Revenue Generators */}
-              <Card className="p-6">
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="font-bold text-gray-900">Top 10 Revenue Generators</h3>
-                  <button className="text-[var(--color-primary)] text-sm font-medium hover:underline">View All</button>
-                </div>
-                <div className="space-y-4">
-                  {topRevenueGenerators.map((item, idx) => (
-                    <div key={idx} className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-gray-700">{item.name}</span>
-                        <span className="text-sm font-bold text-gray-900">€{item.value.toLocaleString()}</span>
+                    <div className="grid grid-cols-3 gap-2 pt-4 border-t border-gray-50">
+                      <div>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">{t("dashboard.revenueShort")}</p>
+                        <p className="font-black text-gray-900 text-sm">€{worker.revenue.toLocaleString()}</p>
                       </div>
-                      <div className="w-full bg-gray-100 rounded-full h-2">
-                        <div
-                          className="h-2 rounded-full transition-all"
-                          style={{
-                            width: `${(item.value / 15420) * 100}%`,
-                            backgroundColor: item.color
-                          }}
-                        />
+                      <div>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">{t("common.clients")}</p>
+                        <p className="font-black text-gray-900 text-sm">{worker.clients}</p>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-            </div>
-          )}
-
-          {!isWorker && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="p-6 border-t-4 border-[var(--color-primary)] bg-[var(--color-primary-light)]">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-sm text-gray-500 mb-1">Bookings</p>
-                    <h2 className="text-4xl font-bold text-gray-900">847</h2>
-                    <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
-                      <TrendingUp className="w-3 h-3" />
-                      +11% increase
-                    </p>
-                  </div>
-                  <div className="bg-[var(--color-primary-light)] p-3 rounded-lg">
-                    <Calendar className="w-6 h-6 text-[var(--color-primary)]" />
-                  </div>
-                </div>
-              </Card>
-
-              <Card className="p-6 border-t-4 border-[var(--color-secondary)] bg-[var(--color-secondary-light)]">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-sm text-gray-500 mb-1">Members</p>
-                    <h2 className="text-4xl font-bold text-gray-900">42</h2>
-                    <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
-                      <TrendingUp className="w-3 h-3" />
-                      +3% increase
-                    </p>
-                  </div>
-                  <div className="bg-[var(--color-secondary-light)] p-3 rounded-lg">
-                    <Users className="w-6 h-6 text-[var(--color-secondary)]" />
-                  </div>
-                </div>
-              </Card>
-
-              <Card className="p-6 border-t-4 border-[var(--color-warning)] bg-[var(--color-warning-light)]">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-sm text-gray-500 mb-1">Occupancy Rate</p>
-                    <h2 className="text-4xl font-bold text-gray-900">75%</h2>
-                    <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
-                      <TrendingUp className="w-3 h-3" />
-                      +5% increase
-                    </p>
-                  </div>
-                  <div className="bg-[var(--color-warning-light)] p-3 rounded-lg">
-                    <Briefcase className="w-6 h-6 text-[var(--color-warning)]" />
-                  </div>
-                </div>
-              </Card>
-            </div>
-          )}
-
-          {/* --- Weekly Attendance & Recent User Activity --- */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Recent Notifications */}
-            <Card className="p-6">
-              <div className="flex items-center gap-2 mb-6">
-                <Bell className="w-5 h-5 text-[var(--color-primary)]" />
-                <h3 className="font-bold text-gray-900">Recent Notifications</h3>
-              </div>
-              <div className="space-y-4">
-                {recentNotifications.map((notif, idx) => {
-                  const Icon = notif.icon;
-                  return (
-                    <div key={idx} className={`flex items-start gap-3 p-3 rounded-xl transition-colors border ${notif.type === "success" ? "bg-green-50/80 border-green-100 hover:bg-green-100/80" :
-                      notif.type === "warning" ? "bg-yellow-50/80 border-yellow-100 hover:bg-yellow-100/80" :
-                        "bg-blue-50/80 border-blue-100 hover:bg-blue-100/80"
-                      }`}>
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${notif.type === "success" ? "bg-green-100 text-green-600" :
-                        notif.type === "warning" ? "bg-yellow-100 text-yellow-600" :
-                          "bg-blue-100 text-blue-600"
-                        }`}>
-                        <Icon className="w-4 h-4" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900">{notif.message}</p>
-                        <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                          <Clock className="w-3 h-3" />
-                          {notif.time}
+                      <div>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">{t("dashboard.rating")}</p>
+                        <p className="font-black text-[var(--color-warning)] text-sm flex items-center gap-0.5">
+                          {worker.rating} <span className="text-[10px] opacity-70">★</span>
                         </p>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            </Card>
-
-            {/* Recent User Activity & Alerts */}
-            <Card className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="font-bold text-gray-900">Recent User Activity & Alerts</h3>
-                <div className="flex gap-2">
-                  <button className="text-xs px-3 py-1 bg-[var(--color-primary)] text-white rounded-full font-medium">Filters</button>
-                  <button className="text-xs px-3 py-1 bg-white border border-gray-200 rounded-full text-gray-600">Archive</button>
-                  <button className="text-xs px-3 py-1 bg-white border border-gray-200 rounded-full text-gray-600">Delete</button>
-                </div>
-              </div>
-              <div className="space-y-3">
-                {recentUserActivity.map((activity, idx) => (
-                  <div key={idx} className={`p-4 rounded-xl border ${activity.color} transition-all hover:shadow-md`}>
-                    <p className="text-sm font-medium text-gray-900 mb-1">{activity.action}</p>
-                    <p className="text-xs text-gray-500">{activity.time}</p>
-                  </div>
+                  </Card>
                 ))}
               </div>
-            </Card>
-          </div>
+            </div>
+          )}
 
+          {/* --- Today's Sessions (Manager Only Full Width) --- */}
+          <Card className="p-8 border-none bg-white shadow-md">
+            <div className="flex justify-between items-center mb-8">
+              <div>
+                <h3 className="font-black text-gray-900 text-xl tracking-tight">{t("dashboard.todaysSessions")}</h3>
+                <p className="text-sm text-gray-400 italic">{t("dashboard.todaysSessionsSubtitle")}</p>
+              </div>
+              <div className="flex gap-2">
+                <span className="bg-[var(--color-success-light)] text-[var(--color-success)] text-xs font-black px-4 py-1.5 rounded-full shadow-sm border border-[var(--color-success-light)]">
+                  {t("dashboard.sessionsCount", { completed: todaysBookings.filter(b => b.status === "Finished").length, total: todaysBookings.length })}
+                </span>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-50">
+                    <th className="text-left text-[10px] font-black text-gray-400 uppercase tracking-widest pb-4 pl-2 italic">{t("common.time")}</th>
+                    <th className="text-left text-[10px] font-black text-gray-400 uppercase tracking-widest pb-4 italic">{t("common.client")}</th>
+                    <th className="text-left text-[10px] font-black text-gray-400 uppercase tracking-widest pb-4 italic">{t("common.service")}</th>
+                    <th className="text-left text-[10px] font-black text-gray-400 uppercase tracking-widest pb-4 italic">{t("common.worker")}</th>
+                    <th className="text-left text-[10px] font-black text-gray-400 uppercase tracking-widest pb-4 italic">{t("common.status")}</th>
+                    <th className="text-center text-[10px] font-black text-gray-400 uppercase tracking-widest pb-4 italic">{t("common.actions")}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {todaysBookings.length > 0 ? todaysBookings.map((session, index) => (
+                    <tr key={index} className="group hover:bg-gray-50/80 transition-all duration-300">
+                      <td className="py-5 pl-2 text-sm font-black text-gray-900 tabular-nums">{session.time}</td>
+                      <td className="py-5">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-xs font-black text-gray-600 shadow-inner group-hover:scale-110 transition-transform`}>
+                            {session.clientName?.charAt(0) || "C"}
+                          </div>
+                          <span className="text-sm text-gray-900 font-bold group-hover:text-[var(--color-primary)] transition-colors">{session.clientName || `Client #${session.clientId}`}</span>
+                        </div>
+                      </td>
+                      <td className="py-5 text-sm font-medium text-gray-500 italic">{t("common.service")} #{session.id}</td>
+                      <td className="py-5 text-sm font-bold text-gray-700">{t("dashboard.teamStats")}</td>
+                      <td className="py-5">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border ${session.status === 'Finished' ? 'bg-green-50 text-green-700 border-green-100' :
+                            session.status === 'Started' ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                              session.status === 'Cancelled' ? 'bg-red-50 text-red-700 border-red-100' :
+                                'bg-yellow-50 text-yellow-700 border-yellow-100'
+                            }`}>
+                            {t(`dashboard.${session.status.toLowerCase()}`)}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-5 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          {permissions.booking(session, "start") && (
+                            <button
+                              onClick={() => handleStartBooking(session.id)}
+                              className="p-2 bg-[var(--color-primary-light)] text-[var(--color-primary)] rounded-xl hover:bg-[var(--color-primary)] hover:text-white transition-all shadow-sm active:scale-90"
+                              title={t("dashboard.start")}
+                            >
+                              <Clock size={18} className="font-black" />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleViewBookingHistory(session)}
+                            className="p-2 bg-gray-100 text-gray-500 rounded-xl hover:bg-gray-900 hover:text-white transition-all shadow-sm active:scale-90"
+                            title={t("dashboard.history")}
+                          >
+                            <History size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-gray-400 italic font-medium">
+                        {t("dashboard.noSessions")}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          {/* History Modal */}
           <HistoryModal
             isOpen={historyModalOpen}
             onClose={() => setHistoryModalOpen(false)}
-            title="Appointment Audit Trail"
-            itemTitle={selectedHistory.title}
+            title={selectedHistory.title}
             itemSubtitle={selectedHistory.subtitle}
             events={selectedHistory.events}
           />

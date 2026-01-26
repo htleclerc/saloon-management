@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useCallback, useMemo, Suspense } from "react";
+import { use, useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import TeamLayout from "@/components/layout/TeamLayout";
@@ -54,27 +54,23 @@ import {
 import { useAuth } from "@/context/AuthProvider";
 import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 import { useActionPermissions } from "@/lib/permissions";
+import { useCurrency } from "@/hooks/useCurrency";
+import { useTranslation } from "@/i18n";
+import { workerService, incomeService, statsService } from "@/lib/services";
+import { SalonWorker } from "@/types";
 
-const teamMemberData = {
-    id: 1,
-    name: "Orphelia",
-    email: "orphelia@adorablebraids.com",
-    phone: "+33 6 12 34 56 78",
+const initialWorkerState = {
+    id: 0,
+    name: "",
+    email: "",
+    phone: "",
     status: "Active",
-    role: "Worker",
-    location: "Paris, France",
-    joinDate: "March 2021",
-    sharingKey: 70,
+    role: "worker",
+    location: "",
+    joinDate: "",
+    sharingKey: 0,
 };
 
-// Performance Overview Cards
-const performanceCards = [
-    { label: "C$8,430", sublabel: "Total Sales", color: "text-[var(--color-primary)]" },
-    { label: "C$40,094", sublabel: "Total Expenses", color: "text-[var(--color-error)]" },
-    { label: "467", sublabel: "Total Services", color: "text-[var(--color-warning)]" },
-    { label: "4.0", sublabel: "Rating", color: "text-[var(--color-success)]" },
-    { label: "C$8,770", sublabel: "Net Profit", color: "text-[var(--color-success)]" },
-];
 
 // Income Row Type
 interface IncomeRow {
@@ -210,142 +206,35 @@ const incomeTransactions = [
     { id: 20, date: "2026-01-05", client: "Léonie Durand", service: "Cornrows", amount: 78, status: "Completed" },
 ];
 
-// Recent Income History (for display with formatted dates)
-const recentIncomeHistory = [
-    { id: 1, date: "14 Jan 2026", client: "Marie Dubois", service: "Box Braids", amount: "€120", status: "Completed" },
-    { id: 2, date: "13 Jan 2026", client: "Sophie Laurent", service: "Senegalese Twists", amount: "€95", status: "Completed" },
-    { id: 3, date: "12 Jan 2026", client: "Anna Martin", service: "Cornrows", amount: "€85", status: "Completed" },
-    { id: 4, date: "11 Jan 2026", client: "Claire Petit", service: "Locs Maintenance", amount: "€150", status: "Completed" },
-    { id: 5, date: "10 Jan 2026", client: "Julie Bernard", service: "Box Braids", amount: "€130", status: "Completed" },
-    { id: 6, date: "9 Jan 2026", client: "Nadia Koné", service: "Twists", amount: "€110", status: "Completed" },
-    { id: 7, date: "8 Jan 2026", client: "Camille Roche", service: "Cornrows", amount: "€75", status: "Completed" },
-    { id: 8, date: "7 Jan 2026", client: "Lucie Moreau", service: "Knotless Braids", amount: "€180", status: "Completed" },
-];
+// Recent Income History - Replaced by dynamic transactions
 
-// Recent Services
-const recentServices = [
-    { id: 1, service: "Box Braids", count: 45, income: "€5,400", lastPerformed: "Today" },
-    { id: 2, service: "Senegalese Twists", count: 38, income: "€3,610", lastPerformed: "Yesterday" },
-    { id: 3, service: "Cornrows", count: 32, income: "€2,720", lastPerformed: "2 days ago" },
-    { id: 4, service: "Locs Maintenance", count: 28, income: "€4,200", lastPerformed: "3 days ago" },
-    { id: 5, service: "Knotless Braids", count: 24, income: "€4,320", lastPerformed: "4 days ago" },
-];
+// Recent Services - Replaced by dynamic servicesList
 
-// Activity History
-const activityHistory = [
-    { id: 1, action: "Completed service for Marie Dubois", type: "service", time: "2 hours ago", icon: Scissors },
-    { id: 2, action: "Received 5-star review", type: "review", time: "4 hours ago", icon: Star },
-    { id: 3, action: "New booking confirmed", type: "booking", time: "Yesterday", icon: Calendar },
-    { id: 4, action: "Completed service for Sophie Laurent", type: "service", time: "Yesterday", icon: Scissors },
-    { id: 5, action: "Profile updated", type: "profile", time: "2 days ago", icon: Edit },
-    { id: 6, action: "Received payment €120", type: "payment", time: "2 days ago", icon: DollarSign },
-    { id: 7, action: "New client added", type: "client", time: "3 days ago", icon: Users },
-    { id: 8, action: "Completed service for Anna Martin", type: "service", time: "3 days ago", icon: Scissors },
-];
+// Activity History - Replaced by dynamic activities
 
-// Client Comments/Reviews
-const clientComments = [
-    { id: 1, client: "Marie Dubois", avatar: "M", rating: 5, date: "2 days ago", comment: "Orphelia is incredible! My box braids are perfect and she took the time to explain the maintenance. I will be back!", color: "bg-[var(--color-primary-light)] text-[var(--color-primary)]" },
-    { id: 2, client: "Sophie Laurent", avatar: "S", rating: 5, date: "1 week ago", comment: "Very professional and fast. The result is beautiful, exactly what I wanted.", color: "bg-[var(--color-secondary-light)] text-[var(--color-secondary)]" },
-    { id: 3, client: "Anna Martin", avatar: "A", rating: 4, date: "2 weeks ago", comment: "Great work on my cornrows! Just a bit long but the result is worth it.", color: "bg-[var(--color-warning-light)] text-[var(--color-warning)]" },
-    { id: 4, client: "Claire Petit", avatar: "C", rating: 5, date: "3 weeks ago", comment: "Best hairdresser for locs! She really takes care of my hair.", color: "bg-[var(--color-success-light)] text-[var(--color-success)]" },
-    { id: 5, client: "Julie Bernard", avatar: "J", rating: 5, date: "1 month ago", comment: "I love my new look! Orphelia is very talented and attentive.", color: "bg-[var(--color-info-light,bg-blue-100)] text-[var(--color-info,text-blue-700)]" },
-    { id: 6, client: "Nadia Koné", avatar: "N", rating: 4, date: "1 month ago", comment: "Very satisfied with my twists. Nice atmosphere in the salon.", color: "bg-[var(--color-primary-light)] opacity-80 text-[var(--color-primary)]" },
-];
+// Client Comments/Reviews - Replaced by dynamic
 
-// Weekly Income Breakdown
-const weeklyIncomeData = [
-    { name: "Mon", value: 65 }, { name: "Tue", value: 80 }, { name: "Wed", value: 55 },
-    { name: "Thu", value: 90 }, { name: "Fri", value: 70 }, { name: "Sat", value: 85 },
-    { name: "Sun", value: 60 }, { name: "Mon", value: 75 }, { name: "Tue", value: 65 },
-    { name: "Wed", value: 80 }, { name: "Thu", value: 70 }, { name: "Fri", value: 85 },
-];
+// Weekly Income Breakdown - Replaced by dynamic state
 
-// Client Volume Trend
-const clientVolumeTrend = [
-    { month: "Jan", value: 40 }, { month: "Feb", value: 55 }, { month: "Mar", value: 45 },
-    { month: "Apr", value: 60 }, { month: "May", value: 50 }, { month: "Jun", value: 65 },
-];
+// Client Volume Trend - Replaced by dynamic state
 
-// Earnings Breakdown
-const earningsBreakdownData = [
-    { month: "Jan", braids: 35, twists: 28, cornrows: 22, locs: 18 },
-    { month: "Feb", braids: 40, twists: 32, cornrows: 25, locs: 20 },
-    { month: "Mar", braids: 38, twists: 30, cornrows: 23, locs: 19 },
-    { month: "Apr", braids: 45, twists: 35, cornrows: 28, locs: 22 },
-    { month: "May", braids: 42, twists: 33, cornrows: 26, locs: 21 },
-    { month: "Jun", braids: 48, twists: 38, cornrows: 30, locs: 24 },
-];
+// Earnings Breakdown - Replaced by dynamic state
 
-// Weekly Performance Details
-const weeklyPerformanceDetails = [
-    { date: "January 2024", clients: 42, services: 45, income: 4500, expenses: 1200, profit: 3300 },
-    { date: "February 2024", clients: 38, services: 42, income: 4200, expenses: 1100, profit: 3100 },
-    { date: "March 2024", clients: 45, services: 48, income: 4800, expenses: 1300, profit: 3500 },
-    { date: "April 2024", clients: 50, services: 55, income: 5500, expenses: 1500, profit: 4000 },
-    { date: "May 2024", clients: 48, services: 52, income: 5200, expenses: 1400, profit: 3800 },
-    { date: "June 2024", clients: 52, services: 58, income: 5800, expenses: 1600, profit: 4200 },
-];
+// Weekly Performance Details - Replaced by dynamic state
 
-// Salary Performance Data
-const salaryPerformanceData = [
-    { month: "Jan", value1: 50, value2: 40, value3: 60, value4: 55 },
-    { month: "Feb", value1: 55, value2: 45, value3: 65, value4: 58 },
-    { month: "Mar", value1: 52, value2: 42, value3: 62, value4: 56 },
-    { month: "Apr", value1: 58, value2: 48, value3: 68, value4: 60 },
-    { month: "May", value1: 60, value2: 50, value3: 70, value4: 62 },
-    { month: "Jun", value1: 65, value2: 55, value3: 75, value4: 68 },
-];
+// Salary Performance Data - Replaced by dynamic state
 
-// Client Satisfaction Data
-const clientSatisfactionData = [
-    { name: "Marie Dubois", rating: 4.9, service: "Box Braids", date: "2 days ago", avatar: "M", color: "bg-[var(--color-primary-light)] text-[var(--color-primary)]" },
-    { name: "Sophie Laurent", rating: 4.8, service: "Twists", date: "1 week ago", avatar: "S", color: "bg-[var(--color-secondary-light)] text-[var(--color-secondary)]" },
-    { name: "Anna Martin", rating: 5.0, service: "Cornrows", date: "2 weeks ago", avatar: "A", color: "bg-[var(--color-warning-light)] text-[var(--color-warning)]" },
-];
+// Client Satisfaction Data - Replaced by dynamic state
 
-// Service Time Distribution
-const serviceTimeDistribution = [
-    { name: "Box Braids", value: 35, color: "var(--color-primary)" },
-    { name: "Twists", value: 25, color: "var(--color-secondary)" },
-    { name: "Cornrows", value: 20, color: "var(--color-warning)" },
-    { name: "Locs", value: 12, color: "var(--color-success)" },
-    { name: "Other", value: 8, color: "var(--color-info, #3B82F6)" },
-];
+// Service Time Distribution - Replaced by dynamic state
 
-// Top Appointment Services
-const topAppointmentServices = [
-    { name: "Senegalese Twists", count: 156, income: "C$18,720", percentage: 35 },
-    { name: "Box Braids", count: 98, income: "C$12,740", percentage: 25 },
-    { name: "Cornrows", count: 87, income: "C$7,395", percentage: 20 },
-    { name: "Locs Maintenance", count: 65, income: "C$9,750", percentage: 12 },
-];
+// Top Appointment Services - Replaced by dynamic
 
-// Overall Performance
-const overallPerformanceData = [
-    { month: "Jan", value1: 55, value2: 45, value3: 65, value4: 50 },
-    { month: "Feb", value1: 60, value2: 50, value3: 70, value4: 55 },
-    { month: "Mar", value1: 58, value2: 48, value3: 68, value4: 52 },
-    { month: "Apr", value1: 65, value2: 55, value3: 75, value4: 58 },
-    { month: "May", value1: 70, value2: 60, value3: 80, value4: 62 },
-    { month: "Jun", value1: 75, value2: 65, value3: 85, value4: 68 },
-];
+// Overall Performance - Replaced by dynamic state
 
-// Top Repeat Clients
-const topRepeatClients = [
-    { name: "Marie Dubois", visits: 24, spent: "C$2,880", avatar: "M", color: "bg-[var(--color-primary-light)] text-[var(--color-primary)]" },
-    { name: "Sophie Laurent", visits: 18, spent: "C$1,710", avatar: "S", color: "bg-[var(--color-secondary-light)] text-[var(--color-secondary)]" },
-    { name: "Anna Martin", visits: 15, spent: "C$1,275", avatar: "A", color: "bg-[var(--color-warning-light)] text-[var(--color-warning)]" },
-    { name: "Claire Petit", visits: 12, spent: "C$1,800", avatar: "C", color: "bg-[var(--color-success-light)] text-[var(--color-success)]" },
-    { name: "Julie Bernard", visits: 10, spent: "C$1,300", avatar: "J", color: "bg-[var(--color-info-light,bg-blue-100)] text-[var(--color-info,text-blue-700)]" },
-];
+// Top Repeat Clients - Replaced by dynamic
 
-// Daily Activities
-const dailyActivities = [
-    { action: "Completed service for Marie", time: "2 hours ago", type: "success" },
-    { action: "New booking confirmed", time: "4 hours ago", type: "info" },
-    { action: "Received 5-star review", time: "Yesterday", type: "success" },
-];
+// Daily Activities - Replaced by dynamic state
 
 function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
@@ -358,13 +247,145 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
     const [incomePage, setIncomePage] = useState(1);
     const itemsPerPage = 5;
 
+    // State for dynamic data
+    const [worker, setWorker] = useState<any>(initialWorkerState);
+    const [incomeStats, setIncomeStats] = useState<any>(incomeDataByYear);
+    const [transactions, setTransactions] = useState<any[]>(incomeTransactions);
+
+    // Dynamic Charts Data
+    const [weeklyIncomeData, setWeeklyIncomeData] = useState<any[]>([]);
+    const [clientVolumeTrend, setClientVolumeTrend] = useState<any[]>([]);
+    const [earningsBreakdownData, setEarningsBreakdownData] = useState<any[]>([]);
+    const [weeklyPerformanceDetails, setWeeklyPerformanceDetails] = useState<any[]>([]);
+    const [salaryPerformanceData, setSalaryPerformanceData] = useState<any[]>([]);
+    const [clientSatisfactionData, setClientSatisfactionData] = useState<any[]>([]);
+    const [serviceTimeDistribution, setServiceTimeDistribution] = useState<any[]>([]);
+    const [overallPerformanceData, setOverallPerformanceData] = useState<any[]>([]);
+
+    // New dynamic state
+    const [servicesList, setServicesList] = useState<any[]>([]);
+    const [topClients, setTopClients] = useState<any[]>([]);
+    const [activities, setActivities] = useState<any[]>([]);
+    const [reviews, setReviews] = useState<any[]>([]);
+
+    const [loading, setLoading] = useState(true);
+
     const auth = useAuth();
+    const { format } = useCurrency();
+    const { t } = useTranslation();
     const permissions = useActionPermissions(auth as any);
-    const isOwnProfile = auth.user?.name === teamMemberData.name; // Simulating ID check with name for mock
-    const canSeeFinancials = permissions.isAdmin || permissions.isManager;
+    const isOwnProfile = auth.user?.name === worker.name;
+    const canSeeFinancials = permissions.isManager;
+
+    const performanceCards = useMemo(() => {
+        // Calculate totals from available data or use fetched stats
+        // Using current year income data for now as proxy for total or fetching specific stats
+        const currentData = incomeStats[selectedYear]?.[incomePeriod] || [];
+        const totalSales = currentData.reduce((acc: number, curr: any) => acc + (curr.income || 0), 0);
+        const totalExpenses = currentData.reduce((acc: number, curr: any) => acc + (curr.salary || 0), 0); // Simplified expense logic (salary as expense)
+        const totalServices = currentData.reduce((acc: number, curr: any) => acc + (curr.services || 0), 0);
+        const netProfit = totalSales - totalExpenses;
+
+        return [
+            { label: format(totalSales), sublabel: t("team.totalSales"), color: "text-[var(--color-primary)]" },
+            { label: format(totalExpenses), sublabel: t("team.totalExpensesEst"), color: "text-[var(--color-error)]" },
+            { label: totalServices.toString(), sublabel: t("team.totalServices"), color: "text-[var(--color-warning)]" },
+            { label: "4.8", sublabel: t("common.rating"), color: "text-[var(--color-success)]" }, // Placeholder rating
+            { label: format(netProfit), sublabel: t("team.netProfitEst"), color: "text-[var(--color-success)]" }
+        ];
+    }, [incomeStats, selectedYear, incomePeriod, format]);
+
+    // Fetch Data
+    useEffect(() => {
+        const fetchData = async () => {
+            if (!id) return;
+            setLoading(true);
+            try {
+                const workerId = parseInt(id);
+                const salonId = 1; // Explicit salon ID, ideally from auth or worker data
+
+                const [
+                    workerData, stats, trans,
+                    services, clients, recentActivity, workerReviews,
+                    weeklyIncome, clientTrend, earnings, performance, salary, serviceDist, overall
+                ] = await Promise.all([
+                    workerService.getById(workerId),
+                    incomeService.getWorkerPerformanceStats(workerId, parseInt(selectedYear)),
+                    incomeService.getWorkerTransactions(workerId, 1, 100, { year: parseInt(selectedYear) }),
+                    statsService.getServicesByRevenue(salonId, workerId),
+                    statsService.getWorkerTopClients(salonId, workerId),
+                    statsService.getRecentWorkerActivity(salonId, workerId),
+                    statsService.getWorkerReviews(salonId, workerId),
+                    statsService.getWeeklyIncomeBreakdown(salonId, workerId),
+                    statsService.getClientVolumeTrend(salonId, workerId),
+                    statsService.getEarningsBreakdown(salonId, workerId),
+                    statsService.getWeeklyPerformanceDetails(salonId, workerId),
+                    statsService.getSalaryPerformance(salonId, workerId),
+                    statsService.getServiceTimeDistribution(salonId, workerId),
+                    statsService.getOverallPerformance(salonId, workerId)
+                ]);
+
+                if (workerData) {
+                    setWorker({
+                        ...workerData,
+                        role: 'worker',
+                        location: 'Paris, France', // Placeholder or fetch from salon
+                        joinDate: new Date(workerData.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+                    });
+                }
+
+                if (stats) {
+                    setIncomeStats({ [selectedYear]: stats }); // Update for current year, keep others if needed or just use current
+                }
+
+                if (services) setServicesList(services);
+                if (clients) setTopClients(clients);
+                if (recentActivity) setActivities(recentActivity);
+                if (workerReviews) {
+                    setReviews(workerReviews);
+                    // Reuse reviews for satisfaction data mapping if needed, or map separate endpoint
+                    // For now, mapping reviews to clientSatisfactionData format
+                    setClientSatisfactionData(workerReviews.map((r: any) => ({
+                        name: r.client,
+                        rating: r.rating,
+                        service: "Unknown", // Review object might need service name
+                        date: r.date,
+                        avatar: r.avatar,
+                        color: r.color
+                    })));
+                }
+
+                if (weeklyIncome) setWeeklyIncomeData(weeklyIncome);
+                if (clientTrend) setClientVolumeTrend(clientTrend);
+                if (earnings) setEarningsBreakdownData(earnings);
+                if (performance) setWeeklyPerformanceDetails(performance);
+                if (salary) setSalaryPerformanceData(salary);
+                if (serviceDist) setServiceTimeDistribution(serviceDist);
+                if (overall) setOverallPerformanceData(overall);
+
+                if (trans && trans.data) {
+                    // Map transaction data if needed to match UI shape
+                    setTransactions(trans.data.map((t: any) => ({
+                        id: t.id,
+                        date: t.date,
+                        client: t.client,
+                        service: t.service,
+                        amount: t.amount,
+                        status: t.status || 'Completed'
+                    })));
+                }
+
+            } catch (error) {
+                console.error("Failed to fetch worker data", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
+    }, [id, selectedYear]);
 
     // SimpleView transactions table state
-    const [transactionDateFilter, setTransactionDateFilter] = useState<DateFilterValue>({ year: new Date().getFullYear(), month: new Date().getMonth() + 1, week: null });
+    const [transactionDateFilter, setTransactionDateFilter] = useState<DateFilterValue>({ year: parseInt(selectedYear), month: null, week: null }); // Default to year view
     const [transactionSearch, setTransactionSearch] = useState("");
     const [transactionPage, setTransactionPage] = useState(1);
     const transactionsPerPage = 10;
@@ -376,7 +397,7 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
     }, []);
 
     // Filter transactions based on date filter and search
-    const filteredTransactions = incomeTransactions.filter((item) => {
+    const filteredTransactions = transactions.filter((item) => {
         const date = new Date(item.date);
         const year = date.getFullYear();
         const month = date.getMonth() + 1;
@@ -391,7 +412,7 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
     const paginatedTransactions = filteredTransactions.slice((transactionPage - 1) * transactionsPerPage, transactionPage * transactionsPerPage);
 
     // Get paginated income data based on year and period
-    const currentIncomeData = incomeDataByYear[selectedYear][incomePeriod];
+    const currentIncomeData = incomeStats[selectedYear]?.[incomePeriod] || [];
     const totalPages = Math.ceil(currentIncomeData.length / itemsPerPage);
     const paginatedIncomeData = currentIncomeData.slice((incomePage - 1) * itemsPerPage, incomePage * itemsPerPage);
 
@@ -445,19 +466,19 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                 <Card className="p-4 bg-gradient-to-br from-[var(--color-primary-light)] to-white hover:shadow-md transition-shadow border-[var(--color-primary-light)]">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-[var(--color-primary)] rounded-lg flex items-center justify-center shadow-lg shadow-[var(--color-primary-light)]"><Percent className="w-5 h-5 text-white" /></div>
-                        <div><p className="text-sm text-gray-600">Sharing Key</p><p className="text-xl font-bold text-[var(--color-primary)]">{teamMemberData.sharingKey}%</p></div>
+                        <div><p className="text-sm text-gray-600">{t("team.sharingKey")}</p><p className="text-xl font-bold text-[var(--color-primary)]">{worker.sharingKey}%</p></div>
                     </div>
                 </Card>
                 <Card className="p-4 bg-gradient-to-br from-[var(--color-warning-light)] to-white hover:shadow-md transition-shadow border-[var(--color-warning-light)]">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-[var(--color-warning)] rounded-lg flex items-center justify-center shadow-lg shadow-[var(--color-warning-light)]"><Calendar className="w-5 h-5 text-white" /></div>
-                        <div><p className="text-sm text-gray-600">Joined</p><p className="text-xl font-bold text-[var(--color-warning)]">{teamMemberData.joinDate}</p></div>
+                        <div><p className="text-sm text-gray-600">{t("team.joined")}</p><p className="text-xl font-bold text-[var(--color-warning)]">{worker.joinDate}</p></div>
                     </div>
                 </Card>
                 <Card className="p-4 bg-gradient-to-br from-[var(--color-success-light)] to-white hover:shadow-md transition-shadow border-[var(--color-success-light)]">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-[var(--color-success)] rounded-lg flex items-center justify-center shadow-lg shadow-[var(--color-success-light)]"><MapPin className="w-5 h-5 text-white" /></div>
-                        <div><p className="text-sm text-gray-600">Location</p><p className="text-xl font-bold text-[var(--color-success)]">{teamMemberData.location}</p></div>
+                        <div><p className="text-sm text-gray-600">{t("team.location")}</p><p className="text-xl font-bold text-[var(--color-success)]">{worker.location}</p></div>
                     </div>
                 </Card>
             </div>
@@ -468,10 +489,10 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <h3 className="font-bold text-gray-900 flex items-center gap-2">
                             <DollarSign className="w-5 h-5 text-[var(--color-success)]" />
-                            Income Transactions
+                            {t("team.incomeTransactions")}
                         </h3>
                         <Link href={`/team/income?workerId=${id}`}>
-                            <Button variant="outline" size="sm" className="text-xs">View Full History</Button>
+                            <Button variant="outline" size="sm" className="text-xs">{t("team.viewFullHistory")}</Button>
                         </Link>
                     </div>
 
@@ -484,7 +505,7 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                             <input
                                 type="text"
-                                placeholder="Search client or service..."
+                                placeholder={t("team.searchClientOrService")}
                                 value={transactionSearch}
                                 onChange={(e) => { setTransactionSearch(e.target.value); setTransactionPage(1); }}
                                 className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
@@ -498,11 +519,11 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                     <table className="w-full">
                         <thead className="bg-gray-50 border-b border-gray-100">
                             <tr>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Client</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Service</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Amount</th>
-                                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Status</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("common.date")}</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">{t("team.totalClients")}</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">{t("common.service")}</th>
+                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">{t("common.amount")}</th>
+                                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">{t("common.status")}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -517,7 +538,7 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                                             </div>
                                         </td>
                                         <td className="px-4 py-3 text-sm text-gray-600 hidden sm:table-cell">{item.service}</td>
-                                        <td className="px-4 py-3 text-sm text-right font-semibold text-[var(--color-success)]">€{item.amount}</td>
+                                        <td className="px-4 py-3 text-sm text-right font-semibold text-[var(--color-success)]">{format(Number(item.amount))}</td>
                                         <td className="px-4 py-3 text-center hidden sm:table-cell">
                                             <span className={`text-xs px-2 py-1 rounded-full ${item.status === "Completed" ? "bg-[var(--color-success-light)] text-[var(--color-success)]" : "bg-[var(--color-warning-light)] text-[var(--color-warning)]"}`}>{item.status}</span>
                                         </td>
@@ -525,15 +546,15 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={5} className="px-4 py-8 text-center text-gray-500">No transactions found for the selected period.</td>
+                                    <td colSpan={5} className="px-4 py-8 text-center text-gray-500">{t("team.noTransactionsFound")}</td>
                                 </tr>
                             )}
                         </tbody>
                         {filteredTransactions.length > 0 && (
                             <tfoot className="bg-[var(--color-primary-light)] font-semibold">
                                 <tr>
-                                    <td colSpan={3} className="px-4 py-3 text-sm text-[var(--color-primary)]">Total ({filteredTransactions.length} transactions)</td>
-                                    <td className="px-4 py-3 text-sm text-right text-[var(--color-success)]">€{filteredTransactions.reduce((sum, t) => sum + t.amount, 0).toLocaleString()}</td>
+                                    <td colSpan={3} className="px-4 py-3 text-sm text-[var(--color-primary)]">{t("team.totalTransactions", { count: filteredTransactions.length })}</td>
+                                    <td className="px-4 py-3 text-sm text-right text-[var(--color-success)]">{format(filteredTransactions.reduce((sum, t) => sum + Number(t.amount || 0), 0))}</td>
                                     <td className="px-4 py-3 hidden sm:table-cell"></td>
                                 </tr>
                             </tfoot>
@@ -542,49 +563,59 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                 </div>
 
                 {/* Pagination */}
-                {totalTransactionPages > 1 && (
-                    <div className="p-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3">
-                        <p className="text-sm text-gray-500">
-                            Showing {(transactionPage - 1) * transactionsPerPage + 1} to {Math.min(transactionPage * transactionsPerPage, filteredTransactions.length)} of {filteredTransactions.length}
-                        </p>
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => setTransactionPage(p => Math.max(1, p - 1))}
-                                disabled={transactionPage === 1}
-                                className={`p-2 rounded-lg transition-colors ${transactionPage === 1 ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-[var(--color-primary-light)] text-[var(--color-primary)] hover:opacity-80"}`}
-                            >
-                                <ChevronLeft className="w-4 h-4" />
-                            </button>
-                            {[...Array(totalTransactionPages)].map((_, i) => (
+                {
+                    totalTransactionPages > 1 && (
+                        <div className="p-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+                            <p className="text-sm text-gray-500">
+                                {t("common.pagination", { start: (transactionPage - 1) * transactionsPerPage + 1, end: Math.min(transactionPage * transactionsPerPage, filteredTransactions.length), total: filteredTransactions.length })}
+                            </p>
+                            <div className="flex items-center gap-2">
                                 <button
-                                    key={i}
-                                    onClick={() => setTransactionPage(i + 1)}
-                                    className={`w-8 h-8 text-sm font-medium rounded-lg transition-colors ${transactionPage === i + 1 ? "bg-[var(--color-primary)] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+                                    onClick={() => setTransactionPage(p => Math.max(1, p - 1))}
+                                    disabled={transactionPage === 1}
+                                    className={`p-2 rounded-lg transition-colors ${transactionPage === 1 ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-[var(--color-primary-light)] text-[var(--color-primary)] hover:opacity-80"}`}
                                 >
-                                    {i + 1}
+                                    <ChevronLeft className="w-4 h-4" />
                                 </button>
-                            ))}
-                            <button
-                                onClick={() => setTransactionPage(p => Math.min(totalTransactionPages, p + 1))}
-                                disabled={transactionPage === totalTransactionPages}
-                                className={`p-2 rounded-lg transition-colors ${transactionPage === totalTransactionPages ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-[var(--color-primary-light)] text-[var(--color-primary)] hover:opacity-80"}`}
-                            >
-                                <ChevronRight className="w-4 h-4" />
-                            </button>
+                                {[...Array(totalTransactionPages)].map((_, i) => (
+                                    <button
+                                        key={i}
+                                        onClick={() => setTransactionPage(i + 1)}
+                                        className={`w-8 h-8 text-sm font-medium rounded-lg transition-colors ${transactionPage === i + 1 ? "bg-[var(--color-primary)] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+                                    >
+                                        {i + 1}
+                                    </button>
+                                ))}
+                                <button
+                                    onClick={() => setTransactionPage(p => Math.min(totalTransactionPages, p + 1))}
+                                    disabled={transactionPage === totalTransactionPages}
+                                    className={`p-2 rounded-lg transition-colors ${transactionPage === totalTransactionPages ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-[var(--color-primary-light)] text-[var(--color-primary)] hover:opacity-80"}`}
+                                >
+                                    <ChevronRight className="w-4 h-4" />
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )
+                }
 
                 {/* Activity History */}
-            </Card>
+            </Card >
             <Card className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-bold text-gray-900 flex items-center gap-2"><History className="w-5 h-5 text-[var(--color-primary)]" />Activity History</h3>
-                    <Button variant="outline" size="sm" className="text-xs">View All</Button>
+                    <h3 className="font-bold text-gray-900 flex items-center gap-2"><History className="w-5 h-5 text-[var(--color-primary)]" />{t("team.activityHistory")}</h3>
+                    <Button variant="outline" size="sm" className="text-xs">{t("team.viewAll")}</Button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {activityHistory.map((item) => {
-                        const IconComponent = item.icon;
+                    {activities.map((item) => {
+                        // Map dynamic types to icons if needed, or rely on service providing correct type string
+                        // StartService returns: type: 'booking' | 'payment' | 'booking' (mapped from original)
+                        // Verify icons mapping:
+                        let IconComponent = Scissors; // Default
+                        if (item.type === 'payment') IconComponent = DollarSign;
+                        if (item.type === 'review') IconComponent = Star;
+                        if (item.type === 'booking') IconComponent = Calendar;
+                        if (item.type === 'client') IconComponent = Users;
+
                         return (
                             <div key={item.id} className={`flex items-center gap-3 p-3 rounded-lg ${item.type === "service" ? "bg-[var(--color-primary-light)]" :
                                 item.type === "review" ? "bg-[var(--color-warning-light)]" :
@@ -602,7 +633,7 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                                 </div>
                                 <div className="flex-1">
                                     <p className="text-sm font-medium text-gray-900">{item.action}</p>
-                                    <p className="text-xs text-gray-500">{item.time}</p>
+                                    <p className="text-xs text-gray-500">{new Date(item.time).toLocaleString()}</p>
                                 </div>
                             </div>
                         );
@@ -613,11 +644,11 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
             {/* Client Comments Preview */}
             < Card className="p-6" >
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-bold text-gray-900 flex items-center gap-2"><MessageSquare className="w-5 h-5 text-[var(--color-secondary)]" />Recent Client Comments</h3>
-                    <Button variant="outline" size="sm" className="text-xs">View All</Button>
+                    <h3 className="font-bold text-gray-900 flex items-center gap-2"><MessageSquare className="w-5 h-5 text-[var(--color-secondary)]" />{t("team.recentComments")}</h3>
+                    <Button variant="outline" size="sm" className="text-xs">{t("team.viewAll")}</Button>
                 </div>
                 <div className="space-y-4">
-                    {clientComments.slice(0, 3).map((comment) => (
+                    {reviews.slice(0, 3).map((comment) => (
                         <div key={comment.id} className="p-4 bg-gray-50 rounded-xl">
                             <div className="flex items-start gap-3">
                                 <div className={`w-10 h-10 rounded-full ${comment.color} flex items-center justify-center font-bold`}>{comment.avatar}</div>
@@ -673,11 +704,11 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                 <div className="flex justify-end gap-3">
                     {canSeeFinancials && (
                         <>
-                            <Button variant="primary" size="sm" className="bg-gradient-to-r from-[var(--color-primary)] to-gray-900 border-none"><Eye className="w-4 h-4 mr-2" />View Reports</Button>
-                            <Button variant="primary" size="sm" className="bg-gradient-to-r from-[var(--color-secondary)] to-gray-900 border-none"><BarChart3 className="w-4 h-4 mr-2" />Analytics</Button>
+                            <Button variant="primary" size="sm" className="bg-gradient-to-r from-[var(--color-primary)] to-gray-900 border-none"><Eye className="w-4 h-4 mr-2" />{t("team.viewReports")}</Button>
+                            <Button variant="primary" size="sm" className="bg-gradient-to-r from-[var(--color-secondary)] to-gray-900 border-none"><BarChart3 className="w-4 h-4 mr-2" />{t("team.analytics")}</Button>
                         </>
                     )}
-                    <Button variant="primary" size="sm" className="bg-gradient-to-r from-[var(--color-warning)] to-gray-900 border-none"><Calendar className="w-4 h-4 mr-2" />Schedule</Button>
+                    <Button variant="primary" size="sm" className="bg-gradient-to-r from-[var(--color-warning)] to-gray-900 border-none"><Calendar className="w-4 h-4 mr-2" />{t("team.schedule")}</Button>
                 </div>
             </div>
 
@@ -686,7 +717,7 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
                     <h3 className="font-bold text-gray-900 flex items-center gap-2">
                         <TrendingUp className="w-5 h-5 text-[var(--color-success)]" />
-                        Income Overview
+                        {t("team.incomeOverview")}
                     </h3>
                     <div className="flex items-center gap-3">
                         <select
@@ -699,9 +730,9 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                             ))}
                         </select>
                         <div className="flex items-center bg-gray-100 rounded-lg p-1">
-                            <button onClick={() => handlePeriodChange("week")} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${incomePeriod === "week" ? "bg-white text-[var(--color-primary)] shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>Week</button>
-                            <button onClick={() => handlePeriodChange("month")} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${incomePeriod === "month" ? "bg-white text-[var(--color-primary)] shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>Month</button>
-                            <button onClick={() => handlePeriodChange("year")} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${incomePeriod === "year" ? "bg-white text-[var(--color-primary)] shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>Year</button>
+                            <button onClick={() => handlePeriodChange("week")} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${incomePeriod === "week" ? "bg-white text-[var(--color-primary)] shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>{t("team.week")}</button>
+                            <button onClick={() => handlePeriodChange("month")} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${incomePeriod === "month" ? "bg-white text-[var(--color-primary)] shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>{t("team.month")}</button>
+                            <button onClick={() => handlePeriodChange("year")} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${incomePeriod === "year" ? "bg-white text-[var(--color-primary)] shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>{t("team.year")}</button>
                         </div>
                     </div>
                 </div>
@@ -709,22 +740,22 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                     <table className="w-full">
                         <thead className="bg-gray-50">
                             <tr>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Period</th>
-                                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Services</th>
-                                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Clients</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Income</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Salary</th>
-                                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Status</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("team.period")}</th>
+                                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">{t("team.totalServices")}</th>
+                                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">{t("team.totalClients")}</th>
+                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">{t("team.totalIncome")}</th>
+                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">{t("team.totalSalaries")}</th>
+                                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">{t("common.status")}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {paginatedIncomeData.map((row) => (
+                            {paginatedIncomeData.map((row: IncomeRow) => (
                                 <tr key={row.id} className="hover:bg-gray-50 transition">
                                     <td className="px-4 py-3 text-sm font-medium text-gray-900">{row.period}</td>
                                     <td className="px-4 py-3 text-sm text-center text-gray-600">{row.services}</td>
                                     <td className="px-4 py-3 text-sm text-center text-gray-600">{row.clients}</td>
-                                    <td className="px-4 py-3 text-sm text-right font-semibold text-[var(--color-success)]">€{row.income.toLocaleString()}</td>
-                                    <td className="px-4 py-3 text-sm text-right font-semibold text-[var(--color-primary)]">€{row.salary.toLocaleString()}</td>
+                                    <td className="px-4 py-3 text-sm text-right font-semibold text-[var(--color-success)]">{format(row.income)}</td>
+                                    <td className="px-4 py-3 text-sm text-right font-semibold text-[var(--color-primary)]">{format(row.salary)}</td>
                                     <td className="px-4 py-3 text-center">
                                         <span className={`text-xs px-2 py-1 rounded-full ${row.status === "Completed" ? "bg-[var(--color-success-light)] text-[var(--color-success)]" : row.status === "In Progress" ? "bg-[var(--color-info-light,bg-blue-100)] text-[var(--color-info,text-blue-700)]" : "bg-[var(--color-warning-light)] text-[var(--color-warning)]"}`}>{row.status}</span>
                                     </td>
@@ -734,10 +765,10 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                         <tfoot className="bg-[var(--color-primary-light)] font-semibold">
                             <tr>
                                 <td className="px-4 py-3 text-sm text-[var(--color-primary)]">Total</td>
-                                <td className="px-4 py-3 text-sm text-center text-[var(--color-primary)]">{currentIncomeData.reduce((sum, r) => sum + r.services, 0)}</td>
-                                <td className="px-4 py-3 text-sm text-center text-[var(--color-primary)]">{currentIncomeData.reduce((sum, r) => sum + r.clients, 0)}</td>
-                                <td className="px-4 py-3 text-sm text-right text-[var(--color-success)]">€{currentIncomeData.reduce((sum, r) => sum + r.income, 0).toLocaleString()}</td>
-                                <td className="px-4 py-3 text-sm text-right text-[var(--color-primary)]">€{currentIncomeData.reduce((sum, r) => sum + r.salary, 0).toLocaleString()}</td>
+                                <td className="px-4 py-3 text-sm text-center text-[var(--color-primary)]">{currentIncomeData.reduce((sum: number, r: IncomeRow) => sum + r.services, 0)}</td>
+                                <td className="px-4 py-3 text-sm text-center text-[var(--color-primary)]">{currentIncomeData.reduce((sum: number, r: IncomeRow) => sum + r.clients, 0)}</td>
+                                <td className="px-4 py-3 text-sm text-right text-[var(--color-success)]">{format(currentIncomeData.reduce((sum: number, r: IncomeRow) => sum + r.income, 0))}</td>
+                                <td className="px-4 py-3 text-sm text-right text-[var(--color-primary)]">{format(currentIncomeData.reduce((sum: number, r: IncomeRow) => sum + r.salary, 0))}</td>
                                 <td className="px-4 py-3"></td>
                             </tr>
                         </tfoot>
@@ -745,7 +776,7 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                 </div>
                 {totalPages > 1 && (
                     <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
-                        <p className="text-sm text-gray-500">Showing {(incomePage - 1) * itemsPerPage + 1} to {Math.min(incomePage * itemsPerPage, currentIncomeData.length)} of {currentIncomeData.length}</p>
+                        <p className="text-sm text-gray-500">{t("common.pagination", { start: (incomePage - 1) * itemsPerPage + 1, end: Math.min(incomePage * itemsPerPage, currentIncomeData.length), total: currentIncomeData.length })}</p>
                         <div className="flex items-center gap-2">
                             <button onClick={() => setIncomePage(p => Math.max(1, p - 1))} disabled={incomePage === 1} className={`px-3 py-1.5 text-xs font-medium rounded-md ${incomePage === 1 ? "bg-gray-100 text-gray-400" : "bg-[var(--color-primary-light)] text-[var(--color-primary)] hover:opacity-80"}`}>Previous</button>
                             {[...Array(totalPages)].map((_, i) => (<button key={i} onClick={() => setIncomePage(i + 1)} className={`w-8 h-8 text-xs font-medium rounded-md ${incomePage === i + 1 ? "bg-[var(--color-primary)] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>{i + 1}</button>))}
@@ -759,17 +790,17 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card className="p-6">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-bold text-gray-900 flex items-center gap-2"><DollarSign className="w-5 h-5 text-green-500" />Recent Income</h3>
-                        <Link href={`/team/income?workerId=${id}`}><Button variant="outline" size="sm" className="text-xs">View All</Button></Link>
+                        <h3 className="font-bold text-gray-900 flex items-center gap-2"><DollarSign className="w-5 h-5 text-green-500" />{t("team.recentIncome")}</h3>
+                        <Link href={`/team/income?workerId=${id}`}><Button variant="outline" size="sm" className="text-xs">{t("team.viewAll")}</Button></Link>
                     </div>
                     <div className="space-y-3">
-                        {recentIncomeHistory.slice(0, 5).map((item) => (
+                        {transactions.slice(0, 5).map((item) => (
                             <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 bg-gradient-to-br from-[var(--color-success)] to-[var(--color-success-dark)] rounded-full flex items-center justify-center text-white font-bold text-sm">{item.client.charAt(0)}</div>
                                     <div><p className="font-medium text-gray-900 text-sm">{item.client}</p><p className="text-xs text-gray-500">{item.service} • {item.date}</p></div>
                                 </div>
-                                <div className="text-right"><p className="font-bold text-[var(--color-success)]">{item.amount}</p><span className="text-xs px-2 py-0.5 rounded-full bg-[var(--color-success-light)] text-[var(--color-success)]">{item.status}</span></div>
+                                <div className="text-right"><p className="font-bold text-[var(--color-success)]">{format(Number(item.amount.replace(/[^0-9.-]+/g, "") || 0))}</p><span className="text-xs px-2 py-0.5 rounded-full bg-[var(--color-success-light)] text-[var(--color-success)]">{item.status}</span></div>
                             </div>
                         ))}
                     </div>
@@ -780,10 +811,10 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                         <Button variant="outline" size="sm" className="text-xs">View All</Button>
                     </div>
                     <div className="space-y-3">
-                        {recentServices.map((item) => (
-                            <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
-                                <div><p className="font-medium text-gray-900 text-sm">{item.service}</p><p className="text-xs text-gray-500">{item.count} performed • Last: {item.lastPerformed}</p></div>
-                                <p className="font-bold text-[var(--color-primary)]">{item.income}</p>
+                        {servicesList.slice(0, 5).map((item) => (
+                            <div key={item.name} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                                <div><p className="font-medium text-gray-900 text-sm">{item.name}</p><p className="text-xs text-gray-500">{item.count} performed • Last: {item.lastPerformed ? new Date(item.lastPerformed).toLocaleDateString() : 'N/A'}</p></div>
+                                <p className="font-bold text-[var(--color-primary)]">{format(item.income)}</p>
                             </div>
                         ))}
                     </div>
@@ -870,9 +901,9 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                                     <td className="px-3 py-3 text-gray-900 font-medium">{row.date}</td>
                                     <td className="px-3 py-3 text-center text-gray-600">{row.clients}</td>
                                     <td className="px-3 py-3 text-center text-gray-600">{row.services}</td>
-                                    <td className="px-3 py-3 text-right text-[var(--color-success)] font-medium">€{row.income.toLocaleString()}</td>
-                                    <td className="px-3 py-3 text-right text-[var(--color-error)] font-medium">€{row.expenses.toLocaleString()}</td>
-                                    <td className="px-3 py-3 text-right text-[var(--color-primary)] font-bold">€{row.profit.toLocaleString()}</td>
+                                    <td className="px-3 py-3 text-right text-[var(--color-success)] font-medium">{format(row.income)}</td>
+                                    <td className="px-3 py-3 text-right text-[var(--color-error)] font-medium">{format(row.expenses)}</td>
+                                    <td className="px-3 py-3 text-right text-[var(--color-primary)] font-bold">{format(row.profit)}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -904,10 +935,10 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                 <Card className="p-6">
                     <h3 className="font-bold text-gray-900 mb-4">Daily Activities Log</h3>
                     <div className="space-y-3">
-                        {dailyActivities.map((activity, idx) => (
-                            <div key={idx} className={`p-3 rounded-lg border ${activity.type === "success" ? "bg-[var(--color-success-light)] border-[var(--color-success-light)]" : "bg-[var(--color-info-light,bg-blue-50)] border-[var(--color-info-light,border-blue-100)]"}`}>
+                        {activities.slice(0, 5).map((activity, idx) => (
+                            <div key={idx} className={`p-3 rounded-lg border ${activity.type === "payment" ? "bg-[var(--color-success-light)] border-[var(--color-success-light)]" : "bg-[var(--color-info-light,bg-blue-50)] border-[var(--color-info-light,border-blue-100)]"}`}>
                                 <p className="font-medium text-gray-900 text-sm">{activity.action}</p>
-                                <p className="text-xs text-gray-500">{activity.time}</p>
+                                <p className="text-xs text-gray-500">{new Date(activity.time).toLocaleString()}</p>
                             </div>
                         ))}
                     </div>
@@ -956,11 +987,11 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                 <Card className="p-6">
                     <h3 className="font-bold text-gray-900 mb-4">Top Appointment Services</h3>
                     <div className="space-y-3">
-                        {topAppointmentServices.map((service, idx) => (
+                        {servicesList.map((service, idx) => (
                             <div key={idx} className="p-3 rounded-lg bg-[var(--color-primary-light)]">
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="font-medium text-gray-900 text-sm">{service.name}</span>
-                                    <span className="text-sm font-bold text-[var(--color-primary)]">{service.income}</span>
+                                    <span className="text-sm font-bold text-[var(--color-primary)]">{format(service.income)}</span>
                                 </div>
                                 <div className="w-full bg-white/50 rounded-full h-2">
                                     <div className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] h-2 rounded-full" style={{ width: `${service.percentage}%` }}></div>
@@ -993,12 +1024,12 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
             <Card className="p-6">
                 <h3 className="font-bold text-gray-900 mb-4">Top 5 Repeat Clients</h3>
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                    {topRepeatClients.map((client, idx) => (
+                    {topClients.map((client, idx) => (
                         <div key={idx} className="text-center p-4 bg-gray-50 rounded-xl">
                             <div className={`w-12 h-12 rounded-full ${client.color} flex items-center justify-center font-bold mx-auto mb-2`}>{client.avatar}</div>
                             <p className="font-medium text-gray-900 text-sm">{client.name}</p>
                             <p className="text-xs text-gray-500">{client.visits} visits</p>
-                            <p className="text-sm font-bold text-[var(--color-primary)] mt-1">{client.spent}</p>
+                            <p className="text-sm font-bold text-[var(--color-primary)] mt-1">{format(client.spent)}</p>
                         </div>
                     ))}
                 </div>
@@ -1017,7 +1048,7 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                     </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {clientComments.map((comment) => (
+                    {reviews.map((comment) => (
                         <div key={comment.id} className="p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition">
                             <div className="flex items-start gap-3">
                                 <div className={`w-12 h-12 rounded-full ${comment.color} flex items-center justify-center font-bold text-lg`}>{comment.avatar}</div>
@@ -1046,7 +1077,7 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
 
     return (
         <TeamLayout
-            title={`${teamMemberData.name}'s Performance`}
+            title={`${worker.name || 'Worker'}'s Performance`}
             description="Detailed analytics and performance metrics"
         >
             <div className="space-y-6 pb-8">
@@ -1077,22 +1108,22 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                                 />
                             </div>
                             <div>
-                                <h2 className="text-2xl font-bold">{teamMemberData.name}</h2>
+                                <h2 className="text-2xl font-bold">{worker.name}</h2>
                                 <div className="flex flex-wrap items-center gap-2 opacity-90 text-sm mt-1">
-                                    <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{teamMemberData.email}</span>
+                                    <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{worker.email}</span>
                                     <span>•</span>
-                                    <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{teamMemberData.phone}</span>
+                                    <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{worker.phone}</span>
                                 </div>
                                 <div className="flex items-center gap-2 mt-2">
-                                    <span className="px-2 py-0.5 bg-white/20 rounded text-xs font-medium">{teamMemberData.role}</span>
+                                    <span className="px-2 py-0.5 bg-white/20 rounded text-xs font-medium">{worker.role}</span>
                                     <span className="px-2 py-0.5 bg-green-400/30 rounded text-xs font-medium flex items-center gap-1">
-                                        <div className="w-1.5 h-1.5 bg-green-300 rounded-full"></div>{teamMemberData.status}
+                                        <div className="w-1.5 h-1.5 bg-green-300 rounded-full"></div>{worker.status}
                                     </span>
                                 </div>
                             </div>
                         </div>
                         <div className="flex gap-2">
-                            {(permissions.isAdmin || permissions.isManager || isOwnProfile) && (
+                            {(permissions.isManager || isOwnProfile) && (
                                 <ReadOnlyGuard>
                                     <Link href={`/team/edit-advanced/${id}`}>
                                         <Button variant="outline" size="sm" className="bg-white/10 border-white/30 text-white hover:bg-white/20 text-xs">

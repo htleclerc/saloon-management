@@ -1,13 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from "date-fns";
 import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
-import { useAuth } from "@/context/AuthProvider";
+import { useAuth, RequirePermission } from "@/context/AuthProvider";
 import { useActionPermissions } from "@/lib/permissions";
+import { incomeService } from "@/lib/services/IncomeService";
+import { statsService } from "@/lib/services/StatsService";
+import { workerService } from "@/lib/services/WorkerService";
+import { salonService } from "@/lib/services/SalonService";
 import {
     DollarSign,
     TrendingUp,
@@ -26,8 +32,13 @@ import {
     BarChart2,
     ChevronDown,
     ChevronUp,
+    Briefcase,
+    Star,
+    Wallet,
+    TrendingDown,
+    History,
+    AlertTriangle
 } from "lucide-react";
-import Link from "next/link";
 import {
     BarChart,
     Bar,
@@ -42,85 +53,81 @@ import {
     Legend
 } from "recharts";
 
-// Mock data for daily salary breakdown
-const dailySalaryData = [
-    { date: "01-01", day: "Mon", worker: "Amanda Drake", avatar: "A", service: "Haircut + Color", income: "€120", commission: "50%", salary: "€60", tips: "€12", total: "€72", status: "Paid" },
-    { date: "01-01", day: "Mon", worker: "Sophie Martin", avatar: "S", service: "Manicure", income: "€45", commission: "40%", salary: "€18", tips: "€5", total: "€23", status: "Paid" },
-    { date: "01-02", day: "Tue", worker: "Emma Wilson", avatar: "E", service: "Haircut", income: "€55", commission: "45%", salary: "€24.75", tips: "€5", total: "€29.75", status: "Paid" },
-    { date: "01-02", day: "Tue", worker: "Amanda Drake", avatar: "A", service: "Full Service", income: "€200", commission: "50%", salary: "€100", tips: "€20", total: "€120", status: "Pending" },
-    { date: "01-03", day: "Wed", worker: "James Brown", avatar: "J", service: "Beard Trim", income: "€30", commission: "35%", salary: "€10.50", tips: "€3", total: "€13.50", status: "Paid" },
-    { date: "01-03", day: "Wed", worker: "Sophie Martin", avatar: "S", service: "Pedicure", income: "€50", commission: "40%", salary: "€20", tips: "€6", total: "€26", status: "Pending" },
-    { date: "01-04", day: "Thu", worker: "Emma Wilson", avatar: "E", service: "Haircut", income: "€55", commission: "45%", salary: "€24.75", tips: "€5", total: "€29.75", status: "Paid" },
-];
-
-// Weekly summary data
-const weeklySummaryData = [
-    { name: "Mon", income: 25420, salary: 12389 },
-    { name: "Tue", income: 18350, salary: 8543 },
-    { name: "Wed", income: 32100, salary: 15234 },
-    { name: "Thu", income: 28450, salary: 13421 },
-    { name: "Fri", income: 35280, salary: 16832 },
-    { name: "Sat", income: 41200, salary: 19876 },
-    { name: "Sun", income: 15800, salary: 7234 },
-];
-
-// Monthly summary data
-const monthlySummaryData = [
-    { name: "Jan", income: 45420, salary: 22145 },
-    { name: "Feb", income: 52350, salary: 25687 },
-    { name: "Mar", income: 48100, salary: 23456 },
-    { name: "Apr", income: 55450, salary: 27123 },
-    { name: "May", income: 61280, salary: 29845 },
-    { name: "Jun", income: 58200, salary: 28432 },
-];
-
-// Annual projection donut chart
-const annualProjectionData = [
-    { name: "Services", value: 45, color: "#8B5CF6" },
-    { name: "Products", value: 25, color: "#EC4899" },
-    { name: "Tips", value: 15, color: "#F59E0B" },
-    { name: "Packages", value: 10, color: "#10B981" },
-    { name: "Other", value: 5, color: "#3B82F6" },
-];
-
-// Worker performance data
-const workerPerformanceData = [
-    { name: "Amanda", income: 15420, salary: 7543, tips: 1234, services: 45, color: "#8B5CF6" },
-    { name: "Sophie", income: 12350, salary: 5687, tips: 987, services: 38, color: "#EC4899" },
-    { name: "Emma", income: 14100, salary: 6456, tips: 1123, services: 42, color: "#F59E0B" },
-    { name: "James", income: 9450, salary: 4123, tips: 756, services: 28, color: "#10B981" },
-];
-
-// Payment status data
-const paymentStatusData = [
-    { name: "Paid", value: 75, color: "#10B981" },
-    { name: "Pending", value: 25, color: "#F59E0B" },
-];
-
-// Pending payments list
-const pendingPayments = [
-    { worker: "Amanda Drake", amount: "€120", date: "01-02", service: "Full Service" },
-    { worker: "Sophie Martin", amount: "€26", date: "01-03", service: "Pedicure" },
-    { worker: "Emma Wilson", amount: "€85", date: "01-05", service: "Color Treatment" },
-];
-
 export default function IncomeDashboardPage() {
-    const [view, setView] = useState<'simple' | 'advanced'>('simple');
-    const [selectedPeriod, setSelectedPeriod] = useState('Daily');
-    const [expandedMobileRows, setExpandedMobileRows] = useState<number[]>([]);
     const { getCardStyle } = useKpiCardStyle();
-    const [currentDate, setCurrentDate] = useState("January 14, 2026");
-    const { user } = useAuth(); // Assuming AuthProvider exposes user
-    const permissions = useActionPermissions({ user } as any);
+    const [selectedPeriod, setSelectedPeriod] = useState('Monthly');
+    const [expandedMobileRows, setExpandedMobileRows] = useState<number[]>([]);
+    const [currentDate, setCurrentDate] = useState(format(new Date(), "MMMM dd, yyyy"));
+    const { user, activeSalonId } = useAuth();
+    const permissions = useActionPermissions({ user, canModify: true } as any);
     const router = useRouter();
 
-    useEffect(() => {
-        if (!permissions.canViewFinancialDashboard) {
-            router.push("/income");
-        }
-    }, [permissions.canViewFinancialDashboard, router]);
+    const [loading, setLoading] = useState(true);
+    const [stats, setStats] = useState<any>(null);
+    const [dailyBreakdown, setDailyBreakdown] = useState<any[]>([]);
+    const [weeklySummary, setWeeklySummary] = useState<any[]>([]);
+    const [monthlySummary, setMonthlySummary] = useState<any[]>([]);
+    const [incomeProjection, setIncomeProjection] = useState<any[]>([]);
+    const [workerPerformance, setWorkerPerformance] = useState<any[]>([]);
 
-    if (!permissions.canViewFinancialDashboard) return null;
+    useEffect(() => {
+        if (!activeSalonId) return;
+
+        async function loadData() {
+            setLoading(true);
+            try {
+                const salonId = Number(activeSalonId);
+
+                // Fetch stats
+                const salonStats = await salonService.getStats(salonId);
+                setStats(salonStats);
+
+                // Fetch Daily Breakdown (Recent Income)
+                const incomes = await incomeService.getAll(salonId);
+                setDailyBreakdown(incomes.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 10));
+
+                // Fetch Weekly Summary
+                const revTrend = await statsService.getRevenueTrend(salonId);
+                const expTrend = await statsService.getExpenseTrend(salonId);
+
+                // For demo/simplicity, we'll use the monthly trend as mock for weekly/monthly view
+                setMonthlySummary(revTrend.map(r => ({
+                    name: format(new Date(r.month + "-01"), "MMM"),
+                    income: r.revenue,
+                    salary: r.revenue * 0.45 // Mock salary as 45% of revenue
+                })));
+
+                // Projection / Breakdown by category
+                const breakdown: Record<string, number> = {};
+                const colors = ["#8B5CF6", "#EC4899", "#F59E0B", "#10B981", "#3B82F6"];
+                incomes.forEach(inc => {
+                    const cat = (inc as any).category || "Services";
+                    breakdown[cat] = (breakdown[cat] || 0) + inc.amount;
+                });
+                setIncomeProjection(Object.entries(breakdown).map(([name, value], idx) => ({
+                    name,
+                    value: Math.round((value / (incomes.reduce((acc, i) => acc + i.amount, 0) || 1)) * 100),
+                    color: colors[idx % colors.length]
+                })));
+
+                // Worker performance
+                const workers = await workerService.getStatsBySalon(salonId);
+                setWorkerPerformance(workers.map(w => ({
+                    ...w,
+                    tips: Math.round(w.monthRevenue * 0.08), // Mock tips
+                    services: Math.round(w.monthRevenue / 80),
+                    color: colors[workers.indexOf(w) % colors.length]
+                })));
+
+            } catch (error) {
+                console.error("Error loading income dashboard data:", error);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        loadData();
+    }, [activeSalonId]);
 
     const toggleMobileRow = (idx: number) => {
         setExpandedMobileRows(prev =>
@@ -128,576 +135,343 @@ export default function IncomeDashboardPage() {
         );
     };
 
-    return (
-        <MainLayout>
-            <div className="space-y-6">
-                {/* Standardized Header */}
-                <div className="flex flex-col gap-4 md:gap-6">
-                    <div>
-                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Income Management</h1>
-                        <p className="text-gray-500 mt-1 text-sm md:text-base">Track and manage all income streams</p>
+    if (loading) {
+        return (
+            <MainLayout>
+                <div className="animate-pulse space-y-8">
+                    <div className="h-10 bg-gray-200 rounded w-1/3"></div>
+                    <div className="grid grid-cols-5 gap-4">
+                        {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-32 bg-gray-200 rounded-3xl"></div>)}
                     </div>
+                </div>
+            </MainLayout>
+        );
+    }
 
-                    <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                        {/* View Toggle - Left in Desktop */}
-                        <div className="flex items-center gap-2 bg-white p-1.5 rounded-xl shadow-sm border border-gray-100 w-full md:w-auto">
-                            <Link href="/income" className="flex-1 md:flex-none">
-                                <button
-                                    className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold text-gray-500 hover:bg-gray-50 rounded-lg transition-all"
-                                >
-                                    <LayoutGrid size={18} />
-                                    <span>Simple List</span>
-                                </button>
-                            </Link>
-                            <button
-                                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold rounded-lg transition-all bg-[var(--color-primary-light)] text-[var(--color-primary)] shadow-sm"
-                            >
-                                <BarChart2 size={18} />
-                                <span>Advanced View</span>
-                            </button>
+    return (
+        <RequirePermission role={['manager']} fallback={
+            <MainLayout>
+                <div className="flex items-center justify-center h-96">
+                    <Card className="text-center p-8 max-w-md">
+                        <AlertTriangle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
+                        <h2 className="text-xl font-bold text-gray-900 mb-2">Accès Restreint</h2>
+                        <p className="text-gray-600 font-medium">L'accès aux données financières détaillées est réservé aux managers.</p>
+                        <Link href="/">
+                            <Button variant="primary" size="md" className="mt-6 rounded-xl">
+                                Retour à l'accueil
+                            </Button>
+                        </Link>
+                    </Card>
+                </div>
+            </MainLayout>
+        }>
+            <MainLayout>
+                <div className="space-y-8 animate-in fade-in duration-500">
+                    {/* Standardized Header */}
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                        <div>
+                            <h1 className="text-2xl md:text-4xl font-black text-gray-900 tracking-tight flex items-center gap-3">
+                                <DollarSign className="w-10 h-10 text-[var(--color-primary)]" />
+                                Gestion des Revenus
+                            </h1>
+                            <p className="text-gray-500 mt-1 font-medium italic">Suivi analytique et gestion des flux financiers</p>
                         </div>
 
-                        {/* Action Buttons - Right in Desktop */}
-                        <div className="grid grid-cols-2 md:flex items-center gap-3 w-full md:w-auto">
-                            <Button variant="outline" size="md" className="flex-1 md:flex-none rounded-xl h-11 flex items-center justify-center gap-2 font-bold text-gray-600 border-gray-200">
-                                <Printer className="w-4 h-4" />
-                                <span>Print</span>
-                            </Button>
-                            <Button variant="outline" size="md" className="flex-1 md:flex-none rounded-xl h-11 flex items-center justify-center gap-2 font-bold text-gray-600 border-gray-200">
-                                <Download className="w-4 h-4" />
-                                <span>Export</span>
-                            </Button>
-                            <Link href="/income/add" className="col-span-2 md:col-span-1">
-                                <Button variant="primary" size="md" className="w-full rounded-xl h-11 flex items-center justify-center gap-2 font-bold shadow-lg shadow-purple-500/20 bg-[#A855F7] hover:bg-[#9333EA]">
+                        <div className="flex items-center gap-4 bg-white p-2 rounded-2xl shadow-sm border border-gray-100">
+                            <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-xl">
+                                <Link href="/income">
+                                    <button className="flex items-center gap-2 px-4 py-2 text-xs font-black text-gray-400 hover:text-gray-600 transition-all uppercase tracking-widest">
+                                        <LayoutGrid size={16} />
+                                        <span>Liste</span>
+                                    </button>
+                                </Link>
+                                <button className="flex items-center gap-2 px-4 py-2 text-xs font-black bg-white text-[var(--color-primary)] rounded-lg shadow-sm border border-gray-100 uppercase tracking-widest">
+                                    <BarChart2 size={16} />
+                                    <span>Analytique</span>
+                                </button>
+                            </div>
+                            <Link href="/income/add">
+                                <Button variant="primary" size="md" className="rounded-xl h-12 flex items-center gap-2 font-black shadow-lg shadow-purple-500/20 active:scale-95 transition-all">
                                     <Plus className="w-5 h-5" />
-                                    <span>Add Income</span>
+                                    <span>Ajouter</span>
                                 </Button>
                             </Link>
                         </div>
                     </div>
-                </div>
 
-                {/* Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                    <Card className="text-white" style={getCardStyle(0)}>
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="p-2 bg-white/20 rounded-lg">
-                                <DollarSign className="w-6 h-6 text-white" />
-                            </div>
-                            <span className="bg-white/20 px-2 py-1 rounded text-xs">Total</span>
-                        </div>
-                        <div>
-                            <p className="text-sm opacity-90 mb-1">Total Income</p>
-                            <h3 className="text-3xl font-bold">€45,892</h3>
-                            <div className="flex items-center gap-1 mt-1 text-sm opacity-80">
-                                <ArrowUp className="w-3 h-3" />
-                                <span>+12.5% vs last week</span>
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
+                        <div className="rounded-3xl p-6 text-white shadow-xl relative overflow-hidden group" style={{ background: 'linear-gradient(135deg, var(--color-primary) 0%, #7c3aed 100%)' }}>
+                            <div className="relative z-10">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div className="p-3 bg-white/20 backdrop-blur-md rounded-2xl"><DollarSign className="w-6 h-6" /></div>
+                                    <span className="text-[10px] font-black bg-white/20 backdrop-blur-md px-2 py-1 rounded-full">+12.5%</span>
+                                </div>
+                                <p className="text-white/80 text-[10px] font-black uppercase tracking-widest">Revenu Total</p>
+                                <h3 className="text-2xl font-black mt-1 tabular-nums">€{stats?.totalRevenue?.toLocaleString()}</h3>
                             </div>
                         </div>
-                    </Card>
 
-                    <Card className="text-white" style={getCardStyle(1)}>
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="p-2 bg-white/20 rounded-lg">
-                                <Users className="w-6 h-6 text-white" />
-                            </div>
-                            <span className="bg-white/20 px-2 py-1 rounded text-xs">Salary</span>
-                        </div>
-                        <div>
-                            <p className="text-sm opacity-90 mb-1">Total Salary</p>
-                            <h3 className="text-3xl font-bold">€22,145</h3>
-                            <div className="flex items-center gap-1 mt-1 text-sm opacity-80">
-                                <ArrowUp className="w-3 h-3" />
-                                <span>+8.3% from average</span>
+                        <div className="rounded-3xl p-6 text-white shadow-xl relative overflow-hidden group" style={{ background: 'linear-gradient(135deg, var(--color-secondary) 0%, #db2777 100%)' }}>
+                            <div className="relative z-10">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div className="p-3 bg-white/20 backdrop-blur-md rounded-2xl"><Users className="w-6 h-6" /></div>
+                                    <span className="text-[10px] font-black bg-white/20 backdrop-blur-md px-2 py-1 rounded-full">+8%</span>
+                                </div>
+                                <p className="text-white/80 text-[10px] font-black uppercase tracking-widest">Masse Salariale</p>
+                                <h3 className="text-2xl font-black mt-1 tabular-nums">€{(stats?.totalRevenue * 0.45)?.toLocaleString()}</h3>
                             </div>
                         </div>
-                    </Card>
 
-                    <Card className="text-white" style={getCardStyle(2)}>
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="p-2 bg-white/20 rounded-lg">
-                                <TrendingUp className="w-6 h-6 text-white" />
-                            </div>
-                            <span className="bg-white/20 px-2 py-1 rounded text-xs">Average</span>
-                        </div>
-                        <div>
-                            <p className="text-sm opacity-90 mb-1">Avg per Worker</p>
-                            <h3 className="text-3xl font-bold">€3,247</h3>
-                            <div className="flex items-center gap-1 mt-1 text-sm opacity-80">
-                                <ArrowUp className="w-3 h-3" />
-                                <span>Consistent growth</span>
+                        <div className="rounded-3xl p-6 text-white shadow-xl relative overflow-hidden group" style={{ background: 'linear-gradient(135deg, var(--color-warning) 0%, #d97706 100%)' }}>
+                            <div className="relative z-10">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div className="p-3 bg-white/20 backdrop-blur-md rounded-2xl"><TrendingUp className="w-6 h-6" /></div>
+                                    <span className="text-[10px] font-black bg-white/20 backdrop-blur-md px-2 py-1 rounded-full">Record</span>
+                                </div>
+                                <p className="text-white/80 text-[10px] font-black uppercase tracking-widest">Moyenne / Staff</p>
+                                <h3 className="text-2xl font-black mt-1 tabular-nums">€{(stats?.totalRevenue / (stats?.totalWorkers || 1))?.toLocaleString()}</h3>
                             </div>
                         </div>
-                    </Card>
 
-                    <Card className="text-white" style={getCardStyle(3)}>
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="p-2 bg-white/20 rounded-lg">
-                                <DollarSign className="w-6 h-6 text-white" />
-                            </div>
-                            <span className="bg-white/20 px-2 py-1 rounded text-xs">Net</span>
-                        </div>
-                        <div>
-                            <p className="text-sm opacity-90 mb-1">Net Profit</p>
-                            <h3 className="text-3xl font-bold">€23,747</h3>
-                            <div className="flex items-center gap-1 mt-1 text-sm opacity-80">
-                                <ArrowUp className="w-3 h-3" />
-                                <span>+15.2% margin</span>
+                        <div className="rounded-3xl p-6 text-white shadow-xl relative overflow-hidden group" style={{ background: 'linear-gradient(135deg, var(--color-success) 0%, #059669 100%)' }}>
+                            <div className="relative z-10">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div className="p-3 bg-white/20 backdrop-blur-md rounded-2xl"><DollarSign className="w-6 h-6" /></div>
+                                    <span className="text-[10px] font-black bg-white/20 backdrop-blur-md px-2 py-1 rounded-full">15% Marge</span>
+                                </div>
+                                <p className="text-white/80 text-[10px] font-black uppercase tracking-widest">Bénéfice Net</p>
+                                <h3 className="text-2xl font-black mt-1 tabular-nums">€{(stats?.totalRevenue * 0.15)?.toLocaleString()}</h3>
                             </div>
                         </div>
-                    </Card>
 
-                    <Card className="text-white" style={getCardStyle(4)}>
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="p-2 bg-white/20 rounded-lg">
-                                <Users className="w-6 h-6 text-white" />
+                        <div className="rounded-3xl p-6 bg-white border border-gray-100 shadow-xl group hover:border-[var(--color-primary-light)] transition-all">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="p-3 bg-gray-50 text-gray-400 rounded-2xl group-hover:bg-[var(--color-primary-light)] group-hover:text-[var(--color-primary)] transition-all"><Users className="w-6 h-6" /></div>
+                                <span className="text-[10px] font-black bg-emerald-50 text-emerald-600 px-2 py-1 rounded-full">Staff</span>
                             </div>
-                            <span className="bg-white/20 px-2 py-1 rounded text-xs">Active</span>
-                        </div>
-                        <div>
-                            <p className="text-sm opacity-90 mb-1">Total Workers</p>
-                            <h3 className="text-3xl font-bold">24</h3>
-                            <div className="flex items-center gap-1 mt-1 text-sm opacity-80">
-                                <ArrowUp className="w-3 h-3" />
-                                <span>2 new this month</span>
-                            </div>
-                        </div>
-                    </Card>
-                </div>
-
-                {/* Time Period Filter */}
-                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                    <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                        <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold text-gray-700">Time Period:</span>
-                            <div className="flex gap-2">
-                                {["Daily", "Weekly", "Monthly", "Annual"].map((period) => (
-                                    <button
-                                        key={period}
-                                        onClick={() => setSelectedPeriod(period)}
-                                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${selectedPeriod === period
-                                            ? "bg-[#A855F7] text-white"
-                                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                                            }`}
-                                    >
-                                        {period}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <button className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
-                                <ChevronLeft className="w-4 h-4" />
-                            </button>
-                            <span className="text-sm font-semibold text-gray-900 px-4">{currentDate}</span>
-                            <button className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
-                                <ChevronRight className="w-4 h-4" />
-                            </button>
+                            <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest">Équipe Active</p>
+                            <h3 className="text-2xl font-black mt-1 text-gray-900 tabular-nums">{stats?.totalWorkers}</h3>
                         </div>
                     </div>
-                </div>
 
-                {/* Daily Salary Breakdown Table */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div className="p-4 md:p-6 border-b border-gray-100">
-                        <h3 className="text-base md:text-lg font-semibold text-gray-900">Daily Salary Breakdown</h3>
-                        <p className="text-xs md:text-sm text-gray-500">Detailed view of worker earnings</p>
+                    {/* Time Period Filter */}
+                    <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
+                        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                            <div className="flex items-center gap-4">
+                                <span className="text-xs font-black uppercase tracking-widest text-gray-400">Période :</span>
+                                <div className="flex gap-2 bg-gray-50 p-1.5 rounded-2xl border border-gray-100">
+                                    {["Daily", "Weekly", "Monthly", "Annual"].map((period) => (
+                                        <button
+                                            key={period}
+                                            onClick={() => setSelectedPeriod(period)}
+                                            className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all ${selectedPeriod === period
+                                                ? "bg-white text-[var(--color-primary)] shadow-sm border border-gray-100"
+                                                : "text-gray-400 hover:text-gray-600"
+                                                }`}
+                                        >
+                                            {period}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button className="p-2.5 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all border border-gray-100 active:scale-90">
+                                    <ChevronLeft className="w-4 h-4 text-gray-400" />
+                                </button>
+                                <span className="text-sm font-black text-gray-900 px-4 tabular-nums italic">{currentDate}</span>
+                                <button className="p-2.5 bg-gray-50 hover:bg-gray-100 rounded-xl transition-all border border-gray-100 active:scale-90">
+                                    <ChevronRight className="w-4 h-4 text-gray-400" />
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    {/* Mobile Card View */}
-                    <div className="block md:hidden divide-y divide-gray-100">
-                        {dailySalaryData.map((row, idx) => (
-                            <div key={idx} className="p-4 hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => toggleMobileRow(idx)}>
-                                <div className="flex items-start justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-purple-200 rounded-full flex items-center justify-center text-[#A855F7] font-bold text-sm border border-purple-200">
-                                            {row.avatar}
+
+                    {/* Charts Section */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        {/* Weekly/Monthly Summary Table */}
+                        <Card className="p-8 border-none shadow-md bg-white rounded-3xl group">
+                            <div className="flex items-center justify-between mb-8">
+                                <div>
+                                    <h3 className="text-xl font-black text-gray-900 tracking-tight group-hover:text-[var(--color-primary)] transition-colors italic">Comparatif Financier</h3>
+                                    <p className="text-sm text-gray-400 font-medium italic">Analyse Revenu vs Salaires</p>
+                                </div>
+                                <History className="w-6 h-6 text-gray-300 group-hover:text-[var(--color-primary)] transition-all" />
+                            </div>
+                            <div className="h-[300px]">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={monthlySummary}>
+                                        <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f0f0f0" />
+                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8', fontWeight: 600 }} dy={10} />
+                                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8', fontWeight: 600 }} />
+                                        <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', padding: '12px' }} cursor={{ fill: 'var(--color-primary-light)', opacity: 0.2 }} />
+                                        <Bar dataKey="income" fill="var(--color-primary)" radius={[6, 6, 0, 0]} barSize={20} />
+                                        <Bar dataKey="salary" fill="var(--color-secondary)" radius={[6, 6, 0, 0]} barSize={10} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="flex items-center justify-center gap-10 mt-8">
+                                <div className="flex items-center gap-3 text-xs font-black uppercase tracking-widest text-gray-600">
+                                    <div className="w-4 h-4 rounded-lg bg-[var(--color-primary)]"></div> Revenu
+                                </div>
+                                <div className="flex items-center gap-3 text-xs font-black uppercase tracking-widest text-gray-600">
+                                    <div className="w-4 h-4 rounded-lg bg-[var(--color-secondary)]"></div> Salaires
+                                </div>
+                            </div>
+                        </Card>
+
+                        {/* Annual Projection / Category Breakdown */}
+                        <Card className="p-8 border-none shadow-md bg-white rounded-3xl group">
+                            <div className="flex items-center justify-between mb-8">
+                                <div>
+                                    <h3 className="text-xl font-black text-gray-900 tracking-tight group-hover:text-[var(--color-warning)] transition-colors italic">Projection & Répartition</h3>
+                                    <p className="text-sm text-gray-400 font-medium italic">Sources de revenus par catégorie</p>
+                                </div>
+                                <TrendingUp className="w-6 h-6 text-gray-300 group-hover:text-[var(--color-warning)] transition-all" />
+                            </div>
+                            <div className="flex flex-col md:flex-row items-center gap-8">
+                                <div className="relative h-64 flex-1">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={incomeProjection}
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={70}
+                                                outerRadius={95}
+                                                paddingAngle={8}
+                                                dataKey="value"
+                                            >
+                                                {incomeProjection.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                        <div className="text-center">
+                                            <p className="text-3xl font-black text-gray-900 tabular-nums">100%</p>
+                                            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Global</p>
                                         </div>
-                                        <div>
-                                            <p className="font-semibold text-gray-900">{row.worker}</p>
-                                            <p className="text-xs text-gray-500">{row.date} • {row.day}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        <div className="text-right flex flex-col items-end">
-                                            <p className="font-bold text-gray-900 text-sm">{row.income}</p>
-                                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold mt-1 ${row.status === "Paid"
-                                                ? "bg-green-100 text-green-700"
-                                                : "bg-orange-100 text-orange-700"
-                                                }`}>
-                                                {row.status}
-                                            </span>
-                                        </div>
-                                        {expandedMobileRows.includes(idx) ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
                                     </div>
                                 </div>
-
-                                {expandedMobileRows.includes(idx) && (
-                                    <div className="mt-4 pt-4 border-t border-gray-100 animate-in fade-in slide-in-from-top-2 duration-200">
-                                        <div className="mb-4">
-                                            <p className="text-xs text-gray-500 mb-1 uppercase tracking-wider font-bold">Service</p>
-                                            <p className="text-sm text-gray-700 font-medium">{row.service}</p>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                                                <p className="text-[10px] text-gray-500 mb-1 uppercase tracking-wider font-bold">Income</p>
-                                                <p className="font-bold text-gray-900">{row.income}</p>
-                                            </div>
-                                            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                                                <p className="text-[10px] text-gray-500 mb-1 uppercase tracking-wider font-bold">Salary</p>
-                                                <p className="font-bold text-gray-900">{row.salary}</p>
-                                            </div>
-                                            <div className="bg-green-50 p-3 rounded-xl border border-green-100">
-                                                <p className="text-[10px] text-green-600 mb-1 uppercase tracking-wider font-bold">Tips</p>
-                                                <p className="font-bold text-green-700">{row.tips}</p>
-                                            </div>
-                                            <div className="bg-[var(--color-primary-light)] p-3 rounded-xl border border-[var(--color-primary-light)]">
-                                                <p className="text-[10px] text-[var(--color-primary)] mb-1 uppercase tracking-wider font-bold">Total</p>
-                                                <p className="font-bold text-[var(--color-primary)]">{row.total}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                    {/* Desktop Table View */}
-                    <div className="hidden md:block overflow-x-auto -mx-6 px-6 pb-2 scrollbar-thin scrollbar-thumb-purple-100 scrollbar-track-transparent">
-                        <table className="w-full min-w-[1000px]">
-                            <thead className="bg-gray-50 border-b border-gray-100 bg-white sticky top-0 z-10 italic">
-                                <tr>
-                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Date</th>
-                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Day</th>
-                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Worker</th>
-                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Service</th>
-                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Income</th>
-                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Comm %</th>
-                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Salary</th>
-                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tips</th>
-                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</th>
-                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {dailySalaryData.map((row, idx) => (
-                                    <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                                        <td className="px-6 py-4 text-sm text-gray-700">{row.date}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-600">{row.day}</td>
-                                        <td className="px-6 py-4">
+                                <div className="flex-1 space-y-4">
+                                    {incomeProjection.map((item, idx) => (
+                                        <div key={idx} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-transparent hover:border-gray-100 transition-all">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 bg-gradient-to-br from-purple-100 to-purple-200 rounded-full flex items-center justify-center text-[#A855F7] font-bold text-xs border border-purple-200">
-                                                    {row.avatar}
-                                                </div>
-                                                <span className="font-medium text-gray-900">{row.worker}</span>
+                                                <div className="w-4 h-4 rounded-lg shadow-sm" style={{ backgroundColor: item.color }}></div>
+                                                <span className="text-xs font-black text-gray-500 uppercase tracking-widest">{item.name}</span>
                                             </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-gray-700">{row.service}</td>
-                                        <td className="px-6 py-4 text-sm font-semibold text-gray-900">{row.income}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-600">{row.commission}</td>
-                                        <td className="px-6 py-4 text-sm font-medium text-gray-900">{row.salary}</td>
-                                        <td className="px-6 py-4 text-sm text-green-600 font-medium">{row.tips}</td>
-                                        <td className="px-6 py-4 text-sm font-bold text-gray-900">{row.total}</td>
-                                        <td className="px-6 py-4">
-                                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${row.status === "Paid"
-                                                ? "bg-green-100 text-green-700"
-                                                : "bg-orange-100 text-orange-700"
-                                                }`}>
-                                                {row.status}
-                                            </span>
-                                        </td>
+                                            <span className="font-black text-gray-900 tabular-nums">{item.value}%</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </Card>
+                    </div>
+
+                    {/* Daily Salary Breakdown Table */}
+                    <Card className="border-none shadow-md bg-white rounded-3xl overflow-hidden group">
+                        <div className="p-8 border-b-2 border-gray-50 flex justify-between items-center">
+                            <div>
+                                <h3 className="text-xl font-black text-gray-900 tracking-tight italic">Journal des Revenus</h3>
+                                <p className="text-sm text-gray-400 font-medium italic">Détails des prestations et gains</p>
+                            </div>
+                            <Button variant="outline" size="sm" className="rounded-xl font-black uppercase text-[10px] tracking-widest px-6 border-gray-100 group-hover:border-[var(--color-primary)] transition-all">Tout Voir</Button>
+                        </div>
+
+                        <div className="overflow-x-auto px-8">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="border-b-2 border-gray-50 italic">
+                                        <th className="px-4 py-6 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Date</th>
+                                        <th className="px-4 py-6 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Équipe</th>
+                                        <th className="px-4 py-6 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Prestation</th>
+                                        <th className="px-4 py-6 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">Revenu</th>
+                                        <th className="px-4 py-6 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">Statut</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50">
+                                    {dailyBreakdown.map((row, idx) => (
+                                        <tr key={idx} className="hover:bg-purple-50/30 transition-colors group/row">
+                                            <td className="px-4 py-8 text-sm font-black text-gray-900 tabular-nums italic">{format(new Date(row.date), "dd/MM")}</td>
+                                            <td className="px-4 py-8">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center text-[var(--color-primary)] font-black text-sm shadow-inner group-hover/row:scale-110 transition-transform">
+                                                        {row.workerName?.charAt(0) || "W"}
+                                                    </div>
+                                                    <span className="font-black text-gray-700 text-sm tracking-tight">{row.workerName || "Membre Team"}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-8 text-sm font-bold text-gray-500 italic">{row.description || "Service Salon"}</td>
+                                            <td className="px-4 py-8 text-right font-black text-gray-900 tabular-nums text-lg">€{row.amount}</td>
+                                            <td className="px-4 py-8 text-center">
+                                                <span className={`inline-flex items-center px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm border ${row.status === "Closed" || row.status === "Validated"
+                                                    ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+                                                    : "bg-orange-50 text-orange-700 border-orange-100"
+                                                    }`}>
+                                                    {row.status}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </Card>
 
-                {/* Charts Section */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Weekly Summary */}
-                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                        <div className="flex items-center justify-between mb-6">
-                            <div>
-                                <h3 className="text-lg font-semibold text-gray-900">Weekly Summary</h3>
-                                <p className="text-sm text-gray-500">Income vs Salary comparison</p>
-                            </div>
-                            <button className="text-[#A855F7] text-sm font-medium hover:underline">View Details</button>
+                    {/* Worker Performance Comparison */}
+                    <div>
+                        <div className="flex justify-between items-center mb-6 px-2">
+                            <h3 className="text-xl font-black text-gray-900 tracking-tight italic">Performance Équipe</h3>
+                            <button onClick={() => router.push("/team")} className="text-xs font-black text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] px-5 py-2.5 rounded-xl transition-all border border-transparent hover:border-[var(--color-primary-light)] uppercase tracking-widest flex items-center gap-2">
+                                <Users className="w-4 h-4" />
+                                Détails Staff
+                            </button>
                         </div>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={weeklySummaryData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                                <XAxis dataKey="name" stroke="#6B7280" />
-                                <YAxis stroke="#6B7280" />
-                                <Tooltip
-                                    contentStyle={{
-                                        backgroundColor: '#fff',
-                                        border: '1px solid #E5E7EB',
-                                        borderRadius: '8px'
-                                    }}
-                                />
-                                <Bar dataKey="income" fill="#8B5CF6" radius={[8, 8, 0, 0]} />
-                                <Bar dataKey="salary" fill="#EC4899" radius={[8, 8, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                        <div className="flex items-center justify-center gap-6 mt-4">
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-[#8B5CF6] rounded"></div>
-                                <span className="text-sm text-gray-600">Income</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-[#EC4899] rounded"></div>
-                                <span className="text-sm text-gray-600">Salary</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Monthly Summary */}
-                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                        <div className="flex items-center justify-between mb-6">
-                            <div>
-                                <h3 className="text-lg font-semibold text-gray-900">Monthly Summary</h3>
-                                <p className="text-sm text-gray-500">6-month performance trend</p>
-                            </div>
-                            <button className="text-[#A855F7] text-sm font-medium hover:underline">View Details</button>
-                        </div>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={monthlySummaryData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                                <XAxis dataKey="name" stroke="#6B7280" />
-                                <YAxis stroke="#6B7280" />
-                                <Tooltip
-                                    contentStyle={{
-                                        backgroundColor: '#fff',
-                                        border: '1px solid #E5E7EB',
-                                        borderRadius: '8px'
-                                    }}
-                                />
-                                <Bar dataKey="income" fill="#8B5CF6" radius={[8, 8, 0, 0]} />
-                                <Bar dataKey="salary" fill="#10B981" radius={[8, 8, 0, 0]} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                        <div className="flex items-center justify-center gap-6 mt-4">
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-[#8B5CF6] rounded"></div>
-                                <span className="text-sm text-gray-600">Income</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 bg-[#10B981] rounded"></div>
-                                <span className="text-sm text-gray-600">Salary</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Annual Projection & Worker Performance */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Annual Projection */}
-                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                        <div className="mb-6">
-                            <h3 className="text-lg font-semibold text-gray-900">Annual Projection</h3>
-                            <p className="text-sm text-gray-500">Income breakdown by category</p>
-                        </div>
-                        <div className="flex flex-col items-center">
-                            <ResponsiveContainer width="100%" height={250}>
-                                <PieChart>
-                                    <Pie
-                                        data={annualProjectionData}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={60}
-                                        outerRadius={90}
-                                        paddingAngle={5}
-                                        dataKey="value"
-                                    >
-                                        {annualProjectionData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.color} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip />
-                                </PieChart>
-                            </ResponsiveContainer>
-                            <div className="grid grid-cols-2 gap-4 mt-4 w-full">
-                                {annualProjectionData.map((item, idx) => (
-                                    <div key={idx} className="flex items-center gap-2">
-                                        <div className="w-3 h-3 rounded" style={{ backgroundColor: item.color }}></div>
-                                        <span className="text-sm text-gray-600">{item.name}: {item.value}%</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="mt-6 pt-6 border-t border-gray-100">
-                            <div className="grid grid-cols-3 gap-4">
-                                <div className="text-center">
-                                    <p className="text-2xl font-bold text-gray-900">€545K</p>
-                                    <p className="text-xs text-gray-500 mt-1">Projected Total</p>
-                                </div>
-                                <div className="text-center">
-                                    <p className="text-2xl font-bold text-green-600">+23%</p>
-                                    <p className="text-xs text-gray-500 mt-1">Growth Rate</p>
-                                </div>
-                                <div className="text-center">
-                                    <p className="text-2xl font-bold text-gray-900">€245K</p>
-                                    <p className="text-xs text-gray-500 mt-1">Total Salaries</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Payment Status */}
-                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                        <div className="mb-6">
-                            <h3 className="text-lg font-semibold text-gray-900">Payment Status</h3>
-                            <p className="text-sm text-gray-500">Current payment distribution</p>
-                        </div>
-                        <div className="flex flex-col items-center">
-                            <ResponsiveContainer width="100%" height={200}>
-                                <PieChart>
-                                    <Pie
-                                        data={paymentStatusData}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={50}
-                                        outerRadius={80}
-                                        paddingAngle={5}
-                                        dataKey="value"
-                                    >
-                                        {paymentStatusData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.color} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip />
-                                </PieChart>
-                            </ResponsiveContainer>
-                            <div className="flex gap-6 mt-4">
-                                {paymentStatusData.map((item, idx) => (
-                                    <div key={idx} className="flex items-center gap-2">
-                                        <div className="w-3 h-3 rounded" style={{ backgroundColor: item.color }}></div>
-                                        <span className="text-sm text-gray-600">{item.name}: {item.value}%</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                        <div className="mt-6 pt-6 border-t border-gray-100">
-                            <h4 className="font-semibold text-gray-900 mb-4">Pending Payments</h4>
-                            <div className="space-y-3">
-                                {pendingPayments.map((payment, idx) => (
-                                    <div key={idx} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-100">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 bg-gradient-to-br from-orange-100 to-orange-200 rounded-full flex items-center justify-center text-orange-700 font-bold text-xs">
-                                                {payment.worker.charAt(0)}
-                                            </div>
-                                            <div>
-                                                <p className="font-medium text-gray-900 text-sm">{payment.worker}</p>
-                                                <p className="text-xs text-gray-500">{payment.service} • {payment.date}</p>
-                                            </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="font-bold text-gray-900">{payment.amount}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Worker Performance Comparison */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <div className="mb-6">
-                        <h3 className="text-lg font-semibold text-gray-900">Worker Performance Comparison</h3>
-                        <p className="text-sm text-gray-500">Top performers this period</p>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {workerPerformanceData.map((worker, idx) => (
-                            <Link key={idx} href={`/team/detail/${idx + 1}`}>
-                                <div
-                                    className="p-4 rounded-xl border-2 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer bg-white group"
-                                    style={{ borderColor: worker.color }}
-                                >
-                                    <div className="flex items-center gap-3 mb-4">
-                                        <div
-                                            className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold"
-                                            style={{ backgroundColor: worker.color }}
-                                        >
-                                            {worker.name.charAt(0)}
-                                        </div>
-                                        <div className="flex-1">
-                                            <h4 className="font-semibold text-gray-900 flex items-center justify-between">
-                                                {worker.name}
-                                                <TrendingUp className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: worker.color }} />
-                                            </h4>
-                                            <p className="text-xs text-gray-500">{worker.services} services</p>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <div className="flex justify-between items-center text-sm p-1.5 rounded-lg group-hover:bg-gray-50 transition-colors">
-                                            <span className="text-xs text-gray-500">Income</span>
-                                            <span className="font-semibold text-gray-900">€{worker.income.toLocaleString()}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-sm p-1.5 rounded-lg group-hover:bg-gray-50 transition-colors">
-                                            <span className="text-xs text-gray-500">Salary</span>
-                                            <span className="font-semibold text-gray-900">€{worker.salary.toLocaleString()}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center text-sm p-1.5 rounded-lg group-hover:bg-gray-50 transition-colors">
-                                            <span className="text-xs text-gray-500">Tips</span>
-                                            <span className="font-semibold text-green-600">€{worker.tips.toLocaleString()}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </Link>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Detailed Breakdown by Worker */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                    <div className="mb-6">
-                        <h3 className="text-lg font-semibold text-gray-900">Detailed Breakdown by Worker</h3>
-                        <p className="text-sm text-gray-500">Expand to view individual worker details</p>
-                    </div>
-                    <div className="space-y-3">
-                        {workerPerformanceData.map((worker, idx) => (
-                            <details key={idx} className="group">
-                                <summary
-                                    className="cursor-pointer p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-between"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div
-                                            className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
-                                            style={{ backgroundColor: worker.color }}
-                                        >
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {workerPerformance.map((worker, idx) => (
+                                <Card key={idx}
+                                    className="p-8 border-none shadow-md bg-white rounded-3xl group cursor-pointer hover:shadow-2xl hover:scale-[1.02] transition-all duration-300"
+                                    onClick={() => router.push(`/team/detail/${worker.workerId}`)}>
+                                    <div className="flex items-center gap-5 mb-8">
+                                        <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-white font-black text-2xl shadow-lg ring-4 ring-offset-2 ring-transparent group-hover:ring-[var(--color-primary-light)] transition-all" style={{ backgroundColor: worker.color }}>
                                             {worker.name.charAt(0)}
                                         </div>
                                         <div>
-                                            <h4 className="font-semibold text-gray-900">{worker.name}</h4>
-                                            <p className="text-xs text-gray-500">{worker.services} completed</p>
+                                            <h4 className="text-lg font-black text-gray-900 group-hover:text-[var(--color-primary)] transition-colors italic tracking-tight">{worker.name}</h4>
+                                            <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">{worker.services} Prestations</p>
                                         </div>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="font-bold text-gray-900">€{worker.income.toLocaleString()}</p>
-                                        <p className="text-xs text-gray-500">Total Income</p>
-                                    </div>
-                                </summary>
-                                <div className="mt-3 p-4 bg-white border border-gray-100 rounded-lg">
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div className="p-3 bg-purple-50 rounded-lg">
-                                            <p className="text-xs text-gray-500 mb-1">Total Income</p>
-                                            <p className="text-xl font-bold text-gray-900">€{worker.income.toLocaleString()}</p>
+
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center p-4 bg-gray-50 rounded-2xl transition-all group-hover:bg-white group-hover:shadow-inner">
+                                            <span className="text-[10px] text-gray-400 font-extrabold uppercase tracking-widest font-black">CA</span>
+                                            <span className="font-black text-gray-900 tabular-nums">€{worker.monthRevenue.toLocaleString()}</span>
                                         </div>
-                                        <div className="p-3 bg-pink-50 rounded-lg">
-                                            <p className="text-xs text-gray-500 mb-1">Total Salary</p>
-                                            <p className="text-xl font-bold text-gray-900">€{worker.salary.toLocaleString()}</p>
+                                        <div className="flex justify-between items-center p-4 bg-gray-50 rounded-2xl transition-all group-hover:bg-white group-hover:shadow-inner">
+                                            <span className="text-[10px] text-gray-400 font-extrabold uppercase tracking-widest font-black">Salaire</span>
+                                            <span className="font-black text-gray-900 tabular-nums">€{(worker.monthRevenue * 0.45).toLocaleString()}</span>
                                         </div>
-                                        <div className="p-3 bg-green-50 rounded-lg">
-                                            <p className="text-xs text-gray-500 mb-1">Total Tips</p>
-                                            <p className="text-xl font-bold text-green-600">€{worker.tips.toLocaleString()}</p>
+                                        <div className="flex justify-between items-center p-4 bg-emerald-50 rounded-2xl transition-all group-hover:bg-white">
+                                            <span className="text-[10px] text-emerald-500 font-extrabold uppercase tracking-widest font-black">Tips</span>
+                                            <span className="font-black text-emerald-600 tabular-nums">€{worker.tips?.toLocaleString()}</span>
                                         </div>
                                     </div>
-                                </div>
-                            </details>
-                        ))}
+
+                                    <div className="mt-6 pt-6 border-t border-gray-50 flex items-center justify-between">
+                                        <div className="flex text-yellow-400 scale-90 -translate-x-1">
+                                            {"★".repeat(5)}
+                                        </div>
+                                        <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest italic pt-1">Rang #{idx + 1}</span>
+                                    </div>
+                                </Card>
+                            ))}
+                        </div>
                     </div>
                 </div>
-            </div>
-        </MainLayout>
+            </MainLayout>
+        </RequirePermission>
     );
 }

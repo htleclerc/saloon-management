@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -9,6 +9,9 @@ import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
 import { useAuth } from "@/context/AuthProvider";
 import { useBooking } from "@/context/BookingProvider";
 import { useConfirm } from "@/context/ConfirmProvider";
+import { format } from "date-fns";
+import { workerService, incomeService } from "@/lib/services";
+import { SalonWorker, Income } from "@/types";
 import {
     Calendar,
     ChevronLeft,
@@ -24,25 +27,45 @@ import {
 } from "lucide-react";
 
 export default function DailyPage() {
-    const [selectedDate, setSelectedDate] = useState("2026-01-19"); // Hardcoded to match task context if needed
+    const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
     const { getCardStyle } = useKpiCardStyle();
-    const { user, hasPermission, getWorkerId, canModify } = useAuth();
+    const { user, hasPermission, getWorkerId, canModify, activeSalonId } = useAuth();
     const { bookings, startBooking } = useBooking();
     const { confirm } = useConfirm();
+    const [workers, setWorkers] = useState<SalonWorker[]>([]);
+    const [draftIncome, setDraftIncome] = useState(0);
+
+    useEffect(() => {
+        if (activeSalonId) {
+            workerService.getAll(Number(activeSalonId)).then(setWorkers);
+
+            incomeService.getAll(Number(activeSalonId), {
+                startDate: selectedDate,
+                endDate: selectedDate,
+                status: 'Draft'
+            }).then((incomes: Income[]) => {
+                const total = incomes.reduce((sum, inc) => sum + inc.finalAmount, 0);
+                setDraftIncome(total);
+            });
+        }
+    }, [activeSalonId, selectedDate]);
 
     const workerId = getWorkerId();
     const isWorker = user?.role === 'worker';
 
-    // Simple date filter for demo: only today's bookings
+    // Simple date filter: only selected date bookings
     const dailyBookings = bookings.filter(b => b.date === selectedDate);
 
-    const filteredAppointments = isWorker
-        ? dailyBookings.filter(apt => (apt.workerIds || []).includes(Number(workerId) || 0))
-        : dailyBookings;
+    const filteredAppointments = useMemo(() => {
+        return isWorker
+            ? dailyBookings.filter(apt => (apt.workerIds || []).includes(Number(workerId) || 0))
+            : dailyBookings;
+    }, [isWorker, dailyBookings, workerId]);
 
-    const availableWorkers = isWorker
-        ? [user?.name || 'Worker']
-        : ['Orphelia', 'Worker 2', 'Worker 3'];
+    const availableWorkers = useMemo(() => {
+        if (isWorker) return [user?.name || 'Worker'];
+        return workers.map(w => w.name);
+    }, [isWorker, user, workers]);
 
     const handleStart = async (id: number) => {
         const isConfirmed = await confirm({
@@ -108,7 +131,7 @@ export default function DailyPage() {
                     />
                     <StatCard
                         title="Income (Draft)"
-                        value="€-- "
+                        value={`€${draftIncome.toLocaleString()}`}
                         subtitle="Calculated on validation"
                         icon={DollarSign}
                         gradient=""
@@ -133,7 +156,7 @@ export default function DailyPage() {
                                             <div className="text-lg font-bold text-purple-600 w-16">{apt.time}</div>
                                             <div>
                                                 <p className="font-bold text-gray-900">{apt.clientName}</p>
-                                                <p className="text-sm text-gray-500">Service: {apt.serviceIds.join(", ")}</p>
+                                                <p className="text-sm text-gray-500">Service: {(apt.serviceIds || []).join(", ")}</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-4">

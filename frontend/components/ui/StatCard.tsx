@@ -36,7 +36,7 @@ export default function StatCard({
             </div>
             {change && (
                 <div className="flex items-center gap-1">
-                    <span className={`text-sm font-medium ${changeType === "positive" ? "text-green-200" : "text-red-200"}`}>
+                    <span className={`text-sm font-medium ${changeType === "positive" ? "text-success-light" : "text-error-light"}`}>
                         {change}
                     </span>
                     <span className="text-sm opacity-75">vs last month</span>

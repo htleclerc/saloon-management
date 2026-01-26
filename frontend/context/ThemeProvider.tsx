@@ -52,7 +52,7 @@ interface ThemeContextType {
 }
 
 const defaultTheme: ThemeSettings = {
-    submenuLayout: "vertical",
+    submenuLayout: "horizontal",
     designType: "modern",
     sidebarCollapsed: false,
     colorPaletteId: "purple-pink",

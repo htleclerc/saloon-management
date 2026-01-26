@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import { useProducts } from "@/context/ProductProvider";
 import { useAuth } from "@/context/AuthProvider";
 import {
     Package,
@@ -22,9 +21,51 @@ import { useToast } from "@/context/ToastProvider";
 import { useConfirm } from "@/context/ConfirmProvider";
 import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 
+import { productService } from "@/lib/services";
+import { useEffect } from "react";
+
 export default function InventoryPage() {
-    const { products, addProduct, updateProduct, deleteProduct } = useProducts();
-    const { canModify } = useAuth();
+    const [products, setProducts] = useState<any[]>([]);
+    const { canModify, activeSalonId } = useAuth();
+
+    // Load Products
+    const loadProducts = () => {
+        if (activeSalonId) {
+            productService.getAll(Number(activeSalonId)).then(setProducts);
+        }
+    };
+
+    useEffect(() => {
+        loadProducts();
+    }, [activeSalonId]);
+
+    const addProduct = async (data: any) => {
+        try {
+            await productService.create({ ...data, salonId: Number(activeSalonId) });
+            loadProducts();
+            addToast("Product added successfully", "success");
+        } catch (e) {
+            addToast("Failed to add product", "error");
+        }
+    };
+
+    const updateProduct = async (id: number, data: any) => {
+        try {
+            await productService.update(id, data);
+            loadProducts();
+        } catch (e) {
+            addToast("Failed to update product", "error");
+        }
+    };
+
+    const deleteProduct = async (id: number) => {
+        try {
+            await productService.delete(id);
+            loadProducts();
+        } catch (e) {
+            addToast("Failed to delete product", "error");
+        }
+    };
     const { addToast } = useToast();
     const { confirm } = useConfirm();
     const { handleReadOnlyClick } = useReadOnlyGuard();

@@ -5,53 +5,84 @@ import Card from "@/components/ui/Card";
 import StatCard from "@/components/ui/StatCard";
 import { BarChart3, TrendingUp, Star, Users, Award, Target } from "lucide-react";
 import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
+import { useCurrency } from "@/hooks/useCurrency";
+import { useTranslation } from "@/i18n";
 
-const performanceData = [
-    { name: "Orphelia", revenue: 45830, services: 203, rating: 4.9, growth: "+12%" },
-    { name: "Worker 2", revenue: 38650, services: 178, rating: 4.8, growth: "+8%" },
-    { name: "Worker 3", revenue: 42200, services: 189, rating: 4.7, growth: "+15%" },
-    { name: "Worker 4", revenue: 35420, services: 165, rating: 4.6, growth: "+5%" },
-    { name: "Worker 5", revenue: 28340, services: 134, rating: 4.5, growth: "-3%" },
-    { name: "Worker 6", revenue: 39850, services: 192, rating: 4.8, growth: "+10%" },
-];
+import { statsService } from "@/lib/services/StatsService";
+import { useEffect, useState } from "react";
+import { WorkerStats } from "@/types";
+
+interface PerformanceData extends WorkerStats {
+    growth: string;
+}
 
 export default function TeamPerformancePage() {
     const { getCardStyle } = useKpiCardStyle();
-    const totalIncome = performanceData.reduce((sum, w) => sum + w.revenue, 0);
-    const avgRating = (performanceData.reduce((sum, w) => sum + w.rating, 0) / performanceData.length).toFixed(1);
+    const { format } = useCurrency();
+    const { t } = useTranslation();
+    const [performanceData, setPerformanceData] = useState<PerformanceData[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const loadStats = async () => {
+            try {
+                const stats = await statsService.getAllWorkersStats(1);
+                // Mock growth calculation for now since we don't have historical data granular enough in WorkerStats
+                const enhancedStats = stats.map(s => ({
+                    ...s,
+                    growth: Math.random() > 0.3 ? `+${Math.floor(Math.random() * 20)}%` : `-${Math.floor(Math.random() * 10)}%`
+                }));
+                setPerformanceData(enhancedStats);
+            } catch (error) {
+                console.error("Failed to load performance stats", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadStats();
+    }, []);
+
+    const totalIncome = performanceData.reduce((sum, w) => sum + w.totalRevenue, 0);
+    const avgRating = performanceData.length > 0
+        ? (performanceData.reduce((sum, w) => sum + w.avgRating, 0) / performanceData.length).toFixed(1)
+        : "0.0";
+    const totalServices = performanceData.reduce((sum, w) => sum + w.completedBookings, 0);
+    const topPerformer = performanceData.length > 0
+        ? performanceData.reduce((prev, current) => (prev.totalRevenue > current.totalRevenue) ? prev : current).name
+        : "-";
 
     return (
         <TeamLayout
-            title="Performance"
-            description="Track team performance and statistics"
+            title={t("team.performance")}
+            description={t("team.performanceDesc")}
         >
             {/* Stats Overview */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <StatCard
-                    title="Total Income"
-                    value={`€${totalIncome.toLocaleString()}`}
+                    title={t("team.totalIncome")}
+                    value={format(totalIncome)}
                     icon={TrendingUp}
                     gradient=""
                     style={getCardStyle(0)}
                 />
                 <StatCard
-                    title="Average Rating"
+                    title={t("team.avgRating")}
                     value={avgRating}
-                    subtitle="out of 5"
+                    subtitle={t("team.outOf5")}
                     icon={Star}
                     gradient=""
                     style={getCardStyle(1)}
                 />
                 <StatCard
-                    title="Services Completed"
-                    value={performanceData.reduce((sum, w) => sum + w.services, 0)}
+                    title={t("team.servicesCompleted")}
+                    value={totalServices}
                     icon={BarChart3}
                     gradient=""
                     style={getCardStyle(2)}
                 />
                 <StatCard
-                    title="Top Performer"
-                    value="Orphelia"
+                    title={t("team.topPerformer")}
+                    value={topPerformer}
                     icon={Award}
                     gradient=""
                     style={getCardStyle(3)}
@@ -61,28 +92,28 @@ export default function TeamPerformancePage() {
             {/* Performance Table */}
             <Card>
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-semibold text-gray-900 text-lg">Performance Ranking</h3>
+                    <h3 className="font-semibold text-gray-900 text-lg">{t("team.performanceRanking")}</h3>
                     <select className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]">
-                        <option>This month</option>
-                        <option>This quarter</option>
-                        <option>This year</option>
+                        <option>{t("team.thisMonth")}</option>
+                        <option>{t("team.thisQuarter")}</option>
+                        <option>{t("team.thisYear")}</option>
                     </select>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead className="bg-gray-50">
                             <tr>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Rank</th>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Team Member</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Income</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Services</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Rating</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Growth</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("team.rank")}</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("team.team")}</th>
+                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">{t("common.income")}</th>
+                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">{t("common.services")}</th>
+                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">{t("common.rating")}</th>
+                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">{t("team.growth")}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {performanceData
-                                .sort((a, b) => b.revenue - a.revenue)
+                                .sort((a, b) => b.totalRevenue - a.totalRevenue)
                                 .map((worker, idx) => (
                                     <tr key={worker.name} className="hover:bg-gray-50">
                                         <td className="px-4 py-4">
@@ -95,12 +126,12 @@ export default function TeamPerformancePage() {
                                             </span>
                                         </td>
                                         <td className="px-4 py-4 font-medium text-gray-900">{worker.name}</td>
-                                        <td className="px-4 py-4 text-right font-semibold text-gray-900">€{worker.revenue.toLocaleString()}</td>
-                                        <td className="px-4 py-4 text-right text-gray-600">{worker.services}</td>
+                                        <td className="px-4 py-4 text-right font-semibold text-gray-900">{format(worker.totalRevenue)}</td>
+                                        <td className="px-4 py-4 text-right text-gray-600">{worker.completedBookings}</td>
                                         <td className="px-4 py-4 text-right">
                                             <div className="flex items-center justify-end gap-1">
                                                 <Star className="w-4 h-4 text-[var(--color-warning)] fill-[var(--color-warning)]" />
-                                                <span className="font-medium">{worker.rating}</span>
+                                                <span className="font-medium">{worker.avgRating}</span>
                                             </div>
                                         </td>
                                         <td className="px-4 py-4 text-right">
@@ -123,15 +154,15 @@ export default function TeamPerformancePage() {
                         <Target className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                        <h3 className="font-semibold text-gray-900">Monthly Goals</h3>
-                        <p className="text-xs text-gray-500">Progress towards team goals</p>
+                        <h3 className="font-semibold text-gray-900">{t("team.monthlyGoals")}</h3>
+                        <p className="text-xs text-gray-500">{t("team.goalsDesc")}</p>
                     </div>
                 </div>
                 <div className="space-y-4">
                     <div>
                         <div className="flex justify-between mb-1">
-                            <span className="text-sm font-medium text-gray-700">Total Income</span>
-                            <span className="text-sm text-gray-600">€{totalIncome.toLocaleString()} / €250,000</span>
+                            <span className="text-sm font-medium text-gray-700">{t("team.totalIncome")}</span>
+                            <span className="text-sm text-gray-600">{format(totalIncome)} / {format(250000)}</span>
                         </div>
                         <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
                             <div className="h-full bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-dark)] rounded-full" style={{ width: `${(totalIncome / 250000) * 100}%` }} />
@@ -139,7 +170,7 @@ export default function TeamPerformancePage() {
                     </div>
                     <div>
                         <div className="flex justify-between mb-1">
-                            <span className="text-sm font-medium text-gray-700">Customer Satisfaction</span>
+                            <span className="text-sm font-medium text-gray-700">{t("team.customerSatisfaction")}</span>
                             <span className="text-sm text-gray-600">{avgRating} / 5.0</span>
                         </div>
                         <div className="h-3 bg-gray-100 rounded-full overflow-hidden">

@@ -5,32 +5,60 @@ import { useRouter } from "next/navigation";
 import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import { Save, X } from "lucide-react";
+import { Save, X, AlertCircle, Loader2 } from "lucide-react";
+import { useAuth } from "@/context/AuthProvider";
+import { clientService } from "@/lib/services/ClientService";
 
 import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 
 export default function AddClientPage() {
     const router = useRouter();
+    const { activeSalonId } = useAuth();
     const { handleReadOnlyClick } = useReadOnlyGuard();
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
     const [formData, setFormData] = useState({
-        firstName: "",
-        lastName: "",
+        name: "",
         email: "",
         phone: "",
         address: "",
         city: "",
         zipCode: "",
         country: "France",
-        type: "Regular",
         notes: "",
     });
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         if (handleReadOnlyClick()) return;
         e.preventDefault();
-        // TODO: Submit to API
-        console.log("Client data:", formData);
-        router.push("/clients");
+
+        if (!activeSalonId) {
+            setError("No active salon selected");
+            return;
+        }
+
+        setIsSubmitting(true);
+        setError(null);
+
+        try {
+            await clientService.create({
+                salonId: Number(activeSalonId),
+                name: formData.name,
+                email: formData.email,
+                phone: formData.phone,
+                address: `${formData.address}${formData.city ? ', ' + formData.city : ''}`,
+                city: formData.city,
+                postalCode: formData.zipCode,
+                notes: formData.notes,
+                isActive: true
+            });
+            router.push("/clients");
+        } catch (err: any) {
+            setError(err.message || "Failed to create client");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -56,33 +84,27 @@ export default function AddClientPage() {
                 <form onSubmit={handleSubmit}>
                     <Card>
                         <h3 className="text-lg font-semibold mb-6">Personal Information</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    First Name <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    name="firstName"
-                                    value={formData.firstName}
-                                    onChange={handleChange}
-                                    required
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                    placeholder="Enter first name"
-                                />
+
+                        {error && (
+                            <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center gap-2">
+                                <AlertCircle className="w-5 h-5 text-red-500" />
+                                {error}
                             </div>
-                            <div>
+                        )}
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="md:col-span-2">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Last Name <span className="text-red-500">*</span>
+                                    Full Name <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="text"
-                                    name="lastName"
-                                    value={formData.lastName}
+                                    name="name"
+                                    value={formData.name}
                                     onChange={handleChange}
                                     required
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                    placeholder="Enter last name"
+                                    placeholder="Enter full name"
                                 />
                             </div>
                             <div>
@@ -160,18 +182,6 @@ export default function AddClientPage() {
                                     <option>Other</option>
                                 </select>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Client Type</label>
-                                <select
-                                    name="type"
-                                    value={formData.type}
-                                    onChange={handleChange}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                >
-                                    <option>Regular</option>
-                                    <option>VIP</option>
-                                </select>
-                            </div>
                             <div className="md:col-span-2">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
                                 <textarea
@@ -185,9 +195,13 @@ export default function AddClientPage() {
                             </div>
                         </div>
                         <div className="flex gap-4 mt-8">
-                            <Button type="submit" variant="success" size="lg" className="flex-1">
-                                <Save className="w-5 h-5" />
-                                Save Client
+                            <Button type="submit" variant="success" size="lg" className="flex-1" disabled={isSubmitting}>
+                                {isSubmitting ? (
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                ) : (
+                                    <Save className="w-5 h-5" />
+                                )}
+                                {isSubmitting ? "Saving..." : "Save Client"}
                             </Button>
                             <Button type="button" variant="danger" size="lg" onClick={() => router.back()}>
                                 <X className="w-5 h-5" />

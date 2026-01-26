@@ -1,4 +1,5 @@
 import { useAuth } from '@/context/AuthProvider';
+import { useTranslation } from '@/i18n';
 
 /**
  * Hook for managing read-only mode behavior
@@ -6,6 +7,7 @@ import { useAuth } from '@/context/AuthProvider';
  */
 export function useReadOnlyMode() {
     const { isReadOnlyMode, isSuperAdmin } = useAuth();
+    const { t } = useTranslation();
 
     /**
      * Wraps a callback to prevent execution in read-only mode
@@ -13,7 +15,7 @@ export function useReadOnlyMode() {
      */
     const disableAction = (callback: () => void) => {
         if (isReadOnlyMode) {
-            alert('❌ Action non autorisée en mode lecture seule.\n\nVous consultez ce salon en tant que Super Admin. Pour effectuer des modifications, demandez au propriétaire de vous ajouter comme administrateur.');
+            alert(`❌ ${t("common.readOnlyTitle")}\n\n${t("common.readOnlyMessage")}`);
             return;
         }
         callback();

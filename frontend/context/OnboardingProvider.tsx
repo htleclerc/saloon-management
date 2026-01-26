@@ -8,7 +8,7 @@ import type {
     Product,
     ExpenseCategory,
     Client,
-    Worker,
+    SalonWorker,
     CSVImportResult,
     CSVImportError
 } from "@/types";
@@ -37,8 +37,8 @@ interface OnboardingContextType {
     setClients: (clients: Client[]) => void;
     addClient: (client: Client) => void;
     removeClient: (clientId: number) => void;
-    setWorkers: (workers: Omit<Worker, 'id' | 'totalRevenue' | 'totalSalary' | 'clients' | 'rating' | 'services' | 'monthRevenue' | 'monthSalary' | 'yearRevenue' | 'yearSalary'>[]) => void;
-    addWorker: (worker: Omit<Worker, 'id' | 'totalRevenue' | 'totalSalary' | 'clients' | 'rating' | 'services' | 'monthRevenue' | 'monthSalary' | 'yearRevenue' | 'yearSalary'>) => void;
+    setWorkers: (workers: Omit<SalonWorker, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>[]) => void;
+    addWorker: (worker: Omit<SalonWorker, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>) => void;
     removeWorker: (index: number) => void;
 
     // Completion
@@ -185,11 +185,11 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         }));
     };
 
-    const setWorkers = (workers: Omit<Worker, 'id' | 'totalRevenue' | 'totalSalary' | 'clients' | 'rating' | 'services' | 'monthRevenue' | 'monthSalary' | 'yearRevenue' | 'yearSalary'>[]) => {
+    const setWorkers = (workers: Omit<SalonWorker, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>[]) => {
         setConfig(prev => ({ ...prev, workers }));
     };
 
-    const addWorker = (worker: Omit<Worker, 'id' | 'totalRevenue' | 'totalSalary' | 'clients' | 'rating' | 'services' | 'monthRevenue' | 'monthSalary' | 'yearRevenue' | 'yearSalary'>) => {
+    const addWorker = (worker: Omit<SalonWorker, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>) => {
         setConfig(prev => ({ ...prev, workers: [...prev.workers, worker] }));
     };
 

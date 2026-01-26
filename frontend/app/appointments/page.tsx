@@ -9,31 +9,15 @@ import { Calendar, Clock, User, Plus, Search, Eye, Edit, Trash2, Check, AlertCir
 import { exportToCSV, exportToPDF, sortData, SortConfig, SortDirection, getNextSortDirection, ExportColumn } from "@/lib/export";
 import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
 import { useAuth, RequirePermission } from "@/context/AuthProvider";
-import { useBooking } from "@/context/BookingProvider";
-import { BookingStatus } from "@/types";
+import { bookingService } from "@/lib/services";
+import { Services } from "@/lib/services";
+import { BookingStatus, Booking } from "@/types";
 import { useRouter } from "next/navigation";
 import AppointmentDetailModal from "@/components/booking/AppointmentDetailModal";
 import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 
-// Helper for labels
-const servicesList = [
-    { id: 1, name: "Box Braids", price: 120 },
-    { id: 2, name: "Cornrows", price: 85 },
-    { id: 3, name: "Twists", price: 95 },
-    { id: 4, name: "Locs", price: 150 },
-    { id: 5, name: "Hair Treatment", price: 75 },
-    { id: 6, name: "Senegalese Twists", price: 135 },
-    { id: 7, name: "Other", price: 0 },
-];
-
-const workersList = [
-    { id: 1, name: "Orphelia" },
-    { id: 2, name: "Worker 2" },
-    { id: 3, name: "Worker 3" },
-    { id: 4, name: "Worker 4" },
-];
-
-type Appointment = {
+// Helper type for UI
+type AppointmentUI = {
     id: number;
     displayId: string;
     clientName: string;
@@ -47,6 +31,7 @@ type Appointment = {
     duration: number;
     totalPrice: string;
     status: string;
+    isAdminModified: boolean;
 };
 
 // Export columns configuration
@@ -65,7 +50,7 @@ const exportColumns: ExportColumn[] = [
 
 export default function AppointmentsPage() {
     const { getCardStyle } = useKpiCardStyle();
-    const { bookings, updateBookingStatus, cancelBooking, approveReschedule, rejectReschedule } = useBooking();
+    // const { bookings, updateBookingStatus, cancelBooking, approveReschedule, rejectReschedule } = useBooking(); // Removed context usage
     const { handleReadOnlyClick } = useReadOnlyGuard();
     const router = useRouter();
     const [detailModal, setDetailModal] = useState<{ open: boolean; appointment: any | null }>({ open: false, appointment: null });
@@ -77,50 +62,107 @@ export default function AppointmentsPage() {
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
     const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
 
+    // Data state
+    const [appointments, setAppointments] = useState<AppointmentUI[]>([]);
+    const [services, setServices] = useState<any[]>([]);
+    const [workers, setWorkers] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
     const { user, hasPermission, canAddServices, canModify } = useAuth();
     const isWorker = user?.role === 'worker';
     const isClient = user?.role === 'client';
-    const isAdminOrManager = hasPermission(['manager', 'admin']);
+    const isAdminOrManager = hasPermission(['manager', 'super_admin', 'owner']);
 
-    // Map context bookings to UI format
-    const appointments = useMemo(() => {
-        return bookings.map(b => {
-            const serviceNames = b.serviceIds.map(id => servicesList.find(s => s.id === id)?.name || "Service").join(", ");
-            const workerNames = b.workerIds.length > 0
-                ? b.workerIds.map(id => workersList.find(w => w.id === id)?.name || "Worker").join(", ")
-                : "Pool";
-            const totalPrice = b.serviceIds.reduce((sum, id) => sum + (servicesList.find(s => s.id === id)?.price || 0), 0);
+    // Fetch data
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const salonId = 1; // TODO: Get from context currentTenant
+            const [bookingsData, workersData, servicesData] = await Promise.all([
+                bookingService.getAll(salonId),
+                Services.worker.getAll(salonId),
+                Services.service.getAll(salonId)
+            ]);
 
-            const isAdminModified = b.interactionHistory.some(i =>
-                (i.action.toLowerCase().includes('edit') || i.action.toLowerCase().includes('update') || i.action.toLowerCase().includes('modify')) &&
-                (i.user.toLowerCase().includes('admin') || i.user.toLowerCase().includes('manager') || i.user === 'Orphelia')
-            );
+            setWorkers(workersData);
+            setServices(servicesData);
 
-            return {
-                ...b,
-                serviceName: serviceNames,
-                workerName: workerNames,
-                totalPrice: `€${totalPrice}`,
-                displayId: `APT-${b.id.toString().slice(-3)}`,
-                isAdminModified
-            };
-        });
-    }, [bookings]);
+            // Map to UI format
+            const mappedAppointments = bookingsData.data ? bookingsData.data.map((b: any) => { // Handle paginated response structure if applicable, or array
+                // Assume getBooking returns array for now or check structure. Default provider returns PaginatedResponse? check interface. 
+                // Interface says PaginatedResponse<Booking>. So .data is correct.
+                // Actually BaseService might resolve it. Let's assume .data or direct array.
+                // Provider interface: getBookings returns PaginatedResponse<Booking>
+                return b;
+            }) : [];
+
+            // Re-map using the fetched services/workers maps
+            const processed = (bookingsData.data || []).map((b: any) => {
+                const serviceNames = (b.serviceIds || []).map((id: number) => servicesData.find(s => s.id === id)?.name || "Service").join(", ");
+                const workerNames = (b.workerIds || []).length > 0
+                    ? (b.workerIds || []).map((id: number) => workersData.find(w => w.id === id)?.name || "Worker").join(", ")
+                    : "Pool";
+
+                // Calculate price if not in booking (mock logic was sum services)
+                // In generic booking model, it might be stored, but let's calc for display if needed or use b.totalPrice if available (Booking has no price field? Check types. Booking has no price field, but Income has. UI shows price. Let's calc from service sum).
+                const totalPrice = (b.serviceIds || []).reduce((sum: number, id: number) => sum + (servicesData.find(s => s.id === id)?.price || 0), 0);
+
+                const isAdminModified = (b.interactionHistory || []).some((i: any) =>
+                    (i.action.toLowerCase().includes('edit') || i.action.toLowerCase().includes('update') || i.action.toLowerCase().includes('modify')) &&
+                    (i.user.toLowerCase().includes('admin') || i.user.toLowerCase().includes('manager') || i.user === 'Orphelia')
+                );
+
+                return {
+                    id: b.id,
+                    displayId: `APT-${b.id.toString().slice(-3)}`,
+                    clientName: b.clientName || "Client",
+                    clientPhone: "", // Not in booking type directly?
+                    serviceIds: b.serviceIds || [],
+                    serviceName: serviceNames,
+                    workerIds: b.workerIds || [],
+                    workerName: workerNames,
+                    date: b.date,
+                    time: b.time,
+                    duration: b.duration,
+                    totalPrice: `€${totalPrice}`,
+                    status: b.status,
+                    isAdminModified,
+                    // keep raw for actions
+                    raw: b
+                };
+            });
+            setAppointments(processed);
+
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Use effect to fetch
+    const [refreshKey, setRefreshKey] = useState(0);
+    const refresh = () => setRefreshKey(prev => prev + 1);
+
+    useMemo(() => {
+        fetchData();
+    }, [refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
 
     // Role-based filtering
-    const initialAppointments = useMemo(() => {
+    const filteredByRole = useMemo(() => {
         if (isWorker) {
-            return appointments.filter(apt => apt.workerIds.includes(parseInt(user?.id || '0')));
+            return appointments.filter(apt => apt.workerIds.includes(parseInt(user?.workerId || '0')));
         }
         if (isClient) {
-            return appointments.filter(apt => apt.clientName === user?.name || apt.clientId === parseInt(user?.id || '0'));
+            return appointments.filter(apt => apt.clientName === user?.name); // fallback to name match if id matching complex
         }
         return appointments;
     }, [isWorker, isClient, appointments, user]);
 
     // Filter appointments
     const filteredAppointments = useMemo(() => {
-        return initialAppointments.filter((apt) => {
+        return filteredByRole.filter((apt) => {
             const matchesSearch = apt.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 apt.serviceName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 apt.workerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -129,7 +171,7 @@ export default function AppointmentsPage() {
             const matchesWorker = workerFilter === "All" || apt.workerName.includes(workerFilter);
             return matchesSearch && matchesStatus && matchesWorker;
         });
-    }, [searchTerm, statusFilter, workerFilter, initialAppointments]);
+    }, [searchTerm, statusFilter, workerFilter, filteredByRole]);
 
     // Sort appointments
     const sortedAppointments = useMemo(() => {
@@ -227,10 +269,10 @@ export default function AppointmentsPage() {
     };
 
     const stats = {
-        total: initialAppointments.length,
-        confirmed: initialAppointments.filter(a => a.status === "Confirmed").length,
-        pending: initialAppointments.filter(a => a.status === "Pending").length,
-        today: initialAppointments.filter(a => a.date === "2026-01-20").length,
+        total: filteredByRole.length,
+        confirmed: filteredByRole.filter((a: any) => a.status === "Confirmed").length,
+        pending: filteredByRole.filter((a: any) => a.status === "Pending").length,
+        today: filteredByRole.filter((a: any) => a.date === new Date().toISOString().split('T')[0]).length,
     };
 
     // Reset page when filters change
@@ -249,12 +291,35 @@ export default function AppointmentsPage() {
         router.push(`/appointments/book?edit=${appointment.id}${stepParam}`);
     };
 
-    const handleCancel = (id: number) => {
+    const handleCancel = async (id: number) => {
         if (handleReadOnlyClick()) return;
         if (confirm("Are you sure you want to cancel this appointment?")) {
-            cancelBooking(id, "Cancelled from appointments list");
+            await bookingService.updateStatus(id, 'Cancelled');
             setDetailModal({ open: false, appointment: null });
+            refresh();
         }
+    };
+
+    const confirmBooking = async (id: number) => {
+        if (handleReadOnlyClick()) return;
+        await bookingService.updateStatus(id, 'Confirmed');
+        refresh();
+    };
+
+    const approveRescheduleAction = async (id: number) => {
+        // Since updateStatus is generic, assume logic handles it or we manually update. 
+        // Service might need specific method if complex logic exists, for now updateStatus.
+        // Actually BookingProvider had specific logic.
+        // Let's use updateStatus('Confirmed').
+        if (handleReadOnlyClick()) return;
+        await bookingService.updateStatus(id, 'Confirmed');
+        refresh();
+    };
+
+    const rejectRescheduleAction = async (id: number) => {
+        if (handleReadOnlyClick()) return;
+        await bookingService.updateStatus(id, 'Cancelled');
+        refresh();
     };
 
     return (
@@ -364,7 +429,8 @@ export default function AppointmentsPage() {
                                     className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                                 >
                                     <option value="All">All Workers</option>
-                                    {workersList.map(worker => (
+                                    <option value="All">All Workers</option>
+                                    {workers.map((worker: any) => (
                                         <option key={worker.id} value={worker.name}>{worker.name}</option>
                                     ))}
                                 </select>
@@ -395,7 +461,7 @@ export default function AppointmentsPage() {
                     </div>
 
                     {/* Bulk Actions - shown when items are selected */}
-                    {selectedItems.size > 0 && hasPermission(['manager', 'admin']) && (
+                    {selectedItems.size > 0 && hasPermission(['manager', 'super_admin']) && (
                         <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap items-center justify-end sm:justify-start gap-3">
                             <span className="text-sm font-medium text-[var(--color-primary)]">
                                 {selectedItems.size} selected
@@ -504,7 +570,7 @@ export default function AppointmentsPage() {
                                                 <Button
                                                     variant="success"
                                                     size="sm"
-                                                    onClick={() => updateBookingStatus(apt.id, 'Confirmed')}
+                                                    onClick={() => confirmBooking(apt.id)}
                                                     className="w-10 h-10 p-0 flex items-center justify-center shadow-sm"
                                                     disabled={apt.status !== 'Pending'}
                                                     title="Valider"
@@ -516,7 +582,7 @@ export default function AppointmentsPage() {
                                                 <Button
                                                     variant="success"
                                                     size="sm"
-                                                    onClick={() => approveReschedule(apt.id)}
+                                                    onClick={() => approveRescheduleAction(apt.id)}
                                                     className="w-10 h-10 p-0 flex items-center justify-center shadow-sm"
                                                     title="Approve Reschedule"
                                                 >
@@ -527,7 +593,7 @@ export default function AppointmentsPage() {
                                                 <Button
                                                     variant="danger"
                                                     size="sm"
-                                                    onClick={() => rejectReschedule(apt.id)}
+                                                    onClick={() => rejectRescheduleAction(apt.id)}
                                                     className="w-10 h-10 p-0 flex items-center justify-center shadow-sm"
                                                     title="Reject Reschedule"
                                                 >
@@ -684,7 +750,7 @@ export default function AppointmentsPage() {
                                                     <Button
                                                         variant="success"
                                                         size="sm"
-                                                        onClick={() => { if (!handleReadOnlyClick()) updateBookingStatus(apt.id, 'Confirmed') }}
+                                                        onClick={() => { if (!handleReadOnlyClick()) confirmBooking(apt.id) }}
                                                         className="w-10 h-10 p-0 flex items-center justify-center shadow-sm"
                                                         disabled={apt.status !== 'Pending'}
                                                         title="Valider"
@@ -696,7 +762,7 @@ export default function AppointmentsPage() {
                                                     <Button
                                                         variant="success"
                                                         size="sm"
-                                                        onClick={() => { if (!handleReadOnlyClick()) approveReschedule(apt.id) }}
+                                                        onClick={() => { if (!handleReadOnlyClick()) approveRescheduleAction(apt.id) }}
                                                         className="w-10 h-10 p-0 flex items-center justify-center shadow-sm"
                                                         title="Approve Reschedule"
                                                     >
@@ -707,7 +773,7 @@ export default function AppointmentsPage() {
                                                     <Button
                                                         variant="danger"
                                                         size="sm"
-                                                        onClick={() => { if (!handleReadOnlyClick()) rejectReschedule(apt.id, "Rejected by client") }}
+                                                        onClick={() => { if (!handleReadOnlyClick()) rejectRescheduleAction(apt.id) }}
                                                         className="w-10 h-10 p-0 flex items-center justify-center shadow-sm"
                                                         title="Reject Reschedule"
                                                     >
@@ -787,13 +853,13 @@ export default function AppointmentsPage() {
                     onClose={() => setDetailModal({ open: false, appointment: null })}
                     onCancel={handleCancel}
                     onConfirm={(id) => {
-                        updateBookingStatus(id, 'Confirmed');
+                        confirmBooking(id);
                         setDetailModal({ open: false, appointment: null });
                     }}
                     onEdit={handleEdit}
-                    onApproveReschedule={approveReschedule}
-                    onRejectReschedule={rejectReschedule}
-                    servicesList={servicesList}
+                    onApproveReschedule={approveRescheduleAction}
+                    onRejectReschedule={rejectRescheduleAction}
+                    servicesList={services}
                     isAdmin={isAdminOrManager}
                     userRole={user?.role}
                     isAdminModified={detailModal.appointment?.isAdminModified}

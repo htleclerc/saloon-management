@@ -74,18 +74,27 @@ export function validateServiceRow(row: Record<string, string>, rowIndex: number
         return { isValid: false, error: `Invalid price: ${price}` };
     }
 
-    if (!duration || duration.trim() === '') {
-        return { isValid: false, error: 'Duration is required' };
+    const parsedDuration = parseInt(duration, 10);
+    if (isNaN(parsedDuration) || parsedDuration <= 0) {
+        return { isValid: false, error: `Invalid duration: ${duration}` };
     }
+
+    const service: Service = {
+        id: Date.now() + rowIndex, // Temporary ID
+        salonId: 0, // Placeholder
+        name: name.trim(),
+        price: parsedPrice,
+        duration: parsedDuration,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdBy: 'system',
+        updatedBy: 'system'
+    };
 
     return {
         isValid: true,
-        data: {
-            id: Date.now() + rowIndex, // Temporary ID
-            name: name.trim(),
-            price: parsedPrice,
-            duration: duration.trim(),
-        },
+        data: service,
     };
 }
 
@@ -113,16 +122,25 @@ export function validateProductRow(row: Record<string, string>, rowIndex: number
         return { isValid: false, error: `Invalid stock: ${stock}` };
     }
 
+    const product: Product = {
+        id: Date.now() + rowIndex,
+        salonId: 0, // Placeholder
+        name: name.trim(),
+        price: parsedPrice,
+        stock: parsedStock,
+        category: category?.trim() || undefined,
+        description: description?.trim() || undefined,
+        isActive: true,
+        isLinkedToService: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdBy: 'system',
+        updatedBy: 'system'
+    };
+
     return {
         isValid: true,
-        data: {
-            id: Date.now() + rowIndex,
-            name: name.trim(),
-            price: parsedPrice,
-            stock: parsedStock,
-            category: category?.trim() || undefined,
-            description: description?.trim() || undefined,
-        },
+        data: product,
     };
 }
 
@@ -154,14 +172,22 @@ export function validateClientRow(row: Record<string, string>, rowIndex: number)
         return { isValid: false, error: 'Phone is required' };
     }
 
+    const client: Client = {
+        id: Date.now() + rowIndex,
+        salonId: 0, // Placeholder
+        name: name.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        createdBy: 'system',
+        updatedBy: 'system'
+    };
+
     return {
         isValid: true,
-        data: {
-            id: Date.now() + rowIndex,
-            name: name.trim(),
-            email: email.trim(),
-            phone: phone.trim(),
-        },
+        data: client,
     };
 }
 

@@ -6,56 +6,91 @@ import Button from "@/components/ui/Button";
 import StatCard from "@/components/ui/StatCard";
 import { DollarSign, TrendingUp, CreditCard, FileText, Download, Calendar } from "lucide-react";
 import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
+import { useCurrency } from "@/hooks/useCurrency";
+import { useTranslation } from "@/i18n";
+import { statsService } from "@/lib/services/StatsService";
+import { useEffect, useState } from "react";
+import { format as formatDate } from "date-fns";
+import { fr, enUS, es } from "date-fns/locale";
 
-const payrollData = [
-    { name: "Orphelia", baseSalary: 2000, commission: 1281, tips: 150, total: 3431, status: "paid" },
-    { name: "Team Member 2", baseSalary: 1800, commission: 958, tips: 120, total: 2878, status: "pending" },
-    { name: "Team Member 3", baseSalary: 1900, commission: 1020, tips: 100, total: 3020, status: "paid" },
-    { name: "Team Member 4", baseSalary: 1700, commission: 810, tips: 80, total: 2590, status: "pending" },
-    { name: "Team Member 5", baseSalary: 1600, commission: 587, tips: 60, total: 2247, status: "paid" },
-    { name: "Team Member 6", baseSalary: 1850, commission: 1003, tips: 130, total: 2983, status: "pending" },
-];
+interface PayrollEntry {
+    id: number;
+    name: string;
+    baseSalary: number;
+    commission: number;
+    tips: number;
+    total: number;
+    status: string;
+}
 
 export default function TeamPayrollPage() {
     const { getCardStyle } = useKpiCardStyle();
+    const { format } = useCurrency();
+    const { t, language } = useTranslation();
+    const [payrollData, setPayrollData] = useState<PayrollEntry[]>([]);
+    const [history, setHistory] = useState<any[]>([]);
+
+    useEffect(() => {
+        const loadStats = async () => {
+            const [data, hist] = await Promise.all([
+                statsService.getPayrollStats(1),
+                statsService.getPayrollHistory(1)
+            ]);
+            setPayrollData(data);
+            setHistory(hist);
+        };
+        loadStats();
+    }, []);
+
     const totalPayroll = payrollData.reduce((sum, w) => sum + w.total, 0);
     const totalCommissions = payrollData.reduce((sum, w) => sum + w.commission, 0);
     const pendingPayments = payrollData.filter((w) => w.status === "pending").length;
 
+    // Helper for locale
+    const getLocale = () => {
+        switch (language) {
+            case 'fr': return fr;
+            case 'es': return es;
+            default: return enUS;
+        }
+    };
+
+    const currentMonthLabel = formatDate(new Date(), 'MMMM yyyy', { locale: getLocale() });
+
     return (
         <TeamLayout
-            title="Payroll"
-            description="Manage salaries, commissions and payments"
+            title={t("team.payroll")}
+            description={t("team.payrollDesc")}
         >
             {/* Stats */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <StatCard
-                    title="Total Payroll"
-                    value={`€${totalPayroll.toLocaleString()}`}
-                    subtitle="This month"
+                    title={t("team.totalPayroll")}
+                    value={format(totalPayroll)}
+                    subtitle={t("team.thisMonth")}
                     icon={DollarSign}
                     gradient=""
                     style={getCardStyle(0)}
                 />
                 <StatCard
-                    title="Commissions"
-                    value={`€${totalCommissions.toLocaleString()}`}
+                    title={t("team.commissions")}
+                    value={format(totalCommissions)}
                     icon={TrendingUp}
                     gradient=""
                     style={getCardStyle(1)}
                 />
                 <StatCard
-                    title="Pending Payments"
+                    title={t("team.pendingPayments")}
                     value={pendingPayments}
-                    subtitle="Team"
+                    subtitle={t("team.team")}
                     icon={CreditCard}
                     gradient=""
                     style={getCardStyle(2)}
                 />
                 <StatCard
-                    title="Payslips"
+                    title={t("team.payslips")}
                     value={payrollData.length}
-                    subtitle="generated"
+                    subtitle={t("team.generated")}
                     icon={FileText}
                     gradient=""
                     style={getCardStyle(3)}
@@ -70,18 +105,18 @@ export default function TeamPayrollPage() {
                             <DollarSign className="w-5 h-5 text-white" />
                         </div>
                         <div>
-                            <h3 className="font-semibold text-gray-900">Salary Details</h3>
-                            <p className="text-xs text-gray-500">January 2026</p>
+                            <h3 className="font-semibold text-gray-900">{t("team.salaryDetails")}</h3>
+                            <p className="text-xs text-gray-500 capitalize">{currentMonthLabel}</p>
                         </div>
                     </div>
                     <div className="flex gap-2">
                         <Button variant="outline" size="sm">
                             <Calendar className="w-4 h-4" />
-                            Period
+                            {t("team.period")}
                         </Button>
                         <Button variant="primary" size="sm">
                             <Download className="w-4 h-4" />
-                            Export
+                            {t("common.export")}
                         </Button>
                     </div>
                 </div>
@@ -90,27 +125,27 @@ export default function TeamPayrollPage() {
                     <table className="w-full">
                         <thead className="bg-gray-50">
                             <tr>
-                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Team Member</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Base Salary</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Commissions</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Tips</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Total</th>
-                                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Status</th>
-                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Actions</th>
+                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t("team.team")}</th>
+                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">{t("team.baseSalary")}</th>
+                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">{t("team.commissions")}</th>
+                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">{t("team.tips")}</th>
+                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">{t("common.total")}</th>
+                                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">{t("common.status")}</th>
+                                <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">{t("common.actions")}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
                             {payrollData.map((worker) => (
                                 <tr key={worker.name} className="hover:bg-gray-50">
                                     <td className="px-4 py-4 font-medium text-gray-900">{worker.name}</td>
-                                    <td className="px-4 py-4 text-right text-gray-600">€{worker.baseSalary.toLocaleString()}</td>
-                                    <td className="px-4 py-4 text-right text-[var(--color-success)] font-medium">+€{worker.commission.toLocaleString()}</td>
-                                    <td className="px-4 py-4 text-right text-[var(--color-primary)]">+€{worker.tips}</td>
-                                    <td className="px-4 py-4 text-right font-bold text-gray-900">€{worker.total.toLocaleString()}</td>
+                                    <td className="px-4 py-4 text-right text-gray-600">{format(worker.baseSalary)}</td>
+                                    <td className="px-4 py-4 text-right text-[var(--color-success)] font-medium">+{format(worker.commission)}</td>
+                                    <td className="px-4 py-4 text-right text-[var(--color-primary)]">+{format(worker.tips)}</td>
+                                    <td className="px-4 py-4 text-right font-bold text-gray-900">{format(worker.total)}</td>
                                     <td className="px-4 py-4 text-center">
                                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${worker.status === "paid" ? "bg-[var(--color-success-light)] text-[var(--color-success)]" : "bg-[var(--color-warning-light)] text-[var(--color-warning)]"
                                             }`}>
-                                            {worker.status === "paid" ? "Paid" : "Pending"}
+                                            {worker.status === "paid" ? t("team.paid") : t("team.pending")}
                                         </span>
                                     </td>
                                     <td className="px-4 py-4 text-right">
@@ -119,7 +154,7 @@ export default function TeamPayrollPage() {
                                                 <FileText className="w-4 h-4" />
                                             </Button>
                                             {worker.status === "pending" && (
-                                                <Button variant="primary" size="sm">Pay</Button>
+                                                <Button variant="primary" size="sm">{t("team.pay")}</Button>
                                             )}
                                         </div>
                                     </td>
@@ -128,18 +163,18 @@ export default function TeamPayrollPage() {
                         </tbody>
                         <tfoot className="bg-[var(--color-primary-light)]">
                             <tr>
-                                <td className="px-4 py-4 font-bold text-[var(--color-primary)]">Total</td>
+                                <td className="px-4 py-4 font-bold text-[var(--color-primary)]">{t("common.total")}</td>
                                 <td className="px-4 py-4 text-right font-bold text-[var(--color-primary)]">
-                                    €{payrollData.reduce((sum, w) => sum + w.baseSalary, 0).toLocaleString()}
+                                    {format(payrollData.reduce((sum, w) => sum + w.baseSalary, 0))}
                                 </td>
                                 <td className="px-4 py-4 text-right font-bold text-[var(--color-primary)]">
-                                    €{totalCommissions.toLocaleString()}
+                                    {format(totalCommissions)}
                                 </td>
                                 <td className="px-4 py-4 text-right font-bold text-[var(--color-primary)]">
-                                    €{payrollData.reduce((sum, w) => sum + w.tips, 0).toLocaleString()}
+                                    {format(payrollData.reduce((sum, w) => sum + w.tips, 0))}
                                 </td>
                                 <td className="px-4 py-4 text-right font-bold text-[var(--color-primary)]">
-                                    €{totalPayroll.toLocaleString()}
+                                    {format(totalPayroll)}
                                 </td>
                                 <td colSpan={2}></td>
                             </tr>
@@ -150,24 +185,27 @@ export default function TeamPayrollPage() {
 
             {/* Payment History */}
             <Card>
-                <h3 className="font-semibold text-gray-900 text-lg mb-4">Payment History</h3>
+                <h3 className="font-semibold text-gray-900 text-lg mb-4">{t("team.paymentHistory")}</h3>
                 <div className="space-y-3">
-                    {[
-                        { date: "31/12/2025", amount: 16500, workers: 6, status: "completed" },
-                        { date: "30/11/2025", amount: 15800, workers: 6, status: "completed" },
-                        { date: "31/10/2025", amount: 16200, workers: 6, status: "completed" },
-                    ].map((payment, idx) => (
+                    {history.map((payment, idx) => (
                         <div key={idx} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
                             <div>
-                                <p className="font-medium text-gray-900 text-sm">{payment.date}</p>
-                                <p className="text-xs text-gray-500">Team: {payment.workers}</p>
+                                <p className="font-medium text-gray-900 text-sm">
+                                    {formatDate(new Date(payment.date), 'dd/MM/yyyy')}
+                                </p>
+                                <p className="text-xs text-gray-500">{t("team.teamCount", { count: payment.workers })}</p>
                             </div>
                             <div className="text-right">
-                                <p className="font-bold text-gray-900">€{payment.amount.toLocaleString()}</p>
-                                <span className="text-xs text-[var(--color-success)] font-medium">Completed</span>
+                                <p className="font-bold text-gray-900">{format(payment.amount)}</p>
+                                <span className="text-xs text-[var(--color-success)] font-medium">{t("team.completed")}</span>
                             </div>
                         </div>
                     ))}
+                    {history.length === 0 && (
+                        <div className="text-center py-4 text-gray-500 text-sm">
+                            No history
+                        </div>
+                    )}
                 </div>
             </Card>
         </TeamLayout>

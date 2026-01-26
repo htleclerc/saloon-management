@@ -84,7 +84,7 @@ export default function CalendarPage() {
         updateDayCapacity(selectedDate, { maxSlots: newVal });
     };
 
-    if (!hasPermission(['admin', 'manager'])) {
+    if (!hasPermission(['super_admin', 'manager'])) {
         return (
             <MainLayout>
                 <div className="flex flex-col items-center justify-center min-h-[60vh]">

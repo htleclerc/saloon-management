@@ -8,6 +8,7 @@ import { useTheme, useResponsive } from "@/context/ThemeProvider";
 import { useAuth } from "@/context/AuthProvider";
 import { useTranslation, availableLanguages, languageFlags, languageNames, Language } from "@/i18n";
 import NotificationsPanel, { Notification } from "./NotificationsPanel";
+import ModeSwitcher from "../ui/ModeSwitcher";
 
 export default function Header() {
     const pathname = usePathname();
@@ -406,6 +407,9 @@ export default function Header() {
                             )}
                         </div>
                     )}
+
+                    {/* Mode Switcher - Data Mode Selection */}
+                    <ModeSwitcher />
 
                     {/* Language Selector */}
                     <div className="relative" ref={dropdownRef}>

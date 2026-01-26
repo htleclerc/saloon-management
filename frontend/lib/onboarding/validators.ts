@@ -70,10 +70,10 @@ export function validateService(service: Partial<Service>): {
         errors.price = 'Price must be positive';
     }
 
-    if (!service.duration || service.duration.trim().length === 0) {
+    if (service.duration === undefined || service.duration === null) {
         errors.duration = 'Duration is required';
     } else {
-        const durationNum = parseInt(service.duration, 10);
+        const durationNum = typeof service.duration === 'string' ? parseInt(service.duration, 10) : service.duration;
         if (isNaN(durationNum) || durationNum <= 0) {
             errors.duration = 'Duration must be a positive number (in minutes)';
         }

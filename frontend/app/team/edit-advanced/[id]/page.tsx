@@ -18,31 +18,38 @@ import {
     Save,
     Trash2,
 } from "lucide-react";
+import { useCurrency } from "@/hooks/useCurrency";
+import { useTranslation } from "@/i18n";
 
-const steps = [
-    { id: 1, name: "Personal", icon: User, description: "Personal information" },
-    { id: 2, name: "Employment", icon: Briefcase, description: "Employment details" },
-    { id: 3, name: "Skills", icon: Scissors, description: "Skills & services" },
-    { id: 4, name: "Schedule", icon: Calendar, description: "Schedule & availability" },
-    { id: 5, name: "Finalize", icon: CheckCircle, description: "Final validation" },
-];
 
-const availableServices = [
-    { id: 1, name: "Box Braids", duration: "3-4h", price: 120 },
-    { id: 2, name: "Cornrows", duration: "2-3h", price: 85 },
-    { id: 3, name: "Senegalese Twists", duration: "3-4h", price: 110 },
-    { id: 4, name: "Locs", duration: "4-5h", price: 150 },
-    { id: 5, name: "Men's Haircut", duration: "30min", price: 25 },
-    { id: 6, name: "Coloring", duration: "2h", price: 80 },
-];
 
-const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+import { useServices, useWorkers } from "@/hooks/useServices";
+import { workerService } from "@/lib/services/WorkerService";
+import { useAuth } from "@/context/AuthProvider";
+import { useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
+import { WorkerStatus } from "@/types";
 
 export default function EditAdvancedTeamMemberPage({ params }: { params: Promise<{ id: string }> }) {
+    const { t } = useTranslation();
     const { id } = use(params);
     const router = useRouter();
+    const { canModify } = useAuth();
+    const { handleReadOnlyClick } = useReadOnlyGuard();
+    const { services: availableServices } = useServices();
+    const { updateWorker, deleteWorker } = useWorkers();
+    const { format, symbol } = useCurrency();
     const [currentStep, setCurrentStep] = useState(1);
     const stepperRef = useRef<HTMLDivElement>(null);
+
+    const steps = [
+        { id: 1, name: t("team.steps.personal.name"), icon: User, description: t("team.steps.personal.description") },
+        { id: 2, name: t("team.steps.employment.name"), icon: Briefcase, description: t("team.steps.employment.description") },
+        { id: 3, name: t("team.steps.skills.name"), icon: Scissors, description: t("team.steps.skills.description") },
+        { id: 4, name: t("team.steps.schedule.name"), icon: Calendar, description: t("team.steps.schedule.description") },
+        { id: 5, name: t("team.steps.finalize.name"), icon: CheckCircle, description: t("team.steps.finalize.description") },
+    ];
+
+    const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
     // Auto-scroll active step to center on mobile
     useEffect(() => {
@@ -59,24 +66,46 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
     }, [currentStep]);
 
     // Step 1: Personal Info - Pre-filled with team member data
-    const [firstName, setFirstName] = useState("Orphelia");
-    const [lastName, setLastName] = useState("Smith");
-    const [email, setEmail] = useState("orphelia@adorablebraids.com");
-    const [phone, setPhone] = useState("+33 6 12 34 56 78");
-    const [address, setAddress] = useState("123 Rue de Paris");
-    const [city, setCity] = useState("Paris");
-    const [zipCode, setZipCode] = useState("75001");
-    const [birthDate, setBirthDate] = useState("1990-05-15");
+    // Step 1: Personal Info
+    const [firstName, setFirstName] = useState("");
+    const [lastName, setLastName] = useState("");
+    const [email, setEmail] = useState("");
+    const [phone, setPhone] = useState("");
+    const [address, setAddress] = useState("");
+    const [city, setCity] = useState("");
+    const [zipCode, setZipCode] = useState("");
+    const [birthDate, setBirthDate] = useState("");
     const [gender, setGender] = useState("female");
 
     // Step 2: Employment
     const [role, setRole] = useState("Team Member");
     const [employeeType, setEmployeeType] = useState("full-time");
-    const [startDate, setStartDate] = useState("2024-01-15");
+    const [startDate, setStartDate] = useState("");
     const [contractEndDate, setContractEndDate] = useState("");
-    const [sharingKey, setSharingKey] = useState(70);
-    const [baseSalary, setBaseSalary] = useState("2500");
+    const [sharingKey, setSharingKey] = useState(50);
+    const [baseSalary, setBaseSalary] = useState("");
     const [status, setStatus] = useState("Active");
+
+    useEffect(() => {
+        const fetchWorker = async () => {
+            try {
+                const data = await workerService.getById(Number(id));
+                if (data) {
+                    const names = data.name.split(' ');
+                    setFirstName(names[0] || "");
+                    setLastName(names.slice(1).join(' ') || "");
+                    setEmail(data.email || "");
+                    setPhone(data.phone || "");
+                    setSharingKey(data.sharingKey);
+                    setStatus(data.status as string);
+                    // Other fields not in SalonWorker type are skipped for now or would need extended type
+                }
+            } catch (e) {
+                console.error("Worker not found");
+            }
+        };
+        fetchWorker();
+    }, [id]);
 
     // Step 3: Skills
     const [selectedServices, setSelectedServices] = useState<number[]>([1, 2, 3]);
@@ -114,21 +143,28 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
         }));
     };
 
-    const handleSubmit = () => {
-        console.log("Updated team member data:", {
-            id: id,
-            firstName, lastName, email, phone, address, city, zipCode, birthDate, gender,
-            role, employeeType, startDate, contractEndDate, sharingKey, baseSalary, status,
-            selectedServices, specialties, experienceLevel, schedule,
-        });
-        alert("Team member updated successfully!");
-        router.push(`/team/detail/${id}`);
+    const handleSubmit = async () => {
+        if (!canModify || handleReadOnlyClick()) return;
+
+        try {
+            await updateWorker(Number(id), {
+                name: `${firstName} ${lastName}`.trim(),
+                email: email || undefined,
+                phone: phone || undefined,
+                sharingKey,
+                status: status as WorkerStatus,
+                // Add other fields as supported by backend
+            });
+            router.push(`/team`);
+        } catch (error) {
+            console.error("Failed to update worker", error);
+        }
     };
 
-    const handleDelete = () => {
-        if (confirm("Are you sure you want to delete this team member? This action cannot be undone.")) {
-            console.log("Deleting team member:", id);
-            alert("Team member deleted successfully!");
+    const handleDelete = async () => {
+        if (!canModify || handleReadOnlyClick()) return;
+        if (confirm(t("team.deleteConfirmation"))) {
+            await deleteWorker(Number(id));
             router.push("/team");
         }
     };
@@ -140,8 +176,8 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                     <User className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                    <h3 className="font-semibold text-gray-900">Personal Information</h3>
-                    <p className="text-xs text-gray-500">Identity and contact details of the team member</p>
+                    <h3 className="font-semibold text-gray-900">{t("team.personalInfo")}</h3>
+                    <p className="text-xs text-gray-500">{t("team.identityDetails")}</p>
                 </div>
             </div>
 
@@ -156,40 +192,40 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                     </button>
                 </div>
                 <div>
-                    <p className="font-medium text-gray-900 text-sm">Profile Picture</p>
-                    <p className="text-xs text-gray-500 mb-2">JPG, PNG. Max 2MB</p>
-                    <Button variant="outline" size="sm">Change Photo</Button>
+                    <p className="font-medium text-gray-900 text-sm">{t("team.profilePicture")}</p>
+                    <p className="text-xs text-gray-500 mb-2">{t("team.photoFormats")}</p>
+                    <Button variant="outline" size="sm">{t("team.changePhoto")}</Button>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                        First Name <span className="text-red-500">*</span>
+                        {t("team.firstName")} <span className="text-red-500">*</span>
                     </label>
                     <input
                         type="text"
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
-                        placeholder="First Name"
+                        placeholder={t("team.firstName")}
                     />
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Last Name <span className="text-red-500">*</span>
+                        {t("team.lastName")} <span className="text-red-500">*</span>
                     </label>
                     <input
                         type="text"
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
-                        placeholder="Last Name"
+                        placeholder={t("team.lastName")}
                     />
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Email <span className="text-red-500">*</span>
+                        {t("team.email")} <span className="text-red-500">*</span>
                     </label>
                     <input
                         type="email"
@@ -201,7 +237,7 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Phone <span className="text-red-500">*</span>
+                        {t("team.phone")} <span className="text-red-500">*</span>
                     </label>
                     <input
                         type="tel"
@@ -212,7 +248,7 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                     />
                 </div>
                 <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t("team.address")}</label>
                     <input
                         type="text"
                         value={address}
@@ -222,7 +258,7 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                     />
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t("team.city")}</label>
                     <input
                         type="text"
                         value={city}
@@ -232,7 +268,7 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                     />
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Zip Code</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t("team.zipCode")}</label>
                     <input
                         type="text"
                         value={zipCode}
@@ -242,7 +278,7 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                     />
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Date of Birth</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t("team.dateOfBirth")}</label>
                     <input
                         type="date"
                         value={birthDate}
@@ -251,15 +287,15 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                     />
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t("team.gender")}</label>
                     <select
                         value={gender}
                         onChange={(e) => setGender(e.target.value)}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
                     >
-                        <option value="female">Female</option>
-                        <option value="male">Male</option>
-                        <option value="other">Other</option>
+                        <option value="female">{t("team.genderFemale")}</option>
+                        <option value="male">{t("team.genderMale")}</option>
+                        <option value="other">{t("team.genderOther")}</option>
                     </select>
                 </div>
             </div>
@@ -273,50 +309,50 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                     <Briefcase className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                    <h3 className="font-semibold text-gray-900">Employment Details</h3>
-                    <p className="text-xs text-gray-500">Role, contract, and compensation</p>
+                    <h3 className="font-semibold text-gray-900">{t("team.employmentDetails")}</h3>
+                    <p className="text-xs text-gray-500">{t("team.employmentSubtitle")}</p>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t("team.role")}</label>
                     <select
                         value={role}
                         onChange={(e) => setRole(e.target.value)}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
                     >
-                        <option value="Team Member">Team Member</option>
-                        <option value="Manager">Manager</option>
-                        <option value="Admin">Administrator</option>
+                        <option value="Team Member">{t("team.roleMember")}</option>
+                        <option value="Manager">{t("team.roleManager")}</option>
+                        <option value="Admin">{t("team.roleAdmin")}</option>
                     </select>
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Contract Type</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t("team.contractType")}</label>
                     <select
                         value={employeeType}
                         onChange={(e) => setEmployeeType(e.target.value)}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
                     >
-                        <option value="full-time">Full-time</option>
-                        <option value="part-time">Part-time</option>
-                        <option value="freelance">Freelance</option>
+                        <option value="full-time">{t("team.contractFull")}</option>
+                        <option value="part-time">{t("team.contractPart")}</option>
+                        <option value="freelance">{t("team.contractFreelance")}</option>
                     </select>
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t("team.status")}</label>
                     <select
                         value={status}
                         onChange={(e) => setStatus(e.target.value)}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
                     >
-                        <option value="Active">Active</option>
-                        <option value="Inactive">Inactive</option>
-                        <option value="On Leave">On Leave</option>
+                        <option value="Active">{t("team.statusActive")}</option>
+                        <option value="Inactive">{t("team.statusInactive")}</option>
+                        <option value="On Leave">{t("team.statusOnLeave")}</option>
                     </select>
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Hire Date</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t("team.hireDate")}</label>
                     <input
                         type="date"
                         value={startDate}
@@ -325,7 +361,7 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                     />
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Contract End Date (Optional)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t("team.contractEndDate")}</label>
                     <input
                         type="date"
                         value={contractEndDate}
@@ -334,7 +370,7 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                     />
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Base Salary (€/month)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t("team.baseSalary")} ({symbol()}/month)</label>
                     <input
                         type="number"
                         value={baseSalary}
@@ -348,7 +384,7 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
             {/* Sharing Key Slider */}
             <div className="mt-6 p-4 bg-[var(--color-primary-light)] rounded-xl">
                 <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Sharing Key: <span className="text-[var(--color-primary)] font-bold">{sharingKey}%</span>
+                    {t("team.sharingKey")}: <span className="text-[var(--color-primary)] font-bold">{sharingKey}%</span>
                 </label>
                 <input
                     type="range"
@@ -359,11 +395,11 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                     className="w-full h-2 bg-[var(--color-primary-light)] opacity-70 rounded-lg appearance-none cursor-pointer accent-[var(--color-primary)]"
                 />
                 <div className="flex justify-between text-xs text-gray-500 mt-1">
-                    <span>0% (Company)</span>
-                    <span>100% (Team Member)</span>
+                    <span>0% ({t("team.sharingCompany")})</span>
+                    <span>100% ({t("team.sharingMember")})</span>
                 </div>
                 <p className="text-xs text-gray-600 mt-2">
-                    The team member will receive <strong>{sharingKey}%</strong> of the income, the company <strong>{100 - sharingKey}%</strong>
+                    {t("team.sharingDescription", { member: sharingKey, company: 100 - sharingKey })}
                 </p>
             </div>
         </Card>
@@ -376,14 +412,14 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                     <Scissors className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                    <h3 className="font-semibold text-gray-900">Skills & Services</h3>
-                    <p className="text-xs text-gray-500">Services this team member can perform</p>
+                    <h3 className="font-semibold text-gray-900">{t("team.skillsServices")}</h3>
+                    <p className="text-xs text-gray-500">{t("team.skillsSubtitle")}</p>
                 </div>
             </div>
 
             {/* Services Grid */}
             <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-3">Assigned Services</label>
+                <label className="block text-sm font-medium text-gray-700 mb-3">{t("team.assignedServices")}</label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {availableServices.map((service) => {
                         const isSelected = selectedServices.includes(service.id);
@@ -404,7 +440,7 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                                 <div className="flex gap-2 text-xs text-gray-500">
                                     <span>{service.duration}</span>
                                     <span>•</span>
-                                    <span>€{service.price}</span>
+                                    <span>{format(service.price)}</span>
                                 </div>
                             </button>
                         );
@@ -414,25 +450,25 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Experience Level</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t("team.experienceLevel")}</label>
                     <select
                         value={experienceLevel}
                         onChange={(e) => setExperienceLevel(e.target.value)}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
                     >
-                        <option value="beginner">Beginner (0-2 years)</option>
-                        <option value="intermediate">Intermediate (2-5 years)</option>
-                        <option value="expert">Expert (5+ years)</option>
+                        <option value="beginner">{t("team.expBeginner")}</option>
+                        <option value="intermediate">{t("team.expIntermediate")}</option>
+                        <option value="expert">{t("team.expExpert")}</option>
                     </select>
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Specialties</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t("team.specialties")}</label>
                     <input
                         type="text"
                         value={specialties}
                         onChange={(e) => setSpecialties(e.target.value)}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
-                        placeholder="e.g.: African braids, coloring..."
+                        placeholder={t("team.specialtiesPlaceholder")}
                     />
                 </div>
             </div>
@@ -446,8 +482,8 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                     <Calendar className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                    <h3 className="font-semibold text-gray-900">Schedule & Availability</h3>
-                    <p className="text-xs text-gray-500">Define working hours</p>
+                    <h3 className="font-semibold text-gray-900">{t("team.scheduleAvailability")}</h3>
+                    <p className="text-xs text-gray-500">{t("team.scheduleSubtitle")}</p>
                 </div>
             </div>
 
@@ -466,7 +502,7 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                                 className="w-4 h-4 text-[var(--color-primary)] rounded focus:ring-[var(--color-primary-light)]"
                             />
                             <span className={`font-medium text-sm ${schedule[day].active ? "text-[var(--color-primary)]" : "text-gray-500"}`}>
-                                {day}
+                                {t("common.days." + day)}
                             </span>
                         </label>
                         {schedule[day].active && (
@@ -477,7 +513,7 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                                     onChange={(e) => updateScheduleTime(day, "start", e.target.value)}
                                     className="px-2 py-1.5 md:px-3 md:py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] w-24 md:w-auto"
                                 />
-                                <span className="text-gray-400 text-xs md:text-sm">to</span>
+                                <span className="text-gray-400 text-xs md:text-sm">{t("common.to")}</span>
                                 <input
                                     type="time"
                                     value={schedule[day].end}
@@ -487,7 +523,7 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                             </div>
                         )}
                         {!schedule[day].active && (
-                            <span className="text-sm text-gray-400">Rest day</span>
+                            <span className="text-sm text-gray-400">{t("team.restDay")}</span>
                         )}
                     </div>
                 ))}
@@ -502,8 +538,8 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                     <CheckCircle className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                    <h3 className="font-semibold">Recap & Validation</h3>
-                    <p className="text-xs text-white opacity-80">Check information before update</p>
+                    <h3 className="font-semibold">{t("team.recapValidation")}</h3>
+                    <p className="text-xs text-white opacity-80">{t("team.recapSubtitle")}</p>
                 </div>
             </div>
 
@@ -511,7 +547,7 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                 {/* Personal */}
                 <div className="p-4 bg-white/10 rounded-xl">
                     <h4 className="font-medium mb-2 flex items-center gap-2">
-                        <User className="w-4 h-4" /> Identity
+                        <User className="w-4 h-4" /> {t("team.identity")}
                     </h4>
                     <p className="text-sm text-white opacity-80">
                         {firstName} {lastName} • {email} • {phone}
@@ -521,7 +557,7 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                 {/* Employment */}
                 <div className="p-4 bg-white/10 rounded-xl">
                     <h4 className="font-medium mb-2 flex items-center gap-2">
-                        <Briefcase className="w-4 h-4" /> Employment
+                        <Briefcase className="w-4 h-4" /> {t("team.employment")}
                     </h4>
                     <p className="text-sm text-white opacity-80">
                         {role} • {employeeType === "full-time" ? "Full-time" : employeeType === "part-time" ? "Part-time" : "Freelance"} •
@@ -532,7 +568,7 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                 {/* Services */}
                 <div className="p-4 bg-white/10 rounded-xl">
                     <h4 className="font-medium mb-2 flex items-center gap-2">
-                        <Scissors className="w-4 h-4" /> Services
+                        <Scissors className="w-4 h-4" /> {t("team.services")}
                     </h4>
                     <p className="text-sm text-white opacity-80">
                         {selectedServices.length} service(s) assigned • Level: {experienceLevel}
@@ -542,7 +578,7 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                 {/* Schedule */}
                 <div className="p-4 bg-white/10 rounded-xl">
                     <h4 className="font-medium mb-2 flex items-center gap-2">
-                        <Calendar className="w-4 h-4" /> Schedule
+                        <Calendar className="w-4 h-4" /> {t("team.schedule")}
                     </h4>
                     <p className="text-sm text-white opacity-80">
                         {Object.values(schedule).filter((s) => s.active).length} working day(s) per week
@@ -557,7 +593,7 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                     className="flex items-center gap-2 text-red-200 hover:text-red-100 transition-colors text-sm"
                 >
                     <Trash2 className="w-4 h-4" />
-                    Delete this team member
+                    {t("team.deleteMember")}
                 </button>
             </div>
         </Card>
@@ -565,8 +601,8 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
 
     return (
         <TeamLayout
-            title={`Edit ${firstName} ${lastName}`}
-            description="Complete form to modify team member information"
+            title={t("team.editMemberTitle", { firstName, lastName })}
+            description={t("team.editMemberDescription")}
         >
             {/* Mobile Step Indicator - Only visible on mobile */}
             <div className="md:hidden mb-4 p-4 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-dark)] rounded-xl text-white shadow-lg">
@@ -636,13 +672,13 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                     className={`w-full md:w-auto ${currentStep === 1 ? "hidden md:invisible md:block" : ""}`}
                 >
                     <ChevronLeft className="w-4 h-4" />
-                    Previous
+                    {t("common.previous")}
                 </Button>
 
                 {currentStep < 5 && (
                     <Button variant="secondary" size="md" onClick={handleSubmit} className="w-full md:w-auto text-[var(--color-primary)] bg-[var(--color-primary-light)] hover:opacity-80 border-[var(--color-primary-light)]">
                         <Save className="w-4 h-4" />
-                        Save Changes
+                        {t("common.saveChanges")}
                     </Button>
                 )}
 
@@ -653,13 +689,13 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                         onClick={() => setCurrentStep((prev) => Math.min(5, prev + 1))}
                         className="w-full md:w-auto"
                     >
-                        Next
+                        {t("common.next")}
                         <ChevronRight className="w-4 h-4" />
                     </Button>
                 ) : (
                     <Button variant="primary" size="md" onClick={handleSubmit} className="w-full md:w-auto">
                         <Check className="w-4 h-4" />
-                        Confirm & Update
+                        {t("team.confirmUpdate")}
                     </Button>
                 )}
             </div>

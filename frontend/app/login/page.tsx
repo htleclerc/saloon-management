@@ -36,7 +36,7 @@ export default function LoginPage() {
     const [fullName, setFullName] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
 
-    const handleDemoMode = (role: "super_admin" | "admin" | "manager" | "worker" | "client") => {
+    const handleDemoMode = (role: "super_admin" | "owner" | "manager" | "worker" | "client") => {
         demoLogin(role);
         router.push("/");
     };
@@ -47,7 +47,7 @@ export default function LoginPage() {
             id: "1",
             name: "User",
             email: email,
-            role: "admin",
+            role: "manager",
             tenantId: "tenant_1",
             isDemo: false
         });
@@ -398,14 +398,14 @@ export default function LoginPage() {
                     </div>
 
                     <div className="mt-6 flex flex-col items-center gap-4">
-                        {/* Demo Mode Button */}
+                        {/* Simplified Demo Mode Button */}
                         <button
-                            onClick={() => handleDemoMode("admin")}
-                            className="group flex items-center gap-2 px-6 py-2.5 rounded-full bg-orange-100 text-orange-700 font-bold hover:bg-orange-200 transition-colors border-2 border-orange-200"
+                            onClick={() => handleDemoMode("owner")}
+                            className="group flex items-center gap-3 px-8 py-3.5 rounded-full bg-orange-100 text-orange-700 font-extrabold hover:bg-orange-200 transition-all border-2 border-orange-200 shadow-lg shadow-orange-500/5 active:scale-95"
                         >
-                            <Globe className="w-4 h-4 animate-pulse" />
+                            <Globe className="w-5 h-5 animate-pulse" />
                             <span>{t("auth.tryDemo")}</span>
-                            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                            <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
                         </button>
 
                         <div className="flex items-center gap-6 text-gray-400">

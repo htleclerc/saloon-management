@@ -18,33 +18,35 @@ import {
     Save,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthProvider";
+import { useCurrency } from "@/hooks/useCurrency";
+import { useTranslation } from "@/i18n";
 import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
+import { storageService } from "@/lib/services/StorageService";
 
-const steps = [
-    { id: 1, name: "Personal", icon: User, description: "Personal information" },
-    { id: 2, name: "Employment", icon: Briefcase, description: "Employment details" },
-    { id: 3, name: "Skills", icon: Scissors, description: "Skills & services" },
-    { id: 4, name: "Schedule", icon: Calendar, description: "Schedule & availability" },
-    { id: 5, name: "Recap", icon: CheckCircle, description: "Final validation" },
-];
 
-const availableServices = [
-    { id: 1, name: "Box Braids", duration: "3-4h", price: 120 },
-    { id: 2, name: "Cornrows", duration: "2-3h", price: 85 },
-    { id: 3, name: "Senegalese Twists", duration: "3-4h", price: 110 },
-    { id: 4, name: "Locs", duration: "4-5h", price: 150 },
-    { id: 5, name: "Men's Haircut", duration: "30min", price: 25 },
-    { id: 6, name: "Coloring", duration: "2h", price: 80 },
-];
+
+import { useServices, useWorkers } from "@/hooks/useServices";
 
 const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export default function AddAdvancedTeamMemberPage() {
     const router = useRouter();
+    const { t } = useTranslation();
     const { canModify } = useAuth();
     const { handleReadOnlyClick } = useReadOnlyGuard();
+    const { format, symbol } = useCurrency();
+    const { services: availableServices } = useServices();
+    const { createWorker } = useWorkers();
     const [currentStep, setCurrentStep] = useState(1);
     const stepperRef = useRef<HTMLDivElement>(null);
+
+    const steps = [
+        { id: 1, name: t("team.steps.personal.name"), icon: User, description: t("team.steps.personal.description") },
+        { id: 2, name: t("team.steps.employment.name"), icon: Briefcase, description: t("team.steps.employment.description") },
+        { id: 3, name: t("team.steps.skills.name"), icon: Scissors, description: t("team.steps.skills.description") },
+        { id: 4, name: t("team.steps.schedule.name"), icon: Calendar, description: t("team.steps.schedule.description") },
+        { id: 5, name: t("team.steps.finalize.name"), icon: CheckCircle, description: t("team.steps.finalize.description") },
+    ];
 
     // Auto-scroll active step to center on mobile
     useEffect(() => {
@@ -70,6 +72,39 @@ export default function AddAdvancedTeamMemberPage() {
     const [zipCode, setZipCode] = useState("");
     const [birthDate, setBirthDate] = useState("");
     const [gender, setGender] = useState("female");
+    const [avatarUrl, setAvatarUrl] = useState("");
+    const [isUploading, setIsUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFileClick = () => {
+        if (!canModify) {
+            handleReadOnlyClick();
+            return;
+        }
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Basic validation
+        if (file.size > 2 * 1024 * 1024) {
+            alert(t("common.fileTooLarge"));
+            return;
+        }
+
+        setIsUploading(true);
+        try {
+            const url = await storageService.uploadImage(file, "avatars", "workers");
+            setAvatarUrl(url);
+        } catch (error) {
+            console.error("Upload failed", error);
+            alert(t("common.uploadFailed"));
+        } finally {
+            setIsUploading(false);
+        }
+    };
 
     // Step 2: Employment
     const [role, setRole] = useState("Team Member");
@@ -115,14 +150,26 @@ export default function AddAdvancedTeamMemberPage() {
         }));
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!canModify || handleReadOnlyClick()) return;
-        console.log("Advanced team member data:", {
-            firstName, lastName, email, phone, address, city, zipCode, birthDate, gender,
-            role, employeeType, startDate, contractEndDate, sharingKey, baseSalary,
-            selectedServices, specialties, experienceLevel, schedule,
-        });
-        router.push("/team");
+
+        try {
+            await createWorker({
+                name: `${firstName} ${lastName}`.trim(),
+                email: email || undefined,
+                phone: phone || undefined,
+                sharingKey,
+                status: 'Active',
+                color: "#8B5CF6", // Default color
+                avatarUrl,
+                bio: undefined,
+                specialties: specialties ? specialties.split(',').map(s => s.trim()) : []
+            });
+            router.push("/team");
+        } catch (error) {
+            console.error("Failed to create worker", error);
+            // Ideally show error toast
+        }
     };
 
     const renderStep1 = () => (
@@ -132,36 +179,52 @@ export default function AddAdvancedTeamMemberPage() {
                     <User className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                    <h3 className="font-semibold text-gray-900">Personal Information</h3>
-                    <p className="text-xs text-gray-500">Identity and contact details of the team member</p>
+                    <h3 className="font-semibold text-gray-900">{t("team.personalInfo")}</h3>
+                    <p className="text-xs text-gray-500">{t("team.identityDetails")}</p>
                 </div>
             </div>
 
             {/* Photo Upload */}
             <div className="flex items-center gap-6 mb-6">
                 <div className="relative">
-                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center text-gray-500 text-2xl font-bold">
-                        {firstName && lastName ? `${firstName[0]}${lastName[0]}`.toUpperCase() : "?"}
+                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center text-gray-500 text-2xl font-bold overflow-hidden border-2 border-dashed border-gray-300">
+                        {avatarUrl ? (
+                            <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                        ) : (
+                            firstName && lastName ? `${firstName[0]}${lastName[0]}`.toUpperCase() : "?"
+                        )}
                     </div>
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        className="hidden"
+                        accept="image/png, image/jpeg, image/jpg"
+                        onChange={handleFileChange}
+                    />
                     <button
-                        className="absolute bottom-0 right-0 w-8 h-8 bg-[var(--color-primary)] rounded-full flex items-center justify-center text-white shadow-lg hover:opacity-90 transition-opacity disabled:opacity-50"
-                        disabled={!canModify}
-                        onClick={() => handleReadOnlyClick()}
+                        type="button"
+                        className="absolute bottom-0 right-0 w-8 h-8 bg-[var(--color-primary)] rounded-full flex items-center justify-center text-white shadow-lg hover:opacity-90 transition-opacity disabled:opacity-50 z-10"
+                        disabled={!canModify || isUploading}
+                        onClick={handleFileClick}
                     >
-                        <Camera className="w-4 h-4" />
+                        {isUploading ? (
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                            <Camera className="w-4 h-4" />
+                        )}
                     </button>
                 </div>
                 <div>
-                    <p className="font-medium text-gray-900 text-sm">Profile Picture</p>
+                    <p className="font-medium text-gray-900 text-sm">{t("team.profilePicture")}</p>
                     <p className="text-xs text-gray-500 mb-2">JPG, PNG. Max 2MB</p>
-                    <Button variant="outline" size="sm" onClick={() => handleReadOnlyClick()} disabled={!canModify}>Choose a photo</Button>
+                    <Button variant="outline" size="sm" onClick={handleFileClick} disabled={!canModify || isUploading}>{t("team.choosePhoto")}</Button>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                        First Name <span className="text-red-500">*</span>
+                        {t("team.firstName")} <span className="text-red-500">*</span>
                     </label>
                     <input
                         type="text"
@@ -169,12 +232,12 @@ export default function AddAdvancedTeamMemberPage() {
                         onChange={(e) => setFirstName(e.target.value)}
                         disabled={!canModify}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm disabled:opacity-50"
-                        placeholder="First Name"
+                        placeholder={t("team.firstName")}
                     />
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Last Name <span className="text-red-500">*</span>
+                        {t("team.lastName")} <span className="text-red-500">*</span>
                     </label>
                     <input
                         type="text"
@@ -182,12 +245,12 @@ export default function AddAdvancedTeamMemberPage() {
                         onChange={(e) => setLastName(e.target.value)}
                         disabled={!canModify}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm disabled:opacity-50"
-                        placeholder="Last Name"
+                        placeholder={t("team.lastName")}
                     />
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Email <span className="text-red-500">*</span>
+                        {t("team.email")} <span className="text-red-500">*</span>
                     </label>
                     <input
                         type="email"
@@ -200,7 +263,7 @@ export default function AddAdvancedTeamMemberPage() {
                 </div>
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Phone <span className="text-red-500">*</span>
+                        {t("team.phone")} <span className="text-red-500">*</span>
                     </label>
                     <input
                         type="tel"
@@ -212,7 +275,7 @@ export default function AddAdvancedTeamMemberPage() {
                     />
                 </div>
                 <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t("team.address")}</label>
                     <input
                         type="text"
                         value={address}
@@ -223,29 +286,29 @@ export default function AddAdvancedTeamMemberPage() {
                     />
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t("team.city")}</label>
                     <input
                         type="text"
                         value={city}
                         onChange={(e) => setCity(e.target.value)}
                         disabled={!canModify}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm disabled:opacity-50"
-                        placeholder="City"
+                        placeholder={t("team.city")}
                     />
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Zip Code</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t("team.zipCode")}</label>
                     <input
                         type="text"
                         value={zipCode}
                         onChange={(e) => setZipCode(e.target.value)}
                         disabled={!canModify}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm disabled:opacity-50"
-                        placeholder="Zip Code"
+                        placeholder={t("team.zipCode")}
                     />
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Date of Birth</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t("team.birthDate")}</label>
                     <input
                         type="date"
                         value={birthDate}
@@ -255,16 +318,16 @@ export default function AddAdvancedTeamMemberPage() {
                     />
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t("team.gender")}</label>
                     <select
                         value={gender}
                         onChange={(e) => setGender(e.target.value)}
                         disabled={!canModify}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm disabled:opacity-50"
                     >
-                        <option value="female">Female</option>
-                        <option value="male">Male</option>
-                        <option value="other">Other</option>
+                        <option value="female">{t("common.genders.female")}</option>
+                        <option value="male">{t("common.genders.male")}</option>
+                        <option value="other">{t("common.genders.other")}</option>
                     </select>
                 </div>
             </div>
@@ -278,40 +341,40 @@ export default function AddAdvancedTeamMemberPage() {
                     <Briefcase className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                    <h3 className="font-semibold text-gray-900">Employment Details</h3>
-                    <p className="text-xs text-gray-500">Role, contract and remuneration</p>
+                    <h3 className="font-semibold text-gray-900">{t("team.employmentDetails")}</h3>
+                    <p className="text-xs text-gray-500">{t("team.roleContractDesc")}</p>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t("team.role")}</label>
                     <select
                         value={role}
                         onChange={(e) => setRole(e.target.value)}
                         disabled={!canModify}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm disabled:opacity-50"
                     >
-                        <option value="Team Member">Team Member</option>
-                        <option value="Manager">Manager</option>
-                        <option value="Admin">Administrator</option>
+                        <option value="Team Member">{t("team.roles.member")}</option>
+                        <option value="Manager">{t("team.roles.manager")}</option>
+                        <option value="Admin">{t("team.roles.admin")}</option>
                     </select>
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Contract Type</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t("team.contractType")}</label>
                     <select
                         value={employeeType}
                         onChange={(e) => setEmployeeType(e.target.value)}
                         disabled={!canModify}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm disabled:opacity-50"
                     >
-                        <option value="full-time">Full-time</option>
-                        <option value="part-time">Part-time</option>
-                        <option value="freelance">Freelance</option>
+                        <option value="full-time">{t("team.contracts.fullTime")}</option>
+                        <option value="part-time">{t("team.contracts.partTime")}</option>
+                        <option value="freelance">{t("team.contracts.freelance")}</option>
                     </select>
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Hire Date</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t("team.hireDate")}</label>
                     <input
                         type="date"
                         value={startDate}
@@ -321,7 +384,7 @@ export default function AddAdvancedTeamMemberPage() {
                     />
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Contract End Date (Optional)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t("team.contractEndDate")}</label>
                     <input
                         type="date"
                         value={contractEndDate}
@@ -335,7 +398,7 @@ export default function AddAdvancedTeamMemberPage() {
             {/* Sharing Key Slider */}
             <div className="mt-6 p-4 bg-[var(--color-primary-light)] rounded-xl">
                 <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Sharing Key: <span className="text-[var(--color-primary)] font-bold">{sharingKey}%</span>
+                    {t("team.sharingKey")}: <span className="text-[var(--color-primary)] font-bold">{sharingKey}%</span>
                 </label>
                 <input
                     type="range"
@@ -347,16 +410,16 @@ export default function AddAdvancedTeamMemberPage() {
                     className="w-full h-2 bg-[var(--color-primary-light)] opacity-70 rounded-lg appearance-none cursor-pointer accent-[var(--color-primary)] disabled:opacity-30"
                 />
                 <div className="flex justify-between text-xs text-gray-500 mt-1">
-                    <span>0% (Company)</span>
-                    <span>100% (Team Member)</span>
+                    <span>0% ({t("team.company")})</span>
+                    <span>100% ({t("team.teamMember")})</span>
                 </div>
                 <p className="text-xs text-gray-600 mt-2">
-                    The team member will receive <strong>{sharingKey}%</strong> of income, the company <strong>{100 - sharingKey}%</strong>
+                    {t("team.sharingKeyDescDynamic", { memberShare: sharingKey, companyShare: 100 - sharingKey })}
                 </p>
             </div>
 
             <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Base Salary (€/month)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">{t("team.baseSalary")} ({symbol()}/{t("common.month")})</label>
                 <input
                     type="number"
                     value={baseSalary}
@@ -376,14 +439,14 @@ export default function AddAdvancedTeamMemberPage() {
                     <Scissors className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                    <h3 className="font-semibold text-gray-900">Skills & Services</h3>
-                    <p className="text-xs text-gray-500">Services this team member can perform</p>
+                    <h3 className="font-semibold text-gray-900">{t("team.skillsAndServices")}</h3>
+                    <p className="text-xs text-gray-500">{t("team.skillsDesc")}</p>
                 </div>
             </div>
 
             {/* Services Grid */}
             <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-3">Assigned Services</label>
+                <label className="block text-sm font-medium text-gray-700 mb-3">{t("team.assignedServices")}</label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                     {availableServices.map((service) => {
                         const isSelected = selectedServices.includes(service.id);
@@ -405,7 +468,7 @@ export default function AddAdvancedTeamMemberPage() {
                                 <div className="flex gap-2 text-xs text-gray-500">
                                     <span>{service.duration}</span>
                                     <span>•</span>
-                                    <span>€{service.price}</span>
+                                    <span>{format(service.price)}</span>
                                 </div>
                             </button>
                         );
@@ -415,20 +478,20 @@ export default function AddAdvancedTeamMemberPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Experience Level</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t("team.experienceLevel")}</label>
                     <select
                         value={experienceLevel}
                         onChange={(e) => setExperienceLevel(e.target.value)}
                         disabled={!canModify}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm disabled:opacity-50"
                     >
-                        <option value="beginner">Beginner (0-2 years)</option>
-                        <option value="intermediate">Intermediate (2-5 years)</option>
-                        <option value="expert">Expert (5+ years)</option>
+                        <option value="beginner">{t("team.experience.beginner")}</option>
+                        <option value="intermediate">{t("team.experience.intermediate")}</option>
+                        <option value="expert">{t("team.experience.expert")}</option>
                     </select>
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Specialties</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t("team.specialties")}</label>
                     <input
                         type="text"
                         value={specialties}
@@ -449,8 +512,8 @@ export default function AddAdvancedTeamMemberPage() {
                     <Calendar className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                    <h3 className="font-semibold text-gray-900">Schedule & Availability</h3>
-                    <p className="text-xs text-gray-500">Define working hours</p>
+                    <h3 className="font-semibold text-gray-900">{t("team.scheduleAndAvailability")}</h3>
+                    <p className="text-xs text-gray-500">{t("team.defineWorkingHours")}</p>
                 </div>
             </div>
 
@@ -470,7 +533,7 @@ export default function AddAdvancedTeamMemberPage() {
                                 className="w-4 h-4 text-[var(--color-primary)] rounded focus:ring-[var(--color-primary-light)]"
                             />
                             <span className={`font-medium text-sm ${schedule[day].active ? "text-[var(--color-primary)]" : "text-gray-500"}`}>
-                                {day}
+                                {t("common.days." + day)}
                             </span>
                         </label>
                         {schedule[day].active && (
@@ -482,7 +545,7 @@ export default function AddAdvancedTeamMemberPage() {
                                     disabled={!canModify}
                                     className="px-2 py-1.5 md:px-3 md:py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 w-24 md:w-auto disabled:opacity-50"
                                 />
-                                <span className="text-gray-400 text-xs md:text-sm">to</span>
+                                <span className="text-gray-400 text-xs md:text-sm">{t("common.to")}</span>
                                 <input
                                     type="time"
                                     value={schedule[day].end}
@@ -493,7 +556,7 @@ export default function AddAdvancedTeamMemberPage() {
                             </div>
                         )}
                         {!schedule[day].active && (
-                            <span className="text-sm text-gray-400">Day off</span>
+                            <span className="text-sm text-gray-400">{t("team.dayOff")}</span>
                         )}
                     </div>
                 ))}
@@ -508,8 +571,8 @@ export default function AddAdvancedTeamMemberPage() {
                     <CheckCircle className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                    <h3 className="font-semibold">Recap & Validation</h3>
-                    <p className="text-xs text-white opacity-80">Check information before creation</p>
+                    <h3 className="font-semibold">{t("team.recap")}</h3>
+                    <p className="text-xs text-white opacity-80">{t("team.checkInfo")}</p>
                 </div>
             </div>
 
@@ -517,7 +580,7 @@ export default function AddAdvancedTeamMemberPage() {
                 {/* Personal */}
                 <div className="p-4 bg-white/10 rounded-xl">
                     <h4 className="font-medium mb-2 flex items-center gap-2">
-                        <User className="w-4 h-4" /> Identity
+                        <User className="w-4 h-4" /> {t("team.identity")}
                     </h4>
                     <p className="text-sm text-green-100">
                         {firstName} {lastName} • {email} • {phone}
@@ -527,31 +590,31 @@ export default function AddAdvancedTeamMemberPage() {
                 {/* Employment */}
                 <div className="p-4 bg-white/10 rounded-xl">
                     <h4 className="font-medium mb-2 flex items-center gap-2">
-                        <Briefcase className="w-4 h-4" /> Employment
+                        <Briefcase className="w-4 h-4" /> {t("team.employment")}
                     </h4>
                     <p className="text-sm text-green-100">
-                        {role} • {employeeType === "full-time" ? "Full-time" : employeeType === "part-time" ? "Part-time" : "Freelance"} •
-                        Sharing: {sharingKey}%
+                        {role} • {employeeType === "full-time" ? t("team.contracts.fullTime") : employeeType === "part-time" ? t("team.contracts.partTime") : t("team.contracts.freelance")} •
+                        {t("team.sharing")}: {sharingKey}%
                     </p>
                 </div>
 
                 {/* Services */}
                 <div className="p-4 bg-white/10 rounded-xl">
                     <h4 className="font-medium mb-2 flex items-center gap-2">
-                        <Scissors className="w-4 h-4" /> Services
+                        <Scissors className="w-4 h-4" /> {t("team.services")}
                     </h4>
                     <p className="text-sm text-green-100">
-                        {selectedServices.length} service(s) assigned • Level: {experienceLevel}
+                        {selectedServices.length} {t("team.serviceCountAssigned")} • {t("team.level")}: {experienceLevel === 'expert' ? t("team.experience.expert") : experienceLevel === 'intermediate' ? t("team.experience.intermediate") : t("team.experience.beginner")}
                     </p>
                 </div>
 
                 {/* Schedule */}
                 <div className="p-4 bg-white/10 rounded-xl">
                     <h4 className="font-medium mb-2 flex items-center gap-2">
-                        <Calendar className="w-4 h-4" /> Schedule
+                        <Calendar className="w-4 h-4" /> {t("team.schedule")}
                     </h4>
                     <p className="text-sm text-green-100">
-                        {Object.values(schedule).filter((s) => s.active).length} working day(s) per week
+                        {Object.values(schedule).filter((s) => s.active).length} {t("team.workingDaysPerWeek")}
                     </p>
                 </div>
             </div>
@@ -560,12 +623,13 @@ export default function AddAdvancedTeamMemberPage() {
 
     return (
         <TeamLayout
-            title="Add Team Member (Advanced)"
-            description="Complete form to create a new team member"
+            title={t("team.addMemberAdvanced")}
+            description={t("team.addMemberAdvancedDesc")}
         >
             {/* Mobile Step Indicator - Only visible on mobile */}
             <div className="md:hidden mb-4 p-4 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-dark)] rounded-xl text-white shadow-lg">
-                <div className="text-sm font-medium opacity-90">Step {currentStep} of 5</div>
+                <div className="text-sm font-medium opacity-90">{t("team.step")} {currentStep} {t("common.of")} 5</div>
+                {/* We need to translate step/description names which are in an array. For now I will leave them or we need to change how steps is defined */}
                 <div className="text-lg font-bold mt-1">{steps[currentStep - 1].name}</div>
                 <div className="text-xs opacity-75 mt-1">{steps[currentStep - 1].description}</div>
             </div>
@@ -631,7 +695,7 @@ export default function AddAdvancedTeamMemberPage() {
                     className={`w-full md:w-auto ${currentStep === 1 ? "hidden md:invisible md:block" : ""}`}
                 >
                     <ChevronLeft className="w-4 h-4" />
-                    Previous
+                    {t("common.previous")}
                 </Button>
 
                 {currentStep < 5 ? (
@@ -641,14 +705,14 @@ export default function AddAdvancedTeamMemberPage() {
                         onClick={() => setCurrentStep((prev) => Math.min(5, prev + 1))}
                         className="w-full md:w-auto"
                     >
-                        Next
+                        {t("common.next")}
                         <ChevronRight className="w-4 h-4" />
                     </Button>
                 ) : (
                     <ReadOnlyGuard>
                         <Button variant="primary" size="md" onClick={handleSubmit} className="w-full md:w-auto">
                             <Save className="w-4 h-4" />
-                            Create Team Member
+                            {t("team.createMember")}
                         </Button>
                     </ReadOnlyGuard>
                 )}

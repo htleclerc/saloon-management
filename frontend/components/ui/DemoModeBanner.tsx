@@ -3,10 +3,12 @@
 import { useAuth } from "@/context/AuthProvider";
 import { AlertCircle, X } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "@/i18n";
 
 export default function DemoModeBanner() {
     const { isDemoMode, user } = useAuth();
     const [isVisible, setIsVisible] = useState(true);
+    const { t } = useTranslation();
 
     if (!isDemoMode || !isVisible) return null;
 
@@ -25,9 +27,9 @@ export default function DemoModeBanner() {
             <div className="flex items-center gap-3">
                 <AlertCircle className="w-5 h-5" />
                 <div>
-                    <p className="font-bold text-sm">Demo Mode Active</p>
+                    <p className="font-bold text-sm">{t("common.demoModeTitle")}</p>
                     <p className="text-xs opacity-90">
-                        This is a demo account. All data will be deleted in {getRemainingTime()}.
+                        {t("common.demoModeMessage", { time: getRemainingTime() })}
                     </p>
                 </div>
             </div>

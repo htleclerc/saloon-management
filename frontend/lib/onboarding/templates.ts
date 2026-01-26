@@ -3,70 +3,70 @@ import type { Service, Product } from '@/types';
 /**
  * Service templates organized by salon type
  */
-export const serviceTemplates: Record<string, Service[]> = {
+export const serviceTemplates: Record<string, Partial<Service>[]> = {
     braids: [
-        { id: 1, name: 'Box Braids', price: 150, duration: '180' },
-        { id: 2, name: 'Cornrows', price: 80, duration: '120' },
-        { id: 3, name: 'Twists', price: 100, duration: '150' },
-        { id: 4, name: 'Locs', price: 120, duration: '180' },
-        { id: 5, name: 'Crochet Braids', price: 90, duration: '120' },
-        { id: 6, name: 'Feed-in Braids', price: 110, duration: '150' },
-        { id: 7, name: 'Goddess Locs', price: 140, duration: '180' },
-        { id: 8, name: 'Passion Twists', price: 130, duration: '180' },
+        { id: 1, name: 'Box Braids', price: 150, duration: 180 },
+        { id: 2, name: 'Cornrows', price: 80, duration: 120 },
+        { id: 3, name: 'Twists', price: 100, duration: 150 },
+        { id: 4, name: 'Locs', price: 120, duration: 180 },
+        { id: 5, name: 'Crochet Braids', price: 90, duration: 120 },
+        { id: 6, name: 'Feed-in Braids', price: 110, duration: 150 },
+        { id: 7, name: 'Goddess Locs', price: 140, duration: 180 },
+        { id: 8, name: 'Passion Twists', price: 130, duration: 180 },
     ],
     hair: [
-        { id: 1, name: 'Coupe', price: 50, duration: '60' },
-        { id: 2, name: 'Coloration', price: 120, duration: '120' },
-        { id: 3, name: 'Brushing', price: 40, duration: '45' },
-        { id: 4, name: 'Lissage', price: 150, duration: '180' },
-        { id: 5, name: 'Balayage', price: 180, duration: '180' },
-        { id: 6, name: 'Mèches', price: 100, duration: '120' },
-        { id: 7, name: 'Soin profond', price: 60, duration: '60' },
-        { id: 8, name: 'Coiffure événementielle', price: 90, duration: '90' },
+        { id: 1, name: 'Coupe', price: 50, duration: 60 },
+        { id: 2, name: 'Coloration', price: 120, duration: 120 },
+        { id: 3, name: 'Brushing', price: 40, duration: 45 },
+        { id: 4, name: 'Lissage', price: 150, duration: 180 },
+        { id: 5, name: 'Balayage', price: 180, duration: 180 },
+        { id: 6, name: 'Mèches', price: 100, duration: 120 },
+        { id: 7, name: 'Soin profond', price: 60, duration: 60 },
+        { id: 8, name: 'Coiffure événementielle', price: 90, duration: 90 },
     ],
     nails: [
-        { id: 1, name: 'Manucure', price: 35, duration: '45' },
-        { id: 2, name: 'Pédicure', price: 45, duration: '60' },
-        { id: 3, name: 'Gel UV', price: 50, duration: '60' },
-        { id: 4, name: 'Nail Art', price: 60, duration: '75' },
-        { id: 5, name: 'French', price: 40, duration: '50' },
-        { id: 6, name: 'Pose capsules', price: 70, duration: '90' },
-        { id: 7, name: 'Vernis semi-permanent', price: 45, duration: '60' },
-        { id: 8, name: 'Soin des mains', price: 30, duration: '30' },
+        { id: 1, name: 'Manucure', price: 35, duration: 45 },
+        { id: 2, name: 'Pédicure', price: 45, duration: 60 },
+        { id: 3, name: 'Gel UV', price: 50, duration: 60 },
+        { id: 4, name: 'Nail Art', price: 60, duration: 75 },
+        { id: 5, name: 'French', price: 40, duration: 50 },
+        { id: 6, name: 'Pose capsules', price: 70, duration: 90 },
+        { id: 7, name: 'Vernis semi-permanent', price: 45, duration: 60 },
+        { id: 8, name: 'Soin des mains', price: 30, duration: 30 },
     ],
     barber: [
-        { id: 1, name: 'Coupe classique', price: 30, duration: '30' },
-        { id: 2, name: 'Dégradé', price: 35, duration: '45' },
-        { id: 3, name: 'Barbe', price: 20, duration: '20' },
-        { id: 4, name: 'Rasage traditionnel', price: 25, duration: '30' },
-        { id: 5, name: 'Coupe + Barbe', price: 45, duration: '60' },
-        { id: 6, name: 'Design capillaire', price: 40, duration: '45' },
-        { id: 7, name: 'Soin barbe', price: 30, duration: '30' },
+        { id: 1, name: 'Coupe classique', price: 30, duration: 30 },
+        { id: 2, name: 'Dégradé', price: 35, duration: 45 },
+        { id: 3, name: 'Barbe', price: 20, duration: 20 },
+        { id: 4, name: 'Rasage traditionnel', price: 25, duration: 30 },
+        { id: 5, name: 'Coupe + Barbe', price: 45, duration: 60 },
+        { id: 6, name: 'Design capillaire', price: 40, duration: 45 },
+        { id: 7, name: 'Soin barbe', price: 30, duration: 30 },
     ],
     beauty: [
-        { id: 1, name: 'Maquillage', price: 60, duration: '60' },
-        { id: 2, name: 'Épilation', price: 40, duration: '45' },
-        { id: 3, name: 'Soin visage', price: 80, duration: '90' },
-        { id: 4, name: 'Extension cils', price: 100, duration: '120' },
-        { id: 5, name: 'Microblading', price: 300, duration: '180' },
-        { id: 6, name: 'Teinture sourcils', price: 25, duration: '30' },
-        { id: 7, name: 'Soin corps', price: 90, duration: '90' },
+        { id: 1, name: 'Maquillage', price: 60, duration: 60 },
+        { id: 2, name: 'Épilation', price: 40, duration: 45 },
+        { id: 3, name: 'Soin visage', price: 80, duration: 90 },
+        { id: 4, name: 'Extension cils', price: 100, duration: 120 },
+        { id: 5, name: 'Microblading', price: 300, duration: 180 },
+        { id: 6, name: 'Teinture sourcils', price: 25, duration: 30 },
+        { id: 7, name: 'Soin corps', price: 90, duration: 90 },
     ],
     spa: [
-        { id: 1, name: 'Massage', price: 90, duration: '60' },
-        { id: 2, name: 'Gommage', price: 70, duration: '45' },
-        { id: 3, name: 'Enveloppement', price: 100, duration: '75' },
-        { id: 4, name: 'Hammam', price: 50, duration: '60' },
-        { id: 5, name: 'Soins du dos', price: 80, duration: '60' },
-        { id: 6, name: 'Réflexologie', price: 75, duration: '60' },
-        { id: 7, name: 'Aromathérapie', price: 85, duration: '75' },
+        { id: 1, name: 'Massage', price: 90, duration: 60 },
+        { id: 2, name: 'Gommage', price: 70, duration: 45 },
+        { id: 3, name: 'Enveloppement', price: 100, duration: 75 },
+        { id: 4, name: 'Hammam', price: 50, duration: 60 },
+        { id: 5, name: 'Soins du dos', price: 80, duration: 60 },
+        { id: 6, name: 'Réflexologie', price: 75, duration: 60 },
+        { id: 7, name: 'Aromathérapie', price: 85, duration: 75 },
     ],
 };
 
 /**
  * Product templates organized by salon type
  */
-export const productTemplates: Record<string, Product[]> = {
+export const productTemplates: Record<string, Partial<Product>[]> = {
     braids: [
         { id: 1, name: 'Braiding Hair - Natural Black', price: 8, stock: 50, category: 'Hair Extensions' },
         { id: 2, name: 'Braiding Hair - Dark Brown', price: 8, stock: 40, category: 'Hair Extensions' },
@@ -114,14 +114,14 @@ export const productTemplates: Record<string, Product[]> = {
 /**
  * Get service templates for a specific salon type
  */
-export function getServiceTemplates(salonType: string): Service[] {
+export function getServiceTemplates(salonType: string): Partial<Service>[] {
     return serviceTemplates[salonType] || [];
 }
 
 /**
  * Get product templates for a specific salon type
  */
-export function getProductTemplates(salonType: string): Product[] {
+export function getProductTemplates(salonType: string): Partial<Product>[] {
     return productTemplates[salonType] || [];
 }
 
@@ -157,12 +157,20 @@ Jane Smith,jane@example.com,555-0101,Prefers morning appointments
 Bob Johnson,bob@example.com,555-0102,VIP client`;
 }
 
-/**
- * Generate CSV template content for workers
- */
 export function getWorkersCSVTemplate(): string {
     return `name,email,role,sharingKey,canAddIncome,canAddExpenses
 Alice Johnson,alice@salon.com,worker,40,true,false
 Bob Williams,bob@salon.com,manager,0,true,true
 Carol Davis,carol@salon.com,worker,35,true,false`;
 }
+
+import { Scissors, Sparkles, Heart } from 'lucide-react';
+
+export const salonTypes = [
+    { id: 'braids', label: 'Braids & Locs', icon: Sparkles, color: 'from-purple-500 to-pink-500' },
+    { id: 'hair', label: 'Salon de coiffure', icon: Scissors, color: 'from-pink-500 to-rose-500' },
+    { id: 'nails', label: "Institut d'ongles", icon: Sparkles, color: 'from-rose-500 to-orange-500' },
+    { id: 'barber', label: 'Barbier', icon: Scissors, color: 'from-blue-500 to-indigo-500' },
+    { id: 'beauty', label: 'Institut de beauté', icon: Heart, color: 'from-teal-500 to-emerald-500' },
+    { id: 'spa', label: 'Spa & Wellness', icon: Sparkles, color: 'from-cyan-500 to-blue-500' },
+];

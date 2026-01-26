@@ -16,6 +16,8 @@ import {
     TrendingUp,
     ArrowLeft,
 } from "lucide-react";
+import { useCurrency } from "@/hooks/useCurrency";
+import { useTranslation } from "@/i18n";
 
 // Mock Team Members for filter
 const teamMembers = [
@@ -64,6 +66,8 @@ function TeamIncomePageContent() {
     const searchParams = useSearchParams();
     const memberIdParam = searchParams.get("memberId");
     const router = useRouter();
+    const { format } = useCurrency();
+    const { t } = useTranslation();
 
     const [selectedMember, setSelectedMember] = useState<number | null>(memberIdParam ? parseInt(memberIdParam) : null);
     const [dateFilter, setDateFilter] = useState<DateFilterValue>({ year: new Date().getFullYear(), month: new Date().getMonth() + 1, week: null });
@@ -104,15 +108,15 @@ function TeamIncomePageContent() {
 
     return (
         <TeamLayout
-            title="Income History"
-            description="View and filter team member income"
+            title={t("team.incomeHistory")}
+            description={t("team.incomeHistoryDesc")}
         >
             <div className="space-y-6">
                 {/* Header Actions */}
                 <div className="flex justify-end gap-2">
                     <Button variant="outline" size="sm" className="bg-gray-50">
                         <Download className="w-4 h-4 mr-2" />
-                        Export
+                        {t("common.export")}
                     </Button>
                 </div>
 
@@ -124,8 +128,8 @@ function TeamIncomePageContent() {
                                 <DollarSign className="w-5 h-5 text-white" />
                             </div>
                             <div>
-                                <p className="text-xs text-gray-500 uppercase tracking-wider">Total Income</p>
-                                <p className="text-xl font-bold text-[var(--color-success)]">€{totalIncome.toLocaleString()}</p>
+                                <p className="text-xs text-gray-500 uppercase tracking-wider">{t("team.totalIncome")}</p>
+                                <p className="text-xl font-bold text-[var(--color-success)]">{format(totalIncome)}</p>
                             </div>
                         </div>
                     </Card>
@@ -135,7 +139,7 @@ function TeamIncomePageContent() {
                                 <TrendingUp className="w-5 h-5 text-white" />
                             </div>
                             <div>
-                                <p className="text-xs text-gray-500 uppercase tracking-wider">Completed</p>
+                                <p className="text-xs text-gray-500 uppercase tracking-wider">{t("team.completed")}</p>
                                 <p className="text-xl font-bold text-[var(--color-primary)]">{completedCount}</p>
                             </div>
                         </div>
@@ -146,7 +150,7 @@ function TeamIncomePageContent() {
                                 <Calendar className="w-5 h-5 text-white" />
                             </div>
                             <div>
-                                <p className="text-xs text-gray-500 uppercase tracking-wider">Pending</p>
+                                <p className="text-xs text-gray-500 uppercase tracking-wider">{t("team.pending")}</p>
                                 <p className="text-xl font-bold text-[var(--color-warning)]">{pendingCount}</p>
                             </div>
                         </div>
@@ -163,13 +167,13 @@ function TeamIncomePageContent() {
                         <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4">
                             {/* Member Filter */}
                             <div className="w-full lg:w-48">
-                                <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Team Member</label>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">{t("team.title")}</label>
                                 <select
                                     value={selectedMember ?? ""}
                                     onChange={(e) => handleMemberChange(e.target.value ? parseInt(e.target.value) : null)}
                                     className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                                 >
-                                    <option value="">All Team Members</option>
+                                    <option value="">{t("team.allTeamMembers")}</option>
                                     {teamMembers.map((member) => (
                                         <option key={member.id} value={member.id}>{member.name}</option>
                                     ))}
@@ -178,12 +182,12 @@ function TeamIncomePageContent() {
 
                             {/* Search */}
                             <div className="flex-1 w-full lg:w-auto">
-                                <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">Search</label>
+                                <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">{t("common.search")}</label>
                                 <div className="relative">
                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                                     <input
                                         type="text"
-                                        placeholder="Client or service..."
+                                        placeholder={t("team.searchPlaceholder")}
                                         value={searchQuery}
                                         onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
                                         className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
@@ -197,19 +201,19 @@ function TeamIncomePageContent() {
                 {/* Income Table */}
                 <Card className="overflow-hidden">
                     <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-                        <h3 className="font-semibold text-gray-900">Income Records</h3>
-                        <p className="text-sm text-gray-500">{filteredData.length} records found</p>
+                        <h3 className="font-semibold text-gray-900">{t("team.incomeRecords")}</h3>
+                        <p className="text-sm text-gray-500">{t("team.recordsFound", { count: filteredData.length })}</p>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead className="bg-gray-50 border-b border-gray-100">
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Team Member</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Client</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Service</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Amount</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{t("common.date")}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{t("team.title")}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{t("common.client")}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{t("common.service")}</th>
+                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">{t("common.amount")}</th>
+                                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">{t("common.status")}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
@@ -227,7 +231,7 @@ function TeamIncomePageContent() {
                                             </td>
                                             <td className="px-4 py-3 text-sm text-gray-900">{item.client}</td>
                                             <td className="px-4 py-3 text-sm text-gray-600">{item.service}</td>
-                                            <td className="px-4 py-3 text-sm text-right font-semibold text-[var(--color-success)]">€{item.amount}</td>
+                                            <td className="px-4 py-3 text-sm text-right font-semibold text-[var(--color-success)]">{format(item.amount)}</td>
                                             <td className="px-4 py-3 text-center">
                                                 <span className={`text-xs px-2 py-1 rounded-full ${item.status === "Completed"
                                                     ? "bg-[var(--color-success-light)] text-[var(--color-success)]"
@@ -241,7 +245,7 @@ function TeamIncomePageContent() {
                                 ) : (
                                     <tr>
                                         <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                                            No income records found matching your filters.
+                                            {t("team.noIncomeRecords")}
                                         </td>
                                     </tr>
                                 )}
@@ -249,8 +253,8 @@ function TeamIncomePageContent() {
                             {filteredData.length > 0 && (
                                 <tfoot className="bg-[var(--color-primary-light)] font-semibold">
                                     <tr>
-                                        <td colSpan={4} className="px-4 py-3 text-sm text-[var(--color-primary)]">Total</td>
-                                        <td className="px-4 py-3 text-sm text-right text-[var(--color-success)]">€{totalIncome.toLocaleString()}</td>
+                                        <td colSpan={4} className="px-4 py-3 text-sm text-[var(--color-primary)]">{t("common.total")}</td>
+                                        <td className="px-4 py-3 text-sm text-right text-[var(--color-success)]">{format(totalIncome)}</td>
                                         <td className="px-4 py-3"></td>
                                     </tr>
                                 </tfoot>
@@ -262,7 +266,7 @@ function TeamIncomePageContent() {
                     {totalPages > 1 && (
                         <div className="p-4 border-t border-gray-100 flex items-center justify-between">
                             <p className="text-sm text-gray-500">
-                                Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredData.length)} of {filteredData.length}
+                                {t("common.pagination", { start: (currentPage - 1) * itemsPerPage + 1, end: Math.min(currentPage * itemsPerPage, filteredData.length), total: filteredData.length })}
                             </p>
                             <div className="flex items-center gap-2">
                                 <button
@@ -308,10 +312,11 @@ function TeamIncomePageContent() {
 
 // Loading fallback
 function LoadingFallback() {
+    const { t } = useTranslation();
     return (
         <TeamLayout
-            title="Income History"
-            description="View and filter team member income"
+            title={t("team.incomeHistory")}
+            description={t("team.incomeHistoryDesc")}
         >
             <div className="animate-pulse space-y-4">
                 <div className="h-8 bg-gray-200 rounded w-1/4"></div>

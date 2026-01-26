@@ -9,7 +9,7 @@ import es from "./translations/es.json";
 
 export type Language = "en" | "fr" | "es";
 
-const translations: Record<Language, typeof en> = { en, fr, es };
+const translations: Record<Language, any> = { en, fr, es };
 
 export const languageNames: Record<Language, string> = {
     en: "English",
@@ -26,7 +26,7 @@ export const languageFlags: Record<Language, string> = {
 interface I18nContextType {
     language: Language;
     setLanguage: (lang: Language) => void;
-    t: (key: string) => string;
+    t: (key: string, params?: Record<string, string | number>) => string;
 }
 
 const I18nContext = createContext<I18nContextType | undefined>(undefined);
@@ -73,8 +73,14 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     };
 
     // Translation function
-    const t = (key: string): string => {
-        return getNestedValue(translations[language] as unknown as Record<string, unknown>, key);
+    const t = (key: string, params?: Record<string, string | number>): string => {
+        let text = getNestedValue(translations[language] as unknown as Record<string, unknown>, key);
+        if (params) {
+            Object.entries(params).forEach(([key, value]) => {
+                text = text.replace(new RegExp(`{{${key}}}`, 'g'), String(value));
+            });
+        }
+        return text;
     };
 
     return (

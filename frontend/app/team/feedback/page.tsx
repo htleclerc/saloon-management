@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -19,36 +19,58 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthProvider";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import { useTranslation } from "@/i18n";
 
-const allComments = [
-    { id: 1, client: "Marie Anderson", comment: "Isabelle was amazing! My box braids look perfect.", rating: 5, date: "2026-01-19", service: "Box Braids" },
-    { id: 2, client: "Lina Davis", comment: "Great service, very professional. Highly recommend.", rating: 4, date: "2026-01-18", service: "Cornrows" },
-    { id: 3, client: "Anna Brown", comment: "Always a pleasure to be serviced by Isabelle. She knows exactly what I want.", rating: 5, date: "2026-01-17", service: "Twists" },
-    { id: 4, client: "Lisa Wilson", comment: "Very happy with my new braids! They are tight but not too tight.", rating: 5, date: "2026-01-16", service: "Braids" },
-    { id: 5, client: "Sophie Martin", comment: "Professional and quick service. A bit expensive but worth it.", rating: 4, date: "2026-01-15", service: "Locs" },
-    { id: 6, client: "Julie Lefebvre", comment: "The salon is beautiful and Isabelle is very talented. 10/10", rating: 5, date: "2026-01-14", service: "Box Braids" },
-    { id: 7, client: "Chloe Dubois", comment: "Nice experience, but waited 10 mins after my appointment time.", rating: 3, date: "2026-01-13", service: "Cornrows" },
-];
+import { statsService } from "@/lib/services/StatsService";
+
+interface Review {
+    id: number;
+    client: string;
+    comment: string;
+    rating: number;
+    date: string;
+    service: string;
+    avatar?: string; // Added optional avatar
+    color?: string; // Added optional color
+}
 
 function FeedbackContent() {
+    const { t } = useTranslation();
     const { user } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
-    const serviceNameFilter = searchParams.get("serviceName");
+    const serviceNameFilter = searchParams.get("service"); // Changed from "serviceName"
     const workerNameFilter = searchParams.get("workerName");
 
     const [searchTerm, setSearchTerm] = useState("");
     const [ratingFilter, setRatingFilter] = useState("all");
+    const [reviews, setReviews] = useState<Review[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    const filteredComments = allComments.filter(comment => {
-        const matchesSearch = comment.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    useEffect(() => {
+        const fetchReviews = async () => {
+            try {
+                const data = await statsService.getAllReviews(1); // Mock salonId
+                setReviews(data as unknown as Review[]);
+            } catch (error) {
+                console.error("Failed to fetch reviews", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchReviews();
+    }, []);
+
+    const filteredComments = reviews.filter((comment) => {
+        const matchesSearch =
+            comment.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
             comment.comment.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesRating = ratingFilter === "all" || comment.rating === parseInt(ratingFilter);
-        const matchesService = !serviceNameFilter || comment.service.toLowerCase() === serviceNameFilter.toLowerCase();
+        const matchesService = serviceNameFilter ? comment.service.toLowerCase() === serviceNameFilter.toLowerCase() : true;
         return matchesSearch && matchesRating && matchesService;
     });
 
-    const avgRating = (allComments.reduce((acc, c) => acc + c.rating, 0) / allComments.length).toFixed(1);
+    const avgRating = reviews.length > 0 ? (reviews.reduce((acc, c) => acc + c.rating, 0) / reviews.length).toFixed(1) : "0.0";
 
     return (
         <ProtectedRoute>
@@ -65,10 +87,10 @@ function FeedbackContent() {
                             </button>
                             <div>
                                 <h1 className="text-2xl font-bold text-gray-900">
-                                    {serviceNameFilter ? `${serviceNameFilter} Reviews` : "Customer Feedback"}
+                                    {serviceNameFilter ? t("team.serviceReviews", { service: serviceNameFilter }) : t("team.customerFeedback")}
                                 </h1>
                                 <p className="text-sm text-gray-500">
-                                    {serviceNameFilter ? `Viewing feedback for ${serviceNameFilter}` : "View and manage reviews from your clients"}
+                                    {serviceNameFilter ? t("team.viewingFeedbackFor", { service: serviceNameFilter }) : t("team.feedbackSubtitle")}
                                 </p>
                             </div>
                         </div>
@@ -80,7 +102,7 @@ function FeedbackContent() {
                             </div>
                             <div className="h-8 w-px bg-gray-100"></div>
                             <div className="px-4 py-2">
-                                <span className="text-sm font-bold text-gray-900">{allComments.length} Total Reviews</span>
+                                <span className="text-sm font-bold text-gray-900">{reviews.length} {t("team.totalReviews")}</span>
                             </div>
                         </div>
                     </div>
@@ -92,10 +114,10 @@ function FeedbackContent() {
                                 <div className="p-2 bg-green-50 text-green-600 rounded-lg">
                                     <TrendingUp className="w-4 h-4" />
                                 </div>
-                                <span className="text-sm font-bold text-gray-900">Sentiment</span>
+                                <span className="text-sm font-bold text-gray-900">{t("team.sentiment")}</span>
                             </div>
-                            <h3 className="text-2xl font-bold text-gray-900 underline decoration-green-500/30 decoration-4">92% Positive</h3>
-                            <p className="text-xs text-green-600 font-medium mt-2">+5% from last month</p>
+                            <h3 className="text-2xl font-bold text-gray-900 underline decoration-green-500/30 decoration-4">92% {t("team.positive")}</h3>
+                            <p className="text-xs text-green-600 font-medium mt-2">+5% {t("team.fromLastMonth")}</p>
                         </Card>
 
                         <div className="md:col-span-2 relative">
@@ -104,7 +126,7 @@ function FeedbackContent() {
                             </div>
                             <input
                                 type="text"
-                                placeholder="Search by client name or feedback content..."
+                                placeholder={t("team.searchFeedbackPlaceholder")}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full h-full pl-12 pr-4 bg-white border-none shadow-xl shadow-gray-200/50 rounded-3xl text-sm focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
@@ -117,22 +139,22 @@ function FeedbackContent() {
                         <div className="flex items-center justify-between">
                             <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                                 <MessageSquare className="w-5 h-5 text-[var(--color-primary)]" />
-                                All Reviews
+                                {t("team.allReviews")}
                             </h3>
 
                             <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest mr-2">Filter by:</span>
+                                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest mr-2">{t("common.filterBy")}:</span>
                                 <select
                                     value={ratingFilter}
                                     onChange={(e) => setRatingFilter(e.target.value)}
                                     className="bg-white border-none shadow-lg shadow-gray-200/50 rounded-xl px-4 py-2 text-xs font-bold text-gray-700 outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                                 >
-                                    <option value="all">All Ratings</option>
-                                    <option value="5">5 Stars</option>
-                                    <option value="4">4 Stars</option>
-                                    <option value="3">3 Stars</option>
-                                    <option value="2">2 Stars</option>
-                                    <option value="1">1 Star</option>
+                                    <option value="all">{t("team.allRatings")}</option>
+                                    <option value="5">5 {t("team.stars")}</option>
+                                    <option value="4">4 {t("team.stars")}</option>
+                                    <option value="3">3 {t("team.stars")}</option>
+                                    <option value="2">2 {t("team.stars")}</option>
+                                    <option value="1">1 {t("team.star")}</option>
                                 </select>
                             </div>
                         </div>
@@ -163,15 +185,15 @@ function FeedbackContent() {
                                             </div>
                                         </div>
                                         <p className="text-sm text-gray-600 leading-relaxed italic border-l-4 border-[var(--color-primary-light)] pl-4 py-1 bg-gray-50/50 rounded-r-xl">
-                                            "{comment.comment}"
+                                            &quot;{comment.comment}&quot;
                                         </p>
                                     </Card>
                                 ))
                             ) : (
                                 <div className="py-20 flex flex-col items-center justify-center bg-white rounded-3xl shadow-sm border border-dashed border-gray-200">
                                     <MessageSquare className="w-12 h-12 text-gray-200 mb-4" />
-                                    <p className="text-gray-500 font-medium">No reviews found matching your criteria</p>
-                                    <Button variant="outline" className="mt-4" onClick={() => { setSearchTerm(""); setRatingFilter("all"); }}>Reset Filters</Button>
+                                    <p className="text-gray-500 font-medium">{t("team.noReviewsFound")}</p>
+                                    <Button variant="outline" className="mt-4" onClick={() => { setSearchTerm(""); setRatingFilter("all"); }}>{t("common.resetFilters")}</Button>
                                 </div>
                             )}
                         </div>

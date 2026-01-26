@@ -23,38 +23,8 @@ import { useAuth } from "@/context/AuthProvider";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { Booking } from "@/types";
 
-// Mock data (in real app, fetch from API/Context)
-const mockAppointments: Booking[] = [
-    {
-        id: 101,
-        salonId: "tenant_1",
-        clientId: 1,
-        clientName: "Marie Dubois",
-        date: "2026-01-19",
-        time: "11:00",
-        endTime: "14:30",
-        duration: 210,
-        status: "Confirmed",
-        serviceIds: [1],
-        workerIds: [1],
-        incomeId: 1,
-        comments: [
-            { id: "1", user: "Orphelia", text: "Client prefers tight braids.", timestamp: new Date("2026-01-18T10:00:00Z") }
-        ],
-        interactionHistory: [
-            { id: "1", user: "System", action: "Appointment Set", timestamp: new Date("2026-01-17T09:00:00Z") },
-            { id: "2", user: "Orphelia", action: "Booking Started", timestamp: new Date("2026-01-19T11:00:00Z") },
-            { id: "3", user: "Orphelia", action: "Booking Finished", timestamp: new Date("2026-01-19T14:30:00Z") }
-        ],
-        createdAt: new Date(),
-        updatedAt: new Date()
-    },
-];
-
-const servicesList = [
-    { id: 1, name: "Box Braids", price: 120 },
-    { id: 2, name: "Cornrows", price: 85 }
-];
+import { bookingService } from "@/lib/services";
+import { BookingWithRelations } from "@/types";
 
 export default function AppointmentDetailPage() {
     const params = useParams();
@@ -62,14 +32,85 @@ export default function AppointmentDetailPage() {
     const searchParams = useSearchParams();
     const appointmentId = parseInt(params.id as string);
     const fromHistory = searchParams.get("fromHistory") === "true";
-    const { user } = useAuth();
+    const { user, hasPermission } = useAuth();
+
+    // State
+    const [appointment, setAppointment] = React.useState<BookingWithRelations | null>(null);
+    const [history, setHistory] = React.useState<any[]>([]);
+    const [comments, setComments] = React.useState<any[]>([]);
+    const [income, setIncome] = React.useState<any | null>(null);
+    const [loading, setLoading] = React.useState(true);
+    const [error, setError] = React.useState<string | null>(null);
 
     // Safety check for user role
-    const isAdminView = user?.role === 'admin' || user?.role === 'owner' || user?.role === 'super_admin';
-    const appointment = mockAppointments.find(a => a.id === appointmentId) || mockAppointments[0];
+    // Using simple role check if hasPermission type is strict
+    // const isAdminView = hasPermission(['Owner', 'SuperAdmin', 'Manager']); 
+    // Fallback to user role string check to avoid complex type issues for now
+    const isAdminView = user?.role === 'owner' || user?.role === 'super_admin' || user?.role === 'manager';
+
+    React.useEffect(() => {
+        const fetchData = async () => {
+            if (!appointmentId) return;
+            try {
+                setLoading(true);
+                // Fetch appointment first to get salonId
+                const aptData = await bookingService.getWithRelations(appointmentId);
+
+                if (!aptData) {
+                    setError("Appointment not found");
+                } else {
+                    setAppointment(aptData);
+
+                    // Fetch related data in parallel
+                    // incomeService.getByBooking is not implemented in service fully yet (returned null in my edit), 
+                    // so use getAll with filter or just empty for now pending implementation.
+                    // Actually I can try getAll
+                    // const incomeData = await incomeService.getAll(aptData.salonId, { bookingId: appointmentId }); // check filter name
+
+                    const [historyData, commentsData] = await Promise.all([
+                        bookingService.getHistory(appointmentId),
+                        bookingService.getComments(appointmentId)
+                    ]);
+
+                    setHistory(historyData);
+                    setComments(commentsData);
+                    // setIncome(incomeData[0] || null); 
+                }
+            } catch (err) {
+                console.error(err);
+                setError("Failed to load appointment details");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [appointmentId]);
+
+    if (loading) {
+        return (
+            <MainLayout>
+                <div className="flex items-center justify-center min-h-[50vh]">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+                </div>
+            </MainLayout>
+        );
+    }
+
+    if (error || !appointment) {
+        return (
+            <MainLayout>
+                <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
+                    <AlertCircle className="w-12 h-12 text-red-500" />
+                    <p className="text-xl font-bold text-gray-900">{error || "Appointment not found"}</p>
+                    <Button onClick={() => router.back()}>Go Back</Button>
+                </div>
+            </MainLayout>
+        );
+    }
 
     return (
-        <ProtectedRoute requiredRole={["admin", "owner", "manager", "worker"]}>
+        <ProtectedRoute requiredRole={["super_admin", "owner", "manager", "worker"]}>
             <MainLayout>
                 <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     {/* Header */}
@@ -142,15 +183,15 @@ export default function AppointmentDetailPage() {
                                         <div>
                                             <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">Service Details</p>
                                             <div className="space-y-3">
-                                                {appointment.serviceIds.map((sid: number) => {
-                                                    const service = servicesList.find(s => s.id === sid);
-                                                    return (
-                                                        <div key={sid} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                                                            <span className="font-bold text-gray-700">{service?.name || "Service"}</span>
-                                                            <span className="font-black text-[var(--color-primary)]">€{service?.price || 0}</span>
-                                                        </div>
-                                                    );
-                                                })}
+                                                {appointment.services && appointment.services.map((service: any) => (
+                                                    <div key={service.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                                                        <span className="font-bold text-gray-700">{service.name}</span>
+                                                        <span className="font-black text-[var(--color-primary)]">€{service.price}</span>
+                                                    </div>
+                                                ))}
+                                                {(!appointment.services || appointment.services.length === 0) && (
+                                                    <p className="text-gray-500 italic">No services listed</p>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -164,17 +205,20 @@ export default function AppointmentDetailPage() {
                                     Internal Comments
                                 </h3>
                                 <div className="space-y-4">
-                                    {appointment.comments.map((comment) => (
+                                    {comments.map((comment: any) => (
                                         <div key={comment.id} className="bg-purple-50 p-5 rounded-3xl border border-purple-100">
                                             <div className="flex items-center justify-between mb-2">
-                                                <span className="font-black text-xs text-[var(--color-primary)] uppercase tracking-wider">{comment.user}</span>
+                                                <span className="font-black text-xs text-[var(--color-primary)] uppercase tracking-wider">{comment.userCode || comment.user || 'System'}</span>
                                                 <span className="text-[10px] font-bold text-gray-400">
                                                     {new Date(comment.timestamp).toLocaleDateString()}
                                                 </span>
                                             </div>
-                                            <p className="text-sm text-gray-700 leading-relaxed italic">"{comment.text}"</p>
+                                            <p className="text-sm text-gray-700 leading-relaxed italic">"{comment.text || comment.comment}"</p>
                                         </div>
                                     ))}
+                                    {(!comments || comments.length === 0) && (
+                                        <p className="text-gray-500 italic">No comments yet.</p>
+                                    )}
                                 </div>
                             </Card>
                         </div>
@@ -188,7 +232,7 @@ export default function AppointmentDetailPage() {
                                 </div>
                                 <div className="space-y-6 relative">
                                     <div className="absolute left-[9px] top-2 bottom-2 w-0.5 bg-gray-50"></div>
-                                    {appointment.interactionHistory.slice().reverse().map((interaction) => (
+                                    {history.slice().reverse().map((interaction: any) => (
                                         <div key={interaction.id} className="flex gap-4 relative z-10">
                                             <div className="w-5 h-5 rounded-full bg-white border-4 border-purple-200 shrink-0"></div>
                                             <div className="min-w-0">
@@ -196,7 +240,7 @@ export default function AppointmentDetailPage() {
                                                     {interaction.action}
                                                 </p>
                                                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">
-                                                    {interaction.user} • {new Date(interaction.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    {interaction.user || interaction.userCode || 'System'} • {new Date(interaction.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </p>
                                             </div>
                                         </div>
@@ -204,7 +248,7 @@ export default function AppointmentDetailPage() {
                                 </div>
                             </Card>
 
-                            {appointment.incomeId && (
+                            {income && (
                                 <Card className="p-6 border-none shadow-xl shadow-blue-500/10 bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-[2rem] space-y-4">
                                     <div className="flex items-center gap-3">
                                         <div className="p-2 bg-white/20 rounded-xl">

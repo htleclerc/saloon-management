@@ -1,9 +1,10 @@
-"use client";
+'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { getPlanLimits, canCreateSalon } from "@/lib/utils/subscriptionHelpers";
+import { UserRole as DomainUserRole } from "@/types";
 
-export type UserRole = "super_admin" | "owner" | "admin" | "manager" | "worker" | "client";
+export type UserRole = DomainUserRole;
 
 // Worker-specific permissions
 export interface WorkerPermissions {
@@ -17,15 +18,14 @@ interface Tenant {
     name: string;
     slug: string;
     logo?: string;
-    primaryColor?: string; // Hex color from logo/default
-    customPrimaryColor?: string; // User-selected custom color (overrides primaryColor)
-    customSecondaryColor?: string; // User-selected custom secondary color
-    useCustomColorOverride?: boolean; // Whether to use custom colors instead of palette
+    primaryColor?: string;
+    customPrimaryColor?: string;
+    customSecondaryColor?: string;
+    useCustomColorOverride?: boolean;
     semanticColorMode?: "default" | "theme" | "custom";
     customSuccessColor?: string;
     customWarningColor?: string;
     customDangerColor?: string;
-    // Subscription fields
     subscriptionPlan?: 'free' | 'starter' | 'pro' | 'enterprise' | 'custom';
     subscriptionStatus?: 'active' | 'trial' | 'expired' | 'cancelled';
 }
@@ -37,13 +37,13 @@ interface User {
     role: UserRole;
     avatar?: string;
     tenantId: string;
-    tenants?: Tenant[]; // For owners/admins with multiple salons
+    tenants?: Tenant[];
     isDemo: boolean;
-    demoCreatedAt?: string; // ISO timestamp for demo mode expiry
-    workerId?: string; // Worker profile ID for filtering data
-    permissions?: WorkerPermissions; // Worker-specific permissions
-    onboardingCompleted?: boolean; // Whether user has completed onboarding
-    onboardingStep?: number; // Current step for resuming onboarding
+    demoCreatedAt?: string;
+    workerId?: string;
+    permissions?: WorkerPermissions;
+    onboardingCompleted?: boolean;
+    onboardingStep?: number;
 }
 
 export interface AuthContextType {
@@ -58,7 +58,6 @@ export interface AuthContextType {
     hasExactRole: (requiredRole: UserRole | UserRole[]) => boolean;
     isSuperAdmin: boolean;
     isOwner: boolean;
-    isAdmin: boolean;
     isManager: boolean;
     isWorker: boolean;
     isClient: boolean;
@@ -74,50 +73,30 @@ export interface AuthContextType {
         warning?: string,
         danger?: string
     ) => void;
-    // Worker-specific permission utilities
     canAddIncome: () => boolean;
     canAddExpenses: () => boolean;
     canAddServices: () => boolean;
     getWorkerId: () => string | null;
-    // Multi-salon & subscription utilities
     canCreateNewSalon: () => boolean;
     getSalonLimit: () => number;
     getCurrentSalonCount: () => number;
-    // Read-only mode for super admin
     isReadOnlyMode: boolean;
     enterReadOnlyMode: (salonId: string, salonName: string, ownerName: string) => void;
     exitReadOnlyMode: () => void;
     toggleReadOnlyMode: () => void;
     enterManageMode: (salonId: string, salonName: string, ownerName: string) => void;
     readOnlySalonInfo: { id: string; name: string; ownerName: string } | null;
-    // Check if super admin has manage rights on a salon
     canManageSalon: (salonId: string) => boolean;
-    // Centralized modification check (respects Read-Only mode)
     canModify: boolean;
+    activeSalonId: string | null;
 }
 
-// Role hierarchy: super_admin > owner > admin > manager > worker > client
 const roleHierarchy: Record<UserRole, number> = {
-    super_admin: 6,
-    owner: 5,
-    admin: 4,
+    super_admin: 5,
+    owner: 4,
     manager: 3,
     worker: 2,
     client: 1,
-};
-
-// Default mock user for development (admin)
-const defaultUser: User = {
-    id: "1",
-    name: "Admin User",
-    email: "admin@workshop.com",
-    role: "admin",
-    tenantId: "tenant_1",
-    tenants: [
-        { id: "tenant_1", name: "Main Salon", slug: "main-salon" },
-        { id: "tenant_2", name: "Downtown Branch", slug: "downtown-branch" }
-    ],
-    isDemo: false,
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -129,20 +108,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [isReadOnlyMode, setIsReadOnlyMode] = useState(false);
     const [readOnlySalonInfo, setReadOnlySalonInfo] = useState<{ id: string; name: string; ownerName: string } | null>(null);
 
-    // Load user from localStorage on mount
     useEffect(() => {
         setMounted(true);
         const savedUser = localStorage.getItem("workshop-user");
         if (savedUser) {
             try {
                 const parsedUser = JSON.parse(savedUser);
-                // Check if demo mode has expired (72 hours)
                 if (parsedUser.isDemo && parsedUser.demoCreatedAt) {
                     const createdAt = new Date(parsedUser.demoCreatedAt);
                     const now = new Date();
                     const hoursDiff = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
                     if (hoursDiff > 72) {
-                        // Demo expired, logout
                         localStorage.removeItem("workshop-user");
                         setUser(null);
                         return;
@@ -156,25 +132,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsLoading(false);
     }, []);
 
-    // Save user to localStorage
     useEffect(() => {
         if (mounted && user) {
             localStorage.setItem("workshop-user", JSON.stringify(user));
         }
     }, [user, mounted]);
 
-    const login = (userData: User) => {
-        setUser(userData);
-    };
+    const login = (userData: User) => setUser(userData);
 
     const demoLogin = (role: UserRole) => {
         let demoTenants: Tenant[] = [];
-
-        // Super admin has no salons, only access to admin panel
-        if (role === 'super_admin') {
-            demoTenants = [];
-        }
-        // Owner gets 2 demo salons with Pro plan
+        if (role === 'super_admin') demoTenants = [];
         else if (role === 'owner') {
             demoTenants = [
                 {
@@ -196,9 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     subscriptionStatus: "active",
                 },
             ];
-        }
-        // Admin and Manager get multiple tenants with Free plan
-        else if (role === 'admin' || role === 'manager') {
+        } else if (role === 'manager') {
             demoTenants = [
                 {
                     id: "tenant_1",
@@ -208,20 +174,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     primaryColor: "#9333ea",
                     subscriptionPlan: "free",
                     subscriptionStatus: "trial",
-                },
-                {
-                    id: "tenant_2",
-                    name: "Demo Branch",
-                    slug: "demo-branch",
-                    logo: "https://ui-avatars.com/api/?name=DB&background=3b82f6&color=fff",
-                    primaryColor: "#3b82f6",
-                    subscriptionPlan: "free",
-                    subscriptionStatus: "trial",
-                },
+                }
             ];
-        }
-        // Worker and Client get single salon with Free plan
-        else {
+        } else {
             demoTenants = [
                 {
                     id: "tenant_1",
@@ -235,20 +190,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             ];
         }
 
-        const getRoleName = (r: UserRole): string => {
-            switch (r) {
-                case 'super_admin': return 'Super Admin';
-                case 'owner': return 'Demo Owner';
-                case 'admin': return 'Demo Admin';
-                case 'manager': return 'Demo Manager';
-                case 'worker': return 'Demo Worker';
-                case 'client': return 'Demo Client';
-            }
-        };
-
         const demoUser: User = {
             id: `demo_user_${Date.now()}`,
-            name: getRoleName(role),
+            name: `Demo ${role}`,
             email: `demo.${role}@workshop.demo`,
             role: role,
             tenantId: demoTenants.length > 0 ? demoTenants[0].id : "",
@@ -256,11 +200,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isDemo: true,
             demoCreatedAt: new Date().toISOString(),
             avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=Demo${role}`,
-            // For workers, assign a worker ID and permissions (using '1' to match Orphelia in mock data)
             workerId: role === 'worker' ? '1' : undefined,
             permissions: role === 'worker' ? {
-                canAddIncome: true,  // Demo worker has full permissions
-                canAddExpenses: false,  // Demo: can't add expenses
+                canAddIncome: true,
+                canAddExpenses: false,
                 canAddServices: true
             } : undefined
         };
@@ -275,57 +218,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     const updateUser = (updates: Partial<User>) => {
-        if (user) {
-            setUser({ ...user, ...updates });
-        }
+        if (user) setUser({ ...user, ...updates });
     };
 
     const switchTenant = (tenantId: string) => {
         if (user && user.tenants) {
             const tenant = user.tenants.find(t => t.id === tenantId);
-            if (tenant) {
-                // In demo mode, simulate an "other set of demo data" by potentially 
-                // changing some user properties or triggering a global state reset
-                if (user.isDemo) {
-                    console.log(`Demo Mode: Switching dataset to ${tenant.name}...`);
-                    // Here we could simulate variations: 
-                    // e.g. change name slightly or set a flag to components
-                    setUser({
-                        ...user,
-                        tenantId,
-                        name: `Demo ${tenant.name.split(' ')[1] || 'User'}`
-                    });
-                } else {
-                    // Normal mode: Standard tenant switch (Backend would handle data isolation)
-                    setUser({ ...user, tenantId });
-                }
-            }
+            if (tenant) setUser({ ...user, tenantId });
         }
     };
 
-    /**
-     * Check if user has required permission
-     * @param requiredRole - Single role or array of roles that can access
-     * @returns boolean - true if user has permission
-     */
     const hasPermission = (requiredRole: UserRole | UserRole[]): boolean => {
         if (!user) return false;
-
         const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
-
-        // Check if user's role is in the allowed roles
         if (roles.includes(user.role)) return true;
-
-        // Check hierarchy - higher roles can access lower role features
         const userLevel = roleHierarchy[user.role];
         return roles.some((role) => userLevel >= roleHierarchy[role]);
     };
 
-    /**
-     * Check if user has the exact role (no hierarchy check)
-     * @param requiredRole - Single role or array of roles
-     * @returns boolean - true if user has exact role match
-     */
     const hasExactRole = (requiredRole: UserRole | UserRole[]): boolean => {
         if (!user) return false;
         const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
@@ -334,16 +244,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const isSuperAdmin = user?.role === "super_admin";
     const isOwner = user?.role === "owner" || isSuperAdmin;
-    const isAdmin = user?.role === "admin" || isOwner;
-    const isManager = user?.role === "manager" || isAdmin;
+    const isManager = user?.role === "manager" || isOwner;
     const isWorker = user?.role === "worker" || isManager;
     const isClient = user?.role === "client";
+
     const isDemoMode = user?.isDemo || false;
 
-    // Get current tenant
     const currentTenant = user?.tenants?.find(t => t.id === user.tenantId) || null;
 
-    // Update tenant custom colors
     const updateTenantColors = (
         primaryColor?: string,
         secondaryColor?: string,
@@ -354,7 +262,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         danger?: string
     ) => {
         if (!user || !currentTenant || !user.tenants) return;
-
         const updatedTenants = user.tenants.map(t => {
             if (t.id === currentTenant.id) {
                 return {
@@ -370,53 +277,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
             return t;
         });
-
         const updatedUser = { ...user, tenants: updatedTenants };
         setUser(updatedUser);
         localStorage.setItem("workshop-user", JSON.stringify(updatedUser));
     };
 
-    // Worker permission utilities
     const canAddIncome = (): boolean => {
         if (!user || isReadOnlyMode) return false;
-        // Admins and managers have full permissions
-        if (hasPermission(['manager', 'admin'])) return true;
-        // Workers need explicit permission
+        if (isManager) return true;
         return user.permissions?.canAddIncome ?? false;
     };
 
     const canAddExpenses = (): boolean => {
         if (!user || isReadOnlyMode) return false;
-        // Admins and managers have full permissions
-        if (hasPermission(['manager', 'admin'])) return true;
-        // Workers need explicit permission
+        if (isManager) return true;
         return user.permissions?.canAddExpenses ?? false;
     };
 
     const canAddServices = (): boolean => {
         if (!user || isReadOnlyMode) return false;
-        // Admins and managers have full permissions
-        if (hasPermission(['manager', 'admin'])) return true;
-        // Workers need explicit permission
+        if (isManager) return true;
         return user.permissions?.canAddServices ?? false;
     };
 
     const getWorkerId = (): string | null => {
         if (!user) return null;
-        // Return workerId for workers, null for other roles
         return user.workerId ?? null;
     };
 
-    // Multi-salon & subscription utilities
     const canCreateNewSalon = (): boolean => {
         if (!user || !currentTenant) return false;
-        // Super admins can always create salons
         if (isSuperAdmin) return true;
-
         const salonCount = user.tenants?.length || 0;
         const plan = currentTenant.subscriptionPlan || 'free';
         const limits = getPlanLimits(plan);
-
         return canCreateSalon(salonCount, limits.maxSalons);
     };
 
@@ -427,110 +321,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return limits.maxSalons;
     };
 
-    const getCurrentSalonCount = (): number => {
-        return user?.tenants?.length || 0;
-    };
+    const getCurrentSalonCount = (): number => user?.tenants?.length || 0;
 
-    // Read-only mode functions
     const enterReadOnlyMode = (salonId: string, salonName: string, ownerName: string) => {
         setIsReadOnlyMode(true);
         setReadOnlySalonInfo({ id: salonId, name: salonName, ownerName });
-        // Switch to the salon tenant
         if (user && user.tenants) {
             const tenant = user.tenants.find(t => t.id === salonId);
-            if (tenant) {
-                setUser({ ...user, tenantId: salonId });
-            }
+            if (tenant) setUser({ ...user, tenantId: salonId });
         }
     };
 
     const exitReadOnlyMode = () => {
         setIsReadOnlyMode(false);
         setReadOnlySalonInfo(null);
-        // Return to admin view (no specific tenant)
-        if (user) {
-            setUser({ ...user, tenantId: user.tenants?.[0]?.id || '' });
-        }
+        if (user) setUser({ ...user, tenantId: user.tenants?.[0]?.id || '' });
     };
 
-    const toggleReadOnlyMode = () => {
-        setIsReadOnlyMode(prev => !prev);
-    };
+    const toggleReadOnlyMode = () => setIsReadOnlyMode(prev => !prev);
 
     const enterManageMode = (salonId: string, salonName: string, ownerName: string) => {
         setIsReadOnlyMode(false);
         setReadOnlySalonInfo({ id: salonId, name: salonName, ownerName });
-        // Switch to the salon tenant
-        if (user && user.tenants) {
-            setUser({ ...user, tenantId: salonId });
-        }
+        if (user && user.tenants) setUser({ ...user, tenantId: salonId });
     };
 
-    // Check if super admin has manage rights on a specific salon
-    // In demo mode, this is simulated by checking if the salon has the super admin as an admin user
-    // In real mode, this would check the database
     const canManageSalon = (salonId: string): boolean => {
         if (!user || !isSuperAdmin) return false;
-
-        // In demo mode: permit management for representative salons
-        if (isDemoMode) {
-            const manageableIds = [
-                'salon-elegance-paris',
-                'salon-retro-bordeaux',
-                'salon-zen-strasbourg',
-                'salon-vintage-lille',
-                'tenant_1' // Also the default demo salon
-            ];
-            return manageableIds.includes(salonId);
-        }
-
-        // In real mode: check if the salon is in the user's tenants (explicitly authorized)
+        if (isDemoMode) return true;
         const salon = user.tenants?.find(t => t.id === salonId);
-        if (!salon) return false;
-        return (salon as any).superAdminCanManage === true;
+        return !!salon;
     };
 
     return (
         <AuthContext.Provider
             value={{
-                user,
-                isAuthenticated: !!user,
-                isLoading,
-                login,
-                demoLogin,
-                logout,
-                updateUser,
-                hasPermission,
-                hasExactRole,
-                isSuperAdmin,
-                isOwner,
-                isAdmin,
-                isManager,
-                isWorker,
-                isClient,
-                isDemoMode,
-                currentTenant,
-                switchTenant,
-                updateTenantColors,
-                // Worker permission utilities
-                canAddIncome,
-                canAddExpenses,
-                canAddServices,
-                getWorkerId,
-                // Multi-salon & subscription utilities
-                canCreateNewSalon,
-                getSalonLimit,
-                getCurrentSalonCount,
-                // Read-only mode
-                isReadOnlyMode,
-                enterReadOnlyMode,
-                exitReadOnlyMode,
-                toggleReadOnlyMode,
-                enterManageMode,
-                readOnlySalonInfo,
-                canManageSalon,
-                // Centralized modification check
-                canModify: !isReadOnlyMode
+                user, isAuthenticated: !!user, isLoading, login, demoLogin, logout, updateUser,
+                hasPermission, hasExactRole, isSuperAdmin, isOwner, isManager, isWorker, isClient, isDemoMode,
+                currentTenant, switchTenant, updateTenantColors,
+                canAddIncome, canAddExpenses, canAddServices, getWorkerId,
+                canCreateNewSalon, getSalonLimit, getCurrentSalonCount,
+                isReadOnlyMode, enterReadOnlyMode, exitReadOnlyMode, toggleReadOnlyMode, enterManageMode,
+                readOnlySalonInfo, canManageSalon, canModify: !isReadOnlyMode,
+                activeSalonId: user?.tenantId ?? null
             }}
         >
             {children}
@@ -540,13 +373,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
     const context = useContext(AuthContext);
-    if (context === undefined) {
-        throw new Error("useAuth must be used within an AuthProvider");
-    }
+    if (context === undefined) throw new Error("useAuth must be used within an AuthProvider");
     return context;
 }
 
-// Permission check component for conditional rendering
 interface RequirePermissionProps {
     role: UserRole | UserRole[];
     children: ReactNode;
@@ -555,10 +385,7 @@ interface RequirePermissionProps {
 
 export function RequirePermission({ role, children, fallback = null }: RequirePermissionProps) {
     const { hasPermission } = useAuth();
-
-    if (!hasPermission(role)) {
-        return <>{fallback}</>;
-    }
-
+    if (!hasPermission(role)) return <>{fallback}</>;
     return <>{children}</>;
 }
+

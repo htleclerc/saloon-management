@@ -38,18 +38,18 @@ import {
 
 const menuItems = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/" },
-    { name: "Daily", icon: TrendingUp, path: "/daily", roles: ['manager', 'admin', 'worker'] },
-    { name: "Income", icon: DollarSign, path: "/income", roles: ['manager', 'admin', 'worker'] },
-    { name: "Team", icon: Users, path: "/team", roles: ['manager', 'admin'] },
+    { name: "Daily", icon: TrendingUp, path: "/daily", roles: ['manager', 'super_admin', 'worker'] },
+    { name: "Income", icon: DollarSign, path: "/income", roles: ['manager', 'super_admin', 'worker'] },
+    { name: "Team", icon: Users, path: "/team", roles: ['manager', 'super_admin'] },
     { name: "My Invoices", icon: FileText, path: "/client/invoices", roles: ['client'], strictRoles: true },
     { name: "Appointments", icon: CalendarCheck, path: "/appointments" },
-    { name: "Calendar", icon: Calendar, path: "/calendar", roles: ['manager', 'admin'] },
-    { name: "Clients", icon: UserCheck, path: "/clients", roles: ['manager', 'admin'] },
-    { name: "Expenses", icon: Receipt, path: "/expenses", roles: ['manager', 'admin'] },
-    { name: "Approvals", icon: CheckSquare, path: "/approvals", roles: ['manager', 'admin'] },
-    { name: "Services", icon: Scissors, path: "/services", roles: ['manager', 'admin', 'worker'] },
-    { name: "Reports", icon: FileText, path: "/reports", roles: ['manager', 'admin'] },
-    { name: "Configuration", icon: Sliders, path: "/configuration", roles: ['manager', 'admin'] },
+    { name: "Calendar", icon: Calendar, path: "/calendar", roles: ['manager', 'super_admin'] },
+    { name: "Clients", icon: UserCheck, path: "/clients", roles: ['manager', 'super_admin'] },
+    { name: "Expenses", icon: Receipt, path: "/expenses", roles: ['manager', 'super_admin'] },
+    { name: "Approvals", icon: CheckSquare, path: "/approvals", roles: ['manager', 'super_admin'] },
+    { name: "Services", icon: Scissors, path: "/services", roles: ['manager', 'super_admin', 'worker'] },
+    { name: "Reports", icon: FileText, path: "/reports", roles: ['manager', 'super_admin'] },
+    { name: "Configuration", icon: Sliders, path: "/configuration", roles: ['manager', 'super_admin'] },
     { name: "Favorites", icon: Heart, path: "/salons/favorites", roles: ['client'], strictRoles: true },
     { name: "Discover", icon: Compass, path: "/salons/discover", roles: ['client'], strictRoles: true },
     { name: "Settings", icon: Settings, path: "/settings" },
@@ -184,7 +184,7 @@ export default function Sidebar() {
                             // Additional logic for Income - although roles should cover it
                             if (item.name === "Income" && !canAddIncome()) {
                                 // Only hide if worker doesn't have explicit permission and is not manager/admin
-                                if (!hasPermission(['manager', 'admin'])) return null;
+                                if (!hasPermission(['manager', 'super_admin'])) return null;
                             }
                         }
 
@@ -227,10 +227,10 @@ export default function Sidebar() {
                             Owner
                         </button>
                         <button
-                            onClick={() => demoLogin('admin')}
+                            onClick={() => demoLogin('manager')}
                             className="text-xs bg-white/10 hover:bg-white/20 py-2 px-2 rounded-lg text-white transition-colors font-medium"
                         >
-                            Admin
+                            Manager
                         </button>
                         <button
                             onClick={() => demoLogin('worker')}

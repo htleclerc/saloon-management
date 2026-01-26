@@ -1,5 +1,8 @@
+"use client";
+
 import { useAuth } from '@/context/AuthProvider';
 import { ReactNode, MouseEvent } from 'react';
+import { useTranslation } from '@/i18n';
 
 /**
  * HOC Component that wraps children and blocks all interactions in read-only mode
@@ -12,12 +15,13 @@ interface ReadOnlyGuardProps {
 
 export function ReadOnlyGuard({ children, showOverlay = true }: ReadOnlyGuardProps) {
     const { isReadOnlyMode } = useAuth();
+    const { t } = useTranslation();
 
     const handleClick = (e: MouseEvent) => {
         if (isReadOnlyMode) {
             e.preventDefault();
             e.stopPropagation();
-            alert('❌ Action non autorisée en mode lecture seule.\n\nVous consultez ce salon en tant que Super Admin sans droits de modification. Pour effectuer des actions, demandez au propriétaire de vous ajouter comme administrateur.');
+            alert(`❌ ${t("common.readOnlyTitle")}\n\n${t("common.readOnlyMessage")}`);
         }
     };
 
@@ -29,7 +33,7 @@ export function ReadOnlyGuard({ children, showOverlay = true }: ReadOnlyGuardPro
                     <div
                         className="absolute inset-0 bg-gray-100/50 z-10 cursor-not-allowed"
                         onClick={handleClick}
-                        title="Action non autorisée en mode lecture seule"
+                        title={t("common.readOnlyTitle")}
                     />
                 )}
                 {/* Content with pointer-events disabled */}
@@ -48,10 +52,11 @@ export function ReadOnlyGuard({ children, showOverlay = true }: ReadOnlyGuardPro
  */
 export function useReadOnlyGuard() {
     const { isReadOnlyMode } = useAuth();
+    const { t } = useTranslation();
 
     const blockAction = (callback: () => void) => {
         if (isReadOnlyMode) {
-            alert('❌ Action non autorisée en mode lecture seule.\n\nVous consultez ce salon en tant que Super Admin sans droits de modification. Pour effectuer des actions, demandez au propriétaire de vous ajouter comme administrateur.');
+            alert(`❌ ${t("common.readOnlyTitle")}\n\n${t("common.readOnlyMessage")}`);
             return;
         }
         callback();
@@ -59,7 +64,7 @@ export function useReadOnlyGuard() {
 
     const handleReadOnlyClick = () => {
         if (isReadOnlyMode) {
-            alert('❌ Action non autorisée en mode lecture seule.\n\nVous consultez ce salon en tant que Super Admin sans droits de modification. Pour effectuer des actions, demandez au propriétaire de vous ajouter comme administrateur.');
+            alert(`❌ ${t("common.readOnlyTitle")}\n\n${t("common.readOnlyMessage")}`);
             return true;
         }
         return false;
@@ -70,7 +75,7 @@ export function useReadOnlyGuard() {
             return {
                 disabled: true,
                 className: 'cursor-not-allowed opacity-50',
-                title: 'Action non autorisée en mode lecture seule'
+                title: t("common.readOnlyTitle")
             };
         }
         return {};
