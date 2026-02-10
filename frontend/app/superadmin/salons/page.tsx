@@ -4,6 +4,8 @@ import { useAuth } from '@/context/AuthProvider';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Building2, Search, Eye, ChevronRight, Users, TrendingUp, Calendar, MapPin, Settings, Lock, AlertCircle, ChevronLeft } from 'lucide-react';
+import { useToast } from '@/context/ToastProvider';
+import { useTranslation } from '@/i18n';
 
 interface Salon {
     id: string;
@@ -20,6 +22,7 @@ interface Salon {
 export default function SuperAdminSalonsPage() {
     const { enterReadOnlyMode, enterManageMode } = useAuth();
     const router = useRouter();
+    const { t } = useTranslation();
     const [salons, setSalons] = useState<Salon[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'archived'>('all');
@@ -110,12 +113,14 @@ export default function SuperAdminSalonsPage() {
         ]);
     }, []);
 
+    const { showToast } = useToast();
+
     const handleAction = (salon: Salon, mode: 'view' | 'manage') => {
         setLoading(true);
         try {
             if (mode === 'manage') {
                 if (!salon.canManage) {
-                    alert("Manage rights for this salon are currently restricted. Contact the salon owner to grant access.");
+                    showToast(t("common.warning"), t("superadmin.accessRestricted"), "warning");
                     return;
                 }
                 enterManageMode(salon.id, salon.name, salon.owner);
@@ -125,6 +130,7 @@ export default function SuperAdminSalonsPage() {
             router.push('/');
         } catch (error) {
             console.error('Failed to enter salon:', error);
+            showToast(t("common.error"), t("superadmin.failedToEnterSalon"), "error");
         } finally {
             setLoading(false);
         }
@@ -154,10 +160,10 @@ export default function SuperAdminSalonsPage() {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                            Manage Salons
+                            {t("superadmin.manageSalons")}
                         </h1>
                         <p className="text-gray-600">
-                            {filteredSalons.length} salon(s) match your filters
+                            {t("superadmin.salonsMatch", { count: filteredSalons.length })}
                         </p>
                     </div>
                 </div>
@@ -192,7 +198,7 @@ export default function SuperAdminSalonsPage() {
                                 setSearchQuery(e.target.value);
                                 setCurrentPage(1);
                             }}
-                            placeholder="Search salon, owner or address..."
+                            placeholder={t("superadmin.searchPlaceholder")}
                             className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         />
                     </div>
@@ -205,7 +211,7 @@ export default function SuperAdminSalonsPage() {
                     <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
                         <Building2 className="w-12 h-12 mx-auto mb-3 text-gray-400" />
                         <p className="text-gray-600">
-                            {searchQuery || statusFilter !== 'all' ? 'No salon found with current filters' : 'No salon registered'}
+                            {searchQuery || statusFilter !== 'all' ? t("superadmin.noSalonFound") : t("superadmin.noSalonRegistered")}
                         </p>
                     </div>
                 ) : (
@@ -230,12 +236,12 @@ export default function SuperAdminSalonsPage() {
                                                 {!salon.canManage && (
                                                     <div className="flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded uppercase tracking-wider">
                                                         <Lock className="w-3 h-3" />
-                                                        Restricted
+                                                        {t("superadmin.restricted")}
                                                     </div>
                                                 )}
                                             </div>
                                             <p className="text-sm text-gray-600">
-                                                By {salon.owner}
+                                                {t("appointments.By")} {salon.owner}
                                             </p>
                                         </div>
                                         <span
@@ -257,7 +263,7 @@ export default function SuperAdminSalonsPage() {
                                         </div>
                                         <div className="flex items-center gap-2 text-sm text-gray-600">
                                             <Users className="w-4 h-4" />
-                                            {salon.users} user(s)
+                                            {salon.users} {t("dashboard.activity.newBooking", { client: "" }).split(' ').pop()}
                                         </div>
                                         <div className="flex items-center gap-2 text-sm text-gray-600">
                                             <Calendar className="w-4 h-4" />
@@ -285,7 +291,7 @@ export default function SuperAdminSalonsPage() {
                                     >
                                         <div className="flex items-center gap-2">
                                             <Eye className="w-4 h-4" />
-                                            <span className="font-medium text-sm">Visit</span>
+                                            <span className="font-medium text-sm">{t("superadmin.visit")}</span>
                                         </div>
                                         <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
                                     </button>
@@ -299,7 +305,7 @@ export default function SuperAdminSalonsPage() {
                                     >
                                         <div className="flex items-center gap-2">
                                             {salon.canManage ? <Settings className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-                                            <span className="font-medium text-sm">Manage</span>
+                                            <span className="font-medium text-sm">{t("superadmin.manage")}</span>
                                         </div>
                                         {salon.canManage && <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />}
                                     </button>

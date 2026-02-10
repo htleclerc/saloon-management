@@ -191,7 +191,7 @@ export default function Dashboard() {
     );
   }
 
-  if (loading && activeSalonId) {
+  if (loading || !activeSalonId) {
     return (
       <MainLayout>
         <div className="flex flex-col items-center justify-center min-h-[400px]">
@@ -271,7 +271,7 @@ export default function Dashboard() {
                   <p className="text-white/80 text-xs font-bold uppercase tracking-wider mb-1">{t("dashboard.totalWorkers")}</p>
                   <h3 className="text-2xl sm:text-3xl font-black">{salonStats?.totalClients || "0"}</h3>
                   <p className="text-xs text-white/90 mt-2 flex items-center gap-1 bg-white/20 w-fit px-2 py-0.5 rounded-full">
-                    <Users className="w-3 h-3" /> {t("dashboard.newClients")}
+                    <Users className="w-3 h-3" /> {t("dashboard.newClients", { count: salonStats?.newClients || 0 })}
                   </p>
                 </div>
                 <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm shadow-inner"><Users className="w-6 h-6 text-white" /></div>

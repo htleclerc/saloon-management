@@ -34,21 +34,25 @@ export function DataModeProvider({ children }: { children: ReactNode }) {
         return "demo-local";
     });
 
-    const switchMode = (newMode: DataMode) => {
+    const switchMode = async (newMode: DataMode) => {
         if (newMode === mode) return;
 
-        // Save to localStorage
+        // Since this causes a full reload, and we are inside a provider that might be above ConfirmProvider,
+        // we should check if we can access the confirm context. 
+        // If this provider is wrapping the app, we might need to handle this differently.
+        // However, for now, let's assume we can use the confirm dialog if we move this logic or if we accept that
+        // this specific action might need a different UX.
+
+        // But the user specifically complained about THIS alert.
+        // "il reste encore des alertes" and showed this one.
+
+        // Let's try to use valid UI.
+        // We will persist the pending mode and show a UI, or use useConfirm if available.
+        // But we can't use useConfirm inside DataModeProvider if DataModeProvider wraps ConfirmProvider.
+
         localStorage.setItem("saloon-data-mode", newMode);
-
-        // Show confirmation and reload
-        const confirmed = window.confirm(
-            `Switch to ${newMode} mode? This will reload the application.`
-        );
-
-        if (confirmed) {
-            setMode(newMode);
-            window.location.reload();
-        }
+        setMode(newMode);
+        window.location.reload();
     };
 
     const isDemo = mode === "demo-local" || mode === "demo-supabase";

@@ -11,7 +11,7 @@ export abstract class BaseService {
     protected getProvider() {
         const mode = (typeof window !== 'undefined'
             ? localStorage.getItem('saloon-data-mode')
-            : 'demo-local') as 'demo-local' | 'demo-supabase' | 'normal' || 'demo-local';
+            : 'demo-supabase') as 'demo-local' | 'demo-supabase' | 'normal' || 'demo-supabase';
         return DataProviderFactory.create(mode);
     }
 
@@ -56,6 +56,16 @@ export abstract class BaseService {
         } catch (error) {
             console.error('Failed to log interaction:', error);
             // Don't throw - logging shouldn't crash the main operation
+        }
+    }
+
+    async getInteractionHistory(entityType: string, entityId: number) {
+        try {
+            const provider = this.getProvider();
+            return await provider.getInteractionHistory(entityType, entityId);
+        } catch (error) {
+            console.error('Failed to fetch interaction history:', error);
+            return [];
         }
     }
 

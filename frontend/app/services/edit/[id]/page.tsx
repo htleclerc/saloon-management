@@ -6,10 +6,16 @@ import Button from "@/components/ui/Button";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import ServiceForm from "@/components/services/ServiceForm";
 import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
+import { useTranslation } from "@/i18n";
+import { useToast } from "@/context/ToastProvider";
+import { useConfirm } from "@/context/ConfirmProvider";
 
 export default function EditServicePage() {
     const params = useParams();
     const router = useRouter();
+    const { t } = useTranslation();
+    const { showToast } = useToast();
+    const { confirm: confirmAction } = useConfirm();
     const searchParams = useSearchParams();
     const id = params.id as string;
     const mode = (searchParams.get("mode") as "simple" | "advanced") || "advanced";
@@ -30,18 +36,41 @@ export default function EditServicePage() {
         ]
     };
 
-    const handleSubmit = (data: any) => {
+    const handleSubmit = async (data: any) => {
         if (handleReadOnlyClick()) return;
-        console.log("Updating service:", data);
-        // In a real app, send to API
-        router.push("/services");
+        try {
+            // In a real app, send to API via serviceService.update(id, data)
+            console.log("Updating service:", data);
+            showToast(t("common.success"), t("dialogs.success"), "success");
+            router.push("/services");
+        } catch (err) {
+            console.error(err);
+            showToast(t("common.error"), t("errors.generic"), "error");
+        }
     };
 
-    const handleArchive = () => {
+    const handleArchive = async () => {
         if (handleReadOnlyClick()) return;
-        console.log("Archiving service:", id);
-        // In a real app, send to API (soft delete)
-        router.push("/services");
+
+        const isConfirmed = await confirmAction({
+            title: t("common.delete"),
+            message: t("dialogs.confirmDelete"),
+            type: 'error',
+            confirmText: t("common.delete"),
+            cancelText: t("common.cancel")
+        });
+
+        if (isConfirmed) {
+            try {
+                // In a real app, send to API (soft delete)
+                console.log("Archiving service:", id);
+                showToast(t("common.success"), t("services.archiveSuccess"), "success");
+                router.push("/services");
+            } catch (err) {
+                console.error(err);
+                showToast(t("common.error"), t("errors.generic"), "error");
+            }
+        }
     };
 
     return (
@@ -54,14 +83,14 @@ export default function EditServicePage() {
                             <ArrowLeft className="w-5 h-5 text-gray-600" />
                         </button>
                         <div>
-                            <h1 className="text-3xl font-bold text-gray-900">Edit Service</h1>
-                            <p className="text-gray-500 mt-1">Modifying service ID: #{id}</p>
+                            <h1 className="text-3xl font-bold text-gray-900">{t("services.editService")}</h1>
+                            <p className="text-gray-500 mt-1">{t("services.editingId")}: #{id}</p>
                         </div>
                     </div>
                     <ReadOnlyGuard>
                         <Button variant="danger" size="md" onClick={handleArchive} className="rounded-xl px-6">
                             <Trash2 className="w-5 h-5" />
-                            Archive Service
+                            {t("services.archiveService")}
                         </Button>
                     </ReadOnlyGuard>
                 </div>

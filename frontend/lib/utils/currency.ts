@@ -23,16 +23,19 @@ export const formatCurrency = (
     locale: string = 'en-US',
     options: CurrencyOptions = {}
 ): string => {
+    // Safety check for NaN or invalid numbers
+    const safeAmount = (typeof amount !== 'number' || isNaN(amount)) ? 0 : amount;
+
     try {
         return new Intl.NumberFormat(locale, {
             style: 'currency',
             currency: currencyCode,
             minimumFractionDigits: options.minimumFractionDigits ?? 2,
             maximumFractionDigits: options.maximumFractionDigits ?? 2,
-        }).format(amount);
+        }).format(safeAmount);
     } catch (error) {
         console.warn(`Error formatting currency: ${currencyCode}. Falling back to basic format.`, error);
-        return `${currencyCode} ${amount.toFixed(2)}`;
+        return `${currencyCode} ${safeAmount.toFixed(2)}`;
     }
 };
 

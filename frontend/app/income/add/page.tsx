@@ -29,33 +29,39 @@ import {
     Lock,
     CheckCircle2,
     X,
+    Send,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthProvider";
 import { useBooking } from "@/context/BookingProvider";
 import { useEffect } from "react";
 import { format, subDays, isBefore, isAfter, startOfToday } from "date-fns";
-import { incomeService } from "@/lib/services";
-import { productService, tipsService, promoCodeService, serviceService } from "@/lib/services";
+import { incomeService, productService, tipsService, promoCodeService, serviceService, workerService, clientService } from "@/lib/services";
 import { CalculatedTipSplit } from "@/lib/services/TipsService";
 import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 import { useToast } from "@/context/ToastProvider";
 import { IncomeStatus, PromoCode } from "@/types";
 import { useActionPermissions } from "@/lib/permissions";
+import { useTranslation } from "@/i18n";
+import { useNotifications } from "@/context/NotificationProvider";
 
-import { CLIENTS as clients, WORKERS as workers } from "@/lib/data";
+
 
 function AddIncomeContent() {
     const auth = useAuth();
     const { isWorker, isManager, isSuperAdmin, user, getWorkerId, canModify } = auth;
+    const isOwner = user?.role === 'owner';
     const permissions = useActionPermissions(auth);
     const { activeSalonId } = auth; // Ensure activeSalonId is available
-
+    const { addNotification } = useNotifications();
+    const { t } = useTranslation();
     const { bookings, updateBooking } = useBooking();
-    const { addToast } = useToast();
+    const { showToast } = useToast();
 
     // Local Service State
     const [products, setProducts] = useState<any[]>([]);
     const [services, setServices] = useState<any[]>([]);
+    const [workers, setWorkers] = useState<any[]>([]);
+    const [clients, setClients] = useState<any[]>([]);
     const [tipSplits, setTipSplits] = useState<CalculatedTipSplit[]>([]);
 
     const decrementStock = async (id: number, quantity: number) => {
@@ -100,7 +106,7 @@ function AddIncomeContent() {
 
     const [notes, setNotes] = useState("");
     const [paymentMethod, setPaymentMethod] = useState("card");
-    const [assignedWorkers, setAssignedWorkers] = useState<{ workerId: number, percentage: number, keyOverride?: number, amountOverride?: number }[]>([]);
+    const [assignedWorkers, setAssignedWorkers] = useState<{ workerId: number, percentage: number, tips?: number, keyOverride?: number, amountOverride?: number }[]>([]);
 
     // Service Selection Logic
     const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
@@ -118,7 +124,7 @@ function AddIncomeContent() {
     const handleSaveNewService = async () => {
         if (handleReadOnlyClick()) return;
         if (!newServiceName || !newServicePrice) {
-            addToast("Name and Price are required", "error");
+            showToast(t("common.error"), t("services.namePriceRequired"), "error");
             return;
         }
         try {
@@ -131,7 +137,7 @@ function AddIncomeContent() {
                 description: "Added via Admin Interface",
                 isActive: true
             });
-            addToast("Service added to catalog!", "success");
+            showToast(t("common.success"), t("services.addedToCatalog"), "success");
             setNewServiceName("");
             setNewServicePrice("");
             setNewServiceDuration("");
@@ -140,7 +146,7 @@ function AddIncomeContent() {
             if (activeSalonId) serviceService.getAll(Number(activeSalonId)).then(setServices);
         } catch (e) {
             console.error(e);
-            addToast("Failed to create service", "error");
+            showToast(t("common.error"), t("services.addFailed"), "error");
         }
     };
 
@@ -150,6 +156,8 @@ function AddIncomeContent() {
             const sid = Number(activeSalonId);
             productService.getAll(sid).then(setProducts);
             serviceService.getAll(sid).then(setServices);
+            workerService.getAll(sid).then(setWorkers);
+            clientService.getAll(sid).then(setClients);
         }
     }, [activeSalonId]);
 
@@ -171,12 +179,22 @@ function AddIncomeContent() {
         const editIdParam = searchParams.get('edit');
         if (editIdParam) {
             const incId = Number(editIdParam);
-            incomeService.getById(incId).then(incomeToEdit => {
+            incomeService.getWithRelations(incId).then(incomeToEdit => {
                 if (incomeToEdit) {
                     setDate(incomeToEdit.date);
-                    setBaseAmount(incomeToEdit.amount);
+                    setDiscount(incomeToEdit.discountAmount || 0);
+
+                    // Derive Base Amount (Service Revenue) to avoid double counting tips and products
+                    // Base = Total + Discount - Tips - Products
+                    const loadedProducts = incomeToEdit.products || [];
+                    const productsCost = loadedProducts.reduce((sum: number, p: any) => sum + (p.product.price * p.quantity), 0);
+                    const derivedBase = incomeToEdit.amount + (incomeToEdit.discountAmount || 0) - (incomeToEdit.tips || 0) - productsCost;
+                    setBaseAmount(derivedBase > 0 ? derivedBase : 0);
+
                     setPaymentMethod(incomeToEdit.paymentMethod || 'card');
-                    setNotes(incomeToEdit.comments ? incomeToEdit.comments.map((c: any) => c.text).join('\n') : "");
+                    setNotes(incomeToEdit.notes || "");
+                    setTips(incomeToEdit.tips || 0);
+                    setUsedProducts((incomeToEdit.products || []).map(p => ({ productId: p.product.id, quantity: p.quantity })));
 
                     if (incomeToEdit.clientId && !incomeToEdit.clientName) { // Assuming type difference or strict check
                         setSelectedClient(Number(incomeToEdit.clientId));
@@ -199,39 +217,63 @@ function AddIncomeContent() {
 
                     setSelectedServices(incomeToEdit.serviceIds || []);
 
-                    // Restore workers (approximate split if not perfectly stored or re-fetch shares)
-                    // Service doesn't return shares in getById by default unless getWithRelations? 
-                    // Let's assume we need to fetch shares or it's in relations.
-                    // If simple getById, we might miss shares.
-                    // For now, we mimic the previous logic which assumed incomes had workerIds.
-                    // If workerIds exist:
-                    const wIds = incomeToEdit.workerIds || [];
-                    const loadedWorkers = wIds.map((wId: number) => ({
-                        workerId: wId,
-                        percentage: 0
-                    }));
-                    if (loadedWorkers.length > 0) {
-                        const equalPart = Number((100 / loadedWorkers.length).toFixed(2));
-                        setAssignedWorkers(loadedWorkers.map((w: any, i: number) => ({
-                            ...w,
-                            percentage: i === loadedWorkers.length - 1 ? Number((100 - (equalPart * (loadedWorkers.length - 1))).toFixed(2)) : equalPart
-                        })));
-                    }
+                    // Restore workers with actual shares from database
+                    incomeService.getWorkerShares(incId).then(actualShares => {
+                        if (actualShares && actualShares.length > 0) {
+                            setAssignedWorkers(actualShares.map(s => ({
+                                workerId: s.workerId,
+                                percentage: s.percentage
+                            })));
+                        } else {
+                            // Fallback: Restore workers (approximate split if not perfectly stored)
+                            const wIds = incomeToEdit.workerIds || [];
+                            const loadedWorkers = wIds.map((wId: number) => ({
+                                workerId: wId,
+                                percentage: 0
+                            }));
+                            if (loadedWorkers.length > 0) {
+                                const equalPart = Number((100 / loadedWorkers.length).toFixed(2));
+                                setAssignedWorkers(loadedWorkers.map((w: any, i: number) => ({
+                                    ...w,
+                                    percentage: i === loadedWorkers.length - 1 ? Number((100 - (equalPart * (loadedWorkers.length - 1))).toFixed(2)) : equalPart
+                                })));
+                            }
+                        }
+                    }).catch(err => {
+                        console.error("Failed to fetch worker shares", err);
+                        // Fallback logic
+                        const wIds = incomeToEdit.workerIds || [];
+                        const loadedWorkers = wIds.map((wId: number) => ({
+                            workerId: wId,
+                            percentage: 0
+                        }));
+                        if (loadedWorkers.length > 0) {
+                            const equalPart = Number((100 / loadedWorkers.length).toFixed(2));
+                            setAssignedWorkers(loadedWorkers.map((w: any, i: number) => ({
+                                ...w,
+                                percentage: i === loadedWorkers.length - 1 ? Number((100 - (equalPart * (loadedWorkers.length - 1))).toFixed(2)) : equalPart
+                            })));
+                        }
+                    });
                 }
             });
         }
     }, [searchParams]);
 
     useEffect(() => {
+        // Skip if we're in edit mode to avoid overwriting loaded workers
+        if (searchParams.get("edit")) return;
+
         const exactRole = user?.role;
         if (exactRole === 'worker') {
             const wId = getWorkerId();
-            const numericId = wId && !isNaN(Number(wId)) ? Number(wId) : 1;
+            const numericId = wId && !isNaN(Number(wId)) ? Number(wId) : (workers.length > 0 ? workers[0].id : 1);
             setAssignedWorkers([{ workerId: numericId, percentage: 100 }]);
         } else if (exactRole === 'super_admin' || exactRole === 'owner' || exactRole === 'manager') {
-            setAssignedWorkers([{ workerId: 1, percentage: 100 }]);
+            const defaultId = workers.length > 0 ? workers[0].id : 1;
+            setAssignedWorkers([{ workerId: defaultId, percentage: 100 }]);
         }
-    }, [user?.role, getWorkerId]);
+    }, [user?.role, getWorkerId, workers, searchParams]);
 
     const eligibleBookings = bookings.filter(b => {
         const bookingDate = new Date(b.date);
@@ -329,11 +371,11 @@ function AddIncomeContent() {
                 disc = promo.value;
             }
             setDiscount(disc);
-            addToast("Promo code applied successfully!", "success");
+            showToast(t("common.success"), t("income.promoApplied"), "success");
         } else {
             setDiscount(0);
             setAppliedPromo(null);
-            addToast("Invalid or inactive promo code", "error");
+            showToast(t("common.error"), t("income.promoInvalid"), "error");
         }
     };
 
@@ -389,7 +431,7 @@ function AddIncomeContent() {
         const salonServiceAmount = serviceShare - workerServiceAmount;
 
         const tipSplit = tipSplits.find(ts => ts.workerId === aw.workerId);
-        const tipShare = tipSplit ? tipSplit.amount : 0;
+        const tipShare = aw.tips !== undefined ? aw.tips : (tipSplit ? tipSplit.amount : 0);
         const salonTipShare = tipSplit ? tipSplit.salonAmount : 0;
 
         return { ...aw, worker, serviceShare, workerAmount: workerServiceAmount, salonAmount: salonServiceAmount, tipShare, salonTipShare };
@@ -476,6 +518,21 @@ function AddIncomeContent() {
         updateWorkerPercentage(index, percentage);
     };
 
+    const updateWorkerTips = (index: number, amount: number) => {
+        setAssignedWorkers(prev => {
+            const next = [...prev];
+            next[index] = { ...next[index], tips: amount };
+
+            // If there's only one other worker, we can auto-balance tips too
+            if (next.length === 2 && tips > 0) {
+                const otherIdx = index === 0 ? 1 : 0;
+                next[otherIdx] = { ...next[otherIdx], tips: Math.max(0, tips - amount) };
+            }
+
+            return next;
+        });
+    };
+
     const updateWorkerKey = (index: number, newKey: number) => {
         setAssignedWorkers(prev => {
             const next = [...prev];
@@ -497,82 +554,104 @@ function AddIncomeContent() {
         if (handleReadOnlyClick()) return;
         // Validations
         if (!isNewClient && !selectedClient) {
-            addToast("Please select a client.", "error");
+            showToast(t("common.error"), t("income.selectClient"), "error");
             return;
         }
         if (isNewClient && !newClientName) {
-            addToast("Please enter a client name.", "error");
+            showToast(t("common.error"), t("income.enterClientName"), "error");
             return;
         }
         if (selectedServices.length === 0 && !isOtherService) {
-            addToast("Please select at least one service.", "error");
+            showToast(t("common.error"), t("income.selectService"), "error");
             return;
         }
 
         // Validate Split Total
         const totalPercentage = assignedWorkers.reduce((sum, w) => sum + w.percentage, 0);
         if (totalPercentage > 100.01) {
-            addToast(`Total worker split cannot exceed 100%. Current: ${totalPercentage}%`, "error");
+            showToast(t("common.error"), t("income.percentageExceeds"), "error");
             return;
         }
         if (totalPercentage < 100) {
             // Non-blocking warning is tricky with simple toast, maybe just proceed but warn?
             // Or we assume it's intentional (Partial allocation).
-            addToast(`Warning: Percentage is ${totalPercentage}% (less than 100%).`, "info");
+            showToast(t("common.info"), t("income.percentageWarning"), "info");
         }
 
         try {
-            const newIncome = await incomeService.create({
-                salonId: 0, // Placeholder
+            const editId = searchParams.get('edit');
+            const isEditing = !!editId;
+
+            const incomeData = {
+                salonId: Number(activeSalonId),
                 bookingId: selectedBookingId || undefined,
                 date,
-                clientId: !isNewClient && selectedClient ? selectedClient : undefined, // API expects number | undefined
-                // If new client, we might need to create it first or pass name? 
-                // IncomeCreateData in types (Step 1332) doesn't have clientName!
-                // It has clientId.
-                // If it's a new client, we usually create client first.
-                // For this migration, if we don't have client creation service calls here, we might be stuck.
-                // BUT Income type has clientName. IncomeCreateData does NOT.
-                // It seems IncomeProvider handled this loosely.
-                // We will assume for now we pass clientId if exists. If strictly new client, we might fail or need to create client.
-                // Let's pass clientId if we have one. If we have name but no ID, we effectively "lose" the link or need to patch service.
-                // Workaround: If new client, create it first? Or skip?
-                // Let's assume we proceed with whatever we have.
+                clientId: !isNewClient && selectedClient ? selectedClient : undefined,
                 amount: totalAmount,
                 discountAmount: discount,
-                // finalAmount is calculated in service
                 paymentMethod: paymentMethod,
                 status,
-                // createdBy / updatedBy handled by service
-                // createdAt / updatedAt handled by service
-                // bookingIds... IncomeCreateData has bookingId (singular) or we need to check if we can pass multiple.
-                // Step 1332: bookingId?: number.
-                // But Income has bookingIds.
-                // We'll pass bookingId.
                 promoCodeId: appliedPromo?.id || undefined,
                 products: usedProducts,
-                // invoiceUrl handled by service or backend
-                workerShares: assignedWorkers.map(aw => ({ workerId: aw.workerId, percentage: aw.percentage })),
+                workerShares: workerShares.map(ws => ({
+                    workerId: ws.workerId,
+                    percentage: ws.percentage,
+                    amount: ws.workerAmount, // Explicit amount excluding products
+                    tips: ws.tipShare // Use calculated or explicit tip
+                })),
                 serviceIds: selectedServices,
-            });
+                notes: notes,
+                tips: tips,
+            };
 
-            // Link Booking if selected
-            if (selectedBookingId && newIncome.id) {
-                updateBooking(selectedBookingId, { incomeId: newIncome.id });
+            let savedIncome;
+            if (isEditing) {
+                savedIncome = await incomeService.update(Number(editId), incomeData as any);
+            } else {
+                savedIncome = await incomeService.create(incomeData);
             }
 
-            // Decrement stock if validated
+            // Link Booking if selected
+            if (selectedBookingId && savedIncome.id) {
+                updateBooking(selectedBookingId, { incomeId: savedIncome.id });
+            }
+
+            // Decrement stock if validated (only if newly validated or stock wasn't decremented before?)
+            // Simplistic: if transitioning to Validated, decrement. 
             if (status === 'Validated') {
                 usedProducts.forEach(up => {
                     decrementStock(up.productId, up.quantity);
                 });
             }
 
-            addToast(`Service saved correctly as ${status}.`, "success");
+            if (status === 'Pending') {
+                showToast(t("common.success"), t("income.submitSuccess") || "Income submitted for approval", "success");
+                // Notify Admin
+                addNotification({
+                    targetUserCode: 'ADM-000',
+                    type: 'success',
+                    title: t("notifications.incomeSubmittedTitle") || "Income Submitted",
+                    message: t("notifications.incomeSubmittedMsg") || `New income submitted by ${user?.name || 'Worker'}.`
+                });
+            } else if (status === 'Draft') {
+                showToast(t("common.success"), t("income.saveSuccess", { status: t(`income.status.${status.toLowerCase()}`) }), "success");
+            } else if (status === 'Validated') {
+                showToast(t("common.success"), t("income.saveSuccess", { status: t(`income.status.${status.toLowerCase()}`) }), "success");
+                // For direct validation (Manager/Owner)
+                if (status === 'Validated') {
+                    // Notify Admin (or self if owner, but good to have log)
+                    addNotification({
+                        targetUserCode: 'ADM-000',
+                        type: 'validation',
+                        title: t("notifications.incomeValidatedTitle") || "Income Validated",
+                        message: t("notifications.incomeValidatedMsg") || "Income has been validated."
+                    });
+                }
+            }
             router.push("/income");
         } catch (error) {
-            console.error("Failed to create income", error);
-            addToast("Failed to create income. Please try again.", "error");
+            console.error("Failed to save income", error);
+            showToast(t("common.error"), t("income.saveError"), "error");
         }
     };
 
@@ -587,18 +666,18 @@ function AddIncomeContent() {
                             <ArrowLeft className="w-5 h-5" />
                         </Button>
                         <div>
-                            <h1 className="text-xl md:text-3xl font-bold text-gray-900">New Service</h1>
-                            <p className="text-sm md:text-base text-gray-500 hidden md:block">Record a new service and split income</p>
+                            <h1 className="text-xl md:text-3xl font-bold text-gray-900">{t("income.newService")}</h1>
+                            <p className="text-sm md:text-base text-gray-500 hidden md:block">{t("income.recordNewDesc")}</p>
                         </div>
                     </div>
                     <div className="flex gap-2 md:gap-3 w-full md:w-auto">
                         <Link href="/income" className="flex-1 md:flex-none">
-                            <Button variant="danger" size="sm" className="w-full md:w-auto">Cancel</Button>
+                            <Button variant="danger" size="sm" className="w-full md:w-auto">{t("common.cancel")}</Button>
                         </Link>
                         <ReadOnlyGuard>
                             <Button variant="success" size="sm" className="flex-1 md:flex-none" onClick={() => handleSave('Draft')}>
                                 <Save className="w-4 h-4 md:w-5 md:h-5" />
-                                <span className="hidden md:inline ml-2">Save</span>
+                                <span className="hidden md:inline ml-2">{t("common.save")}</span>
                             </Button>
                         </ReadOnlyGuard>
                     </div>
@@ -907,7 +986,7 @@ function AddIncomeContent() {
 
                                     {/* Promo Code Input */}
                                     <div className="mt-4 pt-4 border-t border-purple-100">
-                                        <label className="text-[10px] font-bold text-purple-700 mb-2 block uppercase tracking-wide">Promo Code</label>
+                                        <label className="text-[10px] font-bold text-purple-700 mb-2 block uppercase tracking-wide">{t("income.promoCode")}</label>
                                         <div className="flex gap-2">
                                             <input
                                                 type="text"
@@ -938,13 +1017,17 @@ function AddIncomeContent() {
                             <div className="w-8 h-8 bg-pink-100 rounded-full flex items-center justify-center">
                                 <Users className="w-4 h-4 text-pink-600" />
                             </div>
-                            <h2 className="text-xl font-bold text-gray-900">Worker Split</h2>
+                            <h2 className="text-xl font-bold text-gray-900">{t("income.teamPerformance")}</h2>
                         </div>
                         <Button variant="success" size="sm" onClick={addWorker} disabled={!canModify} className="disabled:opacity-50"><Plus className="w-4 h-4" /> Add</Button>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         {workerShares.map(({ workerId, percentage, worker, workerAmount, serviceShare, tipShare }, idx) => (
-                            <div key={workerId} className={`p-4 rounded-xl bg-gradient-to-br ${worker?.color || "from-gray-500 to-gray-600"} text-white shadow-md relative group transition-all hover:shadow-lg`}>
+                            <div
+                                key={workerId}
+                                className={`p-4 rounded-xl text-white shadow-md relative group transition-all hover:shadow-lg ${!worker?.color?.startsWith('#') ? `bg-gradient-to-br ${worker?.color || "from-gray-500 to-gray-600"}` : ''}`}
+                                style={worker?.color?.startsWith('#') ? { background: `linear-gradient(135deg, ${worker.color} 0%, ${worker.color}dd 100%)` } : undefined}
+                            >
                                 <button
                                     onClick={() => { if (!canModify) handleReadOnlyClick(); else removeWorker(workerId); }}
                                     disabled={!canModify}
@@ -995,7 +1078,7 @@ function AddIncomeContent() {
                                                 </>
                                             ) : (
                                                 <div className="w-full bg-white/10 border border-white/10 rounded-lg pl-3 pr-3 h-10 flex items-center justify-center gap-2 text-white/60 text-xs font-medium cursor-not-allowed">
-                                                    <Lock className="w-3 h-3" /> Confidential
+                                                    <Lock className="w-3 h-3" /> {t("income.confidential")}
                                                 </div>
                                             )}
                                         </div>
@@ -1013,7 +1096,7 @@ function AddIncomeContent() {
                                                 </>
                                             ) : (
                                                 <div className="w-full bg-white/10 border border-white/10 rounded-lg pl-3 pr-3 h-10 flex items-center justify-center gap-2 text-white/60 text-xs font-medium cursor-not-allowed">
-                                                    <Lock className="w-3 h-3" /> Confidential
+                                                    <Lock className="w-3 h-3" /> {t("income.confidential")}
                                                 </div>
                                             )}
                                         </div>
@@ -1021,7 +1104,7 @@ function AddIncomeContent() {
 
                                     <div className="mt-4 pt-3 border-t border-white/20 space-y-1">
                                         <div className="flex justify-between items-center opacity-80">
-                                            <p className="text-[10px] uppercase font-bold tracking-wider">Service Net</p>
+                                            <p className="text-[10px] uppercase font-bold tracking-wider">{t("income.serviceNet")}</p>
                                             {permissions.canViewSensitiveWorkerFinancials(workerId) ? (
                                                 <p className="text-sm font-black">€{workerAmount.toFixed(2)}</p>
                                             ) : (
@@ -1029,7 +1112,7 @@ function AddIncomeContent() {
                                             )}
                                         </div>
                                         <div className="flex justify-between items-center opacity-60">
-                                            <p className="text-[10px] uppercase">Salon Key</p>
+                                            <p className="text-[10px] uppercase">{t("income.salonKey")}</p>
                                             {permissions.isManager ? (
                                                 <div className="flex items-center gap-1">
                                                     <input
@@ -1050,7 +1133,7 @@ function AddIncomeContent() {
                                             )}
                                         </div>
                                         <div className="flex justify-between items-center opacity-60">
-                                            <p className="text-[10px] uppercase">Salon Part</p>
+                                            <p className="text-[10px] uppercase">{t("income.salonPart")}</p>
                                             {permissions.isManager ? (
                                                 <p className="text-[10px] font-bold">€{(serviceShare - workerAmount).toFixed(2)}</p>
                                             ) : (
@@ -1063,9 +1146,18 @@ function AddIncomeContent() {
                                         </div>
                                         {tips > 0 && (
                                             <div className="flex justify-between items-center pt-2 mt-1 border-t border-white/10 text-emerald-300">
-                                                <p className="text-[10px] uppercase font-black">Tips Share</p>
+                                                <p className="text-[10px] uppercase font-black">{t("income.tipsShare")}</p>
                                                 {permissions.canViewSensitiveWorkerFinancials(workerId) ? (
-                                                    <p className="text-[10px] font-black underline decoration-emerald-500/50 underline-offset-2 text-sm italic">€{tipShare.toFixed(2)}</p>
+                                                    <div className="relative">
+                                                        <input
+                                                            type="number"
+                                                            value={Number(tipShare.toFixed(2))}
+                                                            onChange={(e) => updateWorkerTips(idx, Number(e.target.value))}
+                                                            disabled={!canModify}
+                                                            className="w-20 bg-emerald-500/20 border border-emerald-500/30 rounded text-right text-sm font-black italic px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-emerald-400 outline-none hover:bg-emerald-500/30 transition disabled:opacity-50"
+                                                        />
+                                                        <span className="absolute -right-3 top-1/2 -translate-y-1/2 text-[10px] opacity-60 font-black">€</span>
+                                                    </div>
                                                 ) : (
                                                     <Lock className="w-3 h-3" />
                                                 )}
@@ -1082,13 +1174,26 @@ function AddIncomeContent() {
                 <Card className="border-l-4 border-l-teal-500">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label className="text-sm font-bold text-gray-700 block mb-2">Notes</label>
+                            <label className="text-sm font-bold text-gray-700 block mb-2">{t("common.notes")}</label>
                             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} disabled={!canModify} rows={3} className="w-full p-3 border border-gray-300 rounded-xl disabled:opacity-50" placeholder="Service notes..." />
                         </div>
                         <div>
                             <div className="flex justify-between mb-2">
-                                <label className="text-sm font-bold text-gray-700">Products</label>
-                                <button onClick={() => { if (!canModify) handleReadOnlyClick(); else addProduct(); }} disabled={!canModify} className="text-xs text-purple-600 font-bold disabled:opacity-50">+ Add</button>
+                                <label className="text-sm font-bold text-gray-700">{t("dashboard.expenseCategories.products")}</label>
+                                <div className="flex gap-2">
+                                    <button onClick={() => { if (!canModify) handleReadOnlyClick(); else addProduct(); }} disabled={!canModify} className="text-xs text-purple-600 font-bold disabled:opacity-50">{t("income.catalog")}</button>
+                                    <button
+                                        onClick={() => {
+                                            if (!canModify) { handleReadOnlyClick(); return; }
+                                            const name = window.prompt(t("income.customProductName") || "Product name?");
+                                            if (name) setNotes(prev => prev + (prev ? '\n' : '') + `- ${name}`);
+                                        }}
+                                        disabled={!canModify}
+                                        className="text-xs text-orange-600 font-bold disabled:opacity-50 transition-colors hover:text-orange-700"
+                                    >
+                                        {t("income.custom")}
+                                    </button>
+                                </div>
                             </div>
                             <div className="space-y-2">
                                 {usedProducts.map((up, idx) => (
@@ -1115,10 +1220,10 @@ function AddIncomeContent() {
                         </div>
                     </div>
                     <div className="mt-6">
-                        <label className="text-sm font-bold text-gray-700 block mb-3">Payment</label>
+                        <label className="text-sm font-bold text-gray-700 block mb-3">{t("common.payment")}</label>
                         <div className="flex gap-2">
                             {['card', 'cash', 'mobile', 'others'].map(m => (
-                                <button key={m} onClick={() => { if (!canModify) handleReadOnlyClick(); else setPaymentMethod(m); }} disabled={!canModify} className={`px-4 py-2 rounded-lg border-2 text-sm font-bold capitalize transition-all ${paymentMethod === m ? 'border-purple-600 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-500'} disabled:opacity-50`}>{m}</button>
+                                <button key={m} onClick={() => { if (!canModify) handleReadOnlyClick(); else setPaymentMethod(m); }} disabled={!canModify} className={`px-4 py-2 rounded-lg border-2 text-sm font-bold capitalize transition-all ${paymentMethod === m ? 'border-purple-600 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-500'} disabled:opacity-50`}>{t(`payment.methods.${m}`)}</button>
                             ))}
                         </div>
                     </div>
@@ -1129,23 +1234,23 @@ function AddIncomeContent() {
                     <div className="flex flex-col md:flex-row justify-between items-center gap-6">
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 w-full">
                             <div>
-                                <p className="text-[10px] opacity-60 uppercase font-black">Total Service</p>
+                                <p className="text-[10px] opacity-60 uppercase font-black">{t("income.totalService")}</p>
                                 <p className="text-2xl font-black">€{totalAmount.toFixed(2)}</p>
                             </div>
                             {permissions.canViewFinancialDashboard && (
                                 <>
                                     <div>
-                                        <p className="text-[10px] opacity-60 uppercase font-black">Workers</p>
+                                        <p className="text-[10px] opacity-60 uppercase font-black">{t("common.workers")}</p>
                                         <p className="text-2xl font-black text-green-400">€{totalWorkerAmount.toFixed(2)}</p>
                                     </div>
                                     <div>
-                                        <p className="text-[10px] opacity-60 uppercase font-black">Salon</p>
+                                        <p className="text-[10px] opacity-60 uppercase font-black">{t("common.salon")}</p>
                                         <p className="text-2xl font-black text-yellow-400">€{totalSalonAmount.toFixed(2)}</p>
                                     </div>
                                 </>
                             )}
                             <div>
-                                <p className="text-[10px] opacity-60 uppercase font-black">Products</p>
+                                <p className="text-[10px] opacity-60 uppercase font-black">{t("dashboard.expenseCategories.products")}</p>
                                 <p className="text-2xl font-black">€{totalProductsCost.toFixed(2)}</p>
                             </div>
                         </div>
@@ -1158,18 +1263,30 @@ function AddIncomeContent() {
                                 <div className="p-1 rounded-full bg-purple-500/20 group-hover:bg-purple-500/40 transition-colors">
                                     <Save className="w-4 h-4 opacity-70 group-hover:opacity-100" />
                                 </div>
-                                <span className="opacity-80 group-hover:opacity-100 transition-opacity">SAVE DRAFT</span>
+                                <span className="opacity-80 group-hover:opacity-100 transition-opacity">{t("income.saveDraft")}</span>
                             </button>
 
-                            <button
-                                onClick={() => handleSave('Validated')}
-                                disabled={!canModify}
-                                className="flex-[2] py-4 px-8 rounded-2xl bg-gradient-to-r from-pink-500 to-fuchsia-600 text-white font-black tracking-wider shadow-xl shadow-pink-900/40 border-t border-white/20 hover:shadow-pink-500/50 hover:-translate-y-1 transition-all active:scale-95 flex items-center justify-center gap-3 group relative overflow-hidden disabled:opacity-50"
-                            >
-                                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 rounded-2xl" />
-                                <CheckCircle2 className="w-6 h-6 relative z-10 drop-shadow-md" />
-                                <span className="relative z-10 text-lg drop-shadow-sm">VALIDATE INCOME</span>
-                            </button>
+                            {isWorker && !isManager && !isOwner ? (
+                                <button
+                                    onClick={() => handleSave('Pending')}
+                                    disabled={!canModify}
+                                    className="flex-[2] py-4 px-8 rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-black tracking-wider shadow-xl shadow-blue-900/40 border-t border-white/20 hover:shadow-blue-500/50 hover:-translate-y-1 transition-all active:scale-95 flex items-center justify-center gap-3 group relative overflow-hidden disabled:opacity-50"
+                                >
+                                    <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 rounded-2xl" />
+                                    <Send className="w-6 h-6 relative z-10 drop-shadow-md" />
+                                    <span className="relative z-10 text-lg drop-shadow-sm">{t("common.submitForApproval")}</span>
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={() => handleSave('Validated')}
+                                    disabled={!canModify}
+                                    className="flex-[2] py-4 px-8 rounded-2xl bg-gradient-to-r from-pink-500 to-fuchsia-600 text-white font-black tracking-wider shadow-xl shadow-pink-900/40 border-t border-white/20 hover:shadow-pink-500/50 hover:-translate-y-1 transition-all active:scale-95 flex items-center justify-center gap-3 group relative overflow-hidden disabled:opacity-50"
+                                >
+                                    <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 rounded-2xl" />
+                                    <CheckCircle2 className="w-6 h-6 relative z-10 drop-shadow-md" />
+                                    <span className="relative z-10 text-lg drop-shadow-sm">{t("income.validateIncome")}</span>
+                                </button>
+                            )}
                         </div>
                     </div>
                 </Card>

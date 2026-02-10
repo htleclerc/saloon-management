@@ -1,8 +1,10 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { getPlanLimits, canCreateSalon } from "@/lib/utils/subscriptionHelpers";
-import { UserRole as DomainUserRole } from "@/types";
+import { UserRole as DomainUserRole, Salon } from "@/types";
+import { salonService } from "@/lib/services/SalonService";
+import { useDataMode } from "@/context/DataModeProvider";
 
 export type UserRole = DomainUserRole;
 
@@ -41,6 +43,7 @@ interface User {
     isDemo: boolean;
     demoCreatedAt?: string;
     workerId?: string;
+    userCode?: string;
     permissions?: WorkerPermissions;
     onboardingCompleted?: boolean;
     onboardingStep?: number;
@@ -51,7 +54,7 @@ export interface AuthContextType {
     isAuthenticated: boolean;
     isLoading: boolean;
     login: (user: User) => void;
-    demoLogin: (role: UserRole) => void;
+    demoLogin: (role: UserRole) => Promise<void>;
     logout: () => void;
     updateUser: (updates: Partial<User>) => void;
     hasPermission: (requiredRole: UserRole | UserRole[]) => boolean;
@@ -140,34 +143,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const login = (userData: User) => setUser(userData);
 
-    const demoLogin = (role: UserRole) => {
+    const mapSalonToTenant = (salon: Salon): Tenant => ({
+        id: salon.id.toString(),
+        name: salon.name,
+        slug: salon.slug,
+        logo: salon.logoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(salon.name)}&background=9333ea&color=fff`,
+        primaryColor: "#9333ea", // Default or should come from settings
+        subscriptionPlan: salon.subscriptionPlan as any,
+        subscriptionStatus: salon.subscriptionStatus as any,
+    });
+
+    const demoLogin = async (role: UserRole) => {
         let demoTenants: Tenant[] = [];
         if (role === 'super_admin') demoTenants = [];
         else if (role === 'owner') {
             demoTenants = [
                 {
-                    id: "salon-elegance-paris",
-                    name: "Salon Élégance Paris",
-                    slug: "elegance-paris",
-                    logo: "https://ui-avatars.com/api/?name=Elegance+Paris&background=9333ea&color=fff",
+                    id: "1",
+                    name: "Demo Salon",
+                    slug: "demo-salon",
+                    logo: "https://ui-avatars.com/api/?name=Demo+Salon&background=9333ea&color=fff",
                     primaryColor: "#9333ea",
                     subscriptionPlan: "pro",
                     subscriptionStatus: "active",
-                },
-                {
-                    id: "salon-moderne-lyon",
-                    name: "Coiffure Moderne Lyon",
-                    slug: "moderne-lyon",
-                    logo: "https://ui-avatars.com/api/?name=Moderne+Lyon&background=3b82f6&color=fff",
-                    primaryColor: "#3b82f6",
-                    subscriptionPlan: "pro",
-                    subscriptionStatus: "active",
-                },
+                }
             ];
         } else if (role === 'manager') {
             demoTenants = [
                 {
-                    id: "tenant_1",
+                    id: "1",
                     name: "Demo Salon",
                     slug: "demo-salon",
                     logo: "https://ui-avatars.com/api/?name=DS&background=9333ea&color=fff",
@@ -176,18 +180,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     subscriptionStatus: "trial",
                 }
             ];
-        } else {
-            demoTenants = [
-                {
-                    id: "tenant_1",
-                    name: "Mon Salon Demo",
-                    slug: "demo-salon",
-                    logo: "https://ui-avatars.com/api/?name=DS&background=9333ea&color=fff",
-                    primaryColor: "#9333ea",
-                    subscriptionPlan: "free",
-                    subscriptionStatus: "trial",
+        }
+
+        // Try to fetch real tenants from Supabase/API if not in purely local demo mode
+        const dataMode = localStorage.getItem('saloon-data-mode') || 'demo-local';
+        if (dataMode !== 'demo-local') {
+            try {
+                const realSalons = await salonService.getAll();
+                if (realSalons.length > 0) {
+                    // Filter by mode if we are in demo login
+                    const filteredSalons = realSalons.filter(s => s.mode === 'demo');
+                    if (filteredSalons.length > 0) {
+                        demoTenants = filteredSalons.map(mapSalonToTenant);
+                    } else {
+                        // Fallback to all if no demo salons found (unlikely)
+                        demoTenants = realSalons.map(mapSalonToTenant);
+                    }
                 }
-            ];
+            } catch (error) {
+                console.warn("Could not fetch real salons for demo, falling back to mock:", error);
+            }
         }
 
         const demoUser: User = {
@@ -201,6 +213,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             demoCreatedAt: new Date().toISOString(),
             avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=Demo${role}`,
             workerId: role === 'worker' ? '1' : undefined,
+            userCode: role === 'worker' ? 'WRK-001' : 'ADM-000',
             permissions: role === 'worker' ? {
                 canAddIncome: true,
                 canAddExpenses: false,
@@ -209,6 +222,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
         setUser(demoUser);
         localStorage.setItem("workshop-user", JSON.stringify(demoUser));
+
+        // Give a small delay to ensure state is processed before reload if needed, 
+        // though window.location.href will interrupt anyway.
         window.location.href = "/";
     };
 
@@ -352,6 +368,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const salon = user.tenants?.find(t => t.id === salonId);
         return !!salon;
     };
+
+    // Effect to refresh tenants for existing user session
+    useEffect(() => {
+        const refreshTenants = async () => {
+            if (user && mounted) {
+                const dataMode = localStorage.getItem('saloon-data-mode') || 'demo-local';
+                if (dataMode !== 'demo-local') {
+                    try {
+                        let salons: Salon[] = [];
+                        // For demo mode or super admins, we often want to show all salons available in the DB
+                        if (user.role === 'super_admin' || user.isDemo) {
+                            const allSalons = await salonService.getAll();
+                            if (user.isDemo) {
+                                salons = allSalons.filter(s => s.mode === 'demo');
+                            } else {
+                                salons = allSalons;
+                            }
+                        } else {
+                            // Attempt to parse ID, fallback to 1 for demo purposes if parsing fails
+                            const numericId = parseInt(user.id.includes('_') ? user.id.split('_').pop()! : user.id);
+                            salons = await salonService.getMySalons(isNaN(numericId) ? 1 : numericId);
+                        }
+
+                        if (salons.length > 0) {
+                            const newTenants = salons.map(mapSalonToTenant);
+                            // Only update if they look different to avoid infinite loops
+                            const currentTenantsStr = JSON.stringify(user.tenants || []);
+                            const newTenantsStr = JSON.stringify(newTenants);
+
+                            if (newTenantsStr !== currentTenantsStr) {
+                                setUser(curr => curr ? {
+                                    ...curr,
+                                    tenants: newTenants,
+                                    tenantId: (curr.tenantId && newTenants.some(t => t.id === curr.tenantId))
+                                        ? curr.tenantId
+                                        : newTenants[0].id
+                                } : null);
+                            }
+                        }
+                    } catch (error) {
+                        console.error("Failed to refresh dynamic tenants:", error);
+                    }
+                }
+            }
+        };
+
+        if (user && mounted) {
+            refreshTenants();
+        }
+    }, [user?.id, mounted]);
 
     return (
         <AuthContext.Provider

@@ -23,6 +23,8 @@ import { useAuth } from "@/context/AuthProvider";
 import { useBooking } from "@/context/BookingProvider";
 import { BookingStatus } from "@/types";
 import { useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
+import { useToast } from "@/context/ToastProvider";
+import { useConfirm } from "@/context/ConfirmProvider";
 import { useTranslation } from "@/i18n";
 import { format } from "date-fns";
 import { fr, enUS, es } from "date-fns/locale";
@@ -137,10 +139,13 @@ function BookAppointmentContent() {
     const showModalTrigger = services.length > SERVICES_LIMIT;
     const visibleServices = services.slice(0, SERVICES_LIMIT);
 
+    const { showToast } = useToast();
+    const { confirm } = useConfirm();
+
     const handleSaveNewService = async () => {
         if (handleReadOnlyClick()) return;
         if (!newServiceName || !newServicePrice) {
-            alert("Name and Price are required");
+            showToast(t("common.error"), t("services.namePriceRequired"), "warning");
             return;
         }
         try {
@@ -153,6 +158,7 @@ function BookAppointmentContent() {
                 description: "Added via Admin Interface",
                 isActive: true
             });
+            showToast(t("common.success"), t("services.addedToCatalog"), "success");
             setNewServiceName("");
             setNewServicePrice("");
             setNewServiceDuration("");
@@ -160,6 +166,7 @@ function BookAppointmentContent() {
             if (selectedSalon?.id) serviceService.getAll(Number(selectedSalon.id)).then(setServices);
         } catch (e) {
             console.error(e);
+            showToast(t("common.error"), t("services.addFailed"), "error");
         }
     };
 
@@ -399,6 +406,7 @@ function BookAppointmentContent() {
                     time: selectedTime,
                     duration: totalDuration,
                 });
+                showToast(t("common.success"), t("booking.updateSuccess"), "success");
             }
         } else {
             addBooking({
@@ -412,6 +420,7 @@ function BookAppointmentContent() {
                 status: (isClient ? 'Pending' : 'Confirmed') as BookingStatus,
                 notes: bookingComment || undefined
             });
+            showToast(t("common.success"), t("booking.createSuccess"), "success");
         }
 
         console.log("Booking created/updated");

@@ -8,10 +8,14 @@ import Button from '@/components/ui/Button';
 import { Check, AlertTriangle, ArrowRight, Sparkles, Zap, Crown } from 'lucide-react';
 import { getActivePlans, getPlanConfig } from '@/lib/utils/subscriptionHelpers';
 import { PlanConfig } from '@/types';
+import { useToast } from '@/context/ToastProvider';
+import { useTranslation } from '@/i18n';
 
 export default function UpgradePage() {
     const router = useRouter();
     const { currentTenant, user } = useAuth();
+    const { showToast } = useToast();
+    const { t } = useTranslation();
 
     const activePlans = getActivePlans();
     const currentPlanId = currentTenant?.subscriptionPlan || 'free';
@@ -19,7 +23,7 @@ export default function UpgradePage() {
 
     const handleUpgrade = (planId: string) => {
         // In demo mode, just show a success message
-        alert(`Upgrade simulé vers le plan ${planId}. En production, ceci redirigerait vers le processus de paiement.`);
+        showToast(t("common.info"), t("settings.billing.demoUpgradeMessage", { planId }), "info");
     };
 
     const getPlanIcon = (planId: string) => {
@@ -52,8 +56,8 @@ export default function UpgradePage() {
 
     return (
         <SettingsLayout
-            title="Mettre à niveau votre plan"
-            description="Choisissez le plan qui correspond le mieux à vos besoins"
+            title={t("settings.billing.upgradeTitle")}
+            description={t("settings.billing.upgradeSubtitle")}
         >
             {/* Alert if user reached limit */}
             {currentPlan && user?.tenants && user.tenants.length >= currentPlan.limits.maxSalons && (
@@ -62,11 +66,10 @@ export default function UpgradePage() {
                         <AlertTriangle className="w-6 h-6 text-orange-600 flex-shrink-0 mt-0.5" />
                         <div>
                             <h3 className="font-semibold text-orange-900 mb-1">
-                                Limite de salons atteinte
+                                {t("settings.billing.salonLimitReached")}
                             </h3>
                             <p className="text-sm text-orange-700">
-                                Vous avez atteint la limite de {currentPlan.limits.maxSalons} salon{currentPlan.limits.maxSalons > 1 ? 's' : ''} pour votre plan <span className="font-semibold">{currentPlan.name}</span>.
-                                Passez à un plan supérieur pour créer plus de salons!
+                                {t("settings.billing.salonLimitReachedDesc", { count: currentPlan.limits.maxSalons, plan: currentPlan.name })}
                             </p>
                         </div>
                     </div>
@@ -78,21 +81,20 @@ export default function UpgradePage() {
                 {activePlans.map((plan: PlanConfig) => {
                     const isCurrent = plan.id === currentPlanId;
                     const isDowngrade = activePlans.findIndex((p: PlanConfig) => p.id === plan.id) < activePlans.findIndex((p: PlanConfig) => p.id === currentPlanId);
-                    const isUpgrade = activePlans.findIndex((p: PlanConfig) => p.id === plan.id) > activePlans.findIndex((p: PlanConfig) => p.id === currentPlanId);
 
                     return (
                         <Card
                             key={plan.id}
                             className={`relative overflow-hidden transition-all duration-300 ${isCurrent
-                                    ? 'ring-2 ring-purple-500 shadow-lg shadow-purple-500/20'
-                                    : 'hover:shadow-xl hover:scale-[1.02]'
+                                ? 'ring-2 ring-purple-500 shadow-lg shadow-purple-500/20'
+                                : 'hover:shadow-xl hover:scale-[1.02]'
                                 }`}
                         >
                             {/* Badge for current plan */}
                             {isCurrent && (
                                 <div className="absolute top-4 right-4">
                                     <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded-full">
-                                        Plan actuel
+                                        {t("settings.billing.currentPlan")}
                                     </span>
                                 </div>
                             )}
@@ -108,11 +110,11 @@ export default function UpgradePage() {
                             {/* Price */}
                             <div className="mb-6">
                                 {plan.price === 0 ? (
-                                    <div className="text-4xl font-bold text-gray-900">Gratuit</div>
+                                    <div className="text-4xl font-bold text-gray-900">{t("settings.billing.free")}</div>
                                 ) : (
                                     <div className="flex items-baseline gap-1">
                                         <span className="text-4xl font-bold text-gray-900">{plan.price}€</span>
-                                        <span className="text-gray-500 text-sm">/mois</span>
+                                        <span className="text-gray-500 text-sm">{t("settings.billing.perMonth")}</span>
                                     </div>
                                 )}
                             </div>
@@ -124,7 +126,7 @@ export default function UpgradePage() {
                                     className="w-full mb-6"
                                     disabled
                                 >
-                                    Plan actuel
+                                    {t("settings.billing.currentPlan")}
                                 </Button>
                             ) : isDowngrade ? (
                                 <Button
@@ -132,7 +134,7 @@ export default function UpgradePage() {
                                     className="w-full mb-6"
                                     onClick={() => handleUpgrade(plan.id)}
                                 >
-                                    Rétrograder
+                                    {t("settings.billing.downgrade")}
                                 </Button>
                             ) : (
                                 <Button
@@ -140,7 +142,7 @@ export default function UpgradePage() {
                                     className="w-full mb-6 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600"
                                     onClick={() => handleUpgrade(plan.id)}
                                 >
-                                    <span>Mettre à niveau</span>
+                                    <span>{t("settings.billing.upgrade")}</span>
                                     <ArrowRight className="w-4 h-4 ml-2" />
                                 </Button>
                             )}
@@ -161,12 +163,12 @@ export default function UpgradePage() {
 
             {/* Feature Comparison Table */}
             <Card>
-                <h3 className="text-xl font-bold text-gray-900 mb-4">Comparaison détaillée</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-4">{t("settings.billing.detailedComparison")}</h3>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="border-b border-gray-200">
-                                <th className="text-left py-3 px-4 font-semibold text-gray-900">Fonctionnalité</th>
+                                <th className="text-left py-3 px-4 font-semibold text-gray-900">{t("settings.billing.feature")}</th>
                                 {activePlans.map((plan: PlanConfig) => (
                                     <th key={plan.id} className="text-center py-3 px-4 font-semibold text-gray-900">
                                         {plan.name}
@@ -176,31 +178,31 @@ export default function UpgradePage() {
                         </thead>
                         <tbody>
                             <tr className="border-b border-gray-100 hover:bg-gray-50">
-                                <td className="py-3 px-4 font-medium text-gray-900">Nombre de salons</td>
+                                <td className="py-3 px-4 font-medium text-gray-900">{t("settings.billing.maxSalons")}</td>
                                 {activePlans.map((plan: PlanConfig) => (
                                     <td key={plan.id} className="text-center py-3 px-4 text-gray-700">
-                                        {plan.limits.maxSalons === 999 ? 'Illimité' : plan.limits.maxSalons}
+                                        {plan.limits.maxSalons === 999 ? t("settings.billing.unlimited") : plan.limits.maxSalons}
                                     </td>
                                 ))}
                             </tr>
                             <tr className="border-b border-gray-100 hover:bg-gray-50">
-                                <td className="py-3 px-4 font-medium text-gray-900">Employés par salon</td>
+                                <td className="py-3 px-4 font-medium text-gray-900">{t("settings.billing.maxWorkers")}</td>
                                 {activePlans.map((plan: PlanConfig) => (
                                     <td key={plan.id} className="text-center py-3 px-4 text-gray-700">
-                                        {plan.limits.maxWorkers === 999 ? 'Illimité' : plan.limits.maxWorkers}
+                                        {plan.limits.maxWorkers === 999 ? t("settings.billing.unlimited") : plan.limits.maxWorkers}
                                     </td>
                                 ))}
                             </tr>
                             <tr className="border-b border-gray-100 hover:bg-gray-50">
-                                <td className="py-3 px-4 font-medium text-gray-900">Réservations/mois</td>
+                                <td className="py-3 px-4 font-medium text-gray-900">{t("settings.billing.bookingsPerMonth")}</td>
                                 {activePlans.map((plan: PlanConfig) => (
                                     <td key={plan.id} className="text-center py-3 px-4 text-gray-700">
-                                        {plan.limits.maxBookingsPerMonth === 99999 ? 'Illimité' : plan.limits.maxBookingsPerMonth}
+                                        {plan.limits.maxBookingsPerMonth === 99999 ? t("settings.billing.unlimited") : plan.limits.maxBookingsPerMonth}
                                     </td>
                                 ))}
                             </tr>
                             <tr className="border-b border-gray-100 hover:bg-gray-50">
-                                <td className="py-3 px-4 font-medium text-gray-900">Rapports avancés</td>
+                                <td className="py-3 px-4 font-medium text-gray-900">{t("settings.billing.advancedReports")}</td>
                                 {activePlans.map((plan: PlanConfig) => (
                                     <td key={plan.id} className="text-center py-3 px-4">
                                         {plan.limits.hasAdvancedReports ? (
@@ -212,7 +214,7 @@ export default function UpgradePage() {
                                 ))}
                             </tr>
                             <tr className="border-b border-gray-100 hover:bg-gray-50">
-                                <td className="py-3 px-4 font-medium text-gray-900">Accès API</td>
+                                <td className="py-3 px-4 font-medium text-gray-900">{t("settings.billing.apiAccess")}</td>
                                 {activePlans.map((plan: PlanConfig) => (
                                     <td key={plan.id} className="text-center py-3 px-4">
                                         {plan.limits.hasAPIAccess ? (
@@ -235,12 +237,12 @@ export default function UpgradePage() {
                         <Sparkles className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                        <h3 className="font-semibold text-gray-900 mb-1">Besoin d'aide pour choisir?</h3>
+                        <h3 className="font-semibold text-gray-900 mb-1">{t("settings.billing.helpTitle")}</h3>
                         <p className="text-sm text-gray-700 mb-3">
-                            Contactez notre équipe pour discuter de vos besoins et trouver le plan parfait pour votre business.
+                            {t("settings.billing.helpSubtitle")}
                         </p>
                         <Button variant="outline" size="sm">
-                            Contactez-nous
+                            {t("settings.billing.contactUs")}
                         </Button>
                     </div>
                 </div>

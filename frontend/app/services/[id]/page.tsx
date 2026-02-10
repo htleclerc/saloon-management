@@ -363,7 +363,7 @@ export default function ServiceDetailPage() {
                     <HistoryModal
                         isOpen={historyModalOpen}
                         onClose={() => setHistoryModalOpen(false)}
-                        title={`${service.name} History`}
+                        title={t('history.serviceHistoryTitle', { name: service.name })}
                         itemTitle="Usage & Income Audit"
                         itemSubtitle={`Complete trace of all bookings and validated income for ${service.name}`}
                         events={serviceUsageHistory.filter(e => e.action.toLowerCase().includes('validated') || e.action.toLowerCase().includes('income'))}

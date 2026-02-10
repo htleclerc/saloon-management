@@ -9,6 +9,7 @@ export { BaseService } from './BaseService';
 
 // Import services and instances
 import { WorkerService, workerService } from './WorkerService';
+import { NotificationService, notificationService } from './NotificationService';
 import { ClientService, clientService } from './ClientService';
 import { BookingService, bookingService } from './BookingService';
 import { IncomeService, incomeService } from './IncomeService';
@@ -19,6 +20,8 @@ import { ServiceService, serviceService } from './ServiceService';
 import { ProductService, productService } from './ProductService';
 import { TipsService, tipsService } from './TipsService';
 import { PromoCodeService, promoCodeService } from './PromoCodeService';
+import { invoiceService } from './InvoiceService';
+import { payrollService } from './PayrollService';
 
 // Export services and instances
 export { WorkerService, workerService };
@@ -32,6 +35,9 @@ export { ServiceService, serviceService };
 export { ProductService, productService };
 export { TipsService, tipsService };
 export { PromoCodeService, promoCodeService };
+export { invoiceService };
+export { NotificationService, notificationService };
+export { payrollService };
 
 // Export all service instances as a namespace for easy access
 export const Services = {
@@ -45,7 +51,9 @@ export const Services = {
     service: serviceService,
     product: productService,
     tips: tipsService,
-    promo: promoCodeService
+    promo: promoCodeService,
+    invoice: invoiceService,
+    payroll: payrollService
 };
 
 /**

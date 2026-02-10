@@ -13,9 +13,15 @@ import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGua
 import { clientService } from "@/lib/services/ClientService";
 import { useAuth } from "@/context/AuthProvider";
 import { Client } from "@/types";
+import { useTranslation } from "@/i18n";
+import { useToast } from "@/context/ToastProvider";
+import { useConfirm } from "@/context/ConfirmProvider";
 
 export default function EditClientPage({ params }: { params: { id: string } }) {
     const router = useRouter();
+    const { t } = useTranslation();
+    const { showToast } = useToast();
+    const { confirm: confirmAction } = useConfirm();
     const { activeSalonId } = useAuth();
     const { handleReadOnlyClick } = useReadOnlyGuard();
     const [isLoading, setIsLoading] = useState(true);
@@ -55,10 +61,10 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
                     notes: client.notes || "",
                 });
             } else {
-                setError("Client not found");
+                setError(t("errors.notFound"));
             }
         } catch (err) {
-            setError("Failed to load client data");
+            setError(t("errors.loadFailed"));
         } finally {
             setIsLoading(false);
         }
@@ -81,9 +87,11 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
                 postalCode: formData.zipCode,
                 notes: formData.notes,
             });
+            showToast(t("common.success"), t("dialogs.success"), "success");
             router.push("/clients");
         } catch (err: any) {
-            setError(err.message || "Failed to update client");
+            setError(err.message || t("errors.generic"));
+            showToast(t("common.error"), err.message || t("errors.generic"), "error");
         } finally {
             setIsSubmitting(false);
         }
@@ -91,13 +99,24 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
 
     const handleDelete = async () => {
         if (handleReadOnlyClick()) return;
-        if (confirm("Are you sure you want to delete this client? This action cannot be undone.")) {
+
+        const isConfirmed = await confirmAction({
+            title: t("common.delete"),
+            message: t("dialogs.confirmDelete"),
+            type: 'error',
+            confirmText: t("common.delete"),
+            cancelText: t("common.cancel")
+        });
+
+        if (isConfirmed) {
             setIsSubmitting(true);
             try {
                 await clientService.delete(Number(params.id));
+                showToast(t("common.success"), t("clients.deleteSuccess"), "success");
                 router.push("/clients");
             } catch (err: any) {
-                setError(err.message || "Failed to delete client");
+                setError(err.message || t("errors.generic"));
+                showToast(t("common.error"), err.message || t("errors.generic"), "error");
                 setIsSubmitting(false);
             }
         }
@@ -113,19 +132,19 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">Edit Client</h1>
-                        <p className="text-gray-500 mt-1">Update client information</p>
+                        <h1 className="text-3xl font-bold text-gray-900">{t("clients.editClient")}</h1>
+                        <p className="text-gray-500 mt-1">{t("clients.subtitle")}</p>
                     </div>
                     <div className="flex gap-3">
                         <ReadOnlyGuard>
                             <Button variant="danger" size="md" onClick={handleDelete}>
                                 <Trash2 className="w-5 h-5" />
-                                Delete
+                                {t("common.delete")}
                             </Button>
                         </ReadOnlyGuard>
                         <Button variant="danger" size="md" onClick={() => router.back()}>
                             <X className="w-5 h-5" />
-                            Cancel
+                            {t("common.cancel")}
                         </Button>
                     </div>
                 </div>
@@ -134,12 +153,12 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
                 {isLoading ? (
                     <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl shadow-sm border border-gray-100">
                         <Loader2 className="w-10 h-10 text-purple-600 animate-spin mb-4" />
-                        <p className="text-gray-500">Loading client data...</p>
+                        <p className="text-gray-500">{t("common.loading")}</p>
                     </div>
                 ) : (
                     <form onSubmit={handleSubmit}>
                         <Card>
-                            <h3 className="text-lg font-semibold mb-6">Personal Information</h3>
+                            <h3 className="text-lg font-semibold mb-6">{t("team.personalInfo")}</h3>
 
                             {error && (
                                 <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center gap-2">
@@ -151,7 +170,7 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="md:col-span-2">
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Full Name <span className="text-red-500">*</span>
+                                        {t("common.name")} <span className="text-red-500">*</span>
                                     </label>
                                     <input
                                         type="text"
@@ -164,7 +183,7 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Email <span className="text-red-500">*</span>
+                                        {t("common.email")} <span className="text-red-500">*</span>
                                     </label>
                                     <input
                                         type="email"
@@ -177,7 +196,7 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Phone <span className="text-red-500">*</span>
+                                        {t("common.phone")} <span className="text-red-500">*</span>
                                     </label>
                                     <input
                                         type="tel"
@@ -189,7 +208,7 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
                                     />
                                 </div>
                                 <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">{t("common.address")}</label>
                                     <input
                                         type="text"
                                         name="address"
@@ -199,7 +218,7 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">{t("team.city")}</label>
                                     <input
                                         type="text"
                                         name="city"
@@ -209,7 +228,7 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Zip Code</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">{t("team.zipCode")}</label>
                                     <input
                                         type="text"
                                         name="zipCode"
@@ -233,7 +252,7 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
                                     </select>
                                 </div>
                                 <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">{t("common.notes")}</label>
                                     <textarea
                                         name="notes"
                                         value={formData.notes}
@@ -250,11 +269,11 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
                                     ) : (
                                         <Save className="w-5 h-5" />
                                     )}
-                                    {isSubmitting ? "Updating..." : "Update Client"}
+                                    {isSubmitting ? t("common.save") + "..." : t("common.save")}
                                 </Button>
                                 <Button type="button" variant="danger" size="lg" onClick={() => router.back()}>
                                     <X className="w-5 h-5" />
-                                    Cancel
+                                    {t("common.cancel")}
                                 </Button>
                             </div>
                         </Card>

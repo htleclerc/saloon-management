@@ -1,0 +1,54 @@
+Je veux faire une refonte et une amélioration complète du formulaire et du process de booking en fonction des profils aussi.
+
+#Coté admin : 
+- On garde le fonctionnement actuel et on rajoute l'étape choix d'un client et une notification au client. Il peut choisir plusieurs workers aussi
+- Il peut valider les rendez vous ou les rejeter. Ceux qui sont sur la liste d'attente 
+- Il peut modifier le calendrier et choisir le nombres de place disponibles par jour 
+- Il peut décider de fermer des créneaux avec ou sans clients
+- L'admin peut attribuer le rendez vous à des workers même s'il sont occupés. 
+- L'admin a la possibilité de commencer un rendez vous donc un ajout de income est ajouté par défaut par l'admin et est en cours de validation
+- Modifier l'horaire (notifier le client du nouvvel horaire et mis a jour du calendrier en général) 
+
+#Coté Worker :
+- Il peut aussi avoir la possibilité de prendre rendez pour un client connu ou anonyme ou nouveau client. il sera sélectionné par défaut lors du booking et la possibilité de choisir plusieurs autres workers avec 
+- Un worker voit juste le calendrier du salon et ses rendez vous mais sans modifier ni accepter! C'est à l'admin de valider! Après la création le reste ne concerne que le client et l'admin
+
+#Coté Client : 
+- Il peut prendre rendez vous et choisir les services du salon multiple et/ou autre en ajoutant un commentaire
+- Il peut prendre rendez vous soit via le dashboard personnel dans ce cas on le redirige vers la recherche de salon et de services pour qu'il puisse commencer son process de booking
+- Quand il commence le service et le salon sont déjà choisi donc il peut rajouter des services supplémentaires du salon et rajouter aussi un commentaire (service autre)
+- Il n'a  pas besoin de choisir de worker on affiche directement le pool du salon et il peut choisir ses horaires. Si l'heure qu'il veut n'est pas disponible il peut quand meme choisir et sera placé dans la file d'attente et sera validé ou pas par le salon seulement l'admin
+- Lui montrer clairement si son créneau est disponible ou pas mais quand meme lui permettre de choisir et envoyer une demande.
+- Dans tout les cas le salon  lui enverra une notification de rejet ou d'acceptation ou proposition d'une autre horaire.
+- Le client peut refuser ou accepter un rendez-vous si cela vient de l'admin ou du client. il peut l'annuler aussi s'il est déjà validé
+- Sans action de la part du client le rendez vous est comme confirmé meme s'il est en acceptation (statut visible par l'admin et le worker)
+
+#Système
+- Le système doit calculer le nombre de place disponibles et les horaires disponibles en temps réels en fonctions des demandes reçues validées ou non
+- Propose moi un algorithme moderne et fiable pour la gestion des rendez vous. Inspire toi des grands systèmes de reservation.
+- On peut avoir une marge d'erreur d'où la validation finale par l'admin.
+- Si l'admin ne clos pas un créneau alors il ne sera disponible meme si le nombre de place est atteint (en cours ou validée)
+- Le Système propose chaque jour des suggestion de fermeture ou de gestion de créneau à l'utilisateur via un algorithme 
+- Pense en meme temps si on a plusieurs services à optimiser la vue,  pareille pour les workers
+- Ajuste le temps en fonction de ca et prends en compte aussi en fonction de la disponibilité des clients.
+- Si un rendez vous est annulé soit par l'admin ou le client, le système recalcule les places disponibles et mets à jour le calendrier
+
+
+# Booking
+- Statuts d'un booking : Created - Pending(en attente de réponse) - Confirmed - Cancelled (en cas d'annulation) - Started (En cours et client effectivement présent et action faites par l'utilisateur bouton start) - Waiting (si commencé automatiquement aucune action faite) - Finished (délai passé peut importe le statut Started) - Validated (Si un income validé est lié au booking) - Closed (Si l'admin le supprime statut (Finished ou Validated), pas de notification client)
+- Un booking est lié à un income
+- Un booking peut être lié à 0, 1 ou plusieurs utilisateurs par l'admin
+- Un booking peut etre modifié dans le formulaire complet par l'admin
+- Un booking peut avoir des commentaires peu importe sin statut sauf Created et Closed
+- On peut modifier rapidement en modifiant les workers (asoociate workers , ajout ou suppression) role admin uniquement
+- On peut voir à tout moment les différentes interactions avec le booking 
+
+
+- Mets moi à jour aussi les différentes parties prenantes du projet comme 
+* services
+* mis à jour menu admin et client avec les nouveaux éléments
+* notifications selon les préférence de l'utilisateur(appli et mail par défaut, sms aussi)
+* systeme d'historiques d'actions (pense en général au booking invoice et aux objets multi acteurs)
+
+N'oublie pas de mettre à jour les documents avec cette nouvelle fonctionalité
+

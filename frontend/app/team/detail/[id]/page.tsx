@@ -83,158 +83,8 @@ interface IncomeRow {
     status: string;
 }
 
-// Income Data by Period and Year
-const incomeDataByYear: Record<string, { week: IncomeRow[]; month: IncomeRow[]; year: IncomeRow[] }> = {
-    "2024": {
-        week: [
-            { id: 1, period: "Mon 13 Jan", services: 3, clients: 3, income: 300, salary: 210, status: "Completed" },
-            { id: 2, period: "Tue 14 Jan", services: 4, clients: 4, income: 420, salary: 294, status: "Completed" },
-            { id: 3, period: "Wed 15 Jan", services: 2, clients: 2, income: 180, salary: 126, status: "Completed" },
-            { id: 4, period: "Thu 16 Jan", services: 5, clients: 4, income: 550, salary: 385, status: "Completed" },
-            { id: 5, period: "Fri 17 Jan", services: 6, clients: 5, income: 680, salary: 476, status: "Completed" },
-            { id: 6, period: "Sat 18 Jan", services: 8, clients: 7, income: 920, salary: 644, status: "Completed" },
-            { id: 7, period: "Sun 19 Jan", services: 3, clients: 3, income: 280, salary: 196, status: "Pending" },
-        ],
-        month: [
-            { id: 1, period: "Week 1 (1-7 Jan)", services: 28, clients: 22, income: 2800, salary: 1960, status: "Completed" },
-            { id: 2, period: "Week 2 (8-14 Jan)", services: 32, clients: 26, income: 3200, salary: 2240, status: "Completed" },
-            { id: 3, period: "Week 3 (15-21 Jan)", services: 30, clients: 24, income: 3100, salary: 2170, status: "Completed" },
-            { id: 4, period: "Week 4 (22-28 Jan)", services: 35, clients: 28, income: 3600, salary: 2520, status: "In Progress" },
-        ],
-        year: [
-            { id: 1, period: "January", services: 125, clients: 98, income: 12500, salary: 8750, status: "Completed" },
-            { id: 2, period: "February", services: 118, clients: 92, income: 11800, salary: 8260, status: "Completed" },
-            { id: 3, period: "March", services: 132, clients: 105, income: 13200, salary: 9240, status: "Completed" },
-            { id: 4, period: "April", services: 140, clients: 112, income: 14000, salary: 9800, status: "Completed" },
-            { id: 5, period: "May", services: 145, clients: 118, income: 14500, salary: 10150, status: "Completed" },
-            { id: 6, period: "June", services: 150, clients: 122, income: 15000, salary: 10500, status: "Completed" },
-            { id: 7, period: "July", services: 155, clients: 128, income: 15500, salary: 10850, status: "Completed" },
-            { id: 8, period: "August", services: 160, clients: 132, income: 16000, salary: 11200, status: "Completed" },
-            { id: 9, period: "September", services: 148, clients: 120, income: 14800, salary: 10360, status: "Completed" },
-            { id: 10, period: "October", services: 152, clients: 124, income: 15200, salary: 10640, status: "Completed" },
-            { id: 11, period: "November", services: 158, clients: 130, income: 15800, salary: 11060, status: "Completed" },
-            { id: 12, period: "December", services: 165, clients: 135, income: 16500, salary: 11550, status: "In Progress" },
-        ],
-    },
-    "2023": {
-        week: [
-            { id: 1, period: "Mon 15 Jan", services: 2, clients: 2, income: 220, salary: 154, status: "Completed" },
-            { id: 2, period: "Tue 16 Jan", services: 3, clients: 3, income: 350, salary: 245, status: "Completed" },
-            { id: 3, period: "Wed 17 Jan", services: 2, clients: 2, income: 200, salary: 140, status: "Completed" },
-            { id: 4, period: "Thu 18 Jan", services: 4, clients: 3, income: 420, salary: 294, status: "Completed" },
-            { id: 5, period: "Fri 19 Jan", services: 5, clients: 4, income: 550, salary: 385, status: "Completed" },
-            { id: 6, period: "Sat 20 Jan", services: 6, clients: 5, income: 680, salary: 476, status: "Completed" },
-            { id: 7, period: "Sun 21 Jan", services: 2, clients: 2, income: 200, salary: 140, status: "Completed" },
-        ],
-        month: [
-            { id: 1, period: "Week 1 (1-7 Jan)", services: 22, clients: 18, income: 2200, salary: 1540, status: "Completed" },
-            { id: 2, period: "Week 2 (8-14 Jan)", services: 26, clients: 20, income: 2600, salary: 1820, status: "Completed" },
-            { id: 3, period: "Week 3 (15-21 Jan)", services: 24, clients: 19, income: 2400, salary: 1680, status: "Completed" },
-            { id: 4, period: "Week 4 (22-28 Jan)", services: 28, clients: 22, income: 2800, salary: 1960, status: "Completed" },
-        ],
-        year: [
-            { id: 1, period: "January", services: 100, clients: 78, income: 10000, salary: 7000, status: "Completed" },
-            { id: 2, period: "February", services: 95, clients: 74, income: 9500, salary: 6650, status: "Completed" },
-            { id: 3, period: "March", services: 108, clients: 85, income: 10800, salary: 7560, status: "Completed" },
-            { id: 4, period: "April", services: 115, clients: 90, income: 11500, salary: 8050, status: "Completed" },
-            { id: 5, period: "May", services: 120, clients: 95, income: 12000, salary: 8400, status: "Completed" },
-            { id: 6, period: "June", services: 125, clients: 100, income: 12500, salary: 8750, status: "Completed" },
-            { id: 7, period: "July", services: 130, clients: 105, income: 13000, salary: 9100, status: "Completed" },
-            { id: 8, period: "August", services: 135, clients: 108, income: 13500, salary: 9450, status: "Completed" },
-            { id: 9, period: "September", services: 125, clients: 100, income: 12500, salary: 8750, status: "Completed" },
-            { id: 10, period: "October", services: 128, clients: 102, income: 12800, salary: 8960, status: "Completed" },
-            { id: 11, period: "November", services: 132, clients: 106, income: 13200, salary: 9240, status: "Completed" },
-            { id: 12, period: "December", services: 140, clients: 112, income: 14000, salary: 9800, status: "Completed" },
-        ],
-    },
-    "2022": {
-        week: [
-            { id: 1, period: "Mon 17 Jan", services: 2, clients: 2, income: 180, salary: 126, status: "Completed" },
-            { id: 2, period: "Tue 18 Jan", services: 2, clients: 2, income: 200, salary: 140, status: "Completed" },
-            { id: 3, period: "Wed 19 Jan", services: 1, clients: 1, income: 120, salary: 84, status: "Completed" },
-            { id: 4, period: "Thu 20 Jan", services: 3, clients: 2, income: 300, salary: 210, status: "Completed" },
-            { id: 5, period: "Fri 21 Jan", services: 4, clients: 3, income: 400, salary: 280, status: "Completed" },
-            { id: 6, period: "Sat 22 Jan", services: 5, clients: 4, income: 500, salary: 350, status: "Completed" },
-            { id: 7, period: "Sun 23 Jan", services: 1, clients: 1, income: 100, salary: 70, status: "Completed" },
-        ],
-        month: [
-            { id: 1, period: "Week 1 (1-7 Jan)", services: 18, clients: 14, income: 1800, salary: 1260, status: "Completed" },
-            { id: 2, period: "Week 2 (8-14 Jan)", services: 20, clients: 16, income: 2000, salary: 1400, status: "Completed" },
-            { id: 3, period: "Week 3 (15-21 Jan)", services: 18, clients: 15, income: 1800, salary: 1260, status: "Completed" },
-            { id: 4, period: "Week 4 (22-28 Jan)", services: 22, clients: 18, income: 2200, salary: 1540, status: "Completed" },
-        ],
-        year: [
-            { id: 1, period: "January", services: 78, clients: 62, income: 7800, salary: 5460, status: "Completed" },
-            { id: 2, period: "February", services: 72, clients: 58, income: 7200, salary: 5040, status: "Completed" },
-            { id: 3, period: "March", services: 85, clients: 68, income: 8500, salary: 5950, status: "Completed" },
-            { id: 4, period: "April", services: 90, clients: 72, income: 9000, salary: 6300, status: "Completed" },
-            { id: 5, period: "May", services: 95, clients: 76, income: 9500, salary: 6650, status: "Completed" },
-            { id: 6, period: "June", services: 100, clients: 80, income: 10000, salary: 7000, status: "Completed" },
-            { id: 7, period: "July", services: 105, clients: 84, income: 10500, salary: 7350, status: "Completed" },
-            { id: 8, period: "August", services: 108, clients: 86, income: 10800, salary: 7560, status: "Completed" },
-            { id: 9, period: "September", services: 100, clients: 80, income: 10000, salary: 7000, status: "Completed" },
-            { id: 10, period: "October", services: 102, clients: 82, income: 10200, salary: 7140, status: "Completed" },
-            { id: 11, period: "November", services: 106, clients: 85, income: 10600, salary: 7420, status: "Completed" },
-            { id: 12, period: "December", services: 112, clients: 90, income: 11200, salary: 7840, status: "Completed" },
-        ],
-    },
-};
-
-const availableYears = ["2024", "2023", "2022"];
-
-// Income Transactions Data (for SimpleView table)
-const incomeTransactions = [
-    { id: 1, date: "2026-01-14", client: "Marie Dubois", service: "Box Braids", amount: 120, status: "Completed" },
-    { id: 2, date: "2026-01-14", client: "Sophie Laurent", service: "Senegalese Twists", amount: 95, status: "Completed" },
-    { id: 3, date: "2026-01-13", client: "Anna Martin", service: "Cornrows", amount: 85, status: "Completed" },
-    { id: 4, date: "2026-01-13", client: "Claire Petit", service: "Locs Maintenance", amount: 150, status: "Completed" },
-    { id: 5, date: "2026-01-12", client: "Julie Bernard", service: "Box Braids", amount: 130, status: "Completed" },
-    { id: 6, date: "2026-01-12", client: "Nadia Koné", service: "Twists", amount: 110, status: "Completed" },
-    { id: 7, date: "2026-01-11", client: "Camille Roche", service: "Cornrows", amount: 75, status: "Completed" },
-    { id: 8, date: "2026-01-11", client: "Lucie Moreau", service: "Knotless Braids", amount: 180, status: "Completed" },
-    { id: 9, date: "2026-01-10", client: "Emma Leroy", service: "Box Braids", amount: 125, status: "Completed" },
-    { id: 10, date: "2026-01-10", client: "Léa Dupont", service: "Twists", amount: 100, status: "Completed" },
-    { id: 11, date: "2026-01-09", client: "Chloé Martin", service: "Senegalese Twists", amount: 95, status: "Completed" },
-    { id: 12, date: "2026-01-09", client: "Manon Petit", service: "Locs Maintenance", amount: 160, status: "Completed" },
-    { id: 13, date: "2026-01-08", client: "Jade Bernard", service: "Box Braids", amount: 140, status: "Completed" },
-    { id: 14, date: "2026-01-08", client: "Louise Moreau", service: "Cornrows", amount: 80, status: "Completed" },
-    { id: 15, date: "2026-01-07", client: "Inès Roux", service: "Knotless Braids", amount: 175, status: "Completed" },
-    { id: 16, date: "2026-01-07", client: "Zoé Lefevre", service: "Twists", amount: 105, status: "Pending" },
-    { id: 17, date: "2026-01-06", client: "Lina Garcia", service: "Box Braids", amount: 135, status: "Completed" },
-    { id: 18, date: "2026-01-06", client: "Mia Thomas", service: "Senegalese Twists", amount: 98, status: "Completed" },
-    { id: 19, date: "2026-01-05", client: "Eva Robert", service: "Locs Maintenance", amount: 155, status: "Completed" },
-    { id: 20, date: "2026-01-05", client: "Léonie Durand", service: "Cornrows", amount: 78, status: "Completed" },
-];
-
-// Recent Income History - Replaced by dynamic transactions
-
-// Recent Services - Replaced by dynamic servicesList
-
-// Activity History - Replaced by dynamic activities
-
-// Client Comments/Reviews - Replaced by dynamic
-
-// Weekly Income Breakdown - Replaced by dynamic state
-
-// Client Volume Trend - Replaced by dynamic state
-
-// Earnings Breakdown - Replaced by dynamic state
-
-// Weekly Performance Details - Replaced by dynamic state
-
-// Salary Performance Data - Replaced by dynamic state
-
-// Client Satisfaction Data - Replaced by dynamic state
-
-// Service Time Distribution - Replaced by dynamic state
-
-// Top Appointment Services - Replaced by dynamic
-
-// Overall Performance - Replaced by dynamic state
-
-// Top Repeat Clients - Replaced by dynamic
-
-// Daily Activities - Replaced by dynamic state
+const currentYear = new Date().getFullYear();
+const availableYears = [currentYear.toString(), (currentYear - 1).toString(), (currentYear - 2).toString()];
 
 function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
@@ -242,15 +92,15 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
     const router = useRouter();
     const initialView = searchParams.get("view") === "advanced" ? "advanced" : "simple";
     const [viewMode, setViewMode] = useState<"simple" | "advanced">(initialView);
-    const [incomePeriod, setIncomePeriod] = useState<"week" | "month" | "year">("month");
-    const [selectedYear, setSelectedYear] = useState("2024");
+    const [incomePeriod, setIncomePeriod] = useState<"day" | "week" | "month" | "year">("month");
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
     const [incomePage, setIncomePage] = useState(1);
     const itemsPerPage = 5;
 
     // State for dynamic data
     const [worker, setWorker] = useState<any>(initialWorkerState);
-    const [incomeStats, setIncomeStats] = useState<any>(incomeDataByYear);
-    const [transactions, setTransactions] = useState<any[]>(incomeTransactions);
+    const [incomeStats, setIncomeStats] = useState<any>({});
+    const [transactions, setTransactions] = useState<any[]>([]);
 
     // Dynamic Charts Data
     const [weeklyIncomeData, setWeeklyIncomeData] = useState<any[]>([]);
@@ -258,6 +108,7 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
     const [earningsBreakdownData, setEarningsBreakdownData] = useState<any[]>([]);
     const [weeklyPerformanceDetails, setWeeklyPerformanceDetails] = useState<any[]>([]);
     const [salaryPerformanceData, setSalaryPerformanceData] = useState<any[]>([]);
+    const [performancePeriod, setPerformancePeriod] = useState("Month");
     const [clientSatisfactionData, setClientSatisfactionData] = useState<any[]>([]);
     const [serviceTimeDistribution, setServiceTimeDistribution] = useState<any[]>([]);
     const [overallPerformanceData, setOverallPerformanceData] = useState<any[]>([]);
@@ -274,8 +125,14 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
     const { format } = useCurrency();
     const { t } = useTranslation();
     const permissions = useActionPermissions(auth as any);
-    const isOwnProfile = auth.user?.name === worker.name;
     const canSeeFinancials = permissions.isManager;
+    const isOwnProfile = auth.user?.name === worker.name;
+
+    const averageRating = useMemo(() => {
+        if (!reviews || reviews.length === 0) return "0.0";
+        const sum = reviews.reduce((acc, curr) => acc + (curr.rating || 0), 0);
+        return (sum / reviews.length).toFixed(1);
+    }, [reviews]);
 
     const performanceCards = useMemo(() => {
         // Calculate totals from available data or use fetched stats
@@ -290,7 +147,7 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
             { label: format(totalSales), sublabel: t("team.totalSales"), color: "text-[var(--color-primary)]" },
             { label: format(totalExpenses), sublabel: t("team.totalExpensesEst"), color: "text-[var(--color-error)]" },
             { label: totalServices.toString(), sublabel: t("team.totalServices"), color: "text-[var(--color-warning)]" },
-            { label: "4.8", sublabel: t("common.rating"), color: "text-[var(--color-success)]" }, // Placeholder rating
+            { label: averageRating, sublabel: t("common.rating"), color: "text-[var(--color-success)]" },
             { label: format(netProfit), sublabel: t("team.netProfitEst"), color: "text-[var(--color-success)]" }
         ];
     }, [incomeStats, selectedYear, incomePeriod, format]);
@@ -302,7 +159,7 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
             setLoading(true);
             try {
                 const workerId = parseInt(id);
-                const salonId = 1; // Explicit salon ID, ideally from auth or worker data
+                const salonId = parseInt(auth.activeSalonId || "1");
 
                 const [
                     workerData, stats, trans,
@@ -318,9 +175,9 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                     statsService.getWorkerReviews(salonId, workerId),
                     statsService.getWeeklyIncomeBreakdown(salonId, workerId),
                     statsService.getClientVolumeTrend(salonId, workerId),
-                    statsService.getEarningsBreakdown(salonId, workerId),
+                    statsService.getMonthlyEarningsByService(salonId, workerId),
                     statsService.getWeeklyPerformanceDetails(salonId, workerId),
-                    statsService.getSalaryPerformance(salonId, workerId),
+                    statsService.getSalaryPerformanceByPeriod(salonId, workerId, performancePeriod),
                     statsService.getServiceTimeDistribution(salonId, workerId),
                     statsService.getOverallPerformance(salonId, workerId)
                 ]);
@@ -356,7 +213,11 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                 }
 
                 if (weeklyIncome) setWeeklyIncomeData(weeklyIncome);
-                if (clientTrend) setClientVolumeTrend(clientTrend);
+                if (clientTrend) setClientVolumeTrend(clientTrend.map((c: any) => ({
+                    ...c,
+                    value: c.clients || 0,
+                    actualValue: c.clients || 0
+                })));
                 if (earnings) setEarningsBreakdownData(earnings);
                 if (performance) setWeeklyPerformanceDetails(performance);
                 if (salary) setSalaryPerformanceData(salary);
@@ -371,7 +232,7 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                         client: t.client,
                         service: t.service,
                         amount: t.amount,
-                        status: t.status || 'Completed'
+                        status: t.status || 'Validated'
                     })));
                 }
 
@@ -382,10 +243,10 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
             }
         };
         fetchData();
-    }, [id, selectedYear]);
+    }, [id, selectedYear, performancePeriod, auth.activeSalonId]);
 
     // SimpleView transactions table state
-    const [transactionDateFilter, setTransactionDateFilter] = useState<DateFilterValue>({ year: parseInt(selectedYear), month: null, week: null }); // Default to year view
+    const [transactionDateFilter, setTransactionDateFilter] = useState<DateFilterValue>({ year: parseInt(selectedYear), month: null, week: null, day: null }); // Default to year view
     const [transactionSearch, setTransactionSearch] = useState("");
     const [transactionPage, setTransactionPage] = useState(1);
     const transactionsPerPage = 10;
@@ -394,16 +255,35 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
     const handleTransactionDateChange = useCallback((value: DateFilterValue) => {
         setTransactionDateFilter(value);
         setTransactionPage(1);
-    }, []);
+
+        // Sync selectedYear for other components if it changed
+        const newYearStr = value.year.toString();
+        if (newYearStr !== selectedYear) {
+            setSelectedYear(newYearStr);
+        }
+    }, [selectedYear]);
 
     // Filter transactions based on date filter and search
     const filteredTransactions = transactions.filter((item) => {
-        const date = new Date(item.date);
-        const year = date.getFullYear();
-        const month = date.getMonth() + 1;
+        // Robust date parsing (YYYY-MM-DD format from DB)
+        const parts = item.date.split('-');
+        const year = parseInt(parts[0]);
+        const month = parseInt(parts[1]);
+
         if (year !== transactionDateFilter.year) return false;
         if (transactionDateFilter.month !== null && month !== transactionDateFilter.month) return false;
-        if (transactionSearch && !item.client.toLowerCase().includes(transactionSearch.toLowerCase()) && !item.service.toLowerCase().includes(transactionSearch.toLowerCase())) return false;
+
+        // Add day filter
+        if (transactionDateFilter.day !== null) {
+            const day = parseInt(parts[2]);
+            if (day !== transactionDateFilter.day) return false;
+        }
+
+        if (transactionSearch &&
+            !item.client.toLowerCase().includes(transactionSearch.toLowerCase()) &&
+            !item.service.toLowerCase().includes(transactionSearch.toLowerCase())) {
+            return false;
+        }
         return true;
     });
 
@@ -417,7 +297,7 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
     const paginatedIncomeData = currentIncomeData.slice((incomePage - 1) * itemsPerPage, incomePage * itemsPerPage);
 
     // Reset page when period or year changes
-    const handlePeriodChange = (period: "week" | "month" | "year") => {
+    const handlePeriodChange = (period: "day" | "week" | "month" | "year") => {
         setIncomePeriod(period);
         setIncomePage(1);
     };
@@ -540,13 +420,16 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                                         <td className="px-4 py-3 text-sm text-gray-600 hidden sm:table-cell">{item.service}</td>
                                         <td className="px-4 py-3 text-sm text-right font-semibold text-[var(--color-success)]">{format(Number(item.amount))}</td>
                                         <td className="px-4 py-3 text-center hidden sm:table-cell">
-                                            <span className={`text-xs px-2 py-1 rounded-full ${item.status === "Completed" ? "bg-[var(--color-success-light)] text-[var(--color-success)]" : "bg-[var(--color-warning-light)] text-[var(--color-warning)]"}`}>{item.status}</span>
+                                            <span className={`text-xs px-2 py-1 rounded-full ${item.status === "Validated" || item.status === "Finished" ? "bg-[var(--color-success-light)] text-[var(--color-success)]" : "bg-[var(--color-warning-light)] text-[var(--color-warning)]"}`}>{item.status}</span>
                                         </td>
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={5} className="px-4 py-8 text-center text-gray-500">{t("team.noTransactionsFound")}</td>
+                                    <td colSpan={5} className="px-4 py-8 text-center text-gray-400 italic">
+                                        <History className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                                        {t("common.comingSoon")}
+                                    </td>
                                 </tr>
                             )}
                         </tbody>
@@ -632,7 +515,14 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                                     <IconComponent className="w-4 h-4" />
                                 </div>
                                 <div className="flex-1">
-                                    <p className="text-sm font-medium text-gray-900">{item.action}</p>
+                                    <p className="text-sm font-medium text-gray-900">
+                                        {item.type === 'payment'
+                                            ? t("team.receivedPayment", { amount: item.metadata?.amount || 0 })
+                                            : item.type === 'booking'
+                                                ? t("team.bookingStatusFor", { status: item.metadata?.status, client: item.metadata?.client })
+                                                : item.action /* Fallback for other types if any */
+                                        }
+                                    </p>
                                     <p className="text-xs text-gray-500">{new Date(item.time).toLocaleString()}</p>
                                 </div>
                             </div>
@@ -648,25 +538,32 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                     <Button variant="outline" size="sm" className="text-xs">{t("team.viewAll")}</Button>
                 </div>
                 <div className="space-y-4">
-                    {reviews.slice(0, 3).map((comment) => (
-                        <div key={comment.id} className="p-4 bg-gray-50 rounded-xl">
-                            <div className="flex items-start gap-3">
-                                <div className={`w-10 h-10 rounded-full ${comment.color} flex items-center justify-center font-bold`}>{comment.avatar}</div>
-                                <div className="flex-1">
-                                    <div className="flex items-center justify-between">
-                                        <p className="font-medium text-gray-900">{comment.client}</p>
-                                        <div className="flex items-center gap-1">
-                                            {[...Array(5)].map((_, i) => (
-                                                <Star key={i} className={`w-3 h-3 ${i < comment.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-300"}`} />
-                                            ))}
+                    {reviews.length > 0 ? (
+                        reviews.slice(0, 3).map((comment) => (
+                            <div key={comment.id} className="p-4 bg-gray-50 rounded-xl">
+                                <div className="flex items-start gap-3">
+                                    <div className={`w-10 h-10 rounded-full ${comment.color} flex items-center justify-center font-bold`}>{comment.avatar}</div>
+                                    <div className="flex-1">
+                                        <div className="flex items-center justify-between">
+                                            <p className="font-medium text-gray-900">{comment.client}</p>
+                                            <div className="flex items-center gap-1">
+                                                {[...Array(5)].map((_, i) => (
+                                                    <Star key={i} className={`w-3 h-3 ${i < comment.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-300"}`} />
+                                                ))}
+                                            </div>
                                         </div>
+                                        <p className="text-sm text-gray-600 mt-1">{comment.comment}</p>
+                                        <p className="text-xs text-gray-400 mt-2">{comment.date}</p>
                                     </div>
-                                    <p className="text-sm text-gray-600 mt-1">{comment.comment}</p>
-                                    <p className="text-xs text-gray-400 mt-2">{comment.date}</p>
                                 </div>
                             </div>
+                        ))
+                    ) : (
+                        <div className="flex flex-col items-center justify-center py-8 text-gray-400 italic">
+                            <MessageSquare className="w-8 h-8 mb-2 opacity-20" />
+                            <p className="text-sm font-medium">{t("common.comingSoon")}</p>
                         </div>
-                    ))}
+                    )}
                 </div>
             </Card >
         </div >
@@ -704,11 +601,17 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                 <div className="flex justify-end gap-3">
                     {canSeeFinancials && (
                         <>
-                            <Button variant="primary" size="sm" className="bg-gradient-to-r from-[var(--color-primary)] to-gray-900 border-none"><Eye className="w-4 h-4 mr-2" />{t("team.viewReports")}</Button>
-                            <Button variant="primary" size="sm" className="bg-gradient-to-r from-[var(--color-secondary)] to-gray-900 border-none"><BarChart3 className="w-4 h-4 mr-2" />{t("team.analytics")}</Button>
+                            <Link href={`/team/income?workerId=${id}`}>
+                                <Button variant="primary" size="sm" className="bg-gradient-to-r from-[var(--color-primary)] to-gray-900 border-none"><Eye className="w-4 h-4 mr-2" />{t("team.viewReports")}</Button>
+                            </Link>
+                            <Link href={`/team/performance?workerId=${id}`}>
+                                <Button variant="primary" size="sm" className="bg-gradient-to-r from-[var(--color-secondary)] to-gray-900 border-none"><BarChart3 className="w-4 h-4 mr-2" />{t("team.analytics")}</Button>
+                            </Link>
                         </>
                     )}
-                    <Button variant="primary" size="sm" className="bg-gradient-to-r from-[var(--color-warning)] to-gray-900 border-none"><Calendar className="w-4 h-4 mr-2" />{t("team.schedule")}</Button>
+                    <Link href={`/team/schedules?workerId=${id}`}>
+                        <Button variant="primary" size="sm" className="bg-gradient-to-r from-[var(--color-warning)] to-gray-900 border-none"><Calendar className="w-4 h-4 mr-2" />{t("team.schedule")}</Button>
+                    </Link>
                 </div>
             </div>
 
@@ -730,6 +633,7 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                             ))}
                         </select>
                         <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                            <button onClick={() => handlePeriodChange("day")} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${incomePeriod === "day" ? "bg-white text-[var(--color-primary)] shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>{t("team.day")}</button>
                             <button onClick={() => handlePeriodChange("week")} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${incomePeriod === "week" ? "bg-white text-[var(--color-primary)] shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>{t("team.week")}</button>
                             <button onClick={() => handlePeriodChange("month")} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${incomePeriod === "month" ? "bg-white text-[var(--color-primary)] shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>{t("team.month")}</button>
                             <button onClick={() => handlePeriodChange("year")} className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${incomePeriod === "year" ? "bg-white text-[var(--color-primary)] shadow-sm" : "text-gray-600 hover:text-gray-900"}`}>{t("team.year")}</button>
@@ -749,18 +653,27 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {paginatedIncomeData.map((row: IncomeRow) => (
-                                <tr key={row.id} className="hover:bg-gray-50 transition">
-                                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{row.period}</td>
-                                    <td className="px-4 py-3 text-sm text-center text-gray-600">{row.services}</td>
-                                    <td className="px-4 py-3 text-sm text-center text-gray-600">{row.clients}</td>
-                                    <td className="px-4 py-3 text-sm text-right font-semibold text-[var(--color-success)]">{format(row.income)}</td>
-                                    <td className="px-4 py-3 text-sm text-right font-semibold text-[var(--color-primary)]">{format(row.salary)}</td>
-                                    <td className="px-4 py-3 text-center">
-                                        <span className={`text-xs px-2 py-1 rounded-full ${row.status === "Completed" ? "bg-[var(--color-success-light)] text-[var(--color-success)]" : row.status === "In Progress" ? "bg-[var(--color-info-light,bg-blue-100)] text-[var(--color-info,text-blue-700)]" : "bg-[var(--color-warning-light)] text-[var(--color-warning)]"}`}>{row.status}</span>
+                            {paginatedIncomeData.length > 0 ? (
+                                paginatedIncomeData.map((row: IncomeRow) => (
+                                    <tr key={row.id} className="hover:bg-gray-50 transition">
+                                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{row.period}</td>
+                                        <td className="px-4 py-3 text-sm text-center text-gray-600">{row.services}</td>
+                                        <td className="px-4 py-3 text-sm text-center text-gray-600">{row.clients}</td>
+                                        <td className="px-4 py-3 text-sm text-right font-semibold text-[var(--color-success)]">{format(row.income)}</td>
+                                        <td className="px-4 py-3 text-sm text-right font-semibold text-[var(--color-primary)]">{format(row.salary)}</td>
+                                        <td className="px-4 py-3 text-center">
+                                            <span className={`text-xs px-2 py-1 rounded-full ${row.status === "Validated" || row.status === "Finished" ? "bg-[var(--color-success-light)] text-[var(--color-success)]" : row.status === "In Progress" ? "bg-[var(--color-info-light,bg-blue-100)] text-[var(--color-info,text-blue-700)]" : "bg-[var(--color-warning-light)] text(--color-warning)"}`}>{row.status}</span>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={6} className="px-4 py-12 text-center text-gray-400 italic">
+                                        <History className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                                        {t("common.comingSoon")}
                                     </td>
                                 </tr>
-                            ))}
+                            )}
                         </tbody>
                         <tfoot className="bg-[var(--color-primary-light)] font-semibold">
                             <tr>
@@ -794,29 +707,51 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                         <Link href={`/team/income?workerId=${id}`}><Button variant="outline" size="sm" className="text-xs">{t("team.viewAll")}</Button></Link>
                     </div>
                     <div className="space-y-3">
-                        {transactions.slice(0, 5).map((item) => (
-                            <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-gradient-to-br from-[var(--color-success)] to-[var(--color-success-dark)] rounded-full flex items-center justify-center text-white font-bold text-sm">{item.client.charAt(0)}</div>
-                                    <div><p className="font-medium text-gray-900 text-sm">{item.client}</p><p className="text-xs text-gray-500">{item.service} • {item.date}</p></div>
+                        {transactions.length > 0 ? (
+                            transactions.slice(0, 5).map((item) => (
+                                <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-gradient-to-br from-[var(--color-success)] to-[var(--color-success-dark)] rounded-full flex items-center justify-center text-white font-bold text-sm">{item.client.charAt(0)}</div>
+                                        <div><p className="font-medium text-gray-900 text-sm">{item.client}</p><p className="text-xs text-gray-500">{item.service} • {item.date}</p></div>
+                                    </div>
+                                    <div className="text-right"><p className="font-bold text-[var(--color-success)]">{format(Number(String(item.amount).replace(/[^0-9.-]+/g, "") || 0))}</p><span className="text-xs px-2 py-0.5 rounded-full bg-[var(--color-success-light)] text-[var(--color-success)]">{item.status}</span></div>
                                 </div>
-                                <div className="text-right"><p className="font-bold text-[var(--color-success)]">{format(Number(item.amount.replace(/[^0-9.-]+/g, "") || 0))}</p><span className="text-xs px-2 py-0.5 rounded-full bg-[var(--color-success-light)] text-[var(--color-success)]">{item.status}</span></div>
+                            ))
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-8 text-gray-400 italic">
+                                <DollarSign className="w-8 h-8 mb-2 opacity-20" />
+                                <p className="text-sm font-medium">{t("common.comingSoon")}</p>
                             </div>
-                        ))}
+                        )}
                     </div>
                 </Card>
                 <Card className="p-6">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-bold text-gray-900 flex items-center gap-2"><Scissors className="w-5 h-5 text-[var(--color-primary)]" />Services Summary</h3>
-                        <Button variant="outline" size="sm" className="text-xs">View All</Button>
+                        <h3 className="font-bold text-gray-900 flex items-center gap-2"><Scissors className="w-5 h-5 text-[var(--color-primary)]" />{t("team.servicesSummary")}</h3>
+                        <Button variant="outline" size="sm" className="text-xs">{t("team.viewAll")}</Button>
                     </div>
                     <div className="space-y-3">
-                        {servicesList.slice(0, 5).map((item) => (
-                            <div key={item.name} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
-                                <div><p className="font-medium text-gray-900 text-sm">{item.name}</p><p className="text-xs text-gray-500">{item.count} performed • Last: {item.lastPerformed ? new Date(item.lastPerformed).toLocaleDateString() : 'N/A'}</p></div>
-                                <p className="font-bold text-[var(--color-primary)]">{format(item.income)}</p>
+                        {servicesList.length > 0 ? (
+                            servicesList.slice(0, 5).map((item) => (
+                                <div key={item.name} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                                    <div>
+                                        <p className="font-medium text-gray-900 text-sm">{item.name}</p>
+                                        <p className="text-xs text-gray-500">{item.count} performed • Last: {item.lastPerformed ? new Date(item.lastPerformed).toLocaleDateString() : 'N/A'}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="font-bold text-[var(--color-primary)]">{format(item.income)}</p>
+                                        {item.potentialIncome > 0 && (
+                                            <p className="text-[10px] text-gray-400 font-medium italic">+{format(item.potentialIncome)} {t("common.potential")}</p>
+                                        )}
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-8 text-gray-400 italic">
+                                <Scissors className="w-8 h-8 mb-2 opacity-20" />
+                                <p className="text-sm font-medium">{t("common.comingSoon")}</p>
                             </div>
-                        ))}
+                        )}
                     </div>
                 </Card>
             </div>
@@ -825,87 +760,162 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card className="p-6">
                     <div className="flex items-center justify-between mb-4">
-                        <div><h3 className="font-bold text-gray-900">Weekly Income Breakdown</h3><p className="text-xs text-gray-500">Last 12 weeks</p></div>
+                        <div><h3 className="font-bold text-gray-900">{t("team.weeklyIncomeBreakdown")}</h3><p className="text-xs text-gray-500">{t("team.last12Weeks")}</p></div>
                     </div>
-                    <ResponsiveContainer width="100%" height={200}>
-                        <BarChart data={weeklyIncomeData}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
-                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
-                            <Tooltip cursor={{ fill: 'var(--color-primary-light)', opacity: 0.4 }} />
-                            <Bar dataKey="value" fill="var(--color-primary)" radius={[4, 4, 0, 0]} />
-                        </BarChart>
-                    </ResponsiveContainer>
+                    {weeklyIncomeData.length > 0 && weeklyIncomeData.some(d => d.income > 0 || d.potentialIncome > 0) ? (
+                        <ResponsiveContainer width="100%" height={200}>
+                            <BarChart data={weeklyIncomeData.map(d => ({
+                                ...d,
+                                visualValue: d.income === 0 && d.potentialIncome === 0 ? 5 : d.income,
+                                potentialVisual: d.potentialIncome
+                            }))}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
+                                <Tooltip
+                                    cursor={{ fill: 'var(--color-primary-light)', opacity: 0.4 }}
+                                    formatter={(value, name, props) => {
+                                        if (name === "actual") return [format(props.payload.income), t("common.revenue")];
+                                        return [format(props.payload.potentialIncome), t("common.potential")];
+                                    }}
+                                />
+                                <Bar dataKey="visualValue" name="actual" stackId="a" fill="var(--color-primary)" radius={[0, 0, 0, 0]} />
+                                <Bar dataKey="potentialVisual" name="potential" stackId="a" fill="var(--color-primary-light)" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <div className="h-[200px] flex flex-col items-center justify-center text-gray-400 italic">
+                            <BarChart3 className="w-8 h-8 mb-2 opacity-20" />
+                            <p className="text-sm font-medium">{t("common.comingSoon")}</p>
+                        </div>
+                    )}
                 </Card>
                 <Card className="p-6">
                     <div className="flex items-center justify-between mb-4">
-                        <div><h3 className="font-bold text-gray-900">Client Volume Trend</h3><p className="text-xs text-gray-500">6 months overview</p></div>
+                        <div><h3 className="font-bold text-gray-900">{t("team.clientVolumeTrend")}</h3><p className="text-xs text-gray-500">{t("team.6MonthsOverview")}</p></div>
                     </div>
-                    <ResponsiveContainer width="100%" height={200}>
-                        <LineChart data={clientVolumeTrend}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                            <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
-                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
-                            <Tooltip />
-                            <Line type="monotone" dataKey="value" stroke="var(--color-secondary)" strokeWidth={3} dot={{ fill: "var(--color-secondary)", r: 4 }} />
-                        </LineChart>
-                    </ResponsiveContainer>
+                    {clientVolumeTrend.length > 0 && clientVolumeTrend.some(d => d.value > 0) ? (
+                        <ResponsiveContainer width="100%" height={200}>
+                            <LineChart data={clientVolumeTrend.map(d => ({ ...d, visualValue: d.value === 0 ? 0.5 : d.value }))}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
+                                <YAxis
+                                    axisLine={false}
+                                    tickLine={false}
+                                    tick={{ fontSize: 10, fill: "#9CA3AF" }}
+                                    domain={[0, Math.max(...clientVolumeTrend.map(d => d.value || 0), 0) < 30 ? 30 : 'auto']}
+                                />
+                                <Tooltip formatter={(value, name, props) => [props.payload.value, t("team.clients")]} />
+                                <Line type="monotone" dataKey="visualValue" stroke="var(--color-secondary)" strokeWidth={3} dot={{ fill: "var(--color-secondary)", r: 4 }} />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <div className="h-[200px] flex flex-col items-center justify-center text-gray-400 italic">
+                            <TrendingUp className="w-8 h-8 mb-2 opacity-20" />
+                            <p className="text-sm font-medium">{t("common.comingSoon")}</p>
+                        </div>
+                    )}
                 </Card>
             </div>
 
             {/* Earnings Breakdown Analysis */}
             <Card className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                    <div><h3 className="font-bold text-gray-900">Earnings Breakdown Analysis</h3><p className="text-xs text-gray-500">By service type</p></div>
+                    <div><h3 className="font-bold text-gray-900">{t("team.earningsBreakdownAnalysis")}</h3><p className="text-xs text-gray-500">{t("team.byServiceType")}</p></div>
                 </div>
-                <ResponsiveContainer width="100%" height={250}>
-                    <BarChart data={earningsBreakdownData}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                        <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
-                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
-                        <Tooltip cursor={{ fill: 'var(--color-primary-light)', opacity: 0.2 }} />
-                        <Bar dataKey="braids" fill="var(--color-primary)" />
-                        <Bar dataKey="twists" fill="var(--color-secondary)" />
-                        <Bar dataKey="cornrows" fill="var(--color-warning)" />
-                        <Bar dataKey="locs" fill="var(--color-success)" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                </ResponsiveContainer>
-                <div className="flex justify-center gap-6 mt-4">
-                    <div className="flex items-center gap-2 text-xs"><div className="w-3 h-3 rounded bg-[var(--color-primary)]"></div><span>Braids</span></div>
-                    <div className="flex items-center gap-2 text-xs"><div className="w-3 h-3 rounded bg-[var(--color-secondary)]"></div><span>Twists</span></div>
-                    <div className="flex items-center gap-2 text-xs"><div className="w-3 h-3 rounded bg-[var(--color-warning)]"></div><span>Cornrows</span></div>
-                    <div className="flex items-center gap-2 text-xs"><div className="w-3 h-3 rounded bg-[var(--color-success)]"></div><span>Locs</span></div>
+                {earningsBreakdownData.length > 0 && earningsBreakdownData.some(d => Object.keys(d).some(k => k !== 'month' && k !== 'fullDate' && d[k] > 0)) ? (
+                    <ResponsiveContainer width="100%" height={250}>
+                        <BarChart data={earningsBreakdownData}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                            <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
+                            <YAxis
+                                axisLine={false}
+                                tickLine={false}
+                                tick={{ fontSize: 10, fill: "#9CA3AF" }}
+                                domain={[0, 'auto']}
+                            />
+                            <Tooltip
+                                cursor={{ fill: 'var(--color-primary-light)', opacity: 0.2 }}
+                                formatter={(value: any, name?: string) => [format(value), name || ""]}
+                            />
+                            {/* Dynamic Bars */}
+                            {Object.keys(earningsBreakdownData.reduce((acc, curr) => ({ ...acc, ...curr }), {}))
+                                .filter(key => key !== 'month' && key !== 'fullDate')
+                                .map((service, index) => {
+                                    const colors = ['var(--color-primary)', 'var(--color-secondary)', 'var(--color-warning)', 'var(--color-success)', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981'];
+                                    return (
+                                        <Bar
+                                            key={service}
+                                            dataKey={service}
+                                            name={service}
+                                            fill={colors[index % colors.length]}
+                                            stackId="a"
+                                            radius={index === 0 ? [0, 0, 0, 0] : [4, 4, 0, 0]}
+                                        />
+                                    );
+                                })
+                            }
+                        </BarChart>
+                    </ResponsiveContainer>
+                ) : (
+                    <div className="h-[250px] flex flex-col items-center justify-center text-gray-400 italic">
+                        <BarChart3 className="w-8 h-8 mb-2 opacity-20" />
+                        <p className="text-sm font-medium">{t("common.comingSoon")}</p>
+                    </div>
+                )}
+                <div className="flex justify-center gap-6 mt-4 flex-wrap">
+                    {Object.keys(earningsBreakdownData.reduce((acc, curr) => ({ ...acc, ...curr }), {}))
+                        .filter(key => key !== 'month' && key !== 'fullDate')
+                        .map((service, index) => {
+                            const colors = ['var(--color-primary)', 'var(--color-secondary)', 'var(--color-warning)', 'var(--color-success)', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981'];
+                            return (
+                                <div key={service} className="flex items-center gap-2 text-xs">
+                                    <div className="w-3 h-3 rounded" style={{ backgroundColor: colors[index % colors.length] }}></div>
+                                    <span>{service}</span>
+                                </div>
+                            );
+                        })
+                    }
                 </div>
             </Card>
 
             {/* Weekly Performance Details Table */}
             <Card className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-bold text-gray-900">Weekly Performance Details</h3>
+                    <h3 className="font-bold text-gray-900">{t("team.weeklyPerformanceDetails")}</h3>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead className="bg-gray-50">
                             <tr>
-                                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">Period</th>
-                                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600">Clients</th>
-                                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600">Services</th>
-                                <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600">Income</th>
-                                <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600">Expenses</th>
-                                <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600">Profit</th>
+                                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-600">{t("team.period")}</th>
+                                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600">{t("team.totalClients")}</th>
+                                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-600">{t("team.totalServices")}</th>
+                                <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600">{t("team.totalIncome")}</th>
+                                <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600">{t("team.totalExpenses")}</th>
+                                <th className="px-3 py-2 text-right text-xs font-semibold text-gray-600">{t("team.totalProfit")}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {weeklyPerformanceDetails.map((row, idx) => (
-                                <tr key={idx} className="hover:bg-gray-50">
-                                    <td className="px-3 py-3 text-gray-900 font-medium">{row.date}</td>
-                                    <td className="px-3 py-3 text-center text-gray-600">{row.clients}</td>
-                                    <td className="px-3 py-3 text-center text-gray-600">{row.services}</td>
-                                    <td className="px-3 py-3 text-right text-[var(--color-success)] font-medium">{format(row.income)}</td>
-                                    <td className="px-3 py-3 text-right text-[var(--color-error)] font-medium">{format(row.expenses)}</td>
-                                    <td className="px-3 py-3 text-right text-[var(--color-primary)] font-bold">{format(row.profit)}</td>
+                            {weeklyPerformanceDetails.length > 0 ? (
+                                weeklyPerformanceDetails.map((row, idx) => (
+                                    <tr key={idx} className="hover:bg-gray-50">
+                                        <td className="px-3 py-3 text-gray-900 font-medium">{row.date}</td>
+                                        <td className="px-3 py-3 text-center text-gray-600">{row.clients}</td>
+                                        <td className="px-3 py-3 text-center text-gray-600">{row.services}</td>
+                                        <td className="px-3 py-3 text-right text-[var(--color-success)] font-medium">{format(row.income)}</td>
+                                        <td className="px-3 py-3 text-right text-[var(--color-error)] font-medium">{format(row.expenses)}</td>
+                                        <td className="px-3 py-3 text-right text-[var(--color-primary)] font-bold">{format(row.profit)}</td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={6} className="px-3 py-8 text-center text-gray-400 italic">
+                                        <TrendingUp className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                                        {t("common.comingSoon")}
+                                    </td>
                                 </tr>
-                            ))}
+                            )}
                         </tbody>
                     </table>
                 </div>
@@ -914,20 +924,92 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
             {/* Salary Performance Details */}
             <Card className="p-6">
                 <div className="flex items-center justify-between mb-4">
-                    <div><h3 className="font-bold text-gray-900">Salary / Performance Details</h3><p className="text-xs text-gray-500">Monthly breakdown</p></div>
+                    <div><h3 className="font-bold text-gray-900">{t("team.salaryPerformanceDetails")}</h3><p className="text-xs text-gray-500">{t("team.performanceBreakdown")}</p></div>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setPerformancePeriod('Day')}
+                            className={`text-xs px-3 py-1 rounded-full font-medium transition-colors ${performancePeriod === 'Day' ? 'bg-[var(--color-primary-light)] text-[var(--color-primary)]' : 'bg-gray-100 text-gray-600'}`}
+                        >
+                            {t("team.day")}
+                        </button>
+                        <button
+                            onClick={() => setPerformancePeriod('Week')}
+                            className={`text-xs px-3 py-1 rounded-full font-medium transition-colors ${performancePeriod === 'Week' ? 'bg-[var(--color-primary-light)] text-[var(--color-primary)]' : 'bg-gray-100 text-gray-600'}`}
+                        >
+                            {t("team.week")}
+                        </button>
+                        <button
+                            onClick={() => setPerformancePeriod('Month')}
+                            className={`text-xs px-3 py-1 rounded-full font-medium transition-colors ${performancePeriod === 'Month' ? 'bg-[var(--color-primary-light)] text-[var(--color-primary)]' : 'bg-gray-100 text-gray-600'}`}
+                        >
+                            {t("team.month")}
+                        </button>
+                        <button
+                            onClick={() => setPerformancePeriod('Year')}
+                            className={`text-xs px-3 py-1 rounded-full font-medium transition-colors ${performancePeriod === 'Year' ? 'bg-[var(--color-primary-light)] text-[var(--color-primary)]' : 'bg-gray-100 text-gray-600'}`}
+                        >
+                            {t("team.year")}
+                        </button>
+                    </div>
                 </div>
-                <ResponsiveContainer width="100%" height={250}>
-                    <BarChart data={salaryPerformanceData}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                        <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
-                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
-                        <Tooltip cursor={{ fill: 'var(--color-primary-light)', opacity: 0.2 }} />
-                        <Bar dataKey="value1" fill="var(--color-primary)" />
-                        <Bar dataKey="value2" fill="var(--color-secondary)" />
-                        <Bar dataKey="value3" fill="var(--color-warning)" />
-                        <Bar dataKey="value4" fill="var(--color-success)" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                </ResponsiveContainer>
+                {salaryPerformanceData.length > 0 && salaryPerformanceData.some(d => d.value1 > 0 || d.value2 > 0 || d.value3 > 0 || d.value4 !== 0) ? (
+                    <ResponsiveContainer width="100%" height={250}>
+                        <BarChart data={salaryPerformanceData.map(d => {
+                            const maxVal = Math.max(
+                                ...salaryPerformanceData.map(item => Math.max(item.value1, item.value1Potential || 0, item.value2, item.value3, item.value4))
+                            ) || 100; // Default fallback to 100 if all 0
+                            const minVisual = maxVal * 0.05; // 5% of max value
+
+                            return {
+                                ...d,
+                                val1Visual: d.value1 <= 0 && (d.value1Potential || 0) <= 0 ? minVisual : d.value1,
+                                val1PotentialVisual: d.value1Potential || 0,
+                                val2Visual: d.value2 <= 0 ? minVisual : d.value2,
+                                val3Visual: d.value3 <= 0 ? minVisual : d.value3,
+                                val4Visual: d.value4 <= 0 ? minVisual : d.value4
+                            };
+                        })}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
+                            <YAxis
+                                axisLine={false}
+                                tickLine={false}
+                                tick={{ fontSize: 10, fill: "#9CA3AF" }}
+                                domain={[(dataMin: number) => Math.min(0, dataMin), (dataMax: number) => Math.max(200, dataMax)]}
+                            />
+                            <Tooltip
+                                cursor={{ fill: 'var(--color-primary-light)', opacity: 0.2 }}
+                                formatter={(value, name, props) => {
+                                    // Maps visual keys back to real data keys
+                                    let actualValue = 0;
+                                    if (props.dataKey === 'val1Visual') actualValue = props.payload.value1;
+                                    if (props.dataKey === 'val1PotentialVisual') actualValue = props.payload.value1Potential;
+                                    if (props.dataKey === 'val2Visual') actualValue = props.payload.value2;
+                                    if (props.dataKey === 'val3Visual') actualValue = props.payload.value3;
+                                    if (props.dataKey === 'val4Visual') actualValue = props.payload.value4;
+                                    return [format(actualValue), name];
+                                }}
+                            />
+                            <Bar dataKey="val1Visual" name={t("team.income")} stackId="income" fill="var(--color-primary)" />
+                            <Bar dataKey="val1PotentialVisual" name={t("common.potential")} stackId="income" fill="var(--color-primary-light)" />
+                            <Bar dataKey="val2Visual" name={t("team.salary")} stackId="costs" fill="var(--color-secondary)" />
+                            <Bar dataKey="val3Visual" name={t("common.expenses")} stackId="costs" fill="var(--color-warning)" />
+                            <Bar dataKey="val4Visual" name={t("team.profit")} stackId="costs" radius={[4, 4, 0, 0]}>
+                                {salaryPerformanceData.map((entry, index) => (
+                                    <Cell
+                                        key={`cell-${index}`}
+                                        fill={entry.value4 >= 0 ? 'var(--color-success)' : 'var(--color-error)'}
+                                    />
+                                ))}
+                            </Bar>
+                        </BarChart>
+                    </ResponsiveContainer>
+                ) : (
+                    <div className="h-[250px] flex flex-col items-center justify-center text-gray-400 italic">
+                        <TrendingUp className="w-8 h-8 mb-2 opacity-20" />
+                        <p className="text-sm font-medium">{t("common.comingSoon")}</p>
+                    </div>
+                )}
             </Card>
 
             {/* Daily Activities & Client Satisfaction */}
@@ -935,26 +1017,40 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                 <Card className="p-6">
                     <h3 className="font-bold text-gray-900 mb-4">Daily Activities Log</h3>
                     <div className="space-y-3">
-                        {activities.slice(0, 5).map((activity, idx) => (
-                            <div key={idx} className={`p-3 rounded-lg border ${activity.type === "payment" ? "bg-[var(--color-success-light)] border-[var(--color-success-light)]" : "bg-[var(--color-info-light,bg-blue-50)] border-[var(--color-info-light,border-blue-100)]"}`}>
-                                <p className="font-medium text-gray-900 text-sm">{activity.action}</p>
-                                <p className="text-xs text-gray-500">{new Date(activity.time).toLocaleString()}</p>
+                        {activities.length > 0 ? (
+                            activities.slice(0, 5).map((activity, idx) => (
+                                <div key={idx} className={`p-3 rounded-lg border ${activity.type === "payment" ? "bg-[var(--color-success-light)] border-[var(--color-success-light)]" : "bg-[var(--color-info-light,bg-blue-50)] border-[var(--color-info-light,border-blue-100)]"}`}>
+                                    <p className="font-medium text-gray-900 text-sm">{activity.action}</p>
+                                    <p className="text-xs text-gray-500">{new Date(activity.time).toLocaleString()}</p>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-8 text-gray-400 italic">
+                                <History className="w-8 h-8 mb-2 opacity-20" />
+                                <p className="text-sm font-medium">{t("common.comingSoon")}</p>
                             </div>
-                        ))}
+                        )}
                     </div>
                 </Card>
                 <Card className="p-6">
                     <h3 className="font-bold text-gray-900 mb-4">Client Satisfaction Ratings</h3>
                     <div className="space-y-3">
-                        {clientSatisfactionData.map((client, idx) => (
-                            <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-10 h-10 rounded-full ${client.color} flex items-center justify-center font-bold`}>{client.avatar}</div>
-                                    <div><p className="font-medium text-gray-900 text-sm">{client.name}</p><p className="text-xs text-gray-500">{client.service} • {client.date}</p></div>
+                        {clientSatisfactionData.length > 0 ? (
+                            clientSatisfactionData.map((client, idx) => (
+                                <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-10 h-10 rounded-full ${client.color} flex items-center justify-center font-bold`}>{client.avatar}</div>
+                                        <div><p className="font-medium text-gray-900 text-sm">{client.name}</p><p className="text-xs text-gray-500">{client.service} • {client.date}</p></div>
+                                    </div>
+                                    <div className="flex items-center gap-1"><span className="text-lg font-bold text-gray-900">{client.rating}</span><Star className="w-4 h-4 fill-yellow-400 text-yellow-400" /></div>
                                 </div>
-                                <div className="flex items-center gap-1"><span className="text-lg font-bold text-gray-900">{client.rating}</span><Star className="w-4 h-4 fill-yellow-400 text-yellow-400" /></div>
+                            ))
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-8 text-gray-400 italic">
+                                <ThumbsUp className="w-8 h-8 mb-2 opacity-20" />
+                                <p className="text-sm font-medium">{t("common.comingSoon")}</p>
                             </div>
-                        ))}
+                        )}
                     </div>
                 </Card>
             </div>
@@ -964,41 +1060,67 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                 <Card className="p-6">
                     <h3 className="font-bold text-gray-900 mb-4">Service Time Distribution</h3>
                     <div className="flex items-center justify-between">
-                        <div className="w-1/2">
-                            <ResponsiveContainer width="100%" height={180}>
-                                <PieChart>
-                                    <Pie data={serviceTimeDistribution} cx="50%" cy="50%" outerRadius={70} dataKey="value">
-                                        {serviceTimeDistribution.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.color} />))}
-                                    </Pie>
-                                    <Tooltip />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </div>
-                        <div className="w-1/2 space-y-2">
-                            {serviceTimeDistribution.map((item, idx) => (
-                                <div key={idx} className="flex items-center justify-between text-xs">
-                                    <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }}></div><span className="text-gray-600">{item.name}</span></div>
-                                    <span className="font-medium text-gray-900">{item.value}%</span>
+                        {serviceTimeDistribution.length > 0 ? (
+                            <>
+                                <div className="w-1/2">
+                                    <ResponsiveContainer width="100%" height={180}>
+                                        <PieChart>
+                                            <Pie
+                                                data={serviceTimeDistribution.map(d => ({ ...d, visualValue: d.value === 0 ? 1 : d.value }))}
+                                                cx="50%"
+                                                cy="50%"
+                                                outerRadius={70}
+                                                dataKey="visualValue"
+                                            >
+                                                {serviceTimeDistribution.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.color} />))}
+                                            </Pie>
+                                            <Tooltip formatter={(value, name, props) => [`${props.payload.value}%`, name]} />
+                                        </PieChart>
+                                    </ResponsiveContainer>
                                 </div>
-                            ))}
-                        </div>
+                                <div className="w-1/2 space-y-2">
+                                    {serviceTimeDistribution.map((item, idx) => (
+                                        <div key={idx} className="flex items-center justify-between text-xs">
+                                            <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }}></div><span className="text-gray-600">{item.name}</span></div>
+                                            <span className="font-medium text-gray-900">{item.value}%</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
+                        ) : (
+                            <div className="w-full flex flex-col items-center justify-center py-8 text-gray-400 italic">
+                                <PieChart className="w-8 h-8 mb-2 opacity-20" />
+                                <p className="text-sm font-medium">{t("common.comingSoon")}</p>
+                            </div>
+                        )}
                     </div>
                 </Card>
                 <Card className="p-6">
                     <h3 className="font-bold text-gray-900 mb-4">Top Appointment Services</h3>
                     <div className="space-y-3">
-                        {servicesList.map((service, idx) => (
-                            <div key={idx} className="p-3 rounded-lg bg-[var(--color-primary-light)]">
-                                <div className="flex items-center justify-between mb-2">
-                                    <span className="font-medium text-gray-900 text-sm">{service.name}</span>
-                                    <span className="text-sm font-bold text-[var(--color-primary)]">{format(service.income)}</span>
+                        {servicesList.length > 0 ? (
+                            servicesList.map((service, idx) => (
+                                <div key={idx} className="p-3 rounded-lg bg-[var(--color-primary-light)]">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="font-medium text-gray-900 text-sm">{service.name}</span>
+                                        <span className="text-sm font-bold text-[var(--color-primary)]">{format(service.income)}</span>
+                                    </div>
+                                    <div className="w-full bg-white/50 rounded-full h-2">
+                                        {/* Visual floor: If percentage is 0, use 2% width for symbolic visibility */}
+                                        <div
+                                            className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] h-2 rounded-full"
+                                            style={{ width: `${Math.max(service.percentage, 2)}%` }}
+                                        ></div>
+                                    </div>
+                                    <p className="text-xs text-gray-600 mt-1">{service.count} bookings</p>
                                 </div>
-                                <div className="w-full bg-white/50 rounded-full h-2">
-                                    <div className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)] h-2 rounded-full" style={{ width: `${service.percentage}%` }}></div>
-                                </div>
-                                <p className="text-xs text-gray-600 mt-1">{service.count} bookings</p>
+                            ))
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-8 text-gray-400 italic">
+                                <Scissors className="w-8 h-8 mb-2 opacity-20" />
+                                <p className="text-sm font-medium">{t("common.comingSoon")}</p>
                             </div>
-                        ))}
+                        )}
                     </div>
                 </Card>
             </div>
@@ -1006,32 +1128,72 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
             {/* Overall Performance */}
             <Card className="p-6">
                 <h3 className="font-bold text-gray-900 mb-4">Weekly Performance Summary Chart</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={overallPerformanceData}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                        <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
-                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
-                        <Tooltip cursor={{ fill: 'var(--color-primary-light)', opacity: 0.2 }} />
-                        <Bar dataKey="value1" fill="var(--color-primary)" />
-                        <Bar dataKey="value2" fill="var(--color-secondary)" />
-                        <Bar dataKey="value3" fill="var(--color-warning)" />
-                        <Bar dataKey="value4" fill="var(--color-success)" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                </ResponsiveContainer>
+                {overallPerformanceData.length > 0 && overallPerformanceData.some(d => d.value1 > 0 || d.value2 > 0 || d.value3 > 0 || d.value4 !== 0) ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={overallPerformanceData.map(d => {
+                            const maxVal = Math.max(
+                                ...overallPerformanceData.map(item => Math.max(item.value1, item.value1Potential || 0, item.value2, item.value3, item.value4))
+                            ) || 100;
+                            const minVisual = maxVal * 0.05;
+
+                            return {
+                                ...d,
+                                val1Visual: d.value1 <= 0 && (d.value1Potential || 0) <= 0 ? minVisual : d.value1,
+                                val1PotentialVisual: d.value1Potential || 0,
+                                val2Visual: d.value2 <= 0 ? minVisual : d.value2,
+                                val3Visual: d.value3 <= 0 ? minVisual : d.value3,
+                                val4Visual: d.value4 <= 0 ? minVisual : d.value4
+                            };
+                        })}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                            <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
+                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
+                            <Tooltip
+                                cursor={{ fill: 'var(--color-primary-light)', opacity: 0.2 }}
+                                formatter={(value, name, props) => {
+                                    let actualValue = 0;
+                                    if (props.dataKey === 'val1Visual') actualValue = props.payload.value1;
+                                    if (props.dataKey === 'val1PotentialVisual') actualValue = props.payload.value1Potential;
+                                    if (props.dataKey === 'val2Visual') actualValue = props.payload.value2;
+                                    if (props.dataKey === 'val3Visual') actualValue = props.payload.value3;
+                                    if (props.dataKey === 'val4Visual') actualValue = props.payload.value4;
+                                    return [format(actualValue), name];
+                                }}
+                            />
+                            <Bar dataKey="val1Visual" name={t("team.totalIncome")} stackId="rev" fill="var(--color-primary)" />
+                            <Bar dataKey="val1PotentialVisual" name={t("common.potential")} stackId="rev" fill="var(--color-primary-light)" />
+                            <Bar dataKey="val2Visual" name={t("team.totalServices")} fill="var(--color-secondary)" />
+                            <Bar dataKey="val3Visual" name={t("team.totalExpenses")} fill="var(--color-warning)" />
+                            <Bar dataKey="val4Visual" name={t("team.totalProfit")} fill="var(--color-success)" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                    </ResponsiveContainer>
+                ) : (
+                    <div className="h-[300px] flex flex-col items-center justify-center text-gray-400 italic">
+                        <BarChart3 className="w-8 h-8 mb-2 opacity-20" />
+                        <p className="text-sm font-medium">{t("common.comingSoon")}</p>
+                    </div>
+                )}
             </Card>
 
             {/* Top Repeat Clients Card */}
             <Card className="p-6">
                 <h3 className="font-bold text-gray-900 mb-4">Top 5 Repeat Clients</h3>
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                    {topClients.map((client, idx) => (
-                        <div key={idx} className="text-center p-4 bg-gray-50 rounded-xl">
-                            <div className={`w-12 h-12 rounded-full ${client.color} flex items-center justify-center font-bold mx-auto mb-2`}>{client.avatar}</div>
-                            <p className="font-medium text-gray-900 text-sm">{client.name}</p>
-                            <p className="text-xs text-gray-500">{client.visits} visits</p>
-                            <p className="text-sm font-bold text-[var(--color-primary)] mt-1">{format(client.spent)}</p>
+                    {topClients.length > 0 ? (
+                        topClients.map((client, idx) => (
+                            <div key={idx} className="text-center p-4 bg-gray-50 rounded-xl">
+                                <div className={`w-12 h-12 rounded-full ${client.color} flex items-center justify-center font-bold mx-auto mb-2`}>{client.avatar}</div>
+                                <p className="font-medium text-gray-900 text-sm">{client.name}</p>
+                                <p className="text-xs text-gray-500">{client.visits} visits</p>
+                                <p className="text-sm font-bold text-[var(--color-primary)] mt-1">{format(client.spent)}</p>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="col-span-1 md:col-span-5 flex flex-col items-center justify-center py-8 text-gray-400 italic">
+                            <Users className="w-8 h-8 mb-2 opacity-20" />
+                            <p className="text-sm font-medium">{t("common.comingSoon")}</p>
                         </div>
-                    ))}
+                    )}
                 </div>
             </Card>
 
@@ -1043,33 +1205,40 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                         <span className="text-sm text-gray-500">Average Rating:</span>
                         <div className="flex items-center gap-1 bg-[var(--color-warning-light)] px-3 py-1 rounded-full">
                             <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                            <span className="font-bold text-gray-900">4.7</span>
+                            <span className="font-bold text-gray-900">{averageRating}</span>
                         </div>
                     </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {reviews.map((comment) => (
-                        <div key={comment.id} className="p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition">
-                            <div className="flex items-start gap-3">
-                                <div className={`w-12 h-12 rounded-full ${comment.color} flex items-center justify-center font-bold text-lg`}>{comment.avatar}</div>
-                                <div className="flex-1">
-                                    <div className="flex items-center justify-between">
-                                        <p className="font-semibold text-gray-900">{comment.client}</p>
-                                        <div className="flex items-center gap-1">
-                                            {[...Array(5)].map((_, i) => (
-                                                <Star key={i} className={`w-3.5 h-3.5 ${i < comment.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-300"}`} />
-                                            ))}
+                    {reviews.length > 0 ? (
+                        reviews.map((comment) => (
+                            <div key={comment.id} className="p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition">
+                                <div className="flex items-start gap-3">
+                                    <div className={`w-12 h-12 rounded-full ${comment.color} flex items-center justify-center font-bold text-lg`}>{comment.avatar}</div>
+                                    <div className="flex-1">
+                                        <div className="flex items-center justify-between">
+                                            <p className="font-semibold text-gray-900">{comment.client}</p>
+                                            <div className="flex items-center gap-1">
+                                                {[...Array(5)].map((_, i) => (
+                                                    <Star key={i} className={`w-3.5 h-3.5 ${i < comment.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-300"}`} />
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
-                                    <p className="text-sm text-gray-600 mt-2 leading-relaxed">{comment.comment}</p>
-                                    <div className="flex items-center gap-2 mt-3">
-                                        <span className="text-xs text-gray-400">{comment.date}</span>
-                                        <button className="text-xs text-[var(--color-primary)] hover:underline flex items-center gap-1"><ThumbsUp className="w-3 h-3" />Helpful</button>
+                                        <p className="text-sm text-gray-600 mt-2 leading-relaxed">{comment.comment}</p>
+                                        <div className="flex items-center gap-2 mt-3">
+                                            <span className="text-xs text-gray-400">{comment.date}</span>
+                                            <button className="text-xs text-[var(--color-primary)] hover:underline flex items-center gap-1"><ThumbsUp className="w-3 h-3" />Helpful</button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
+                        ))
+                    ) : (
+                        <div className="col-span-1 md:col-span-2 flex flex-col items-center justify-center py-8 text-gray-400 italic">
+                            <MessageSquare className="w-8 h-8 mb-2 opacity-20" />
+                            <p className="text-sm font-medium">{t("common.comingSoon")}</p>
                         </div>
-                    ))}
+                    )}
                 </div>
             </Card>
         </div>

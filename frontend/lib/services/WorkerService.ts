@@ -128,6 +128,17 @@ export class WorkerService extends BaseService {
 
         return stats;
     }
+
+    /**
+     * Get UserCode for a worker
+     */
+    async getUserCode(workerId: number): Promise<string | null> {
+        const worker = await this.getById(workerId);
+        if (!worker || !worker.userId) return null;
+
+        const user = await this.provider.getUser(worker.userId);
+        return user ? user.userCode : null;
+    }
 }
 
 // Export singleton instance

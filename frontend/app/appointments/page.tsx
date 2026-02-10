@@ -15,6 +15,9 @@ import { BookingStatus, Booking } from "@/types";
 import { useRouter } from "next/navigation";
 import AppointmentDetailModal from "@/components/booking/AppointmentDetailModal";
 import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
+import { useToast } from "@/context/ToastProvider";
+import { useConfirm } from "@/context/ConfirmProvider";
+import { useTranslation } from "@/i18n";
 
 // Helper type for UI
 type AppointmentUI = {
@@ -53,6 +56,7 @@ export default function AppointmentsPage() {
     // const { bookings, updateBookingStatus, cancelBooking, approveReschedule, rejectReschedule } = useBooking(); // Removed context usage
     const { handleReadOnlyClick } = useReadOnlyGuard();
     const router = useRouter();
+    const { t } = useTranslation();
     const [detailModal, setDetailModal] = useState<{ open: boolean; appointment: any | null }>({ open: false, appointment: null });
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("All");
@@ -228,32 +232,68 @@ export default function AppointmentsPage() {
 
     const isAllSelected = paginatedAppointments.length > 0 && selectedItems.size === paginatedAppointments.length;
 
+    const { showToast } = useToast();
+    const { confirm } = useConfirm();
+
     // Handle bulk actions
-    const handleBulkDelete = () => {
+    const handleBulkDelete = async () => {
         if (handleReadOnlyClick()) return;
-        alert(`Would delete ${selectedItems.size} appointments: ${Array.from(selectedItems).join(", ")}`);
-        setSelectedItems(new Set());
+        const count = selectedItems.size;
+        const confirmed = await confirm({
+            title: t("appointments.bulkDelete"),
+            message: t("appointments.bulkDeleteConfirm", { count }),
+            type: "error",
+            confirmText: t("common.delete"),
+            cancelText: t("common.cancel")
+        });
+
+        if (confirmed) {
+            // Logic to delete multiple would go here
+            showToast(t("appointments.bulkDelete"), t("appointments.bulkDeleteSuccess", { count }), "info");
+            setSelectedItems(new Set());
+        }
     };
 
-    const handleBulkStatusChange = (status: string) => {
+    const handleBulkStatusChange = async (status: string) => {
         if (handleReadOnlyClick()) return;
-        alert(`Would change status to "${status}" for ${selectedItems.size} appointments`);
-        setSelectedItems(new Set());
+        const count = selectedItems.size;
+        const confirmed = await confirm({
+            title: t("appointments.bulkUpdate"),
+            message: t("appointments.bulkUpdateConfirm", { status, count }),
+            type: "warning",
+            confirmText: t("common.update"),
+            cancelText: t("common.cancel")
+        });
+
+        if (confirmed) {
+            // Logic to update multiple
+            showToast(t("appointments.bulkUpdate"), t("appointments.bulkUpdateSuccess", { count, status }), "info");
+            setSelectedItems(new Set());
+        }
     };
 
     // Handle export
     const handleExportCSV = () => {
-        const dataToExport = selectedItems.size > 0
-            ? sortedAppointments.filter(a => selectedItems.has(a.id))
-            : sortedAppointments;
-        exportToCSV(dataToExport, exportColumns, "appointments");
+        try {
+            const dataToExport = selectedItems.size > 0
+                ? sortedAppointments.filter(a => selectedItems.has(a.id))
+                : sortedAppointments;
+            exportToCSV(dataToExport, exportColumns, "appointments");
+            showToast(t("common.exportSuccess"), t("common.success"), "success");
+        } catch (err) {
+            showToast(t("common.exportFailed"), err instanceof Error ? err.message : t("common.error"), "error");
+        }
     };
 
     const handleExportPDF = () => {
-        const dataToExport = selectedItems.size > 0
-            ? sortedAppointments.filter(a => selectedItems.has(a.id))
-            : sortedAppointments;
-        exportToPDF(dataToExport, exportColumns, "Appointments Report", "appointments");
+        try {
+            const dataToExport = selectedItems.size > 0
+                ? sortedAppointments.filter(a => selectedItems.has(a.id))
+                : sortedAppointments;
+            exportToPDF(dataToExport, exportColumns, "Appointments Report", "appointments");
+        } catch (err) {
+            showToast(t("common.exportFailed"), err instanceof Error ? err.message : t("common.error"), "error");
+        }
     };
 
     const getStatusColor = (status: string) => {
@@ -293,8 +333,17 @@ export default function AppointmentsPage() {
 
     const handleCancel = async (id: number) => {
         if (handleReadOnlyClick()) return;
-        if (confirm("Are you sure you want to cancel this appointment?")) {
+        const confirmed = await confirm({
+            title: t("appointments.cancelAppointment"),
+            message: t("appointments.cancelConfirm"),
+            type: "warning",
+            confirmText: t("common.confirm"),
+            cancelText: t("common.cancel")
+        });
+
+        if (confirmed) {
             await bookingService.updateStatus(id, 'Cancelled');
+            showToast(t("common.info"), t("appointments.cancelSuccess"), "success");
             setDetailModal({ open: false, appointment: null });
             refresh();
         }
@@ -302,8 +351,13 @@ export default function AppointmentsPage() {
 
     const confirmBooking = async (id: number) => {
         if (handleReadOnlyClick()) return;
-        await bookingService.updateStatus(id, 'Confirmed');
-        refresh();
+        try {
+            await bookingService.updateStatus(id, 'Confirmed');
+            showToast(t("common.success"), t("appointments.confirmSuccess"), "success");
+            refresh();
+        } catch (error) {
+            showToast(t("common.error"), t("common.updateError"), "error");
+        }
     };
 
     const approveRescheduleAction = async (id: number) => {
@@ -312,14 +366,24 @@ export default function AppointmentsPage() {
         // Actually BookingProvider had specific logic.
         // Let's use updateStatus('Confirmed').
         if (handleReadOnlyClick()) return;
-        await bookingService.updateStatus(id, 'Confirmed');
-        refresh();
+        try {
+            await bookingService.updateStatus(id, 'Confirmed');
+            showToast(t("common.success"), t("appointments.rescheduleApproved"), "success");
+            refresh();
+        } catch (error) {
+            showToast(t("common.error"), t("common.updateError"), "error");
+        }
     };
 
     const rejectRescheduleAction = async (id: number) => {
         if (handleReadOnlyClick()) return;
-        await bookingService.updateStatus(id, 'Cancelled');
-        refresh();
+        try {
+            await bookingService.updateStatus(id, 'Cancelled');
+            showToast(t("common.success"), t("appointments.rescheduleRejected"), "success");
+            refresh();
+        } catch (error) {
+            showToast(t("common.error"), t("common.updateError"), "error");
+        }
     };
 
     return (

@@ -3,7 +3,7 @@ import { ReactNode } from "react";
 interface ButtonProps {
     children: ReactNode;
     onClick?: () => void;
-    variant?: "primary" | "secondary" | "outline" | "danger" | "success";
+    variant?: "primary" | "secondary" | "outline" | "danger" | "success" | "ghost";
     size?: "sm" | "md" | "lg";
     className?: string;
     disabled?: boolean;
@@ -29,6 +29,7 @@ export default function Button({
         outline: "border-2 border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary-light)]",
         danger: "bg-[var(--color-error)] text-white hover:opacity-90 shadow-md",
         success: "bg-[var(--color-success)] text-white hover:opacity-90 shadow-md",
+        ghost: "bg-transparent hover:bg-gray-100 text-gray-600 transition-colors",
     };
 
     const sizeClasses = {

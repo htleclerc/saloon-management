@@ -17,8 +17,8 @@ export default function SuperAdminLoginPage() {
     const router = useRouter();
     const { demoLogin } = useAuth();
 
-    const handleDemoMode = () => {
-        demoLogin("super_admin");
+    const handleDemoMode = async () => {
+        await demoLogin("super_admin");
         router.push("/superadmin");
     };
 

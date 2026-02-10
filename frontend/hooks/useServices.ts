@@ -7,11 +7,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { workerService, clientService, bookingService, serviceService } from '@/lib/services';
 import { SalonWorker, Client, Booking, Service } from '@/types';
+import { useAuth } from '@/context/AuthProvider';
 
 /**
  * Hook to use WorkerService
  */
 export function useWorkers() {
+    const { user } = useAuth();
+    const activeSalonId = user?.tenantId ? parseInt(user.tenantId) : 0;
     const [workers, setWorkers] = useState<SalonWorker[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -30,15 +33,17 @@ export function useWorkers() {
     }, []);
 
     useEffect(() => {
-        fetchWorkers();
-    }, [fetchWorkers]);
+        if (activeSalonId > 0) {
+            fetchWorkers(activeSalonId);
+        }
+    }, [fetchWorkers, activeSalonId]);
 
     const createWorker = useCallback(async (data: Omit<SalonWorker, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy' | 'isActive' | 'salonId'> & { salonId?: number, isActive?: boolean }) => {
         setLoading(true);
         setError(null);
         try {
             const newWorker = await workerService.create({
-                salonId: 0, // Default salon ID
+                salonId: activeSalonId, // Use active salon ID
                 isActive: true, // Default active status
                 ...data
             } as any);
@@ -99,6 +104,8 @@ export function useWorkers() {
  * Hook to use ClientService
  */
 export function useClients() {
+    const { user } = useAuth();
+    const activeSalonId = user?.tenantId ? parseInt(user.tenantId) : 0;
     const [clients, setClients] = useState<Client[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -117,8 +124,10 @@ export function useClients() {
     }, []);
 
     useEffect(() => {
-        fetchClients();
-    }, [fetchClients]);
+        if (activeSalonId > 0) {
+            fetchClients(activeSalonId);
+        }
+    }, [fetchClients, activeSalonId]);
 
     const createClient = useCallback(async (data: Omit<Client, 'id'>) => {
         setLoading(true);
@@ -182,6 +191,8 @@ export function useClients() {
  * Hook to use BookingService
  */
 export function useBookings() {
+    const { user } = useAuth();
+    const activeSalonId = user?.tenantId ? parseInt(user.tenantId) : 0;
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -200,8 +211,10 @@ export function useBookings() {
     }, []);
 
     useEffect(() => {
-        fetchBookings();
-    }, [fetchBookings]);
+        if (activeSalonId > 0) {
+            fetchBookings(activeSalonId);
+        }
+    }, [fetchBookings, activeSalonId]);
 
     const createBooking = useCallback(async (data: Omit<Booking, 'id' | 'createdAt' | 'updatedAt' | 'interactionHistory' | 'comments' | 'endTime'> & { workerIds: number[], serviceIds: number[] }) => {
         setLoading(true);
@@ -270,6 +283,8 @@ export function useBookings() {
  * Hook to use ServiceService
  */
 export function useServices() {
+    const { user } = useAuth();
+    const activeSalonId = user?.tenantId ? parseInt(user.tenantId) : 0;
     const [services, setServices] = useState<Service[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -288,8 +303,10 @@ export function useServices() {
     }, []);
 
     useEffect(() => {
-        fetchServices();
-    }, [fetchServices]);
+        if (activeSalonId > 0) {
+            fetchServices(activeSalonId);
+        }
+    }, [fetchServices, activeSalonId]);
 
     const createService = useCallback(async (data: Omit<Service, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>) => {
         setLoading(true);

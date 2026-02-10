@@ -1,5 +1,6 @@
 import { useAuth } from '@/context/AuthProvider';
 import { useTranslation } from '@/i18n';
+import { useToast } from '@/context/ToastProvider';
 
 /**
  * Hook for managing read-only mode behavior
@@ -8,6 +9,7 @@ import { useTranslation } from '@/i18n';
 export function useReadOnlyMode() {
     const { isReadOnlyMode, isSuperAdmin } = useAuth();
     const { t } = useTranslation();
+    const { showToast } = useToast();
 
     /**
      * Wraps a callback to prevent execution in read-only mode
@@ -15,7 +17,7 @@ export function useReadOnlyMode() {
      */
     const disableAction = (callback: () => void) => {
         if (isReadOnlyMode) {
-            alert(`❌ ${t("common.readOnlyTitle")}\n\n${t("common.readOnlyMessage")}`);
+            showToast(t("common.readOnlyTitle"), t("common.readOnlyMessage"), 'warning');
             return;
         }
         callback();

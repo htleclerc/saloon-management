@@ -12,9 +12,9 @@ Système de gestion complet pour un salon de coiffure spécialisé dans les tres
 
 ### 1. Gestion des Braiders (Coiffeuses)
 
-- **Liste des braiders** : Orphelia, Braider 2, Braider 3, etc. (jusqu'à 17 braiders)
+- **Liste des braiders (Demo Defaults)** : Orphelia Brandy, Jean Dupont, Marie Smith.
 - **Taux de partage (Sharing Key)** : Chaque braider a un pourcentage de partage des revenus
-  - Exemples : Orphelia (0.7 = 70%), Braider 2 (0.55 = 55%), Braider 3 (0.6 = 60%)
+  - Exemples : Orphelia (0.6 = 60%), Jean (0.4 = 40%), Marie (0.5 = 50%)
 - **Statut actif/inactif**
 
 ### 2. Suivi quotidien des revenus (Daily & Incomes)
@@ -449,9 +449,12 @@ The Income system implements a sophisticated multi-step validation workflow to e
 - **Accès** : Bouton "Essayer la démo" sur page de connexion
 
 ### Nettoyage automatique
-- Job CRON qui s'exécute toutes les heures
-- Supprime les comptes démo > 72h
 - Supprime toutes les données associées (rendez-vous, revenus, etc.)
+
+### Dynamic Salon Loading
+- **Provider Sync**: The `AuthProvider` now dynamically fetches salons from Supabase instead of using hardcoded lists.
+- **Tenant Mapping**: Salon records are mapped to `Tenant` objects at runtime.
+- **Demo Mode**: In Demo Mode, all available salons in the database are accessible to the user.
 
 ## Sécurité et permissions
 
@@ -467,8 +470,24 @@ The Income system implements a sophisticated multi-step validation workflow to e
 - **Language**: TypeScript (Strict Mode)
 - **Styling**: Tailwind CSS 4
 - **State**: React 19 / Context API
-- **DB (Local)**: LocalStorage + Supabase (mock)
+- **DB (Production/Demo)**: Supabase V2 Schema
+- **RLS**: Row Level Security enabled with Public access for Demo Mode (see `supabase/policies_v2.sql`)
 - **i18n**: Fully implemented (Fr/En/Es)
+
+### Component Standards & UI
+- **DateRangeFilter**: Supports "Day, Week, Month, Year" granularity.
+  - `showDayFilter`: Toggle daily selection (default: false).
+  - `showWeekFilter`: Toggle weekly selection (default: true).
+  - **Year Limitation**: Selection restricted to the last 4 years (Current + 3 previous) to ensure performance and focus on recent data.
+- **Income Overview**: Supports daily, weekly, monthly, and annual periodicity toggles.
+- **Data Visualization & Charts**:
+    - **Zero Value Visibility**: Use a dynamic "visual floor" (e.g., 5% of dataset maximum) for Bar and Line charts to ensure markers are visible even for zero data.
+    - **Tooltip Accuracy**: Always use a custom formatter to display the *real* value (0) in tooltips even when a visual floor is applied.
+    - **Label Clarity**: Avoid generic keys like `value1`, `value2`. Always use explicit, localized labels (`name` prop) or translation keys.
+    - **Pie Charts**: For zero-only datasets, show uniform placeholder slices with "0%" labels rather than a blank space.
+    - **Y-Axis Scaling**:
+        - **Earnings/Financial Charts**: Maintain a minimum domain of `[0, 200]` even if the maximum value is lower, ensuring visual consistency across different datasets.
+        - **Client Volume Trends**: Maintain a minimum domain of `[0, 30]` even if the data is sparse, to avoid misleadingly steep curves.
 
 ### Coding Standards
 1. **No `any`**: Use proper types from `@/types`

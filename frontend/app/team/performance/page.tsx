@@ -10,6 +10,7 @@ import { useTranslation } from "@/i18n";
 
 import { statsService } from "@/lib/services/StatsService";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/context/AuthProvider";
 import { WorkerStats } from "@/types";
 
 interface PerformanceData extends WorkerStats {
@@ -20,13 +21,15 @@ export default function TeamPerformancePage() {
     const { getCardStyle } = useKpiCardStyle();
     const { format } = useCurrency();
     const { t } = useTranslation();
+    const { activeSalonId } = useAuth();
     const [performanceData, setPerformanceData] = useState<PerformanceData[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const loadStats = async () => {
             try {
-                const stats = await statsService.getAllWorkersStats(1);
+                const salonId = parseInt(activeSalonId || "1");
+                const stats = await statsService.getAllWorkersStats(salonId);
                 // Mock growth calculation for now since we don't have historical data granular enough in WorkerStats
                 const enhancedStats = stats.map(s => ({
                     ...s,
@@ -40,7 +43,7 @@ export default function TeamPerformancePage() {
             }
         };
         loadStats();
-    }, []);
+    }, [activeSalonId]);
 
     const totalIncome = performanceData.reduce((sum, w) => sum + w.totalRevenue, 0);
     const avgRating = performanceData.length > 0

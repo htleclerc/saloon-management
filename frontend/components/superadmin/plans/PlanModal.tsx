@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import Button from '@/components/ui/Button';
 import { X, Save, AlertCircle, BarChart3, Code, Info, Plus, Trash2, Globe } from 'lucide-react';
 import { PlanConfig } from '@/types';
+import { useToast } from '@/context/ToastProvider';
+import { useTranslation } from '@/i18n';
 
 interface PlanModalProps {
     isOpen: boolean;
@@ -73,13 +75,16 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
         setFormData({ ...formData, features: newFeatures });
     };
 
+    const { showToast } = useToast();
+    const { t } = useTranslation();
+
     const handleSave = () => {
         if (!formData.name) {
-            alert('Plan name is required');
+            showToast(t("common.warning"), t("superadmin.planNameRequired"), "warning");
             return;
         }
         if (formData.price < 0) {
-            alert('Price cannot be negative');
+            showToast(t("common.warning"), t("superadmin.priceNegative"), "warning");
             return;
         }
         onSave(formData);
@@ -92,10 +97,10 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
                 <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-8 py-6 flex items-center justify-between">
                     <div>
                         <h2 className="text-2xl font-black text-white">
-                            {plan ? `Edit Plan: ${plan.name}` : 'Create New Subscription Plan'}
+                            {plan ? t("superadmin.editPlan", { name: plan.name }) : t("superadmin.createPlan")}
                         </h2>
                         <p className="text-purple-100 text-sm opacity-80 mt-1">
-                            Define limits, features and pricing for this tier.
+                            {t("superadmin.planSubtitle")}
                         </p>
                     </div>
                     <button
@@ -112,11 +117,11 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
                     <div className="space-y-4">
                         <div className="flex items-center gap-2 text-purple-600 mb-2">
                             <Info className="w-5 h-5" />
-                            <h3 className="font-black uppercase tracking-wider text-xs">General Settings</h3>
+                            <h3 className="font-black uppercase tracking-wider text-xs">{t("superadmin.generalSettings")}</h3>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div className="md:col-span-1">
-                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Plan Name</label>
+                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">{t("superadmin.planName")}</label>
                                 <input
                                     type="text"
                                     placeholder="e.g. Professional"
@@ -126,7 +131,7 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Monthly Price (€)</label>
+                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">{t("superadmin.monthlyPrice")}</label>
                                 <input
                                     type="number"
                                     value={formData.price}
@@ -137,7 +142,7 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Display Order</label>
+                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">{t("superadmin.displayOrder")}</label>
                                 <input
                                     type="number"
                                     value={formData.displayOrder}
@@ -152,11 +157,11 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
                     <div className="space-y-4 pt-4 border-t border-gray-50">
                         <div className="flex items-center gap-2 text-blue-600 mb-2">
                             <BarChart3 className="w-5 h-5" />
-                            <h3 className="font-black uppercase tracking-wider text-xs">Access Limits</h3>
+                            <h3 className="font-black uppercase tracking-wider text-xs">{t("superadmin.accessLimits")}</h3>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div>
-                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Max Salons</label>
+                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">{t("superadmin.maxSalons")}</label>
                                 <input
                                     type="number"
                                     value={formData.limits.maxSalons}
@@ -164,10 +169,10 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
                                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 outline-none transition-all font-bold"
                                     min="1"
                                 />
-                                <p className="text-[10px] text-gray-400 mt-1 font-bold italic">Use 999 for unlimited</p>
+                                <p className="text-[10px] text-gray-400 mt-1 font-bold italic">{t("superadmin.unlimited999")}</p>
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Max Workers / Salon</label>
+                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">{t("superadmin.maxWorkers")}</label>
                                 <input
                                     type="number"
                                     value={formData.limits.maxWorkers}
@@ -175,10 +180,10 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
                                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 outline-none transition-all font-bold"
                                     min="1"
                                 />
-                                <p className="text-[10px] text-gray-400 mt-1 font-bold italic">Use 999 for unlimited</p>
+                                <p className="text-[10px] text-gray-400 mt-1 font-bold italic">{t("superadmin.unlimited999")}</p>
                             </div>
                             <div>
-                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Bookings / Month</label>
+                                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">{t("superadmin.bookingsPerMonth")}</label>
                                 <input
                                     type="number"
                                     value={formData.limits.maxBookingsPerMonth}
@@ -186,7 +191,7 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
                                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 outline-none transition-all font-bold"
                                     min="1"
                                 />
-                                <p className="text-[10px] text-gray-400 mt-1 font-bold italic">Use 99999 for unlimited</p>
+                                <p className="text-[10px] text-gray-400 mt-1 font-bold italic">{t("superadmin.unlimited99999")}</p>
                             </div>
                         </div>
                     </div>
@@ -196,7 +201,7 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
                         <div className="space-y-4">
                             <div className="flex items-center gap-2 text-indigo-600 mb-2">
                                 <Code className="w-5 h-5" />
-                                <h3 className="font-black uppercase tracking-wider text-xs">Premium Features</h3>
+                                <h3 className="font-black uppercase tracking-wider text-xs">{t("superadmin.premiumFeatures")}</h3>
                             </div>
                             <div className="space-y-3">
                                 <label className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-200 cursor-pointer group hover:border-purple-200 transition-all">
@@ -221,7 +226,7 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
 
                             <div className="flex items-center gap-2 text-gray-600 pt-4">
                                 <Globe className="w-5 h-5" />
-                                <h3 className="font-black uppercase tracking-wider text-xs">Global Visibility</h3>
+                                <h3 className="font-black uppercase tracking-wider text-xs">{t("superadmin.globalVisibility")}</h3>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <label className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200 cursor-pointer">
@@ -231,7 +236,7 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
                                         onChange={(e) => updateField('isActive', e.target.checked)}
                                         className="w-5 h-5 text-green-600 rounded-md focus:ring-green-500"
                                     />
-                                    <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">Active Plan</span>
+                                    <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">{t("superadmin.activePlan")}</span>
                                 </label>
                                 <label className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200 cursor-pointer">
                                     <input
@@ -240,7 +245,7 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
                                         onChange={(e) => updateField('isDefault', e.target.checked)}
                                         className="w-5 h-5 text-purple-600 rounded-md focus:ring-purple-500"
                                     />
-                                    <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">Default Tier</span>
+                                    <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">{t("superadmin.defaultTier")}</span>
                                 </label>
                             </div>
                         </div>
@@ -248,7 +253,7 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
                         <div className="space-y-4">
                             <div className="flex items-center gap-2 text-amber-600 mb-2">
                                 <Plus className="w-5 h-5" />
-                                <h3 className="font-black uppercase tracking-wider text-xs">Included Features List</h3>
+                                <h3 className="font-black uppercase tracking-wider text-xs">{t("superadmin.includedFeatures")}</h3>
                             </div>
                             <div className="space-y-2">
                                 {formData.features.map((feature, index) => (
@@ -279,7 +284,7 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
                                     onClick={addFeature}
                                     className="w-full rounded-2xl border-dashed border-2 hover:border-purple-400 hover:bg-purple-50 hover:text-purple-600 font-bold"
                                 >
-                                    + Add Feature Description
+                                    {t("superadmin.addFeature")}
                                 </Button>
                             </div>
                         </div>
@@ -309,7 +314,7 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
                         onClick={onClose}
                         className="rounded-2xl border-gray-200 bg-white text-gray-600 font-black uppercase tracking-widest text-xs px-6 py-3"
                     >
-                        Discard Changes
+                        {t("superadmin.discardChanges")}
                     </Button>
                     <Button
                         variant="primary"
@@ -317,7 +322,7 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
                         className="rounded-2xl shadow-xl shadow-purple-500/30 font-black uppercase tracking-widest text-xs px-8 py-3 flex items-center gap-2"
                     >
                         <Save className="w-4 h-4" />
-                        Save Configuration
+                        {t("superadmin.saveConfiguration")}
                     </Button>
                 </div>
             </div>

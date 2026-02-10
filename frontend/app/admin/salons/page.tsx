@@ -9,6 +9,8 @@ import {
     Building, Eye, Settings, Lock, CheckCircle,
     Search, Filter, ArrowUpDown, Users, Calendar, Shield
 } from 'lucide-react';
+import { useToast } from '@/context/ToastProvider';
+import { useTranslation } from '@/i18n';
 
 interface SalonWithStats extends Salon {
     users: number;
@@ -26,6 +28,8 @@ import type { Salon } from '@/types';
 export default function AdminSalonsPage() {
     const { isSuperAdmin, enterReadOnlyMode, canManageSalon, exitReadOnlyMode, user, switchTenant } = useAuth();
     const router = useRouter();
+    const { showToast } = useToast();
+    const { t } = useTranslation();
     const [searchQuery, setSearchQuery] = useState('');
     const [filterPlan, setFilterPlan] = useState<string>('all');
     const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -96,7 +100,7 @@ export default function AdminSalonsPage() {
     const handleManageSalon = (salon: SalonWithStats) => {
         // Check if super admin has manage rights
         if (!canManageSalon(salon.id.toString())) {
-            alert(`❌ Accès refusé\n\nVous n'avez pas les droits de gestion sur ce salon.\n\nPour obtenir l'accès, demandez au propriétaire (${salon.ownerName}) de vous ajouter comme administrateur.`);
+            showToast(t("superadmin.accessDenied"), t("superadmin.accessDeniedDetail", { owner: salon.ownerName || "Unknown" }), "error");
             return;
         }
 
@@ -122,10 +126,10 @@ export default function AdminSalonsPage() {
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                            Gestion des Salons
+                            {t("superadmin.manageSalons")}
                         </h1>
                         <p className="text-gray-600">
-                            {filteredSalons.length} salon{filteredSalons.length > 1 ? 's' : ''} trouvé{filteredSalons.length > 1 ? 's' : ''}
+                            {filteredSalons.length} salon{filteredSalons.length > 1 ? 's' : ''} {t("common.found")}
                         </p>
                     </div>
                     <Button
@@ -133,7 +137,7 @@ export default function AdminSalonsPage() {
                         className="bg-gradient-to-r from-purple-600 to-pink-500"
                         onClick={() => router.push('/admin')}
                     >
-                        ← Retour au Dashboard
+                        ← {t("superadmin.backToDashboard")}
                     </Button>
                 </div>
 
@@ -146,7 +150,7 @@ export default function AdminSalonsPage() {
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                                 <input
                                     type="text"
-                                    placeholder="Rechercher par nom, propriétaire, email..."
+                                    placeholder={t("superadmin.searchSalons")}
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
@@ -161,7 +165,7 @@ export default function AdminSalonsPage() {
                                 onChange={(e) => setFilterPlan(e.target.value)}
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                             >
-                                <option value="all">Tous les plans</option>
+                                <option value="all">{t("superadmin.allPlans")}</option>
                                 <option value="free">Free</option>
                                 <option value="pro">Pro</option>
                                 <option value="enterprise">Enterprise</option>
@@ -175,11 +179,11 @@ export default function AdminSalonsPage() {
                                 onChange={(e) => setFilterStatus(e.target.value)}
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                             >
-                                <option value="all">Tous les statuts</option>
-                                <option value="active">Actif</option>
-                                <option value="trial">Trial</option>
-                                <option value="suspended">Suspendu</option>
-                                <option value="expired">Expiré</option>
+                                <option value="all">{t("superadmin.allStatus")}</option>
+                                <option value="active">{t("common.active")}</option>
+                                <option value="trial">{t("common.trial")}</option>
+                                <option value="suspended">{t("common.suspended")}</option>
+                                <option value="expired">{t("common.expired")}</option>
                             </select>
                         </div>
                     </div>
@@ -191,14 +195,14 @@ export default function AdminSalonsPage() {
                         <table className="w-full">
                             <thead>
                                 <tr className="border-b border-gray-200">
-                                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Salon</th>
-                                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Propriétaire</th>
-                                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Plan</th>
-                                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Statut</th>
-                                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Utilisateurs</th>
-                                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Créé le</th>
-                                    <th className="text-left py-3 px-4 font-semibold text-gray-700">Activité</th>
-                                    <th className="text-right py-3 px-4 font-semibold text-gray-700">Actions</th>
+                                    <th className="text-left py-3 px-4 font-semibold text-gray-700">{t("superadmin.salon")}</th>
+                                    <th className="text-left py-3 px-4 font-semibold text-gray-700">{t("superadmin.owner")}</th>
+                                    <th className="text-left py-3 px-4 font-semibold text-gray-700">{t("superadmin.plan")}</th>
+                                    <th className="text-left py-3 px-4 font-semibold text-gray-700">{t("common.status")}</th>
+                                    <th className="text-left py-3 px-4 font-semibold text-gray-700">{t("dashboard.totalWorkers")}</th>
+                                    <th className="text-left py-3 px-4 font-semibold text-gray-700">{t("common.createdAt")}</th>
+                                    <th className="text-left py-3 px-4 font-semibold text-gray-700">{t("common.activity")}</th>
+                                    <th className="text-right py-3 px-4 font-semibold text-gray-700">{t("common.actions")}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -226,7 +230,7 @@ export default function AdminSalonsPage() {
                                         </td>
                                         <td className="py-3 px-4">
                                             <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(salon.status)}`}>
-                                                {salon.status}
+                                                {t("common." + salon.status.toLowerCase())}
                                             </span>
                                         </td>
                                         <td className="py-3 px-4">
@@ -250,7 +254,7 @@ export default function AdminSalonsPage() {
                                                 <button
                                                     onClick={() => handleViewSalon(salon)}
                                                     className="p-2 hover:bg-blue-50 rounded-lg transition-colors group"
-                                                    title="Voir en mode lecture seule"
+                                                    title={t("superadmin.viewReadOnly")}
                                                 >
                                                     <Eye className="w-5 h-5 text-blue-600 group-hover:scale-110 transition-transform" />
                                                 </button>
@@ -264,8 +268,8 @@ export default function AdminSalonsPage() {
                                                         }`}
                                                     title={
                                                         canManageSalon(salon.id.toString())
-                                                            ? "Gérer en tant qu'administrateur"
-                                                            : "Vous n'avez pas les droits de gestion sur ce salon"
+                                                            ? t("superadmin.manageAsAdmin")
+                                                            : t("superadmin.noManageRights")
                                                     }
                                                 >
                                                     <Shield className={`w-5 h-5 group-hover:scale-110 transition-transform ${canManageSalon(salon.id.toString())
@@ -283,7 +287,7 @@ export default function AdminSalonsPage() {
                         {filteredSalons.length === 0 && (
                             <div className="text-center py-12">
                                 <Building className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                                <p className="text-gray-500">Aucun salon trouvé</p>
+                                <p className="text-gray-500">{t("superadmin.noSalonFound")}</p>
                             </div>
                         )}
                     </div>

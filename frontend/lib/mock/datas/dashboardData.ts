@@ -21,34 +21,34 @@ export const expenseDistributionData: ExpenseDistributionPoint[] = [
 
 export const topPerformersData: TopPerformer[] = [
     {
-        name: "Isabelle",
-        role: "Hair Stylist",
-        revenue: 4250,
-        clients: 42,
+        name: "Orphelia Brandy",
+        role: "Manager / Braids Specialist",
+        revenue: 5250,
+        clients: 15,
         rating: 4.9,
-        avatar: "I",
-        bg: "bg-purple-100",
-        text: "text-purple-600"
-    },
-    {
-        name: "Fatima S",
-        role: "Nail Artist",
-        revenue: 3890,
-        clients: 38,
-        rating: 4.8,
-        avatar: "F",
+        avatar: "O",
         bg: "bg-pink-100",
         text: "text-pink-600"
     },
     {
-        name: "Nadine B",
-        role: "Colorist",
+        name: "Marie Smith",
+        role: "Expert Colorist",
+        revenue: 4120,
+        clients: 28,
+        rating: 5.0,
+        avatar: "M",
+        bg: "bg-green-100",
+        text: "text-green-600"
+    },
+    {
+        name: "Jean Dupont",
+        role: "Barber",
         revenue: 3560,
-        clients: 35,
-        rating: 4.8,
-        avatar: "N",
-        bg: "bg-orange-100",
-        text: "text-orange-600"
+        clients: 45,
+        rating: 4.7,
+        avatar: "J",
+        bg: "bg-blue-100",
+        text: "text-blue-600"
     }
 ];
 

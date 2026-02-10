@@ -3,6 +3,7 @@
 import { useAuth } from '@/context/AuthProvider';
 import { ReactNode, MouseEvent } from 'react';
 import { useTranslation } from '@/i18n';
+import { useToast } from '@/context/ToastProvider';
 
 /**
  * HOC Component that wraps children and blocks all interactions in read-only mode
@@ -16,12 +17,13 @@ interface ReadOnlyGuardProps {
 export function ReadOnlyGuard({ children, showOverlay = true }: ReadOnlyGuardProps) {
     const { isReadOnlyMode } = useAuth();
     const { t } = useTranslation();
+    const { showToast } = useToast();
 
     const handleClick = (e: MouseEvent) => {
         if (isReadOnlyMode) {
             e.preventDefault();
             e.stopPropagation();
-            alert(`❌ ${t("common.readOnlyTitle")}\n\n${t("common.readOnlyMessage")}`);
+            showToast(t("common.readOnlyTitle"), t("common.readOnlyMessage"), 'warning');
         }
     };
 
@@ -53,10 +55,11 @@ export function ReadOnlyGuard({ children, showOverlay = true }: ReadOnlyGuardPro
 export function useReadOnlyGuard() {
     const { isReadOnlyMode } = useAuth();
     const { t } = useTranslation();
+    const { showToast } = useToast();
 
     const blockAction = (callback: () => void) => {
         if (isReadOnlyMode) {
-            alert(`❌ ${t("common.readOnlyTitle")}\n\n${t("common.readOnlyMessage")}`);
+            showToast(t("common.readOnlyTitle"), t("common.readOnlyMessage"), 'warning');
             return;
         }
         callback();
@@ -64,7 +67,7 @@ export function useReadOnlyGuard() {
 
     const handleReadOnlyClick = () => {
         if (isReadOnlyMode) {
-            alert(`❌ ${t("common.readOnlyTitle")}\n\n${t("common.readOnlyMessage")}`);
+            showToast(t("common.readOnlyTitle"), t("common.readOnlyMessage"), 'warning');
             return true;
         }
         return false;

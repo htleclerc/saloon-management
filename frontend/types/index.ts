@@ -58,6 +58,7 @@ export interface Salon {
     subscriptionStatus: string;
     subscriptionEndsAt?: Date;
     isActive: boolean;
+    mode?: 'demo' | 'prod';
     createdAt: Date;
     updatedAt: Date;
     createdBy: string;
@@ -106,6 +107,23 @@ export interface SalonWorker {
     sharingKey: number;
     bio?: string;
     specialties?: string[];  // Array OK - small list, no stats
+
+    // Advanced fields
+    firstName?: string;
+    lastName?: string;
+    address?: string;
+    city?: string;
+    postalCode?: string;
+    birthDate?: string;
+    gender?: string;
+    employeeRole?: string;
+    contractType?: string;
+    hireDate?: string;
+    contractEndDate?: string;
+    baseSalary?: number;
+    experienceLevel?: string;
+    weeklySchedule?: any; // Stores the full schedule object
+
     isActive: boolean;
     createdAt: Date;
     updatedAt: Date;
@@ -126,6 +144,8 @@ export interface WorkerStats {
     totalRevenue: number;
     monthRevenue: number;
     yearRevenue: number;
+    monthCommission: number; // Added for correct earnings display
+    monthTips: number;       // Added for correct tips display
     avgRating: number;
     totalReviews: number;
 }
@@ -255,6 +275,7 @@ export interface Booking {
     comments?: BookingComment[];  // Internal staff comments
     createdAt: Date;
     updatedAt: Date;
+    isActive: boolean;
     createdBy: string;
     updatedBy: string;
 }
@@ -325,8 +346,13 @@ export interface Income {
     clientName?: string;   // Joined field
     bookingIds?: number[]; // Support for multiple bookings (from Junction)
     serviceIds?: number[]; // From Junction
+    serviceNames?: string[]; // Joined field
     workerIds?: number[];  // From Junction
+    workerShares?: IncomeWorkerShare[];
     comments?: BookingComment[];
+    notes?: string;
+    tips?: number;
+    isActive: boolean;
     createdAt: Date;
     updatedAt: Date;
     createdBy: string;
@@ -340,6 +366,7 @@ export interface IncomeWorkerShare {
     workerId: number;
     amount: number;
     percentage: number;
+    tips: number; // Explicit tips for this worker
     createdAt: Date;
 }
 
@@ -375,12 +402,16 @@ export interface IncomeCreateData {
     workerShares: Array<{
         workerId: number;
         percentage: number;
+        amount?: number;
+        tips?: number;
     }>;
     serviceIds: number[];
     products?: Array<{
         productId: number;
         quantity: number;
     }>;
+    notes?: string;
+    tips?: number;
 }
 
 // ============================================================
@@ -499,6 +530,7 @@ export interface SalonStats {
     monthRevenue: number;
     totalExpenses: number;
     monthExpenses: number;
+    newClients: number;
 }
 
 export interface ClientRegistrationTrend {
@@ -572,6 +604,7 @@ export interface BookingFilters {
     startDate?: string;
     endDate?: string;
     isSensitive?: boolean;
+    isActive?: boolean;
 }
 
 export interface IncomeFilters {
@@ -582,6 +615,7 @@ export interface IncomeFilters {
     startDate?: string;
     endDate?: string;
     hasInvoice?: boolean;
+    isActive?: boolean;
 }
 
 export interface ExpenseFilters {

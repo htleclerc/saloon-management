@@ -15,6 +15,7 @@ import { ConfirmProvider } from "@/context/ConfirmProvider";
 import { OnboardingProvider } from "@/context/OnboardingProvider";
 import { DataModeProvider } from "@/context/DataModeProvider";
 import { AIProvider } from "@/context/AIProvider";
+import { NotificationProvider } from "@/context/NotificationProvider";
 import ReadOnlyBanner from "@/components/layout/ReadOnlyBanner";
 
 function ReadOnlyBannerWrapper({ children }: { children: ReactNode }) {
@@ -44,9 +45,11 @@ export default function Providers({ children }: ProvidersProps) {
                                 <ThemeProvider>
                                     <ConfirmProvider>
                                         <ToastProvider>
-                                            <ReadOnlyBannerWrapper>
-                                                {children}
-                                            </ReadOnlyBannerWrapper>
+                                            <NotificationProvider>
+                                                <ReadOnlyBannerWrapper>
+                                                    {children}
+                                                </ReadOnlyBannerWrapper>
+                                            </NotificationProvider>
                                         </ToastProvider>
                                     </ConfirmProvider>
                                 </ThemeProvider>

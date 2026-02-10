@@ -10,11 +10,15 @@ import { useAuth } from "@/context/AuthProvider";
 import { clientService } from "@/lib/services/ClientService";
 
 import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
+import { useTranslation } from "@/i18n";
+import { useToast } from "@/context/ToastProvider";
 
 export default function AddClientPage() {
     const router = useRouter();
+    const { t } = useTranslation();
     const { activeSalonId } = useAuth();
     const { handleReadOnlyClick } = useReadOnlyGuard();
+    const { showToast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -53,9 +57,11 @@ export default function AddClientPage() {
                 notes: formData.notes,
                 isActive: true
             });
+            showToast(t("common.success"), t("dialogs.success"), "success");
             router.push("/clients");
         } catch (err: any) {
-            setError(err.message || "Failed to create client");
+            setError(err.message || t("errors.generic"));
+            showToast(t("common.error"), err.message || t("errors.generic"), "error");
         } finally {
             setIsSubmitting(false);
         }
@@ -71,19 +77,19 @@ export default function AddClientPage() {
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">Add New Client</h1>
-                        <p className="text-gray-500 mt-1">Create a new client profile</p>
+                        <h1 className="text-3xl font-bold text-gray-900">{t("clients.addClient")}</h1>
+                        <p className="text-gray-500 mt-1">{t("clients.subtitle")}</p>
                     </div>
                     <Button variant="danger" size="md" onClick={() => router.back()}>
                         <X className="w-5 h-5" />
-                        Cancel
+                        {t("common.cancel")}
                     </Button>
                 </div>
 
                 {/* Form */}
                 <form onSubmit={handleSubmit}>
                     <Card>
-                        <h3 className="text-lg font-semibold mb-6">Personal Information</h3>
+                        <h3 className="text-lg font-semibold mb-6">{t("team.personalInfo")}</h3>
 
                         {error && (
                             <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex items-center gap-2">
@@ -95,7 +101,7 @@ export default function AddClientPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="md:col-span-2">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Full Name <span className="text-red-500">*</span>
+                                    {t("common.name")} <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="text"
@@ -104,12 +110,12 @@ export default function AddClientPage() {
                                     onChange={handleChange}
                                     required
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                    placeholder="Enter full name"
+                                    placeholder={t("common.name")}
                                 />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Email <span className="text-red-500">*</span>
+                                    {t("common.email")} <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="email"
@@ -123,7 +129,7 @@ export default function AddClientPage() {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Phone <span className="text-red-500">*</span>
+                                    {t("common.phone")} <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="tel"
@@ -136,18 +142,18 @@ export default function AddClientPage() {
                                 />
                             </div>
                             <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">{t("common.address")}</label>
                                 <input
                                     type="text"
                                     name="address"
                                     value={formData.address}
                                     onChange={handleChange}
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                    placeholder="Street address"
+                                    placeholder={t("common.address")}
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">{t("team.city")}</label>
                                 <input
                                     type="text"
                                     name="city"
@@ -158,7 +164,7 @@ export default function AddClientPage() {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Zip Code</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">{t("team.zipCode")}</label>
                                 <input
                                     type="text"
                                     name="zipCode"
@@ -183,14 +189,14 @@ export default function AddClientPage() {
                                 </select>
                             </div>
                             <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">{t("common.notes")}</label>
                                 <textarea
                                     name="notes"
                                     value={formData.notes}
                                     onChange={handleChange}
                                     rows={4}
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                    placeholder="Add any additional notes about the client..."
+                                    placeholder={t("common.addNotePlaceholder")}
                                 />
                             </div>
                         </div>
@@ -201,11 +207,11 @@ export default function AddClientPage() {
                                 ) : (
                                     <Save className="w-5 h-5" />
                                 )}
-                                {isSubmitting ? "Saving..." : "Save Client"}
+                                {isSubmitting ? t("common.save") + "..." : t("common.save")}
                             </Button>
                             <Button type="button" variant="danger" size="lg" onClick={() => router.back()}>
                                 <X className="w-5 h-5" />
-                                Cancel
+                                {t("common.cancel")}
                             </Button>
                         </div>
                     </Card>

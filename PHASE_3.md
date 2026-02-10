@@ -12,10 +12,10 @@ Setup environnement de développement complet avec Docker Compose : PostgreSQL, 
 
 ## 📦 Livrables
 
-- [ ] `docker-compose.dev.yml`
-- [ ] Scripts d'initialisation Keycloak
-- [ ] Documentation setup local
-- [ ] Variables d'environnement
+- [x] `docker-compose.dev.yml`
+- [x] Scripts d'initialisation Keycloak
+- [x] Documentation setup local
+- [x] Variables d'environnement
 
 ---
 

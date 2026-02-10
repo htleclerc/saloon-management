@@ -22,6 +22,7 @@ import { useCurrency } from "@/hooks/useCurrency";
 import { useTranslation } from "@/i18n";
 import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 import { storageService } from "@/lib/services/StorageService";
+import { useToast } from "@/context/ToastProvider";
 
 
 
@@ -76,6 +77,8 @@ export default function AddAdvancedTeamMemberPage() {
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const { showToast } = useToast();
+
     const handleFileClick = () => {
         if (!canModify) {
             handleReadOnlyClick();
@@ -90,7 +93,7 @@ export default function AddAdvancedTeamMemberPage() {
 
         // Basic validation
         if (file.size > 2 * 1024 * 1024) {
-            alert(t("common.fileTooLarge"));
+            showToast(t("common.error"), t("common.fileTooLarge"), "warning");
             return;
         }
 
@@ -98,9 +101,10 @@ export default function AddAdvancedTeamMemberPage() {
         try {
             const url = await storageService.uploadImage(file, "avatars", "workers");
             setAvatarUrl(url);
+            showToast(t("common.success"), t("team.updateSuccess"), "success");
         } catch (error) {
             console.error("Upload failed", error);
-            alert(t("common.uploadFailed"));
+            showToast(t("common.error"), t("common.uploadFailed"), "error");
         } finally {
             setIsUploading(false);
         }
@@ -156,14 +160,28 @@ export default function AddAdvancedTeamMemberPage() {
         try {
             await createWorker({
                 name: `${firstName} ${lastName}`.trim(),
+                firstName,
+                lastName,
                 email: email || undefined,
                 phone: phone || undefined,
+                address,
+                city,
+                postalCode: zipCode,
+                birthDate: birthDate || undefined,
+                gender,
+                avatarUrl,
+                employeeRole: role,
+                contractType: employeeType,
+                hireDate: startDate || undefined,
+                contractEndDate: contractEndDate || undefined,
+                baseSalary: baseSalary ? parseFloat(baseSalary) : undefined,
                 sharingKey,
                 status: 'Active',
                 color: "#8B5CF6", // Default color
-                avatarUrl,
-                bio: undefined,
-                specialties: specialties ? specialties.split(',').map(s => s.trim()) : []
+                experienceLevel,
+                specialties: specialties ? specialties.split(',').map(s => s.trim()).filter(s => s !== "") : [],
+                weeklySchedule: schedule,
+                isActive: true
             });
             router.push("/team");
         } catch (error) {

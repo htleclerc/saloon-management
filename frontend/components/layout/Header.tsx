@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useRef, useEffect, Fragment } from "react";
-import { Bell, User, Search, Sun, Moon, Globe, ChevronDown, ChevronRight, Home, Menu, Building, FlaskConical, Settings, LogOut, X, Plus } from "lucide-react";
+import { Bell, User, Search, Sun, Moon, Globe, ChevronDown, ChevronRight, Home, Menu, Building, FlaskConical, Settings, Power, X, Plus } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTheme, useResponsive } from "@/context/ThemeProvider";
 import { useAuth } from "@/context/AuthProvider";
 import { useTranslation, availableLanguages, languageFlags, languageNames, Language } from "@/i18n";
-import NotificationsPanel, { Notification } from "./NotificationsPanel";
+import { useNotifications } from "@/context/NotificationProvider";
+import NotificationsPanel from "./NotificationsPanel";
 import ModeSwitcher from "../ui/ModeSwitcher";
 
 export default function Header() {
@@ -17,6 +18,7 @@ export default function Header() {
     const { user, isDemoMode, currentTenant, switchTenant, logout, canCreateNewSalon, getSalonLimit, getCurrentSalonCount, isReadOnlyMode, readOnlySalonInfo } = useAuth();
     const { t, language, setLanguage } = useTranslation();
     const { isMobile, isTablet } = useResponsive();
+    const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
     const [langDropdownOpen, setLangDropdownOpen] = useState(false);
     const [notificationsOpen, setNotificationsOpen] = useState(false);
     const [tenantDropdownOpen, setTenantDropdownOpen] = useState(false);
@@ -28,65 +30,24 @@ export default function Header() {
     const tenantDropdownRef = useRef<HTMLDivElement>(null);
     const profileDropdownRef = useRef<HTMLDivElement>(null);
 
-    // Mock notifications data
-    const [notifications, setNotifications] = useState<Notification[]>([
-        {
-            id: '1',
-            type: 'validation',
-            title: 'New leave request',
-            message: 'Marie Dupont requested 3 days of leave from Jan 15 to Jan 17.',
-            timestamp: new Date(Date.now() - 2 * 60 * 1000), // 2 min ago
-            isRead: false,
-            actions: {
-                onView: () => console.log('View Marie\'s leave details'),
-                onApprove: () => console.log('Approved leave for Marie'),
-                onReject: () => console.log('Rejected leave for Marie')
-            }
-        },
-        {
-            id: '2',
-            type: 'validation',
-            title: 'Expense validation',
-            message: 'Jean Martin submitted an expense of €125 for supplies.',
-            timestamp: new Date(Date.now() - 45 * 60 * 1000), // 45 min ago
-            isRead: false,
-            actions: {
-                onView: () => console.log('View expense details'),
-                onApprove: () => console.log('Expense approved'),
-                onReject: () => console.log('Expense rejected')
-            }
-        },
-        {
-            id: '3',
-            type: 'booking',
-            title: 'New booking',
-            message: 'Client: Sophie Laurent - Box Braids - Tomorrow at 2:00 PM',
-            timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000), // 1 hour ago
-            isRead: false
-        },
-        {
-            id: '4',
-            type: 'success',
-            title: 'Payment received',
-            message: 'Payment of €120 confirmed for booking #4523',
-            timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000), // 3 hours ago
-            isRead: true
-        },
-        {
-            id: '5',
-            type: 'warning',
-            title: 'Low stock',
-            message: 'The stock of "Hair Care Products" is below 10 units.',
-            timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000), // 5 hours ago
-            isRead: true
-        }
-    ]);
+    // Mock notifications removed in favor of NotificationProvider
 
     // Breadcrumbs logic
     const getBreadcrumbs = () => {
         if (pathname === "/") return [];
 
         const segments = pathname.split("/").filter(Boolean);
+
+        // Special case: Workers on /team/my-payroll should only see "My Payroll" (hide "Team")
+        if (pathname === "/team/my-payroll" && user?.role === "worker") {
+            return [
+                {
+                    label: "My Payroll",
+                    path: "/team/my-payroll",
+                    isLink: false
+                }
+            ];
+        }
 
         // Special path segment mappings (segment -> display label)
         const pathMappings: Record<string, string> = {
@@ -468,9 +429,9 @@ export default function Header() {
                                 title={t("header.notifications")}
                             >
                                 <Bell className="w-5 h-5 text-gray-600" />
-                                {notifications.filter(n => !n.isRead).length > 0 && (
+                                {unreadCount > 0 && (
                                     <span className="absolute top-1 right-1 flex items-center justify-center min-w-[16px] h-[16px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white shadow-sm">
-                                        {notifications.filter(n => !n.isRead).length > 99 ? '99+' : notifications.filter(n => !n.isRead).length}
+                                        {unreadCount > 99 ? '99+' : unreadCount}
                                     </span>
                                 )}
                             </button>
@@ -478,14 +439,8 @@ export default function Header() {
                             {notificationsOpen && (
                                 <NotificationsPanel
                                     notifications={notifications}
-                                    onMarkAsRead={(id) => {
-                                        setNotifications(prev => prev.map(n =>
-                                            n.id === id ? { ...n, isRead: true } : n
-                                        ));
-                                    }}
-                                    onMarkAllAsRead={() => {
-                                        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-                                    }}
+                                    onMarkAsRead={markAsRead}
+                                    onMarkAllAsRead={markAllAsRead}
                                     onClose={() => setNotificationsOpen(false)}
                                 />
                             )}
@@ -539,7 +494,7 @@ export default function Header() {
                                         }}
                                         className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-red-50 transition text-sm text-red-600"
                                     >
-                                        <LogOut className="w-4 h-4" />
+                                        <Power className="w-4 h-4" />
                                         <span>Logout</span>
                                     </button>
                                 </div>

@@ -40,21 +40,58 @@ export class ServiceService extends BaseService {
      * Create a new service
      */
     async create(data: Omit<Service, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>): Promise<Service> {
-        return this.provider.createService(data);
+        // Validation
+        this.validateRequired(data, ['salonId', 'name', 'price', 'duration']);
+
+        if (data.price < 0) {
+            throw new Error('Price must be positive');
+        }
+
+        if (data.duration <= 0) {
+            throw new Error('Duration must be greater than 0');
+        }
+
+        // Create
+        const service = await this.provider.createService({
+            ...data,
+            createdBy: this.getCurrentUser(),
+            updatedBy: this.getCurrentUser()
+        });
+
+        // Log action
+        await this.logInteraction('service', service.id, 'created', `Service ${service.name} created`);
+
+        return service;
     }
 
     /**
      * Update an existing service
      */
     async update(id: number, data: Partial<Service>): Promise<Service> {
-        return this.provider.updateService(id, data);
+        if (data.price !== undefined && data.price < 0) {
+            throw new Error('Price must be positive');
+        }
+
+        if (data.duration !== undefined && data.duration <= 0) {
+            throw new Error('Duration must be greater than 0');
+        }
+
+        const service = await this.provider.updateService(id, {
+            ...data,
+            updatedBy: this.getCurrentUser()
+        });
+
+        await this.logInteraction('service', id, 'updated');
+
+        return service;
     }
 
     /**
      * Delete a service
      */
     async delete(id: number): Promise<void> {
-        return this.provider.deleteService(id);
+        await this.provider.deleteService(id);
+        await this.logInteraction('service', id, 'deleted');
     }
 }
 

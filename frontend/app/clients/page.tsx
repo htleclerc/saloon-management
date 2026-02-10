@@ -9,7 +9,7 @@ import Button from "@/components/ui/Button";
 import {
     Plus, Download, Filter, Search, Eye, Edit, Trash2, Users, UserPlus, RefreshCcw,
     User, ArrowUp, Upload, MessageSquare, X, Phone, Mail, MapPin, Calendar, CreditCard,
-    FileText, UserCheck
+    FileText, UserCheck, Star, Activity, PlusCircle
 } from "lucide-react";
 import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/export";
 import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
@@ -17,12 +17,17 @@ import { clientService } from "@/lib/services/ClientService";
 import { Client, ClientStats, ClientAnalytics } from "@/types";
 import { useAuth } from "@/context/AuthProvider";
 import { useTranslation } from "@/i18n";
+import { useToast } from "@/context/ToastProvider";
+import { useConfirm } from "@/context/ConfirmProvider";
+import { statsService } from "@/lib/services/StatsService";
+import { Review } from "@/types";
 
 export default function ClientsPage() {
     const { t } = useTranslation();
     const { activeSalonId } = useAuth();
     const [clients, setClients] = useState<(Client & { stats?: ClientStats | null })[]>([]);
     const [analytics, setAnalytics] = useState<ClientAnalytics | null>(null);
+    const [reviews, setReviews] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const { getCardStyle } = useKpiCardStyle();
@@ -40,10 +45,11 @@ export default function ClientsPage() {
         try {
             const salonId = Number(activeSalonId);
 
-            // Parallel loading of clients and analytics
-            const [clientsData, analyticsData] = await Promise.all([
+            // Parallel loading of clients, analytics and reviews
+            const [clientsData, analyticsData, reviewsData] = await Promise.all([
                 clientService.getAll(salonId),
-                clientService.getClientAnalytics(salonId)
+                clientService.getClientAnalytics(salonId),
+                statsService.getAllReviews(salonId, 6)
             ]);
 
             // Fetch stats for each client
@@ -54,6 +60,7 @@ export default function ClientsPage() {
 
             setClients(clientsWithStats);
             setAnalytics(analyticsData);
+            setReviews(reviewsData);
         } catch (error) {
             console.error("Failed to load clients data:", error);
         } finally {
@@ -76,6 +83,27 @@ export default function ClientsPage() {
         return totalClients > 0 ? Math.round((returningClients / totalClients) * 100) : 0;
     }, [clients, totalClients]);
 
+    const totalDistribution = useMemo(() => {
+        if (!analytics?.distribution) return 0;
+        return analytics.distribution.reduce((sum, item) => sum + item.value, 0);
+    }, [analytics]);
+
+    const satisfactionMetrics = useMemo(() => {
+        if (!reviews.length) return null;
+
+        const avg = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+        const dist = [0, 0, 0, 0, 0]; // 1-5 stars
+        reviews.forEach(r => {
+            if (r.rating >= 1 && r.rating <= 5) dist[r.rating - 1]++;
+        });
+
+        return {
+            average: avg.toFixed(1),
+            total: reviews.length,
+            distribution: dist.reverse() // [5, 4, 3, 2, 1] for display
+        };
+    }, [reviews]);
+
     const toggleClientSelection = (id: number) => {
         const newSelected = new Set(selectedClientIds);
         if (newSelected.has(id)) {
@@ -94,6 +122,9 @@ export default function ClientsPage() {
         }
     };
 
+    const { showToast } = useToast();
+    const { confirm } = useConfirm();
+
     const clientExportColumns: ExportColumn[] = [
         { key: "id", header: t("clients.table.id") },
         { key: "name", header: t("clients.table.name") },
@@ -106,16 +137,35 @@ export default function ClientsPage() {
         { key: "status", header: t("clients.table.status") },
     ];
 
-    const handleExportAll = () => exportToCSV(clients, clientExportColumns, "clients");
-    const handleExportPDF = () => exportToPDF(clients, clientExportColumns, t("clients.title"), "clients");
+    const handleExportAll = () => {
+        try {
+            exportToCSV(clients, clientExportColumns, "clients");
+            showToast(t("common.success"), t("clients.exportSuccess"), "success");
+        } catch (err) {
+            showToast(t("common.error"), err instanceof Error ? err.message : "Unknown error", "error");
+        }
+    };
+
+    const handleExportPDF = () => {
+        try {
+            exportToPDF(clients, clientExportColumns, t("clients.title"), "clients");
+        } catch (err) {
+            showToast(t("common.error"), err instanceof Error ? err.message : "Unknown error", "error");
+        }
+    };
 
     const handleExportSelected = () => {
         const selectedClients = clients.filter(c => selectedClientIds.has(c.id));
         if (selectedClients.length === 0) {
-            alert(t("common.noData"));
+            showToast(t("common.noData"), "", "warning");
             return;
         }
-        exportToCSV(selectedClients, clientExportColumns, "clients_selected");
+        try {
+            exportToCSV(selectedClients, clientExportColumns, "clients_selected");
+            showToast(t("common.success"), t("clients.exportSuccess"), "success");
+        } catch (err) {
+            showToast(t("common.error"), err instanceof Error ? err.message : "Unknown error", "error");
+        }
     };
 
     return (
@@ -390,10 +440,24 @@ export default function ClientsPage() {
                                                     <ReadOnlyGuard>
                                                         <button
                                                             className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
-                                                            onClick={async () => {
-                                                                if (confirm(t("dialogs.confirmDelete"))) {
-                                                                    await clientService.delete(client.id);
-                                                                    loadData();
+                                                            onClick={async (e) => {
+                                                                e.stopPropagation();
+                                                                const isConfirmed = await confirm({
+                                                                    title: t("common.delete"),
+                                                                    message: t("dialogs.confirmDelete"),
+                                                                    type: 'error',
+                                                                    confirmText: t("common.delete"),
+                                                                    cancelText: t("common.cancel")
+                                                                });
+
+                                                                if (isConfirmed) {
+                                                                    try {
+                                                                        await clientService.delete(client.id);
+                                                                        showToast(t("common.success"), t("clients.deleteSuccess"), "success");
+                                                                        loadData();
+                                                                    } catch (error) {
+                                                                        showToast(t("common.error"), t("clients.deleteError"), "error");
+                                                                    }
                                                                 }
                                                             }}
                                                         >
@@ -468,12 +532,12 @@ export default function ClientsPage() {
                                     <div key={idx}>
                                         <div className="flex items-center justify-between mb-2">
                                             <span className="text-sm font-medium text-gray-600">{t(item.key)}</span>
-                                            <span className="text-sm font-semibold text-gray-900">{item.value.toLocaleString()} ({((item.value / 500000) * 100).toFixed(1)}%)</span>
+                                            <span className="text-sm font-semibold text-gray-900">{item.value.toLocaleString()} ({totalDistribution > 0 ? ((item.value / totalDistribution) * 100).toFixed(1) : 0}%)</span>
                                         </div>
                                         <div className="w-full bg-gray-100 rounded-full h-2.5">
                                             <div
                                                 className="h-2.5 rounded-full transition-all duration-1000"
-                                                style={{ width: `${(item.value / 500000) * 100}%`, backgroundColor: item.color }}
+                                                style={{ width: `${totalDistribution > 0 ? (item.value / totalDistribution) * 100 : 0}%`, backgroundColor: item.color }}
                                             ></div>
                                         </div>
                                     </div>
@@ -485,6 +549,110 @@ export default function ClientsPage() {
                         </div>
                     </div>
                 )}
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Client Satisfaction Ratings */}
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <h3 className="text-lg font-semibold mb-6 text-gray-900 flex items-center gap-2">
+                            <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+                            {t("clients.satisfaction.title")}
+                        </h3>
+                        {satisfactionMetrics ? (
+                            <div className="space-y-6">
+                                <div className="flex items-end gap-4 mb-8">
+                                    <div className="text-5xl font-black text-gray-900">{satisfactionMetrics.average}</div>
+                                    <div className="pb-1">
+                                        <div className="flex mb-1">
+                                            {[1, 2, 3, 4, 5].map((star) => (
+                                                <Star
+                                                    key={star}
+                                                    className={`w-4 h-4 ${star <= Math.round(Number(satisfactionMetrics.average)) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200'}`}
+                                                />
+                                            ))}
+                                        </div>
+                                        <p className="text-sm text-gray-500 font-medium">
+                                            {satisfactionMetrics.total} {t("clients.satisfaction.totalReviews")}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="space-y-3">
+                                    {satisfactionMetrics.distribution.map((count, idx) => {
+                                        const rating = 5 - idx;
+                                        const percentage = satisfactionMetrics.total > 0 ? (count / satisfactionMetrics.total) * 100 : 0;
+                                        return (
+                                            <div key={rating} className="flex items-center gap-3">
+                                                <div className="flex items-center gap-1 w-12 shrink-0">
+                                                    <span className="text-sm font-bold text-gray-600">{rating}</span>
+                                                    <Star className="w-3 h-3 text-gray-400 fill-gray-400" />
+                                                </div>
+                                                <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                                                    <div
+                                                        className="h-full bg-yellow-400 transition-all duration-1000"
+                                                        style={{ width: `${percentage}%` }}
+                                                    ></div>
+                                                </div>
+                                                <span className="text-xs font-semibold text-gray-400 w-10 text-right">
+                                                    {Math.round(percentage)}%
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="h-48 flex items-center justify-center text-gray-400 italic">
+                                {t("common.comingSoon")}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Client Comments & Reviews */}
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col">
+                        <h3 className="text-lg font-semibold mb-6 text-gray-900 flex items-center gap-2">
+                            <MessageSquare className="w-5 h-5 text-purple-500" />
+                            {t("clients.reviews.title")}
+                        </h3>
+                        <div className="space-y-4 flex-1 overflow-y-auto max-h-[350px] pr-2 custom-scrollbar">
+                            {reviews.length > 0 ? (
+                                reviews.map((review) => (
+                                    <div key={review.id} className="p-4 rounded-xl bg-gray-50 border border-gray-100 space-y-2 hover:bg-white hover:shadow-md transition-all duration-300">
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-bold text-xs">
+                                                    {review.avatar || review.client?.charAt(0) || "C"}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-bold text-gray-900">{review.client}</p>
+                                                    <p className="text-[10px] text-gray-500">{review.date}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-0.5">
+                                                {[1, 2, 3, 4, 5].map((s) => (
+                                                    <Star
+                                                        key={s}
+                                                        className={`w-3 h-3 ${s <= review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200'}`}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <p className="text-sm text-gray-600 italic leading-relaxed">
+                                            "{review.comment}"
+                                        </p>
+                                        <div className="pt-1">
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-primary)] opacity-70">
+                                                {review.service || "General Service"}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="h-full flex items-center justify-center text-gray-400 italic">
+                                    {t("common.comingSoon")}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
 
                 {analytics && (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -596,10 +764,23 @@ export default function ClientsPage() {
                                         size="lg"
                                         className="w-full justify-center text-red-600 hover:bg-red-50 hover:border-red-200"
                                         onClick={async () => {
-                                            if (confirm(t("dialogs.confirmDelete"))) {
-                                                await clientService.delete(selectedClient.id);
-                                                setSelectedClient(null);
-                                                loadData();
+                                            const isConfirmed = await confirm({
+                                                title: t("common.delete"),
+                                                message: t("dialogs.confirmDelete"),
+                                                type: 'error',
+                                                confirmText: t("common.delete"),
+                                                cancelText: t("common.cancel")
+                                            });
+
+                                            if (isConfirmed) {
+                                                try {
+                                                    await clientService.delete(selectedClient.id);
+                                                    showToast(t("common.success"), t("clients.deleteSuccess"), "success");
+                                                    setSelectedClient(null);
+                                                    loadData();
+                                                } catch (error) {
+                                                    showToast(t("common.error"), t("clients.deleteError"), "error");
+                                                }
                                             }
                                         }}
                                     >

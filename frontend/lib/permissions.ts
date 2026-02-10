@@ -2,7 +2,7 @@ import { UserRole, AuthContextType } from "@/context/AuthProvider";
 import { Booking, BookingStatus, Income, IncomeStatus } from "@/types";
 
 export type BookingAction = "view" | "edit" | "cancel" | "start" | "confirm" | "approve_reschedule" | "reject_reschedule" | "manage_team" | "view_invoice" | "delete";
-export type IncomeAction = "view" | "edit" | "validate" | "print" | "view_invoice" | "delete";
+export type IncomeAction = "view" | "edit" | "validate" | "print" | "view_invoice" | "delete" | "contest";
 export type ServiceAction = "view" | "add" | "edit" | "archive" | "delete";
 export type ServiceManageAction = "add_category" | "edit_category" | "delete_category";
 export type ExpenseAction = "view" | "add" | "edit" | "delete";
@@ -11,6 +11,7 @@ interface ActionRule<TStatus, TAction extends string> {
     allowedStatuses?: TStatus[];
     allowedRoles: UserRole[];
     requiresInvoiceId?: boolean;
+    requiresOrigin?: boolean;
 }
 
 const bookingRules: Record<BookingAction, ActionRule<BookingStatus, BookingAction>> = {
@@ -63,7 +64,7 @@ const incomeRules: Record<IncomeAction, ActionRule<IncomeStatus, IncomeAction>> 
         allowedRoles: ["super_admin", "owner", "manager", "worker", "client"],
     },
     edit: {
-        allowedStatuses: ["Draft", "Pending"],
+        allowedStatuses: ["Draft", "Pending", "Refused"],
         allowedRoles: ["super_admin", "owner", "manager", "worker"],
     },
     validate: {
@@ -80,9 +81,14 @@ const incomeRules: Record<IncomeAction, ActionRule<IncomeStatus, IncomeAction>> 
         requiresInvoiceId: true,
     },
     delete: {
-        allowedStatuses: ["Draft", "Cancelled"],
+        allowedStatuses: ["Draft", "Cancelled", "Validated"],
         allowedRoles: ["super_admin", "owner", "manager"],
     },
+    contest: {
+        allowedStatuses: ["Validated"],
+        allowedRoles: ["super_admin", "owner", "manager", "worker"],
+        requiresOrigin: true
+    }
 };
 
 const serviceRules: Record<ServiceAction, ActionRule<string, ServiceAction>> = {
@@ -135,14 +141,16 @@ export function canPerformBookingAction(
 export function canPerformIncomeAction(
     income: Partial<Income> & { status: IncomeStatus },
     action: IncomeAction,
-    userRole: UserRole
+    userRole: UserRole,
+    isOrigin: boolean = false
 ): boolean {
     const rule = incomeRules[action];
     if (!rule) return false;
     const statusMatches = rule.allowedStatuses ? rule.allowedStatuses.includes(income.status) : true;
     const roleMatches = rule.allowedRoles.includes(userRole);
     const invoiceRequirementMet = rule.requiresInvoiceId ? income.hasInvoice || !!income.invoiceUrl : true;
-    return statusMatches && roleMatches && invoiceRequirementMet;
+    const originRequirementMet = rule.requiresOrigin ? isOrigin : true;
+    return statusMatches && roleMatches && invoiceRequirementMet && originRequirementMet;
 }
 
 export function canPerformServiceAction(action: ServiceAction, userRole: UserRole): boolean {
@@ -167,9 +175,9 @@ export function useActionPermissions(auth: AuthContextType) {
             if (!canModify && isMutationAction(action)) return false;
             return canPerformBookingAction(booking, action, userRole, hasInvoiceId);
         },
-        income: (income: Partial<Income> & { status: IncomeStatus }, action: IncomeAction) => {
+        income: (income: Partial<Income> & { status: IncomeStatus }, action: IncomeAction, isOrigin: boolean = false) => {
             if (!canModify && isMutationAction(action)) return false;
-            return canPerformIncomeAction(income, action, userRole);
+            return canPerformIncomeAction(income, action, userRole, isOrigin);
         },
         service: (action: ServiceAction) => {
             if (!canModify && isMutationAction(action)) return false;
@@ -184,7 +192,7 @@ export function useActionPermissions(auth: AuthContextType) {
         isManager: ["super_admin", "owner", "manager"].includes(userRole),
         canViewFinancialDashboard: !["worker", "client"].includes(userRole),
         canViewSensitiveWorkerFinancials: (targetWorkerId: number | string) => {
-            if (["SuperAdmin", "Owner", "Manager"].includes(userRole)) return true;
+            if (["super_admin", "owner", "manager", "admin"].includes(userRole)) return true;
             const currentWorkerId = auth.getWorkerId();
             if (!currentWorkerId) return false;
             const normalizeId = (id: number | string) => String(id) === 'worker_demo_1' ? '1' : String(id);

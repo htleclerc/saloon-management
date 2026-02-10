@@ -7,18 +7,29 @@ import Button from "@/components/ui/Button";
 import { ArrowLeft } from "lucide-react";
 import ServiceForm from "@/components/services/ServiceForm";
 import { useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
+import { useTranslation } from "@/i18n";
+import { useToast } from "@/context/ToastProvider";
+import { useServices } from "@/hooks/useServices";
 
 function AddServiceContent() {
     const router = useRouter();
+    const { t } = useTranslation();
+    const { showToast } = useToast();
+    const { createService } = useServices();
     const searchParams = useSearchParams();
     const mode = (searchParams.get("mode") as "simple" | "advanced") || "advanced";
     const { handleReadOnlyClick } = useReadOnlyGuard();
 
-    const handleSubmit = (data: any) => {
+    const handleSubmit = async (data: any) => {
         if (handleReadOnlyClick()) return;
-        console.log("Creating service:", data);
-        // In a real app, send to API
-        router.push("/services");
+        try {
+            await createService(data);
+            showToast(t("common.success"), t("dialogs.success"), "success");
+            router.push("/services");
+        } catch (err) {
+            console.error("Failed to create service:", err);
+            showToast(t("common.error"), t("errors.generic"), "error");
+        }
     };
 
     return (
@@ -30,11 +41,11 @@ function AddServiceContent() {
                         <ArrowLeft className="w-5 h-5 text-gray-600" />
                     </button>
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">Add New Service</h1>
+                        <h1 className="text-3xl font-bold text-gray-900">{t("services.addService")}</h1>
                         <p className="text-gray-500 mt-1">
                             {mode === 'advanced'
-                                ? "Configure comprehensive service details and media"
-                                : "Quickly initiate a new service with basic info"
+                                ? t("services.advancedDesc")
+                                : t("services.simpleDesc")
                             }
                         </p>
                     </div>

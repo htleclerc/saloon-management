@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, Suspense } from "react";
+import { useState, useCallback, Suspense, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import TeamLayout from "@/components/layout/TeamLayout";
 import Card from "@/components/ui/Card";
@@ -14,42 +14,13 @@ import {
     Download,
     Search,
     TrendingUp,
-    ArrowLeft,
 } from "lucide-react";
 import { useCurrency } from "@/hooks/useCurrency";
 import { useTranslation } from "@/i18n";
-
-// Mock Team Members for filter
-const teamMembers = [
-    { id: 1, name: "Orphelia" },
-    { id: 2, name: "Aminata" },
-    { id: 3, name: "Fatou" },
-    { id: 4, name: "Aïcha" },
-];
-
-// Mock Income Data
-const allIncomeData = [
-    { id: 1, date: "2026-01-14", memberId: 1, member: "Orphelia", client: "Marie Dubois", service: "Box Braids", amount: 120, status: "Completed" },
-    { id: 2, date: "2026-01-14", memberId: 1, member: "Orphelia", client: "Sophie Laurent", service: "Senegalese Twists", amount: 95, status: "Completed" },
-    { id: 3, date: "2026-01-13", memberId: 2, member: "Aminata", client: "Anna Martin", service: "Cornrows", amount: 85, status: "Completed" },
-    { id: 4, date: "2026-01-13", memberId: 1, member: "Orphelia", client: "Claire Petit", service: "Locs Maintenance", amount: 150, status: "Completed" },
-    { id: 5, date: "2026-01-12", memberId: 3, member: "Fatou", client: "Julie Bernard", service: "Box Braids", amount: 130, status: "Completed" },
-    { id: 6, date: "2026-01-12", memberId: 1, member: "Orphelia", client: "Nadia Koné", service: "Twists", amount: 110, status: "Completed" },
-    { id: 7, date: "2026-01-11", memberId: 2, member: "Aminata", client: "Camille Roche", service: "Cornrows", amount: 75, status: "Completed" },
-    { id: 8, date: "2026-01-11", memberId: 4, member: "Aïcha", client: "Lucie Moreau", service: "Knotless Braids", amount: 180, status: "Completed" },
-    { id: 9, date: "2026-01-10", memberId: 1, member: "Orphelia", client: "Emma Leroy", service: "Box Braids", amount: 125, status: "Completed" },
-    { id: 10, date: "2026-01-10", memberId: 3, member: "Fatou", client: "Léa Dupont", service: "Twists", amount: 100, status: "Completed" },
-    { id: 11, date: "2026-01-09", memberId: 1, member: "Orphelia", client: "Chloé Martin", service: "Senegalese Twists", amount: 95, status: "Completed" },
-    { id: 12, date: "2026-01-09", memberId: 2, member: "Aminata", client: "Manon Petit", service: "Locs Maintenance", amount: 160, status: "Completed" },
-    { id: 13, date: "2026-01-08", memberId: 4, member: "Aïcha", client: "Jade Bernard", service: "Box Braids", amount: 140, status: "Completed" },
-    { id: 14, date: "2026-01-08", memberId: 1, member: "Orphelia", client: "Louise Moreau", service: "Cornrows", amount: 80, status: "Completed" },
-    { id: 15, date: "2026-01-07", memberId: 3, member: "Fatou", client: "Inès Roux", service: "Knotless Braids", amount: 175, status: "Completed" },
-    { id: 16, date: "2026-01-07", memberId: 1, member: "Orphelia", client: "Zoé Lefevre", service: "Twists", amount: 105, status: "Pending" },
-    { id: 17, date: "2026-01-06", memberId: 2, member: "Aminata", client: "Lina Garcia", service: "Box Braids", amount: 135, status: "Completed" },
-    { id: 18, date: "2026-01-06", memberId: 4, member: "Aïcha", client: "Mia Thomas", service: "Senegalese Twists", amount: 98, status: "Completed" },
-    { id: 19, date: "2026-01-05", memberId: 1, member: "Orphelia", client: "Eva Robert", service: "Locs Maintenance", amount: 155, status: "Completed" },
-    { id: 20, date: "2026-01-05", memberId: 3, member: "Fatou", client: "Léonie Durand", service: "Cornrows", amount: 78, status: "Completed" },
-];
+import { useAuth } from "@/context/AuthProvider";
+import { workerService } from "@/lib/services/WorkerService";
+import { incomeService } from "@/lib/services/IncomeService";
+import { SalonWorker, Income } from "@/types";
 
 // Helper to check if a date matches the filter
 const matchesDateFilter = (dateStr: string, filter: DateFilterValue): boolean => {
@@ -62,18 +33,88 @@ const matchesDateFilter = (dateStr: string, filter: DateFilterValue): boolean =>
     return true;
 };
 
+// Interface for normalized income item for the table
+interface NormalizedIncomeItem {
+    id: number;
+    date: string;
+    memberId: number | null; // Primary member ID if available
+    member: string;
+    client: string;
+    service: string; // Could be multiple services or generic "Service"
+    amount: number;
+    status: Income['status'];
+    _workerIds: number[];
+}
+
 function TeamIncomePageContent() {
     const searchParams = useSearchParams();
     const memberIdParam = searchParams.get("memberId");
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const router = useRouter();
     const { format } = useCurrency();
     const { t } = useTranslation();
+    const { activeSalonId } = useAuth();
+
+    const [teamMembers, setTeamMembers] = useState<SalonWorker[]>([]);
+    const [allIncomeData, setAllIncomeData] = useState<NormalizedIncomeItem[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
     const [selectedMember, setSelectedMember] = useState<number | null>(memberIdParam ? parseInt(memberIdParam) : null);
-    const [dateFilter, setDateFilter] = useState<DateFilterValue>({ year: new Date().getFullYear(), month: new Date().getMonth() + 1, week: null });
+    const [dateFilter, setDateFilter] = useState<DateFilterValue>({ year: new Date().getFullYear(), month: new Date().getMonth() + 1, week: null, day: null });
     const [searchQuery, setSearchQuery] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
+
+    // Fetch Data
+    useEffect(() => {
+        const loadData = async () => {
+            if (!activeSalonId) return;
+
+            setIsLoading(true);
+            try {
+                // Fetch workers
+                const workers = await workerService.getAll(Number(activeSalonId));
+                setTeamMembers(workers);
+
+                // Fetch incomes
+                const incomes = await incomeService.getAll(Number(activeSalonId));
+
+                // Normalize incomes for display
+                const items: NormalizedIncomeItem[] = incomes.map(income => {
+                    // Resolve worker names using workerIds
+                    const incomeWorkerIds = income.workerIds || [];
+                    const incomeWorkerNames = incomeWorkerIds.map(id => {
+                        const worker = workers.find(w => w.id === id);
+                        return worker ? `${worker.firstName} ${worker.lastName}` : t("common.unknown");
+                    });
+
+                    const mainWorkerId = incomeWorkerIds.length > 0 ? incomeWorkerIds[0] : null;
+
+                    return {
+                        id: income.id,
+                        date: income.date,
+                        memberId: mainWorkerId,
+                        member: incomeWorkerNames.join(", ") || t("common.noWorker"),
+                        client: income.clientName || t("common.unknownClient"),
+                        service: t("common.service"),
+                        amount: income.finalAmount,
+                        status: income.status,
+                        _workerIds: incomeWorkerIds
+                    };
+                });
+
+                setAllIncomeData(items);
+
+            } catch (error) {
+                console.error("Failed to load team income data", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        loadData();
+    }, [activeSalonId, t]);
+
 
     // Memoized callback for date filter changes
     const handleDateFilterChange = useCallback((value: DateFilterValue) => {
@@ -84,7 +125,11 @@ function TeamIncomePageContent() {
     // Filter data
     const filteredData = allIncomeData.filter((item) => {
         // Member filter
-        if (selectedMember && item.memberId !== selectedMember) return false;
+        if (selectedMember) {
+            // Check if this member is involved in the income
+            if (!item._workerIds || !item._workerIds.includes(selectedMember)) return false;
+        }
+
         // Date filter
         if (!matchesDateFilter(item.date, dateFilter)) return false;
         // Search filter
@@ -98,13 +143,26 @@ function TeamIncomePageContent() {
 
     // Stats
     const totalIncome = filteredData.reduce((sum, item) => sum + item.amount, 0);
-    const completedCount = filteredData.filter(item => item.status === "Completed").length;
-    const pendingCount = filteredData.filter(item => item.status === "Pending").length;
+    const completedCount = filteredData.filter(item => item.status === "Validated").length; // Changed 'Completed' to 'Validated' per business rules
+    const pendingCount = filteredData.filter(item => item.status === "Pending" || item.status === "Draft").length;
 
     const handleMemberChange = (memberId: number | null) => {
         setSelectedMember(memberId);
         setCurrentPage(1);
     };
+
+    if (isLoading) {
+        return (
+            <TeamLayout
+                title={t("team.incomeHistory")}
+                description={t("team.incomeHistoryDesc")}
+            >
+                <div className="flex items-center justify-center h-64">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-primary)]"></div>
+                </div>
+            </TeamLayout>
+        )
+    }
 
     return (
         <TeamLayout
@@ -175,7 +233,7 @@ function TeamIncomePageContent() {
                                 >
                                     <option value="">{t("team.allTeamMembers")}</option>
                                     {teamMembers.map((member) => (
-                                        <option key={member.id} value={member.id}>{member.name}</option>
+                                        <option key={member.id} value={member.id}>{member.firstName} {member.lastName}</option>
                                     ))}
                                 </select>
                             </div>
@@ -233,7 +291,7 @@ function TeamIncomePageContent() {
                                             <td className="px-4 py-3 text-sm text-gray-600">{item.service}</td>
                                             <td className="px-4 py-3 text-sm text-right font-semibold text-[var(--color-success)]">{format(item.amount)}</td>
                                             <td className="px-4 py-3 text-center">
-                                                <span className={`text-xs px-2 py-1 rounded-full ${item.status === "Completed"
+                                                <span className={`text-xs px-2 py-1 rounded-full ${item.status === "Validated"
                                                     ? "bg-[var(--color-success-light)] text-[var(--color-success)]"
                                                     : "bg-[var(--color-warning-light)] text-[var(--color-warning)]"
                                                     }`}>

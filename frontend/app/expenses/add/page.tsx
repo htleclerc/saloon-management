@@ -7,9 +7,12 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { Save, X } from "lucide-react";
 import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
+import { useToast } from "@/context/ToastProvider";
+import { useTranslation } from "@/i18n";
 
 export default function AddExpensePage() {
     const router = useRouter();
+    const { t } = useTranslation();
     const { handleReadOnlyClick } = useReadOnlyGuard();
     const [formData, setFormData] = useState({
         date: new Date().toISOString().split('T')[0],
@@ -22,6 +25,8 @@ export default function AddExpensePage() {
         status: "Pending", // Pending for admin validation if submitted by worker
     });
 
+    const { showToast } = useToast();
+
     // Check user role - in real app, get from auth context
     const userRole = "worker"; // or "admin"
 
@@ -31,9 +36,9 @@ export default function AddExpensePage() {
         console.log("Expense data:", formData);
 
         if (userRole === "worker") {
-            alert("Expense submitted for admin approval!");
+            showToast(t("common.info"), t("expenses.submittedInfo"), "info");
         } else {
-            alert("Expense added successfully!");
+            showToast(t("common.success"), t("expenses.addSuccess"), "success");
         }
         router.push("/expenses");
     };
@@ -48,19 +53,19 @@ export default function AddExpensePage() {
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">Add New Expense</h1>
-                        <p className="text-gray-500 mt-1">Record a new business expense</p>
+                        <h1 className="text-3xl font-bold text-gray-900">{t("expenses.addExpense")}</h1>
+                        <p className="text-gray-500 mt-1">{t("expenses.recordNew")}</p>
                     </div>
                     <Button variant="danger" size="md" onClick={() => router.back()}>
                         <X className="w-5 h-5" />
-                        Cancel
+                        {t("common.cancel")}
                     </Button>
                 </div>
 
                 {/* Form */}
                 <form onSubmit={handleSubmit}>
                     <Card>
-                        <h3 className="text-lg font-semibold mb-6">Expense Information</h3>
+                        <h3 className="text-lg font-semibold mb-6">{t("expenses.information")}</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* Date */}
                             <div>
@@ -205,11 +210,11 @@ export default function AddExpensePage() {
                         <div className="flex gap-4 mt-8">
                             <Button type="submit" variant="success" size="lg" className="flex-1">
                                 <Save className="w-5 h-5" />
-                                {userRole === "worker" ? "Submit for Approval" : "Save Expense"}
+                                {userRole === "worker" ? t("expenses.submitForApproval") : t("expenses.saveExpense")}
                             </Button>
                             <Button type="button" variant="danger" size="lg" onClick={() => router.back()}>
                                 <X className="w-5 h-5" />
-                                Cancel
+                                {t("common.cancel")}
                             </Button>
                         </div>
                     </Card>

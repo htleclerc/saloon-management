@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import MainLayout from "@/components/layout/MainLayout";
+import { useTranslation } from "@/i18n";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import {
@@ -43,11 +44,13 @@ const serviceUsageHistory = [
 ];
 
 export default function ServiceHistoryPage() {
+    const { t } = useTranslation();
     const params = useParams();
     const router = useRouter();
     const serviceId = parseInt(params.id as string);
     const { isSuperAdmin, isOwner } = useAuth();
 
+    // ... rest of state ...
     const [filter, setFilter] = useState("all");
     const [searchTerm, setSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
@@ -57,7 +60,8 @@ export default function ServiceHistoryPage() {
 
     const filteredHistory = serviceUsageHistory.filter(event => {
         const matchesFilter = filter === "all" || event.type === filter;
-        const matchesSearch = event.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        const actionTranslated = t(`history.actions.${event.action.toLowerCase().replace(/ /g, '_')}`, { defaultValue: event.action });
+        const matchesSearch = actionTranslated.toLowerCase().includes(searchTerm.toLowerCase()) ||
             event.comment?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             event.user.toLowerCase().includes(searchTerm.toLowerCase());
         return matchesFilter && matchesSearch;
@@ -104,8 +108,8 @@ export default function ServiceHistoryPage() {
                                 <ArrowLeft className="w-5 h-5 text-gray-600" />
                             </button>
                             <div>
-                                <h1 className="text-2xl font-bold text-gray-900">{service.name} History</h1>
-                                <p className="text-sm text-gray-500 uppercase tracking-widest font-bold mt-1">Full Audit Trail & Activity Logs</p>
+                                <h1 className="text-2xl font-bold text-gray-900">{t("history.serviceHistoryTitle", { name: service.name })}</h1>
+                                <p className="text-sm text-gray-500 uppercase tracking-widest font-bold mt-1">{t("history.fullAuditTrail")}</p>
                             </div>
                         </div>
                     </div>

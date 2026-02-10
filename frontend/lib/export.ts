@@ -18,8 +18,7 @@ export function exportToCSV<T extends Record<string, any>>(
     filename: string = 'export'
 ): void {
     if (data.length === 0) {
-        alert('No data to export');
-        return;
+        throw new Error('No data to export');
     }
 
     // Create header row
@@ -66,15 +65,13 @@ export function exportToPDF<T extends Record<string, any>>(
     filename: string = 'export'
 ): void {
     if (data.length === 0) {
-        alert('No data to export');
-        return;
+        throw new Error('No data to export');
     }
 
     // Create a new window with printable content
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
-        alert('Please allow popups for PDF export');
-        return;
+        throw new Error('Please allow popups for PDF export');
     }
 
     // Generate table HTML

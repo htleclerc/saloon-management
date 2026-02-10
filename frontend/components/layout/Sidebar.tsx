@@ -24,7 +24,7 @@ import {
     Bell,
     Moon,
     Sun,
-    LogOut,
+    Power,
     ChevronDown,
     FlaskConical,
     Heart,
@@ -48,6 +48,7 @@ const menuItems = [
     { name: "Expenses", icon: Receipt, path: "/expenses", roles: ['manager', 'super_admin'] },
     { name: "Approvals", icon: CheckSquare, path: "/approvals", roles: ['manager', 'super_admin'] },
     { name: "Services", icon: Scissors, path: "/services", roles: ['manager', 'super_admin', 'worker'] },
+    { name: "My Payroll", icon: DollarSign, path: "/team/my-payroll", roles: ['worker'], strictRoles: true },
     { name: "Reports", icon: FileText, path: "/reports", roles: ['manager', 'super_admin'] },
     { name: "Configuration", icon: Sliders, path: "/configuration", roles: ['manager', 'super_admin'] },
     { name: "Favorites", icon: Heart, path: "/salons/favorites", roles: ['client'], strictRoles: true },
@@ -68,6 +69,7 @@ const superAdminMenuItems = [
 ];
 
 import { useAuth } from "@/context/AuthProvider";
+
 
 export default function Sidebar() {
     const pathname = usePathname();
@@ -221,25 +223,25 @@ export default function Sidebar() {
                     <p className="text-xs text-white/50 mb-2 px-3 uppercase font-semibold tracking-wider">Demo Roles</p>
                     <div className="grid grid-cols-2 gap-2 px-3">
                         <button
-                            onClick={() => demoLogin('owner')}
+                            onClick={async () => await demoLogin('owner')}
                             className="text-xs bg-white/10 hover:bg-white/20 py-2 px-2 rounded-lg text-white transition-colors font-medium"
                         >
                             Owner
                         </button>
                         <button
-                            onClick={() => demoLogin('manager')}
+                            onClick={async () => await demoLogin('manager')}
                             className="text-xs bg-white/10 hover:bg-white/20 py-2 px-2 rounded-lg text-white transition-colors font-medium"
                         >
                             Manager
                         </button>
                         <button
-                            onClick={() => demoLogin('worker')}
+                            onClick={async () => await demoLogin('worker')}
                             className="text-xs bg-white/10 hover:bg-white/20 py-2 px-2 rounded-lg text-white transition-colors font-medium"
                         >
                             Worker
                         </button>
                         <button
-                            onClick={() => demoLogin('client')}
+                            onClick={async () => await demoLogin('client')}
                             className="text-xs bg-white/10 hover:bg-white/20 py-2 px-2 rounded-lg text-white transition-colors font-medium"
                         >
                             Client
@@ -247,6 +249,8 @@ export default function Sidebar() {
                     </div>
                 </div>
             )}
+
+
 
             {/* Mobile-only: Tenant Selector, Notifications, Dark Mode */}
             {isMobile && !isSuperAdminRoute && (
@@ -321,10 +325,10 @@ export default function Sidebar() {
             <div className={`mt-auto pt-4 border-t border-white/10 px-3 pb-6 ${(isCollapsed && !isMobile) ? "px-2" : ""}`}>
                 <button
                     onClick={logout}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 hover:bg-white/10 text-white/70 hover:text-white ${(isCollapsed && !isMobile) ? "justify-center px-0" : ""}`}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 hover:bg-red-500/20 text-white/70 hover:text-red-300 ${(isCollapsed && !isMobile) ? "justify-center px-0" : ""}`}
                     title={(isCollapsed && !isMobile) ? "Logout" : undefined}
                 >
-                    <LogOut className="w-5 h-5 flex-shrink-0" />
+                    <Power className="w-5 h-5 flex-shrink-0" />
                     {(!isCollapsed || isMobile) && (
                         <span className="font-medium text-sm">Logout</span>
                     )}

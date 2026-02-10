@@ -59,6 +59,7 @@ CREATE TABLE salons (
     logo_url TEXT,
     timezone VARCHAR(100) DEFAULT 'Europe/Paris',
     currency VARCHAR(10) DEFAULT 'EUR',
+    mode VARCHAR(50) DEFAULT 'prod' CHECK (mode IN ('demo', 'prod')),
     subscription_plan VARCHAR(50) DEFAULT 'free',
     subscription_status VARCHAR(50) DEFAULT 'active',
     subscription_ends_at TIMESTAMPTZ,
@@ -116,6 +117,23 @@ CREATE TABLE workers (
     sharing_key INTEGER DEFAULT 50 CHECK (sharing_key >= 0 AND sharing_key <= 100),
     bio TEXT,
     specialties TEXT[], -- Array of strings
+    
+    -- Added fields for Advanced Form
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    address TEXT,
+    city VARCHAR(100),
+    postal_code VARCHAR(20),
+    birth_date DATE,
+    gender VARCHAR(20),
+    employee_role VARCHAR(100),
+    contract_type VARCHAR(50), -- full-time, part-time, freelance
+    hire_date DATE,
+    contract_end_date DATE,
+    base_salary DECIMAL(10,2),
+    experience_level VARCHAR(50), -- beginner, intermediate, expert
+    weekly_schedule JSONB, -- Stores the full schedule object
+    
     is_active BOOLEAN DEFAULT TRUE,
     created_by VARCHAR(100),
     updated_by VARCHAR(100),
@@ -234,6 +252,7 @@ CREATE TABLE bookings (
     is_sensitive BOOLEAN DEFAULT FALSE,
     created_by VARCHAR(100),
     updated_by VARCHAR(100),
+    is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -268,6 +287,7 @@ CREATE TABLE incomes (
     promo_code_id BIGINT REFERENCES promo_codes(id) ON DELETE SET NULL,
     created_by VARCHAR(100),
     updated_by VARCHAR(100),
+    is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );

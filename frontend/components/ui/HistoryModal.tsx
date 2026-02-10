@@ -4,6 +4,7 @@ import React from "react";
 import { X, History, User, Clock, MessageSquare, Briefcase } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
+import { useTranslation } from "@/i18n";
 
 export interface HistoryEvent {
     date: string | Date;
@@ -23,6 +24,7 @@ interface HistoryModalProps {
     itemTitle?: string;
     itemSubtitle?: string;
     viewAllLink?: string;
+    onViewAllClick?: () => void;
 }
 
 export default function HistoryModal({
@@ -32,8 +34,21 @@ export default function HistoryModal({
     events,
     itemTitle,
     itemSubtitle,
-    viewAllLink
+    viewAllLink,
+    onViewAllClick
 }: HistoryModalProps) {
+    const { t } = useTranslation();
+
+    React.useEffect(() => {
+        if (isOpen) {
+            const originalStyle = window.getComputedStyle(document.body).overflow;
+            document.body.style.overflow = 'hidden';
+            return () => {
+                document.body.style.overflow = originalStyle;
+            };
+        }
+    }, [isOpen]);
+
     if (!isOpen) return null;
 
     return (
@@ -47,7 +62,7 @@ export default function HistoryModal({
                         </div>
                         <div>
                             <h2 className="text-xl font-bold">{title}</h2>
-                            <p className="text-white/80 text-xs font-bold uppercase tracking-widest mt-0.5">Audit Trail & History</p>
+                            <p className="text-white/80 text-xs font-bold uppercase tracking-widest mt-0.5">{t('history.subtitle')}</p>
                         </div>
                     </div>
                     <button
@@ -76,7 +91,7 @@ export default function HistoryModal({
                             {events.length === 0 ? (
                                 <div className="text-center py-8 text-gray-400">
                                     <History className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                                    <p>No history records found.</p>
+                                    <p>{t('history.noRecords')}</p>
                                 </div>
                             ) : (
                                 events.map((event, index) => (
@@ -100,7 +115,7 @@ export default function HistoryModal({
                                             </div>
                                             <div className="flex items-center gap-1.5 text-xs text-[var(--color-primary)] font-bold uppercase tracking-wider mb-2">
                                                 <User className="w-3 h-3" />
-                                                By {event.user}
+                                                {t('history.by')} {event.user}
                                             </div>
                                             {event.comment && (
                                                 <div className="p-3 bg-gray-50 rounded-xl text-xs text-gray-600 italic border border-gray-100 leading-relaxed">
@@ -114,15 +129,25 @@ export default function HistoryModal({
                         </div>
                     </div>
 
-                    {viewAllLink && (
+                    {(viewAllLink || onViewAllClick) && (
                         <div className="mt-8 pt-6 border-t border-gray-100 flex justify-center">
-                            <a
-                                href={viewAllLink}
-                                className="text-[var(--color-primary)] font-bold text-sm hover:underline flex items-center gap-2"
-                            >
-                                <History className="w-4 h-4" />
-                                View Full History
-                            </a>
+                            {viewAllLink ? (
+                                <a
+                                    href={viewAllLink}
+                                    className="text-[var(--color-primary)] font-bold text-sm hover:underline flex items-center gap-2"
+                                >
+                                    <History className="w-4 h-4" />
+                                    {t('common.viewAll')}
+                                </a>
+                            ) : (
+                                <button
+                                    onClick={onViewAllClick}
+                                    className="text-[var(--color-primary)] font-bold text-sm hover:underline flex items-center gap-2"
+                                >
+                                    <History className="w-4 h-4" />
+                                    {t('common.viewAll')}
+                                </button>
+                            )}
                         </div>
                     )}
 
@@ -132,7 +157,7 @@ export default function HistoryModal({
                             className="w-full py-6 rounded-2xl shadow-lg shadow-purple-500/20 font-bold"
                             onClick={onClose}
                         >
-                            Close History
+                            {t('history.close')}
                         </Button>
                     </div>
                 </div>

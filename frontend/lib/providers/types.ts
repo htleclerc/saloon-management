@@ -210,6 +210,8 @@ export interface IDataProvider {
     addProductToIncome(incomeId: number, productId: number, quantity: number): Promise<void>;
     removeProductFromIncome(incomeId: number, productId: number): Promise<void>;
     getIncomeProducts(incomeId: number): Promise<Array<{ product: Product; quantity: number }>>;
+    clearIncomeJunctions(incomeId: number): Promise<void>;
+    clearBookingJunctions(bookingId: number): Promise<void>;
 
     // ============================================
     // EXPENSE CATEGORIES
@@ -262,6 +264,12 @@ export interface IDataProvider {
     getComments(entityType: string, entityId: number): Promise<SalonComment[]>;
     createComment(data: Omit<SalonComment, 'id' | 'timestamp'>): Promise<SalonComment>;
     deleteComment(id: number): Promise<void>;
+
+    // ============================================
+    // UTILS / TOKENS
+    // ============================================
+    createOneTimeToken(type: string, payload: any, expiresInMinutes?: number): Promise<string | null>;
+    consumeOneTimeToken(tokenId: string): Promise<any | null>;
 }
 
 /**

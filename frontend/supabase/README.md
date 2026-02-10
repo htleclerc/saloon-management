@@ -26,9 +26,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
 In Supabase SQL Editor, run in order:
 
 ```bash
-supabase/schema.sql     # Creates all tables
-supabase/policies.sql   # Sets up RLS policies
-supabase/cleanup.sql    # Auto-cleanup function
+supabase/schema_v2.sql     # Creates all tables
+supabase/policies_v2.sql   # Sets up RLS policies
+supabase/cleanup_script.sql # Auto-cleanup function
 ```
 
 ### 2. Enable pg_cron (for auto-cleanup)

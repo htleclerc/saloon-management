@@ -44,8 +44,10 @@ Toutes les tables (sauf `salons` et `users`) possèdent une FK `salon_id`.
 - **Booking**: Rendez-vous.
   - Relations N:N via `booking_services` et `booking_workers`.
   - `status`: Created, Pending, Confirmed, Started, Finished, Cancelled, Closed.
+  - `is_active`: boolean
 - **Income**: Encaissements.
   - `worker_shares`: Ventilation du CA par employé (Revenu split).
+  - `is_active`: boolean
 - **Expense**: Dépenses.
 
 ---

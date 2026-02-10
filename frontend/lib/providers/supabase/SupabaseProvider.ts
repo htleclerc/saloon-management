@@ -117,13 +117,21 @@ export class SupabaseProvider implements IDataProvider {
     // ============================================
 
     async getSalons(): Promise<Salon[]> {
-        const { data, error } = await supabase
-            .from('salons')
-            .select('*')
-            .order('created_at', { ascending: false });
+        try {
+            const { data, error } = await supabase
+                .from('salons')
+                .select('*')
+                .order('created_at', { ascending: false });
 
-        if (error) throw new Error(`Failed to fetch salons: ${error.message}`);
-        return (data || []).map(this.mapSalonFromDB);
+            if (error) {
+                console.warn(`Supabase: Failed to fetch salons (${error.message}). Fallback to empty list.`);
+                return [];
+            }
+            return (data || []).map(this.mapSalonFromDB);
+        } catch (err) {
+            console.error("Supabase connection error in getSalons:", err);
+            return [];
+        }
     }
 
     async getSalon(id: number): Promise<Salon | null> {
@@ -265,32 +273,135 @@ export class SupabaseProvider implements IDataProvider {
     }
 
     // Salon Stats (from view)
+    // Salon Stats (Manual Calculation from raw tables)
     async getSalonStats(salonId: number): Promise<SalonStats> {
-        const { data, error } = await supabase
-            .from('salon_stats')
-            .select('*')
-            .eq('salon_id', salonId)
-            .single();
-
-        if (error) throw new Error(`Failed to fetch salon stats: ${error.message}`);
-        return this.mapSalonStatsFromDB(data);
-    }
-
-    async getDashboardAnalytics(salonId: number): Promise<DashboardAnalytics> {
-        // For demo-supabase mode, we provide consistent mock stats
-        if (this.isDemo) {
-            const { revenueTrendData, expenseDistributionData } = require('../../mock/datas/dashboardData');
+        if (!salonId || isNaN(salonId)) {
+            console.warn("getSalonStats called with invalid salonId:", salonId);
             return {
-                revenueTrend: revenueTrendData,
-                expenseDistribution: expenseDistributionData
+                salonId: 0, salonName: "N/A", totalWorkers: 0, totalClients: 0,
+                totalBookings: 0, completedBookings: 0, totalRevenue: 0,
+                monthRevenue: 0, totalExpenses: 0, monthExpenses: 0, newClients: 0
             };
         }
 
-        // Production implementation (fallback)
-        return {
-            revenueTrend: [],
-            expenseDistribution: []
-        };
+        try {
+            const now = new Date();
+            const startOfMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+            const startOfYearStr = `${now.getFullYear()}-01-01`;
+
+            // Parallel queries for performance
+            const [
+                salonRes,
+                workersCount,
+                clientsCount,
+                bookingsCount,
+                completedBookingsCount,
+                revenueData,
+                monthRevenueData,
+                expensesData,
+                monthExpensesData,
+                newClientsCount
+            ] = await Promise.all([
+                this.getSalon(salonId),
+                supabase.from('workers').select('id', { count: 'exact', head: true }).eq('salon_id', salonId).eq('is_active', true),
+                supabase.from('clients').select('id', { count: 'exact', head: true }).eq('salon_id', salonId).eq('is_active', true),
+                supabase.from('bookings').select('id', { count: 'exact', head: true }).eq('salon_id', salonId),
+                supabase.from('bookings').select('id', { count: 'exact', head: true }).eq('salon_id', salonId).eq('status', 'Finished'),
+                supabase.from('incomes').select('final_amount').eq('salon_id', salonId).eq('status', 'Validated'),
+                supabase.from('incomes').select('final_amount').eq('salon_id', salonId).eq('status', 'Validated').gte('date', startOfMonthStr),
+                supabase.from('expenses').select('amount').eq('salon_id', salonId),
+                supabase.from('expenses').select('amount').eq('salon_id', salonId).gte('date', startOfMonthStr),
+                supabase.from('clients').select('id', { count: 'exact', head: true }).eq('salon_id', salonId).gte('created_at', startOfMonthStr)
+            ]);
+
+            // Calculate Sums
+            const totalRevenue = (revenueData.data || []).reduce((sum: number, item: any) => sum + (item.final_amount || 0), 0);
+            const monthRevenue = (monthRevenueData.data || []).reduce((sum: number, item: any) => sum + (item.final_amount || 0), 0);
+            const totalExpenses = (expensesData.data || []).reduce((sum: number, item: any) => sum + (item.amount || 0), 0);
+            const monthExpenses = (monthExpensesData.data || []).reduce((sum: number, item: any) => sum + (item.amount || 0), 0);
+
+            return {
+                salonId,
+                salonName: salonRes?.name || "N/A",
+                totalWorkers: workersCount.count || 0,
+                totalClients: clientsCount.count || 0,
+                totalBookings: bookingsCount.count || 0,
+                completedBookings: completedBookingsCount.count || 0,
+                totalRevenue,
+                monthRevenue,
+                totalExpenses,
+                monthExpenses,
+                newClients: newClientsCount.count || 0
+            };
+        } catch (err) {
+            console.error("Supabase manual stats error:", err);
+            return {
+                salonId,
+                salonName: "Error",
+                totalWorkers: 0,
+                totalClients: 0,
+                totalBookings: 0,
+                completedBookings: 0,
+                totalRevenue: 0,
+                monthRevenue: 0,
+                totalExpenses: 0,
+                monthExpenses: 0,
+                newClients: 0
+            };
+        }
+    }
+
+    async getDashboardAnalytics(salonId: number): Promise<DashboardAnalytics> {
+        try {
+            // 1. Fetch Revenue Trend from view
+            const { data: revenueData, error: revError } = await supabase
+                .from('revenue_by_month')
+                .select('month, revenue')
+                .eq('salon_id', salonId)
+                .order('month', { ascending: true })
+                .limit(12);
+
+            // 2. Fetch Expenses for distribution
+            // We'll aggregate this in JS for flexibility
+            const { data: expenses, error: expError } = await supabase
+                .from('expenses')
+                .select('amount, category_id, category:expense_categories(name, color)')
+                .eq('salon_id', salonId);
+
+            if (revError || expError) {
+                console.warn("Analytics fetch error, returning empty trend");
+                return { revenueTrend: [], expenseDistribution: [] };
+            }
+
+            const revenueTrend = (revenueData || []).map((r: any) => ({
+                name: new Date(r.month).toLocaleDateString('en-US', { month: 'short' }),
+                value: r.revenue
+            }));
+
+            // Aggregate expenses by category
+            const distributionMap = new Map<string, { key: string, value: number, color: string }>();
+
+            (expenses || []).forEach((exp: any) => {
+                const catName = exp.category?.name || 'Uncategorized';
+                const catColor = exp.category?.color || '#cbd5e1';
+                const current = distributionMap.get(catName) || { key: catName, value: 0, color: catColor };
+                distributionMap.set(catName, {
+                    ...current,
+                    value: current.value + Number(exp.amount)
+                });
+            });
+
+            return {
+                revenueTrend,
+                expenseDistribution: Array.from(distributionMap.values())
+            };
+        } catch (err) {
+            console.error("Dashboard Analytics Error:", err);
+            return {
+                revenueTrend: [],
+                expenseDistribution: []
+            };
+        }
     }
 
     // ============================================
@@ -298,6 +409,11 @@ export class SupabaseProvider implements IDataProvider {
     // ============================================
 
     async getWorkers(salonId: number): Promise<SalonWorker[]> {
+        if (isNaN(salonId)) {
+            console.warn("getWorkers called with NaN salonId");
+            return [];
+        }
+
         const { data, error } = await supabase
             .from('workers')
             .select('*')
@@ -320,14 +436,98 @@ export class SupabaseProvider implements IDataProvider {
     }
 
     async getWorkerStats(id: number): Promise<WorkerStats | null> {
-        const { data, error } = await supabase
-            .from('worker_stats')
-            .select('*')
-            .eq('worker_id', id)
-            .single();
+        if (isNaN(id) || id <= 0) return null;
 
-        if (error) return null;
-        return data ? this.mapWorkerStatsFromDB(data) : null;
+        try {
+            const worker = await this.getWorker(id);
+            if (!worker) return null;
+
+            const now = new Date();
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            const startOfMonthStr = startOfMonth.toISOString().split('T')[0];
+            const startOfYearStr = new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0];
+
+            // Bookings Counts
+            const bookingsCount = await supabase.from('booking_workers').select('booking_id', { count: 'exact', head: true }).eq('worker_id', id);
+
+            // Revenue from Shares (Gross CA vs Commission)
+            // We look at income_worker_shares to get 'monthCommission'
+            // AND we look at incomes to get total generated revenue ('monthRevenue')
+            // NOTE: monthRevenue for a worker is the sum of (income.amount) where the worker participated,
+            // divided by number of workers if multi-worker? OR sum of their specific share if they are linked to specific services.
+            // Simplest for now: CA = Sum of the Income.amount they are part of.
+
+            const { data: sharesData } = await supabase
+                .from('income_worker_shares')
+                .select(`
+                amount,
+                percentage,
+                tips,
+                created_at,
+                incomes (
+                    id,
+                    amount,
+                    final_amount,
+                    tips,
+                    status,
+                    date
+                )
+            `)
+                .eq('worker_id', id);
+
+            const allShares = (sharesData || []).map((s: any) => ({
+                ...s,
+                income: s.incomes // Compatibility with previous mapping
+            }));
+            const validatedShares = allShares.filter((s: any) => s.income?.status === 'Validated');
+
+            // CA generated by the worker (Portion of final_amount)
+            const totalRevenue = validatedShares.reduce((sum: number, s: any) => sum + (s.amount || 0), 0);
+            const monthRevenue = validatedShares
+                .filter((s: any) => s.income?.date && s.income.date >= startOfMonthStr)
+                .reduce((sum: number, s: any) => sum + (s.amount || 0), 0);
+            const yearRevenue = validatedShares
+                .filter((s: any) => s.income?.date && s.income.date >= startOfYearStr)
+                .reduce((sum: number, s: any) => sum + (s.amount || 0), 0);
+
+            // Commission based on worker's sharingKey
+            const sharingRate = (worker.sharingKey || 50) / 100;
+            const monthCommission = monthRevenue * sharingRate;
+
+            const monthTips = validatedShares
+                .filter((s: any) => s.income?.date && s.income.date >= startOfMonthStr)
+                .reduce((sum: number, s: any) => sum + (s.tips || 0), 0);
+
+            // Reviews
+            const { data: reviews } = await supabase
+                .from('reviews')
+                .select('rating')
+                .eq('worker_id', id);
+
+            const totalReviews = reviews?.length || 0;
+            const avgRating = totalReviews > 0
+                ? (reviews!.reduce((sum: number, r: any) => sum + r.rating, 0) / totalReviews)
+                : 0;
+
+            return {
+                workerId: id,
+                salonId: worker.salonId,
+                name: worker.name,
+                totalBookings: bookingsCount.count || 0,
+                totalClients: 0, // Requires complex join
+                completedBookings: 0, // Requires complex join
+                totalRevenue,
+                monthRevenue,
+                yearRevenue,
+                monthCommission,
+                monthTips,
+                avgRating,
+                totalReviews
+            };
+        } catch (err) {
+            console.error("Worker stats manual calc error:", err);
+            return null;
+        }
     }
 
     async createWorker(data: Omit<SalonWorker, 'id' | 'createdAt' | 'updatedAt'>): Promise<SalonWorker> {
@@ -343,6 +543,20 @@ export class SupabaseProvider implements IDataProvider {
             sharing_key: data.sharingKey,
             bio: data.bio,
             specialties: data.specialties,
+            first_name: data.firstName,
+            last_name: data.lastName,
+            address: data.address,
+            city: data.city,
+            postal_code: data.postalCode,
+            birth_date: data.birthDate,
+            gender: data.gender,
+            employee_role: data.employeeRole,
+            contract_type: data.contractType,
+            hire_date: data.hireDate,
+            contract_end_date: data.contractEndDate,
+            base_salary: data.baseSalary,
+            experience_level: data.experienceLevel,
+            weekly_schedule: data.weeklySchedule,
             is_active: data.isActive ?? true
         };
 
@@ -369,6 +583,20 @@ export class SupabaseProvider implements IDataProvider {
         if (data.sharingKey !== undefined) dbWorker.sharing_key = data.sharingKey;
         if (data.bio !== undefined) dbWorker.bio = data.bio;
         if (data.specialties !== undefined) dbWorker.specialties = data.specialties;
+        if (data.firstName !== undefined) dbWorker.first_name = data.firstName;
+        if (data.lastName !== undefined) dbWorker.last_name = data.lastName;
+        if (data.address !== undefined) dbWorker.address = data.address;
+        if (data.city !== undefined) dbWorker.city = data.city;
+        if (data.postalCode !== undefined) dbWorker.postal_code = data.postalCode;
+        if (data.birthDate !== undefined) dbWorker.birth_date = data.birthDate;
+        if (data.gender !== undefined) dbWorker.gender = data.gender;
+        if (data.employeeRole !== undefined) dbWorker.employee_role = data.employeeRole;
+        if (data.contractType !== undefined) dbWorker.contract_type = data.contractType;
+        if (data.hireDate !== undefined) dbWorker.hire_date = data.hireDate;
+        if (data.contractEndDate !== undefined) dbWorker.contract_end_date = data.contractEndDate;
+        if (data.baseSalary !== undefined) dbWorker.base_salary = data.baseSalary;
+        if (data.experienceLevel !== undefined) dbWorker.experience_level = data.experienceLevel;
+        if (data.weeklySchedule !== undefined) dbWorker.weekly_schedule = data.weeklySchedule;
         if (data.isActive !== undefined) dbWorker.is_active = data.isActive;
 
         const { data: updated, error } = await supabase
@@ -396,6 +624,11 @@ export class SupabaseProvider implements IDataProvider {
     // ============================================
 
     async getClients(salonId: number): Promise<Client[]> {
+        if (isNaN(salonId)) {
+            console.warn("getClients called with NaN salonId");
+            return [];
+        }
+
         const { data, error } = await supabase
             .from('clients')
             .select('*')
@@ -595,6 +828,7 @@ export class SupabaseProvider implements IDataProvider {
             subscriptionStatus: db.subscription_status,
             subscriptionEndsAt: db.subscription_ends_at ? new Date(db.subscription_ends_at) : undefined,
             isActive: db.is_active,
+            mode: db.mode,
             createdAt: new Date(db.created_at),
             updatedAt: new Date(db.updated_at),
             createdBy: db.created_by,
@@ -619,6 +853,7 @@ export class SupabaseProvider implements IDataProvider {
         if (salon.subscriptionPlan !== undefined) db.subscription_plan = salon.subscriptionPlan;
         if (salon.subscriptionStatus !== undefined) db.subscription_status = salon.subscriptionStatus;
         if (salon.isActive !== undefined) db.is_active = salon.isActive;
+        if (salon.mode !== undefined) db.mode = salon.mode;
         if (salon.createdBy !== undefined) db.created_by = salon.createdBy;
         if (salon.updatedBy !== undefined) db.updated_by = salon.updatedBy;
         return db;
@@ -669,7 +904,8 @@ export class SupabaseProvider implements IDataProvider {
             totalRevenue: db.total_revenue || 0,
             monthRevenue: db.month_revenue || 0,
             totalExpenses: db.total_expenses || 0,
-            monthExpenses: db.month_expenses || 0
+            monthExpenses: db.month_expenses || 0,
+            newClients: 0 // Will be populated separately
         };
     }
 
@@ -687,6 +923,20 @@ export class SupabaseProvider implements IDataProvider {
             sharingKey: db.sharing_key,
             bio: db.bio,
             specialties: db.specialties || [],
+            firstName: db.first_name,
+            lastName: db.last_name,
+            address: db.address,
+            city: db.city,
+            postalCode: db.postal_code,
+            birthDate: db.birth_date,
+            gender: db.gender,
+            employeeRole: db.employee_role,
+            contractType: db.contract_type,
+            hireDate: db.hire_date,
+            contractEndDate: db.contract_end_date,
+            baseSalary: db.base_salary ? parseFloat(db.base_salary) : undefined,
+            experienceLevel: db.experience_level,
+            weeklySchedule: db.weekly_schedule,
             isActive: db.is_active,
             createdAt: new Date(db.created_at),
             updatedAt: new Date(db.updated_at),
@@ -708,6 +958,20 @@ export class SupabaseProvider implements IDataProvider {
         if (worker.sharingKey !== undefined) db.sharing_key = worker.sharingKey;
         if (worker.bio !== undefined) db.bio = worker.bio;
         if (worker.specialties !== undefined) db.specialties = worker.specialties;
+        if (worker.firstName !== undefined) db.first_name = worker.firstName;
+        if (worker.lastName !== undefined) db.last_name = worker.lastName;
+        if (worker.address !== undefined) db.address = worker.address;
+        if (worker.city !== undefined) db.city = worker.city;
+        if (worker.postalCode !== undefined) db.postal_code = worker.postalCode;
+        if (worker.birthDate !== undefined) db.birth_date = worker.birthDate;
+        if (worker.gender !== undefined) db.gender = worker.gender;
+        if (worker.employeeRole !== undefined) db.employee_role = worker.employeeRole;
+        if (worker.contractType !== undefined) db.contract_type = worker.contractType;
+        if (worker.hireDate !== undefined) db.hire_date = worker.hireDate;
+        if (worker.contractEndDate !== undefined) db.contract_end_date = worker.contractEndDate;
+        if (worker.baseSalary !== undefined) db.base_salary = worker.baseSalary;
+        if (worker.experienceLevel !== undefined) db.experience_level = worker.experienceLevel;
+        if (worker.weeklySchedule !== undefined) db.weekly_schedule = worker.weeklySchedule;
         if (worker.isActive !== undefined) db.is_active = worker.isActive;
         if (worker.createdBy !== undefined) db.created_by = worker.createdBy;
         if (worker.updatedBy !== undefined) db.updated_by = worker.updatedBy;
@@ -725,6 +989,8 @@ export class SupabaseProvider implements IDataProvider {
             totalRevenue: db.total_revenue || 0,
             monthRevenue: db.month_revenue || 0,
             yearRevenue: db.year_revenue || 0,
+            monthCommission: db.month_commission || 0,
+            monthTips: db.month_tips || 0,
             avgRating: db.avg_rating || 0,
             totalReviews: db.total_reviews || 0
         };
@@ -787,6 +1053,11 @@ export class SupabaseProvider implements IDataProvider {
     // ============================================
 
     async getServiceCategories(salonId: number): Promise<ServiceCategory[]> {
+        if (isNaN(salonId)) {
+            console.warn("getServiceCategories called with NaN salonId");
+            return [];
+        }
+
         const { data, error } = await supabase
             .from('service_categories')
             .select('*')
@@ -845,6 +1116,11 @@ export class SupabaseProvider implements IDataProvider {
     // ============================================
 
     async getServices(salonId: number): Promise<Service[]> {
+        if (isNaN(salonId)) {
+            console.warn("getServices called with NaN salonId");
+            return [];
+        }
+
         const { data, error } = await supabase
             .from('services')
             .select('*')
@@ -934,6 +1210,11 @@ export class SupabaseProvider implements IDataProvider {
     // ============================================
 
     async getProducts(salonId: number): Promise<Product[]> {
+        if (isNaN(salonId)) {
+            console.warn("getProducts called with NaN salonId");
+            return [];
+        }
+
         const { data, error } = await supabase
             .from('products')
             .select('*')
@@ -1043,9 +1324,23 @@ export class SupabaseProvider implements IDataProvider {
         filters?: BookingFilters,
         pagination?: PaginationParams
     ): Promise<PaginatedResponse<Booking>> {
+        if (isNaN(salonId)) {
+            console.warn("getBookings called with NaN salonId");
+            return { data: [], total: 0, page: 1, perPage: 50, totalPages: 0 };
+        }
+
         let query = supabase
             .from('bookings')
-            .select('*', { count: 'exact' })
+            .select(`
+            *,
+            client:clients(name),
+            booking_services(service_id),
+            *,
+            client:clients(name),
+            booking_services(service_id),
+            booking_workers(worker_id),
+            incomes(id)
+        `, { count: 'exact' })
             .eq('salon_id', salonId);
 
         // Apply filters
@@ -1054,6 +1349,13 @@ export class SupabaseProvider implements IDataProvider {
         if (filters?.startDate) query = query.gte('date', filters.startDate);
         if (filters?.endDate) query = query.lte('date', filters.endDate);
         if (filters?.isSensitive !== undefined) query = query.eq('is_sensitive', filters.isSensitive);
+
+        // Default to is_active: true if not specified
+        if (filters?.isActive !== undefined) {
+            query = query.eq('is_active', filters.isActive);
+        } else {
+            query = query.or('is_active.eq.true,is_active.is.null');
+        }
 
         // Apply pagination
         const page = pagination?.page || 1;
@@ -1065,7 +1367,16 @@ export class SupabaseProvider implements IDataProvider {
 
         const { data, error, count } = await query;
 
-        if (error) throw new Error(`Failed to fetch bookings: ${error.message}`);
+        if (error) {
+            console.warn(`Supabase: Failed to fetch bookings (${error.message}).`);
+            return {
+                data: [],
+                total: 0,
+                totalPages: 0,
+                page: pagination?.page || 1,
+                perPage: pagination?.perPage || 50
+            };
+        }
 
         const total = count || 0;
         const totalPages = Math.ceil(total / perPage);
@@ -1082,7 +1393,14 @@ export class SupabaseProvider implements IDataProvider {
     async getBooking(id: number): Promise<Booking | null> {
         const { data, error } = await supabase
             .from('bookings')
-            .select('*')
+            .select(`
+            *,
+            client:clients(name),
+            booking_services(service_id),
+            booking_services(service_id),
+            booking_workers(worker_id),
+            incomes(id)
+        `)
             .eq('id', id)
             .single();
 
@@ -1180,31 +1498,28 @@ export class SupabaseProvider implements IDataProvider {
 
         if (error) throw new Error(`Failed to create booking: ${error.message}`);
 
-        const booking = this.mapBookingFromDB(created);
-
-        // Add workers
-        for (const workerId of data.workerIds) {
-            await this.addWorkerToBooking(booking.id, workerId);
-        }
-
-        // Add services
-        for (const serviceId of data.serviceIds) {
-            await this.addServiceToBooking(booking.id, serviceId);
-        }
-
-        return booking;
+        return this.mapBookingFromDB(created);
     }
 
     async updateBooking(id: number, data: Partial<Booking>): Promise<Booking> {
         const { data: updated, error } = await supabase
             .from('bookings')
-            .update(this.mapBookingToDB(data))
+            .update(this.mapBookingToDB(data as any))
             .eq('id', id)
             .select()
             .single();
 
         if (error) throw new Error(`Failed to update booking: ${error.message}`);
         return this.mapBookingFromDB(updated);
+    }
+
+    async clearBookingJunctions(bookingId: number): Promise<void> {
+        const { error: sError } = await supabase.from('booking_services').delete().eq('booking_id', bookingId);
+        const { error: wError } = await supabase.from('booking_workers').delete().eq('booking_id', bookingId);
+
+        if (sError || wError) {
+            throw new Error(`Failed to clear booking junctions: ${sError?.message || ''} ${wError?.message || ''}`);
+        }
     }
 
     async deleteBooking(id: number): Promise<void> {
@@ -1409,12 +1724,14 @@ export class SupabaseProvider implements IDataProvider {
             duration: db.duration || 0,
             status: db.status,
             notes: db.notes,
+            incomeId: db.incomes && db.incomes.length > 0 ? db.incomes[0].id : undefined,
             isSensitive: db.is_sensitive || false,
-            // These would normally come from a join or separate call
-            serviceIds: [],
-            workerIds: [],
+            // These come from joined queries
+            serviceIds: db.booking_services?.map((bs: any) => bs.service_id) || [],
+            workerIds: db.booking_workers?.map((bw: any) => bw.worker_id) || [],
             createdAt: new Date(db.created_at),
             updatedAt: new Date(db.updated_at),
+            isActive: db.is_active !== false,
             createdBy: db.created_by,
             updatedBy: db.updated_by
         };
@@ -1430,6 +1747,7 @@ export class SupabaseProvider implements IDataProvider {
         if (booking.status !== undefined) db.status = booking.status;
         if (booking.notes !== undefined) db.notes = booking.notes;
         if (booking.isSensitive !== undefined) db.is_sensitive = booking.isSensitive;
+        if (booking.isActive !== undefined) db.is_active = booking.isActive;
         if (booking.createdBy !== undefined) db.created_by = booking.createdBy;
         if (booking.updatedBy !== undefined) db.updated_by = booking.updatedBy;
         return db;
@@ -1439,15 +1757,73 @@ export class SupabaseProvider implements IDataProvider {
     // INCOME
     // ============================================
 
+    private async fetchAndAttachComments(incomes: Income[]): Promise<Income[]> {
+        if (!incomes || incomes.length === 0) return incomes;
+
+        const incomeIds = incomes.map(i => i.id);
+
+        // Fetch comments for these incomes
+        const { data: comments } = await supabase
+            .from('salon_comments')
+            .select('*')
+            .eq('entity_type', 'income')
+            .in('entity_id', incomeIds)
+            .order('timestamp', { ascending: true });
+
+        const commentsMap = new Map<number, any[]>();
+
+        if (comments) {
+            comments.forEach((c: any) => {
+                if (!commentsMap.has(c.entity_id)) {
+                    commentsMap.set(c.entity_id, []);
+                }
+                commentsMap.get(c.entity_id)!.push(this.mapCommentFromDB(c));
+            });
+        }
+
+        return incomes.map(income => {
+            if (commentsMap.has(income.id)) {
+                // Ensure comments are properly typed as BookingComment[] (compatible structure)
+                income.comments = commentsMap.get(income.id);
+            }
+            return income;
+        });
+    }
+
     async getIncomes(
         salonId: number,
         filters?: IncomeFilters,
         pagination?: PaginationParams
     ): Promise<PaginatedResponse<Income>> {
+        if (!salonId || isNaN(salonId)) {
+            console.warn("getIncomes called with invalid salonId:", salonId);
+            return {
+                data: [],
+                total: 0,
+                page: pagination?.page || 1,
+                perPage: pagination?.perPage || 50,
+                totalPages: 0
+            };
+        }
+
         let query = supabase
             .from('incomes')
-            .select('*', { count: 'exact' })
+            .select(`
+            *,
+            client:clients(name),
+            income_services(service_id, services(name)),
+                        income_worker_shares(worker_id, amount, tips, percentage)
+
+        `, { count: 'exact' })
             .eq('salon_id', salonId);
+
+        // Default to is_active: true if not specified
+        if (filters?.isActive !== undefined) {
+            query = query.eq('is_active', filters.isActive);
+        } else {
+            // Treat NULL as true for existing records to avoid regression
+            query = query.or('is_active.eq.true,is_active.is.null');
+        }
 
         // Apply filters
         if (filters?.clientId) query = query.eq('client_id', filters.clientId);
@@ -1468,8 +1844,11 @@ export class SupabaseProvider implements IDataProvider {
 
         if (error) throw new Error(`Failed to fetch incomes: ${error.message}`);
 
+        const validData = (data || []).map((row: any) => this.mapIncomeFromDB(row));
+        const incomesWithComments = await this.fetchAndAttachComments(validData);
+
         return {
-            data: (data || []).map(this.mapIncomeFromDB),
+            data: incomesWithComments,
             total: count || 0,
             page,
             perPage,
@@ -1480,12 +1859,22 @@ export class SupabaseProvider implements IDataProvider {
     async getIncome(id: number): Promise<Income | null> {
         const { data, error } = await supabase
             .from('incomes')
-            .select('*')
+            .select(`
+            *,
+            client:clients(name),
+            income_services(service_id, services(name)),
+            income_worker_shares(worker_id)
+        `)
             .eq('id', id)
             .single();
 
         if (error) return null;
-        return data ? this.mapIncomeFromDB(data) : null;
+        if (!data) return null;
+
+        const income = this.mapIncomeFromDB(data);
+        const [incomeWithComments] = await this.fetchAndAttachComments([income]);
+
+        return incomeWithComments;
     }
 
     async getIncomeWithRelations(id: number): Promise<IncomeWithRelations | null> {
@@ -1528,27 +1917,40 @@ export class SupabaseProvider implements IDataProvider {
             .order('date', { ascending: false });
 
         if (error) throw new Error(`Failed to fetch incomes by client: ${error.message}`);
-        return (data || []).map(this.mapIncomeFromDB);
+        const incomes = (data || []).map(this.mapIncomeFromDB);
+        return this.fetchAndAttachComments(incomes);
     }
 
     async getIncomesByWorker(workerId: number): Promise<Income[]> {
+        if (isNaN(workerId)) {
+            console.warn("getIncomesByWorker called with NaN workerId");
+            return [];
+        }
+
+        // Fetch incomes through worker shares junction with all necessary joins for mapping
         const { data, error } = await supabase
-            .from('income_workers')
-            .select('income_id')
-            .eq('worker_id', workerId);
+            .from('income_worker_shares')
+            .select(`
+                incomes (
+                    *,
+                    client:clients(name),
+                    income_services(service_id, services(name)),
+                    income_worker_shares(worker_id, amount, tips, percentage)
+                )
+            `)
+            .eq('worker_id', workerId)
+            // PostgREST ordering on joined table
+            .order('date', { foreignTable: 'incomes', ascending: false });
 
         if (error) throw new Error(`Failed to fetch incomes by worker: ${error.message}`);
 
-        const incomeIds = (data || []).map((row: any) => row.income_id);
-        if (incomeIds.length === 0) return [];
+        // Extract and map incomes, filtering out any possible nulls from failed joins
+        const incomes = (data || [])
+            .map((row: any) => row.incomes)
+            .filter((inc: any) => !!inc)
+            .map((inc: any) => this.mapIncomeFromDB(inc));
 
-        const incomes: Income[] = [];
-        for (const id of incomeIds) {
-            const income = await this.getIncome(id);
-            if (income) incomes.push(income);
-        }
-
-        return incomes;
+        return this.fetchAndAttachComments(incomes);
     }
 
     async createIncome(data: IncomeCreateData): Promise<Income> {
@@ -1567,47 +1969,38 @@ export class SupabaseProvider implements IDataProvider {
                 payment_method: data.paymentMethod,
                 status: data.status || 'Draft',
                 promo_code_id: data.promoCodeId,
-                has_invoice: false
+                has_invoice: false,
+                notes: data.notes,
+                tips: data.tips || 0
             }])
             .select()
             .single();
 
         if (error) throw new Error(`Failed to create income: ${error.message}`);
 
-        const income = this.mapIncomeFromDB(created);
-
-        // Add worker shares
-        for (const share of data.workerShares) {
-            await this.addWorkerToIncome(income.id, share.workerId, finalAmount * share.percentage / 100, share.percentage);
-        }
-
-        // Add services
-        if (data.serviceIds) {
-            for (const serviceId of data.serviceIds) {
-                await this.addServiceToIncome(income.id, serviceId);
-            }
-        }
-
-        // Add products
-        if (data.products) {
-            for (const product of data.products) {
-                await this.addProductToIncome(income.id, product.productId, product.quantity);
-            }
-        }
-
-        return income;
+        return this.mapIncomeFromDB(created);
     }
 
     async updateIncome(id: number, data: Partial<Income>): Promise<Income> {
         const { data: updated, error } = await supabase
             .from('incomes')
-            .update(this.mapIncomeToDB(data))
+            .update(this.mapIncomeToDB(data as any))
             .eq('id', id)
             .select()
             .single();
 
         if (error) throw new Error(`Failed to update income: ${error.message}`);
         return this.mapIncomeFromDB(updated);
+    }
+
+    async clearIncomeJunctions(incomeId: number): Promise<void> {
+        const { error: sError } = await supabase.from('income_services').delete().eq('income_id', incomeId);
+        const { error: wError } = await supabase.from('income_worker_shares').delete().eq('income_id', incomeId);
+        const { error: pError } = await supabase.from('income_products').delete().eq('income_id', incomeId);
+
+        if (sError || wError || pError) {
+            throw new Error(`Failed to clear income junctions: ${sError?.message || ''} ${wError?.message || ''} ${pError?.message || ''}`);
+        }
     }
 
     async deleteIncome(id: number): Promise<void> {
@@ -1620,14 +2013,15 @@ export class SupabaseProvider implements IDataProvider {
     }
 
     // Income-Worker Junction
-    async addWorkerToIncome(incomeId: number, workerId: number, amount: number, percentage: number): Promise<IncomeWorkerShare> {
+    async addWorkerToIncome(incomeId: number, workerId: number, amount: number, percentage: number, tips: number = 0): Promise<IncomeWorkerShare> {
         const { data, error } = await supabase
-            .from('income_workers')
+            .from('income_worker_shares')
             .insert([{
                 income_id: incomeId,
                 worker_id: workerId,
                 amount,
-                percentage
+                percentage,
+                tips
             }])
             .select()
             .single();
@@ -1638,7 +2032,7 @@ export class SupabaseProvider implements IDataProvider {
 
     async removeWorkerFromIncome(incomeId: number, workerId: number): Promise<void> {
         const { error } = await supabase
-            .from('income_workers')
+            .from('income_worker_shares')
             .delete()
             .eq('income_id', incomeId)
             .eq('worker_id', workerId);
@@ -1648,7 +2042,7 @@ export class SupabaseProvider implements IDataProvider {
 
     async getIncomeWorkerShares(incomeId: number): Promise<IncomeWorkerShare[]> {
         const { data, error } = await supabase
-            .from('income_workers')
+            .from('income_worker_shares')
             .select('*')
             .eq('income_id', incomeId);
 
@@ -1697,12 +2091,19 @@ export class SupabaseProvider implements IDataProvider {
 
     // Income-Product Junction
     async addProductToIncome(incomeId: number, productId: number, quantity: number): Promise<void> {
+        // Fetch product to get price
+        const product = await this.getProduct(productId);
+        if (!product) throw new Error(`Product not found: ${productId}`);
+
+        const amount = product.price * quantity;
+
         const { error } = await supabase
             .from('income_products')
             .insert([{
                 income_id: incomeId,
                 product_id: productId,
-                quantity
+                quantity,
+                amount
             }]);
 
         if (error) throw new Error(`Failed to add product to income: ${error.message}`);
@@ -2113,7 +2514,7 @@ export class SupabaseProvider implements IDataProvider {
 
     async getComments(entityType: string, entityId: number): Promise<SalonComment[]> {
         const { data, error } = await supabase
-            .from('comments')
+            .from('salon_comments')
             .select('*')
             .eq('entity_type', entityType)
             .eq('entity_id', entityId)
@@ -2125,7 +2526,7 @@ export class SupabaseProvider implements IDataProvider {
 
     async createComment(data: Omit<SalonComment, 'id' | 'timestamp'>): Promise<SalonComment> {
         const { data: created, error } = await supabase
-            .from('comments')
+            .from('salon_comments')
             .insert([{
                 entity_type: data.entityType,
                 entity_id: data.entityId,
@@ -2141,7 +2542,7 @@ export class SupabaseProvider implements IDataProvider {
 
     async deleteComment(id: number): Promise<void> {
         const { error } = await supabase
-            .from('comments')
+            .from('salon_comments')
             .delete()
             .eq('id', id);
 
@@ -2160,17 +2561,27 @@ export class SupabaseProvider implements IDataProvider {
             bookingIds: db.booking_id ? [db.booking_id] : [],
             clientId: db.client_id,
             clientName: db.client?.name || 'Unknown',
-            amount: db.amount,
+            amount: db.amount || 0,
             discountAmount: db.discount_amount || 0,
-            finalAmount: db.final_amount || db.amount,
+            finalAmount: db.final_amount || db.amount || 0,
             date: db.date,
             paymentMethod: db.payment_method || 'Card',
             status: db.status,
             hasInvoice: db.has_invoice || false,
             invoiceUrl: db.invoice_url,
             promoCodeId: db.promo_code_id,
-            serviceIds: [],
-            workerIds: [],
+            notes: db.notes,
+            tips: db.tips || 0,
+            serviceIds: db.income_services?.map((is: any) => is.service_id) || [],
+            serviceNames: db.income_services?.map((is: any) => is.services?.name).filter((n: any) => !!n) || [],
+            workerIds: db.income_worker_shares?.map((iw: any) => iw.worker_id) || [],
+            workerShares: db.income_worker_shares?.map((iw: any) => ({
+                workerId: iw.worker_id,
+                amount: iw.amount || 0,
+                percentage: iw.percentage || 0,
+                tips: iw.tips || 0
+            })) || [],
+            isActive: db.is_active !== false, // Default to true if null
             createdAt: new Date(db.created_at),
             updatedAt: new Date(db.updated_at),
             createdBy: db.created_by,
@@ -2191,6 +2602,9 @@ export class SupabaseProvider implements IDataProvider {
         if (income.hasInvoice !== undefined) db.has_invoice = income.hasInvoice;
         if (income.invoiceUrl !== undefined) db.invoice_url = income.invoiceUrl;
         if (income.promoCodeId !== undefined) db.promo_code_id = income.promoCodeId;
+        if (income.notes !== undefined) db.notes = income.notes;
+        if (income.tips !== undefined) db.tips = income.tips;
+        if (income.isActive !== undefined) db.is_active = income.isActive;
         if (income.createdBy !== undefined) db.created_by = income.createdBy;
         if (income.updatedBy !== undefined) db.updated_by = income.updatedBy;
         return db;
@@ -2203,6 +2617,7 @@ export class SupabaseProvider implements IDataProvider {
             workerId: db.worker_id,
             amount: db.amount,
             percentage: db.percentage,
+            tips: db.tips || 0,
             createdAt: new Date(db.created_at)
         };
     }
@@ -2240,10 +2655,11 @@ export class SupabaseProvider implements IDataProvider {
             id: db.id,
             salonId: db.salon_id,
             categoryId: db.category_id,
-            amount: db.amount,
+            amount: db.amount || 0,
             date: db.date,
             description: db.description,
             receiptUrl: db.receipt_url,
+            status: db.status || 'Pending',
             isActive: db.is_active,
             createdAt: new Date(db.created_at),
             updatedAt: new Date(db.updated_at),
@@ -2342,14 +2758,127 @@ export class SupabaseProvider implements IDataProvider {
         };
     }
 
-    private mapCommentFromDB(db: any): SalonComment {
+    private mapCommentFromDB(db: any): any { // Return any or extended type to support 'user' prop
         return {
             id: db.id,
             entityType: db.entity_type,
             entityId: db.entity_id,
             userCode: db.user_code,
+            user: db.user_code, // Map code to 'user' for frontend compatibility
             text: db.text,
             timestamp: new Date(db.timestamp)
         };
+    }
+
+    // ============================================
+    // UTILS / TOKENS
+    // ============================================
+    async createOneTimeToken(type: string, payload: any, expiresInMinutes: number = 60): Promise<string | null> {
+        try {
+            const expiresAt = new Date(Date.now() + expiresInMinutes * 60000).toISOString();
+
+            const { data, error } = await supabase
+                .from('one_time_tokens')
+                .insert({
+                    type,
+                    payload,
+                    expires_at: expiresAt
+                })
+                .select('id')
+                .single();
+
+            if (error) {
+                console.error('Supabase: Error creating token (using fallback):', error.message || error.details || JSON.stringify(error));
+                throw error;
+            }
+            return data?.id || null;
+        } catch (error) {
+            console.warn('Supabase: Token creation failed, using local fallback.');
+            // Fallback: Create a local token using localStorage to unblock the user
+            try {
+                const id = crypto.randomUUID();
+                const expiresAt = new Date(Date.now() + expiresInMinutes * 60000).toISOString();
+                const token = {
+                    id,
+                    type,
+                    payload,
+                    expires_at: expiresAt,
+                    used_at: null,
+                    created_at: new Date().toISOString()
+                };
+
+                // Save to localStorage under specific key for tokens
+                const localTokens = JSON.parse(localStorage.getItem('saloon-one-time-tokens') || '[]');
+                localTokens.push(token);
+                localStorage.setItem('saloon-one-time-tokens', JSON.stringify(localTokens));
+
+                return id;
+            } catch (localError) {
+                console.error('Local fallback also failed:', localError);
+                return null;
+            }
+        }
+    }
+
+    async consumeOneTimeToken(tokenId: string): Promise<any | null> {
+        try {
+            // First check validity
+            const { data: token, error: fetchError } = await supabase
+                .from('one_time_tokens')
+                .select('*')
+                .eq('id', tokenId)
+                .single();
+
+            if (fetchError || !token) {
+                console.error('Token not found in DB', fetchError);
+                // Try looking in local fallback storage
+                const localTokens = JSON.parse(localStorage.getItem('saloon-one-time-tokens') || '[]');
+                const localTokenIndex = localTokens.findIndex((t: any) => t.id === tokenId);
+                const localToken = localTokens[localTokenIndex];
+
+                if (!localToken) return null;
+
+                // Validate local token
+                if (new Date(localToken.expires_at) < new Date()) {
+                    console.warn('Local Token expired');
+                    return null;
+                }
+                if (localToken.used_at) {
+                    console.warn('Local Token already used');
+                    return null;
+                }
+
+                // Mark as used locally
+                localTokens[localTokenIndex].used_at = new Date().toISOString();
+                localStorage.setItem('saloon-one-time-tokens', JSON.stringify(localTokens));
+
+                return localToken.payload;
+            }
+
+            // Check expiration
+            if (new Date(token.expires_at) < new Date()) {
+                console.warn('Token expired');
+                return null;
+            }
+
+            // Check if used
+            if (token.used_at) {
+                console.warn('Token already used');
+                return null;
+            }
+
+            // Mark as used
+            const { error: updateError } = await supabase
+                .from('one_time_tokens')
+                .update({ used_at: new Date().toISOString() })
+                .eq('id', tokenId);
+
+            if (updateError) throw updateError;
+
+            return token.payload;
+        } catch (error) {
+            console.error('Error consuming token:', error);
+            return null;
+        }
     }
 }

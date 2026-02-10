@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -9,7 +9,7 @@ import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
 import { useAuth } from "@/context/AuthProvider";
 import { useBooking } from "@/context/BookingProvider";
 import { useConfirm } from "@/context/ConfirmProvider";
-import { format } from "date-fns";
+import { format, addDays, subDays } from "date-fns";
 import { workerService, incomeService } from "@/lib/services";
 import { SalonWorker, Income } from "@/types";
 import {
@@ -34,6 +34,7 @@ export default function DailyPage() {
     const { confirm } = useConfirm();
     const [workers, setWorkers] = useState<SalonWorker[]>([]);
     const [draftIncome, setDraftIncome] = useState(0);
+    const dateInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         if (activeSalonId) {
@@ -80,6 +81,14 @@ export default function DailyPage() {
         }
     };
 
+    const handlePrevDay = () => {
+        setSelectedDate(prev => format(subDays(new Date(prev), 1), "yyyy-MM-dd"));
+    };
+
+    const handleNextDay = () => {
+        setSelectedDate(prev => format(addDays(new Date(prev), 1), "yyyy-MM-dd"));
+    };
+
     return (
         <MainLayout>
             <div className="space-y-6">
@@ -89,15 +98,25 @@ export default function DailyPage() {
                         <h1 className="text-3xl font-bold text-gray-900">Daily Overview</h1>
                         <p className="text-gray-500 mt-1">Manage today's schedule and track daily performance</p>
                     </div>
-                    <div className="flex items-center gap-3 bg-white p-2 rounded-xl border border-gray-100 shadow-sm">
-                        <Button variant="outline" size="sm" className="p-2">
+                    <div className="flex items-center gap-3 bg-white p-2 rounded-xl border border-gray-100 shadow-sm mr-4">
+                        <Button variant="outline" size="sm" className="p-2" onClick={handlePrevDay}>
                             <ChevronLeft className="w-5 h-5" />
                         </Button>
-                        <div className="flex items-center gap-2 px-4 font-semibold text-gray-700">
-                            <Calendar className="w-5 h-5 text-purple-600" />
-                            <span>{selectedDate}</span>
+                        <div
+                            className="relative flex items-center gap-2 px-4 font-semibold text-gray-700 cursor-pointer hover:bg-gray-50 transition-colors rounded-lg"
+                            onClick={() => dateInputRef.current?.showPicker()}
+                        >
+                            <Calendar className="w-5 h-5 text-purple-600 pointer-events-none" />
+                            <input
+                                ref={dateInputRef}
+                                type="date"
+                                value={selectedDate}
+                                onChange={(e) => setSelectedDate(e.target.value)}
+                                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+                            />
+                            <span className="z-0 pointer-events-none">{selectedDate}</span>
                         </div>
-                        <Button variant="outline" size="sm" className="p-2">
+                        <Button variant="outline" size="sm" className="p-2" onClick={handleNextDay}>
                             <ChevronRight className="w-5 h-5" />
                         </Button>
                     </div>

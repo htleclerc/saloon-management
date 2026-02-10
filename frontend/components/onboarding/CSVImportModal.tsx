@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { X, Upload, Download, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { parseCSVFile, downloadCSV } from '@/lib/utils/csvParser';
 import type { CSVImportResult } from '@/types';
+import { useToast } from '@/context/ToastProvider';
+import { useTranslation } from '@/i18n';
 
 interface CSVImportModalProps<T> {
     isOpen: boolean;
@@ -26,6 +28,8 @@ export default function CSVImportModal<T>({
     title,
     description,
 }: CSVImportModalProps<T>) {
+    const { showToast } = useToast();
+    const { t } = useTranslation();
     const [file, setFile] = useState<File | null>(null);
     const [result, setResult] = useState<CSVImportResult<T> | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -59,7 +63,7 @@ export default function CSVImportModal<T>({
 
     const handleFile = async (selectedFile: File) => {
         if (!selectedFile.name.endsWith('.csv')) {
-            alert('Please select a CSV file');
+            showToast(t("common.invalidFile"), t("common.invalidFileCSV"), "warning");
             return;
         }
 
@@ -71,7 +75,7 @@ export default function CSVImportModal<T>({
             setResult(parseResult);
         } catch (error) {
             console.error('Error parsing CSV:', error);
-            alert('Failed to parse CSV file');
+            showToast(t("common.error"), t("common.parsingError"), "error");
         } finally {
             setIsProcessing(false);
         }
@@ -119,15 +123,15 @@ export default function CSVImportModal<T>({
                     {/* Download template */}
                     <div className="flex items-center justify-between p-4 bg-purple-50 rounded-xl border border-purple-100">
                         <div>
-                            <p className="font-bold text-gray-900">Télécharger le modèle CSV</p>
-                            <p className="text-sm text-gray-600">Utilisez ce fichier comme exemple</p>
+                            <p className="font-bold text-gray-900">{t("common.import.template")}</p>
+                            <p className="text-sm text-gray-600">{t("common.import.templateDesc")}</p>
                         </div>
                         <button
                             onClick={handleDownloadTemplate}
                             className="flex items-center gap-2 px-4 py-2 bg-white border border-purple-200 rounded-xl hover:bg-purple-50 transition-colors"
                         >
                             <Download className="w-4 h-4" />
-                            <span className="font-medium">Télécharger</span>
+                            <span className="font-medium">{t("common.import.download")}</span>
                         </button>
                     </div>
 
@@ -142,11 +146,11 @@ export default function CSVImportModal<T>({
                     >
                         <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400" />
                         <p className="text-gray-700 font-medium mb-2">
-                            Glissez-déposez votre fichier CSV ici
+                            {t("common.import.dropFile")}
                         </p>
-                        <p className="text-sm text-gray-500 mb-4">ou</p>
+                        <p className="text-sm text-gray-500 mb-4">{t("common.import.or")}</p>
                         <label className="cursor-pointer inline-block px-6 py-3 bg-gradient-to-r from-[#8B5CF6] to-[#D946EF] text-white rounded-xl font-bold hover:scale-[1.02] transition-transform">
-                            Parcourir les fichiers
+                            {t("common.import.browse")}
                             <input
                                 type="file"
                                 accept=".csv"
@@ -156,7 +160,7 @@ export default function CSVImportModal<T>({
                         </label>
                         {file && (
                             <p className="mt-4 text-sm text-gray-600">
-                                Fichier sélectionné: <span className="font-bold">{file.name}</span>
+                                {t("common.import.selectedFile")}: <span className="font-bold">{file.name}</span>
                             </p>
                         )}
                     </div>
@@ -165,7 +169,7 @@ export default function CSVImportModal<T>({
                     {isProcessing && (
                         <div className="text-center py-4">
                             <div className="animate-spin rounded-full h-8 w-8 border-4 border-purple-500 border-t-transparent mx-auto mb-2"></div>
-                            <p className="text-gray-600">Traitement du fichier...</p>
+                            <p className="text-gray-600">{t("common.import.processing")}</p>
                         </div>
                     )}
 
@@ -178,9 +182,9 @@ export default function CSVImportModal<T>({
                                     <CheckCircle2 className="w-5 h-5 text-green-600" />
                                     <div>
                                         <p className="font-bold text-green-900">
-                                            {result.validCount} élément(s) valide(s)
+                                            {t("common.import.validCount", { count: result.validCount })}
                                         </p>
-                                        <p className="text-sm text-green-700">Prêt à importer</p>
+                                        <p className="text-sm text-green-700">{t("common.import.readyToImport")}</p>
                                     </div>
                                 </div>
                             )}
@@ -192,10 +196,10 @@ export default function CSVImportModal<T>({
                                         <AlertCircle className="w-5 h-5 text-red-600" />
                                         <div>
                                             <p className="font-bold text-red-900">
-                                                {result.errorCount} erreur(s) trouvée(s)
+                                                {t("common.import.errorCount", { count: result.errorCount })}
                                             </p>
                                             <p className="text-sm text-red-700">
-                                                Ces lignes seront ignorées
+                                                {t("common.import.ignoredLines")}
                                             </p>
                                         </div>
                                     </div>
@@ -205,7 +209,7 @@ export default function CSVImportModal<T>({
                                                 key={index}
                                                 className="text-sm p-2 bg-red-50 rounded-lg border border-red-100"
                                             >
-                                                <span className="font-bold text-red-900">Ligne {error.row}:</span>{' '}
+                                                <span className="font-bold text-red-900">{t("common.import.line")} {error.row}:</span>{' '}
                                                 <span className="text-red-700">{error.error}</span>
                                             </div>
                                         ))}
@@ -222,17 +226,17 @@ export default function CSVImportModal<T>({
                         onClick={handleClose}
                         className="flex-1 py-3 px-6 border-2 border-gray-200 rounded-xl font-bold text-gray-700 hover:bg-gray-50 transition-colors"
                     >
-                        Annuler
+                        {t("common.cancel")}
                     </button>
                     <button
                         onClick={handleImport}
                         disabled={!result || result.validCount === 0}
                         className={`flex-1 py-3 px-6 rounded-xl font-bold transition-all ${result && result.validCount > 0
-                                ? 'bg-gradient-to-r from-[#8B5CF6] to-[#D946EF] text-white hover:scale-[1.02] shadow-lg'
-                                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            ? 'bg-gradient-to-r from-[#8B5CF6] to-[#D946EF] text-white hover:scale-[1.02] shadow-lg'
+                            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                             }`}
                     >
-                        Importer {result && result.validCount > 0 ? `(${result.validCount})` : ''}
+                        {t("common.import.importCount", { count: result ? result.validCount : 0 })}
                     </button>
                 </div>
             </div>

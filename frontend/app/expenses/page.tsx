@@ -14,6 +14,9 @@ import { useAuth, UserRole } from "@/context/AuthProvider";
 import { canPerformExpenseAction } from "@/lib/permissions";
 import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 import { expenseService } from "@/lib/services";
+import { useToast } from "@/context/ToastProvider";
+import { useConfirm } from "@/context/ConfirmProvider";
+import { useTranslation } from "@/i18n";
 
 // Export columns configuration
 const expenseExportColumns: ExportColumn[] = [
@@ -29,7 +32,8 @@ export default function ExpensesPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedCategory, setSelectedCategory] = useState("All Categories");
     const { getCardStyle } = useKpiCardStyle();
-    const { user } = useAuth();
+    const { user, activeSalonId } = useAuth();
+    const { t } = useTranslation();
 
     const canAdd = canPerformExpenseAction("add", user?.role as UserRole);
     const canEdit = canPerformExpenseAction("edit", user?.role as UserRole);
@@ -40,10 +44,12 @@ export default function ExpensesPage() {
     const [loading, setLoading] = useState(true);
 
     const fetchData = async () => {
+        if (!activeSalonId) return;
         try {
+            const sid = Number(activeSalonId);
             const [fetchedExpenses, fetchedCategories] = await Promise.all([
-                expenseService.getAll(1), // Default salonId
-                expenseService.getCategories(1)
+                expenseService.getAll(sid),
+                expenseService.getCategories(sid)
             ]);
             setExpenses(fetchedExpenses);
             // Ensure derived category data works - service returns categories, we calculate totals below
@@ -57,7 +63,7 @@ export default function ExpensesPage() {
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [activeSalonId]);
 
     // Compute category data with totals
     const categoriesWithTotals = useMemo(() => {
@@ -97,23 +103,45 @@ export default function ExpensesPage() {
         [categoriesWithTotals]
     );
 
+    const { showToast } = useToast();
+    const { confirm } = useConfirm();
+
     const handleExportCSV = () => {
-        exportToCSV(recentExpenses, expenseExportColumns, "expenses");
+        try {
+            exportToCSV(recentExpenses, expenseExportColumns, "expenses");
+            showToast(t("common.exportSuccess"), t("common.success"), "success");
+        } catch (err) {
+            showToast(t("common.exportFailed"), err instanceof Error ? err.message : t("common.error"), "error");
+        }
     };
 
     const handleExportPDF = () => {
-        exportToPDF(recentExpenses, expenseExportColumns, "Expenses Report", "expenses");
+        try {
+            exportToPDF(recentExpenses, expenseExportColumns, "Expenses Report", "expenses");
+            // PDF export opens print window, success toast might be premature but acceptable.
+        } catch (err) {
+            showToast(t("common.exportFailed"), err instanceof Error ? err.message : t("common.error"), "error");
+        }
     };
 
     const handleDelete = async (id: number) => {
-        if (confirm("Are you sure you want to delete this expense?")) {
+        const confirmed = await confirm({
+            title: t("common.delete"),
+            message: t("common.confirmDeleteMessage"),
+            type: "error",
+            confirmText: t("common.delete"),
+            cancelText: t("common.cancel")
+        });
+
+        if (confirmed) {
             try {
                 await expenseService.delete(id);
+                showToast(t("common.success"), t("common.deleteSuccess"), "success");
                 // Refresh data
                 fetchData();
             } catch (error) {
                 console.error("Failed to delete expense", error);
-                alert("Failed to delete expense");
+                showToast(t("common.error"), t("common.deleteError"), "error");
             }
         }
     };

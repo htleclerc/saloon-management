@@ -92,13 +92,32 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                 const data = await workerService.getById(Number(id));
                 if (data) {
                     const names = data.name.split(' ');
-                    setFirstName(names[0] || "");
-                    setLastName(names.slice(1).join(' ') || "");
+                    setFirstName(data.firstName || names[0] || "");
+                    setLastName(data.lastName || names.slice(1).join(' ') || "");
                     setEmail(data.email || "");
                     setPhone(data.phone || "");
+                    setAddress(data.address || "");
+                    setCity(data.city || "");
+                    setZipCode(data.postalCode || "");
+                    setBirthDate(data.birthDate || "");
+                    setGender(data.gender || "female");
+
+                    setRole(data.employeeRole || "Team Member");
+                    setEmployeeType(data.contractType || "full-time");
+                    setStartDate(data.hireDate || "");
+                    setContractEndDate(data.contractEndDate || "");
                     setSharingKey(data.sharingKey);
+                    setBaseSalary(data.baseSalary?.toString() || "");
                     setStatus(data.status as string);
-                    // Other fields not in SalonWorker type are skipped for now or would need extended type
+
+                    if (data.specialties) {
+                        setSpecialties(data.specialties.join(", "));
+                    }
+                    setExperienceLevel(data.experienceLevel || "expert");
+
+                    if (data.weeklySchedule) {
+                        setSchedule(data.weeklySchedule);
+                    }
                 }
             } catch (e) {
                 console.error("Worker not found");
@@ -149,11 +168,25 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
         try {
             await updateWorker(Number(id), {
                 name: `${firstName} ${lastName}`.trim(),
+                firstName,
+                lastName,
                 email: email || undefined,
                 phone: phone || undefined,
+                address,
+                city,
+                postalCode: zipCode,
+                birthDate: birthDate || undefined,
+                gender,
+                employeeRole: role,
+                contractType: employeeType,
+                hireDate: startDate || undefined,
+                contractEndDate: contractEndDate || undefined,
+                baseSalary: baseSalary ? parseFloat(baseSalary) : undefined,
                 sharingKey,
                 status: status as WorkerStatus,
-                // Add other fields as supported by backend
+                experienceLevel,
+                specialties: specialties.split(",").map(s => s.trim()).filter(s => s !== ""),
+                weeklySchedule: schedule
             });
             router.push(`/team`);
         } catch (error) {
@@ -232,7 +265,7 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
-                        placeholder="email@example.com"
+                        placeholder={t("team.email")}
                     />
                 </div>
                 <div>
@@ -244,7 +277,7 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
-                        placeholder="+33 6 12 34 56 78"
+                        placeholder={t("team.phone")}
                     />
                 </div>
                 <div className="md:col-span-2">
@@ -254,7 +287,7 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                         value={address}
                         onChange={(e) => setAddress(e.target.value)}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
-                        placeholder="123 Rue de Paris"
+                        placeholder={t("team.address")}
                     />
                 </div>
                 <div>
@@ -264,7 +297,7 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                         value={city}
                         onChange={(e) => setCity(e.target.value)}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
-                        placeholder="Paris"
+                        placeholder={t("team.city")}
                     />
                 </div>
                 <div>
@@ -274,7 +307,7 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                         value={zipCode}
                         onChange={(e) => setZipCode(e.target.value)}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
-                        placeholder="75001"
+                        placeholder={t("team.zipCode")}
                     />
                 </div>
                 <div>
@@ -322,9 +355,9 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                         onChange={(e) => setRole(e.target.value)}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] text-sm"
                     >
-                        <option value="Team Member">{t("team.roleMember")}</option>
-                        <option value="Manager">{t("team.roleManager")}</option>
-                        <option value="Admin">{t("team.roleAdmin")}</option>
+                        <option value="Team Member">{t("team.roles.member")}</option>
+                        <option value="Manager">{t("team.roles.manager")}</option>
+                        <option value="Admin">{t("team.roles.admin")}</option>
                     </select>
                 </div>
                 <div>
@@ -560,8 +593,8 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                         <Briefcase className="w-4 h-4" /> {t("team.employment")}
                     </h4>
                     <p className="text-sm text-white opacity-80">
-                        {role} • {employeeType === "full-time" ? "Full-time" : employeeType === "part-time" ? "Part-time" : "Freelance"} •
-                        Sharing: {sharingKey}% • Status: {status}
+                        {role === "Team Member" ? t("team.roles.member") : role === "Manager" ? t("team.roles.manager") : t("team.roles.admin")} • {t(`team.contracts.${employeeType === "full-time" ? "fullTime" : employeeType === "part-time" ? "partTime" : "freelance"}`)} •
+                        {t("team.sharing")}: {sharingKey}% • {t("common.status")}: {status === "Active" ? t("team.statusActive") : status === "Inactive" ? t("team.statusInactive") : t("team.statusOnLeave")}
                     </p>
                 </div>
 
@@ -571,7 +604,7 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                         <Scissors className="w-4 h-4" /> {t("team.services")}
                     </h4>
                     <p className="text-sm text-white opacity-80">
-                        {selectedServices.length} service(s) assigned • Level: {experienceLevel}
+                        {t("team.serviceCountAssigned", { count: selectedServices.length })} • {t("team.level")}: {experienceLevel === "expert" ? t("team.expExpert") : experienceLevel === "intermediate" ? t("team.expIntermediate") : t("team.expBeginner")}
                     </p>
                 </div>
 
@@ -581,7 +614,7 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                         <Calendar className="w-4 h-4" /> {t("team.schedule")}
                     </h4>
                     <p className="text-sm text-white opacity-80">
-                        {Object.values(schedule).filter((s) => s.active).length} working day(s) per week
+                        {t("team.workingDaysPerWeek", { count: Object.values(schedule).filter((s) => s.active).length })}
                     </p>
                 </div>
             </div>
@@ -606,7 +639,7 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
         >
             {/* Mobile Step Indicator - Only visible on mobile */}
             <div className="md:hidden mb-4 p-4 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-dark)] rounded-xl text-white shadow-lg">
-                <div className="text-sm font-medium opacity-90">Step {currentStep} of 5</div>
+                <div className="text-sm font-medium opacity-90">{t("common.pageOf", { current: currentStep, total: 5 })}</div>
                 <div className="text-lg font-bold mt-1">{steps[currentStep - 1].name}</div>
                 <div className="text-xs opacity-75 mt-1">{steps[currentStep - 1].description}</div>
             </div>
@@ -678,7 +711,7 @@ export default function EditAdvancedTeamMemberPage({ params }: { params: Promise
                 {currentStep < 5 && (
                     <Button variant="secondary" size="md" onClick={handleSubmit} className="w-full md:w-auto text-[var(--color-primary)] bg-[var(--color-primary-light)] hover:opacity-80 border-[var(--color-primary-light)]">
                         <Save className="w-4 h-4" />
-                        {t("common.saveChanges")}
+                        {t("common.save")}
                     </Button>
                 )}
 

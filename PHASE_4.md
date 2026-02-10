@@ -12,11 +12,11 @@ Implémenter le provider Supabase pour mode démo cloud avec cleanup automatique
 
 ## 📦 Livrables
 
-- [ ] Projet Supabase configuré
-- [ ] Schéma SQL + RLS policies
-- [ ] `frontend/lib/providers/supabase.provider.ts`
-- [ ] Script cleanup automatique
-- [ ] Tests CRUD Supabase
+- [x] Projet Supabase configuré
+- [x] Schéma SQL + RLS policies
+- [x] `frontend/lib/providers/supabase/SupabaseProvider.ts`
+- [x] Script cleanup automatique
+- [x] Tests CRUD Supabase
 
 ---
 

@@ -10,6 +10,7 @@ import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGua
 import { useAuth } from "@/context/AuthProvider";
 import { useWorkers } from "@/hooks/useServices";
 import { useTranslation } from "@/i18n";
+import { useToast } from "@/context/ToastProvider";
 
 export default function AddTeamMemberPage() {
     const router = useRouter();
@@ -17,6 +18,7 @@ export default function AddTeamMemberPage() {
     const { canModify } = useAuth();
     const { handleReadOnlyClick } = useReadOnlyGuard();
     const { createWorker, loading, error } = useWorkers();
+    const { showToast } = useToast();
     const [formData, setFormData] = useState({
         firstName: "",
         lastName: "",
@@ -41,19 +43,30 @@ export default function AddTeamMemberPage() {
             // Create worker using the service
             await createWorker({
                 name: `${formData.firstName} ${formData.lastName}`.trim(),
+                firstName: formData.firstName,
+                lastName: formData.lastName,
                 email: formData.email || undefined,
                 phone: formData.phone || undefined,
                 sharingKey: formData.sharingKey,
+                employeeRole: formData.role, // Mapping role to employeeRole
                 status: formData.status,
+                address: formData.address,
+                city: formData.city,
+                postalCode: formData.zipCode,
+                baseSalary: formData.salary ? parseFloat(formData.salary) : undefined,
+                bio: formData.notes,
                 avatarUrl: '',
-                color: '#8B5CF6'
+                color: '#8B5CF6',
+                isActive: true
             });
 
             // Success - redirect to team page
+            showToast(t("common.success"), t("dialogs.success"), "success");
             router.push("/team");
         } catch (err) {
             // Error is already captured by the hook
             console.error('Failed to create worker:', err);
+            showToast(t("common.error"), t("errors.generic"), "error");
         }
     };
 

@@ -82,13 +82,17 @@ export class BookingService extends BaseService {
         });
 
         // Add workers
+        booking.workerIds = [];
         for (const workerId of data.workerIds) {
             await this.provider.addWorkerToBooking(booking.id, workerId);
+            booking.workerIds.push(workerId);
         }
 
         // Add services
+        booking.serviceIds = [];
         for (const serviceId of data.serviceIds) {
             await this.provider.addServiceToBooking(booking.id, serviceId);
+            booking.serviceIds.push(serviceId);
         }
 
         // Log action

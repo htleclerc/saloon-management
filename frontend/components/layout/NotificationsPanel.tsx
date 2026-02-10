@@ -4,21 +4,7 @@ import { Check, X, AlertCircle, CheckCircle, Info, Calendar, Clock, Eye } from "
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 
-export type NotificationType = 'info' | 'warning' | 'success' | 'validation' | 'booking';
-
-export interface Notification {
-    id: string;
-    type: NotificationType;
-    title: string;
-    message: string;
-    timestamp: Date;
-    isRead: boolean;
-    actions?: {
-        onApprove?: () => void;
-        onReject?: () => void;
-        onView?: () => void;
-    };
-}
+import { Notification, NotificationType } from "@/types";
 
 interface NotificationsPanelProps {
     notifications: Notification[];

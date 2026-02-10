@@ -16,26 +16,26 @@ Implémenter le provider localStorage et rendre fonctionnel le mode démo local 
 - ✅ Phase 1 : Architecture providers (types, factory, context, services)
 
 ### À Vérifier
-- [ ] `DataModeProvider` fonctionne
-- [ ] Services (WorkerService, ClientService) existent
-- [ ] Tests Phase 1 passent
+- [x] `DataModeProvider` fonctionne
+- [x] Services (WorkerService, ClientService) existent
+- [x] Tests Phase 1 passent
 
 ---
 
 ## 📦 Livrables de cette Phase
 
 ### 1. LocalStorage Provider
-- [ ] `frontend/lib/providers/local.provider.ts` - Implémentation complète
+- [x] `frontend/lib/providers/local/LocalStorageProvider.ts` - Implémentation complète
 
 ### 2. Mock Data
-- [ ] `frontend/lib/mock/data.ts` - Données de démo centralisées
+- [x] `frontend/lib/constants/initialData.ts` - Données de démo centralisées (utilisé à la place de mock/data.ts)
 
 ### 3. UI Mode Switcher
-- [ ] `frontend/components/ModeSwitcher.tsx` - Composant pour changer de mode
+- [x] `frontend/components/ModeSwitcher.tsx` - Composant pour changer de mode
 
 ### 4. Intégration
-- [ ] Migrer pages existantes vers les services
-- [ ] Tester CRUD complet en mode local
+- [x] Migrer pages existantes vers les services (Team Page & Edit Team Page)
+- [x] Tester CRUD complet en mode local
 
 ---
 
@@ -387,15 +387,15 @@ export default function TeamPage() {
 
 ## 🎯 Checklist de Fin de Phase
 
-- [ ] LocalStorageProvider implémenté
-- [ ] Mock data créées
-- [ ] ModeSwitcher fonctionnel
-- [ ] Au moins 1 page (team) migrée
-- [ ] Tests manuels CRUD OK
-- [ ] TypeScript strict OK
-- [ ] Commit Phase 2
+- [x] LocalStorageProvider implémenté
+- [x] Mock data créées
+- [x] ModeSwitcher fonctionnel
+- [x] Au moins 1 page (team) migrée
+- [x] Tests manuels CRUD OK
+- [x] TypeScript strict OK
+- [x] Commit Phase 2
 - [ ] **Mettre à jour CONTEXT.md**
-- [ ] **Mettre à jour task.md**
+- [x] **Mettre à jour task.md**
 
 ---
 

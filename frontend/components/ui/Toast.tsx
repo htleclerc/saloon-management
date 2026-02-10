@@ -61,8 +61,8 @@ export default function Toast({ message, type, onClose }: ToastProps) {
     return (
         <div
             className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl border shadow-lg backdrop-blur-md transition-all duration-300 transform ${isVisible
-                    ? 'translate-y-0 opacity-100 scale-100'
-                    : 'translate-y-2 opacity-0 scale-95'
+                ? 'translate-y-0 opacity-100 scale-100'
+                : '-translate-y-2 opacity-0 scale-95'
                 }`}
             style={{
                 backgroundColor: 'rgba(255, 255, 255, 0.8)', // Semi-transparent white for glass effect
@@ -107,6 +107,6 @@ export default function Toast({ message, type, onClose }: ToastProps) {
                     to { width: 0%; }
                 }
             `}</style>
-        </div>
+        </div >
     );
 }

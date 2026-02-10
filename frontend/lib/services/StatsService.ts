@@ -6,6 +6,7 @@
 
 import { BaseService } from './BaseService';
 import type { WorkerStats, SalonStats, ClientStats, DashboardAnalytics, Booking, Income, Expense, ExpenseCategory, Review, IncomeWorkerShare } from '@/types';
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subDays, subMonths, subWeeks, subYears } from 'date-fns';
 
 export class StatsService extends BaseService {
     /**
@@ -149,23 +150,45 @@ export class StatsService extends BaseService {
 
     /**
      * Get popular services
+     * Refactored to use Incomes for better performance and alignment with revenue
      */
     async getPopularServices(salonId: number, limit: number = 5): Promise<Array<{ serviceId: number; serviceName: string; count: number }>> {
-        const bookings = await this.provider.getBookings(salonId, {});
-        const serviceCounts = new Map<number, { name: string; count: number }>();
+        const incomesResponse = await this.provider.getIncomes(salonId, {
+            status: 'Validated',
+            limit: 1000 // Reasonable sample size for popularity
+        });
 
-        for (const booking of bookings.data) {
-            const services = await this.provider.getBookingServices(booking.id);
-            for (const service of services) {
-                const current = serviceCounts.get(service.id) || { name: service.name, count: 0 };
-                serviceCounts.set(service.id, { name: current.name, count: current.count + 1 });
+        const serviceCounts = new Map<string, { id: number; count: number }>();
+
+        for (const income of incomesResponse.data) {
+            const serviceIds = income.serviceIds || [];
+            const serviceNames = income.serviceNames || [];
+
+            for (let i = 0; i < serviceNames.length; i++) {
+                const name = serviceNames[i];
+                const id = serviceIds[i] || 0;
+
+                const current = serviceCounts.get(name) || { id, count: 0 };
+                serviceCounts.set(name, { id: current.id || id, count: current.count + 1 });
+            }
+        }
+
+        // Fallback to Finished bookings if no validated incomes found (e.g. new salon or strictly booking-based)
+        if (serviceCounts.size === 0) {
+            const bookings = await this.provider.getBookings(salonId, { status: 'Finished', limit: 100 });
+            for (const booking of bookings.data) {
+                const services = await this.provider.getBookingServices(booking.id);
+                for (const service of services) {
+                    const current = serviceCounts.get(service.name) || { id: service.id, count: 0 };
+                    serviceCounts.set(service.name, { id: current.id, count: current.count + 1 });
+                }
             }
         }
 
         return Array.from(serviceCounts.entries())
-            .map(([serviceId, data]) => ({
-                serviceId,
-                serviceName: data.name,
+            .map(([name, data]) => ({
+                serviceId: data.id,
+                serviceName: name,
                 count: data.count
             }))
             .sort((a, b) => b.count - a.count)
@@ -295,41 +318,123 @@ export class StatsService extends BaseService {
 
     /**
      * Get services by revenue for a specific worker or salon
+     * Refactored to use Incomes for better accuracy and performance
      */
     async getServicesByRevenue(salonId: number, workerId?: number, limit: number = 5) {
-        const bookings = await this.provider.getBookings(salonId, { workerId, status: 'Finished' });
-        const serviceStats = new Map<string, { count: number; income: number; lastPerformed: Date }>();
-        let totalIncome = 0;
+        // Fetch incomes (Validated/Pending) and Confirmed bookings for potential revenue
+        const [incomesResponse, bookingsResponse] = await Promise.all([
+            this.provider.getIncomes(salonId, {
+                workerId,
+                limit: 500
+            }),
+            this.provider.getBookings(salonId, {
+                workerId,
+                status: 'Confirmed',
+                limit: 100
+            })
+        ]);
 
-        for (const booking of bookings.data) {
-            const bookingDate = new Date(booking.date + ' ' + booking.time);
-            const services = await this.provider.getBookingServices(booking.id);
+        const serviceStats = new Map<string, { count: number; income: number; potentialIncome: number; lastPerformed: Date }>();
+        let totalRevenue = 0;
+        let totalPotential = 0;
 
-            for (const service of services) {
-                const current = serviceStats.get(service.name) || { count: 0, income: 0, lastPerformed: new Date(0) };
+        // 1. Process Incomes (Source of truth for actual and pending money)
+        for (const income of incomesResponse.data) {
+            const incomeDate = new Date(income.date);
+            const services = income.serviceNames || [];
+            if (services.length === 0) continue;
 
-                // Update last performed if this booking is more recent
-                const lastPerformed = bookingDate > current.lastPerformed ? bookingDate : current.lastPerformed;
+            const amountPerService = income.amount / services.length;
+            const isActual = income.status === 'Validated' || income.status === 'Closed';
 
-                serviceStats.set(service.name, {
-                    count: current.count + 1,
-                    income: current.income + service.price,
-                    lastPerformed
-                });
-                totalIncome += service.price;
+            for (const serviceName of services) {
+                const current = serviceStats.get(serviceName) || {
+                    count: 0,
+                    income: 0,
+                    potentialIncome: 0,
+                    lastPerformed: new Date(0)
+                };
+
+                const lastPerformed = incomeDate > current.lastPerformed ? incomeDate : current.lastPerformed;
+
+                if (isActual) {
+                    current.income += amountPerService;
+                    totalRevenue += amountPerService;
+                } else {
+                    current.potentialIncome += amountPerService;
+                    totalPotential += amountPerService;
+                }
+
+                current.count += 1;
+                current.lastPerformed = lastPerformed;
+                serviceStats.set(serviceName, current);
+            }
+        }
+
+        // 2. Process Confirmed Bookings (Pure potential revenue not yet in Income)
+        // Note: In a real system, some Confirmed bookings might already have Pending incomes.
+        // To simplify, we'll only count Bookings that don't look like they have an incomeId yet.
+        const potentialBookings = bookingsResponse.data.filter((b: Booking) => !b.incomeId);
+
+        for (const booking of potentialBookings) {
+            const bookingDate = new Date(booking.date + ' ' + (booking.time || '00:00'));
+            // Fetching services for each booking is expensive (N+1), but here bookingsResponse.data
+            // doesn't have names. However, our provider.getBookings usually includes clientName
+            // but not serviceNames.
+            // Actually, let's try to get services if count is small.
+            if (potentialBookings.length < 20) {
+                const services = await this.provider.getBookingServices(booking.id);
+                for (const service of services) {
+                    const current = serviceStats.get(service.name) || {
+                        count: 0,
+                        income: 0,
+                        potentialIncome: 0,
+                        lastPerformed: new Date(0)
+                    };
+
+                    current.potentialIncome += service.price;
+                    current.count += 1;
+                    totalPotential += service.price;
+                    if (bookingDate > current.lastPerformed) current.lastPerformed = bookingDate;
+                    serviceStats.set(service.name, current);
+                }
+            }
+        }
+
+        // 3. Fallback to Finished bookings if no stats gathered yet
+        if (serviceStats.size === 0) {
+            const finishedBookings = await this.provider.getBookings(salonId, { workerId, status: 'Finished', limit: 100 });
+            for (const booking of finishedBookings.data) {
+                const bookingDate = new Date(booking.date + ' ' + (booking.time || '00:00'));
+                const services = await this.provider.getBookingServices(booking.id);
+
+                for (const service of services) {
+                    const current = serviceStats.get(service.name) || { count: 0, income: 0, potentialIncome: 0, lastPerformed: new Date(0) };
+                    if (bookingDate > current.lastPerformed) current.lastPerformed = bookingDate;
+
+                    current.count += 1;
+                    current.income += service.price;
+                    totalRevenue += service.price;
+                    serviceStats.set(service.name, current);
+                }
             }
         }
 
         return Array.from(serviceStats.entries())
-            .map(([name, stats]) => ({
-                name,
-                service: name, // For compatibility
-                count: stats.count,
-                income: stats.income,
-                percentage: totalIncome > 0 ? Math.round((stats.income / totalIncome) * 100) : 0,
-                lastPerformed: stats.lastPerformed // Date object
-            }))
-            .sort((a, b) => b.income - a.income)
+            .map(([name, stats]) => {
+                const total = stats.income + stats.potentialIncome;
+                return {
+                    name,
+                    service: name,
+                    count: stats.count,
+                    income: Math.round(stats.income),
+                    potentialIncome: Math.round(stats.potentialIncome),
+                    totalIncome: Math.round(total),
+                    percentage: totalRevenue > 0 ? Math.round((stats.income / totalRevenue) * 100) : 0,
+                    lastPerformed: stats.lastPerformed
+                };
+            })
+            .sort((a, b) => b.totalIncome - a.totalIncome)
             .slice(0, limit);
     }
 
@@ -411,26 +516,70 @@ export class StatsService extends BaseService {
             this.provider.getIncomes(salonId, { workerId, limit: limit * 2 })
         ]);
 
-        const activities = [
+        // Combine raw items first to sort and slice
+        const combined = [
             ...bookings.data.map((b: Booking) => ({
-                id: `b-${b.id}`,
                 type: 'booking',
-                action: `${b.status} booking for ${b.clientName || 'Client'}`,
-                time: new Date(b.updatedAt),
-                original: b
+                data: b as Booking,
+                time: new Date(b.updatedAt)
             })),
             ...incomes.data.map((i: Income) => ({
-                id: `i-${i.id}`,
                 type: 'payment',
-                action: `Received payment ${i.finalAmount}`,
-                time: new Date(i.updatedAt),
-                original: i
+                data: i as Income,
+                time: new Date(i.updatedAt)
             }))
-        ];
-
-        return activities
-            .sort((a, b) => b.time.getTime() - a.time.getTime())
+        ].sort((a, b) => b.time.getTime() - a.time.getTime())
             .slice(0, limit);
+
+        // Process final items with pre-joined data or fallback
+        const activities = await Promise.all(combined.map(async (item) => {
+            if (item.type === 'booking') {
+                const b = item.data as Booking;
+                return {
+                    id: `b-${b.id}`,
+                    type: 'booking',
+                    metadata: {
+                        status: b.status,
+                        client: b.clientName || 'Client'
+                    },
+                    time: item.time,
+                    original: b
+                };
+            } else {
+                const i = item.data as Income;
+                let receivedAmount = 0;
+
+                // Optimization: Use pre-joined workerShares
+                const workerShare = i.workerShares?.find((s: any) => s.workerId === workerId);
+
+                if (workerShare) {
+                    receivedAmount = (workerShare.amount || 0) + (workerShare.tips || 0);
+                } else {
+                    // Fallback to separate fetch if not joined
+                    try {
+                        const shares = await this.provider.getIncomeWorkerShares(i.id);
+                        const share = shares.find((s: IncomeWorkerShare) => s.workerId === workerId);
+                        if (share) {
+                            receivedAmount = (share.amount || 0) + (share.tips || 0);
+                        }
+                    } catch (err) {
+                        console.error(`Failed to fetch shares for income ${i.id}`, err);
+                    }
+                }
+
+                return {
+                    id: `i-${i.id}`,
+                    type: 'payment',
+                    metadata: {
+                        amount: Math.round(receivedAmount)
+                    },
+                    time: item.time,
+                    original: i
+                };
+            }
+        }));
+
+        return activities;
     }
 
     /**
@@ -460,6 +609,7 @@ export class StatsService extends BaseService {
 
         return reviews
             .sort((a: Review, b: Review) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+            .slice(0, limit)
             .map((r: Review) => ({
                 id: r.id,
                 client: "Client " + (r.clientId || "?"),
@@ -476,20 +626,62 @@ export class StatsService extends BaseService {
      * Get team schedule stats (weekly availability and appointments)
      */
     async getTeamScheduleStats(salonId: number) {
-        // In a real app, this would query bookings grouped by worker and date
         const workers = await this.getAllWorkersStats(salonId);
         const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+        const today = new Date();
+
+        // Get start of week (Monday)
+        const startOfWeek = new Date(today);
+        const day = startOfWeek.getDay() || 7; // Get current day number, converting Sun (0) to 7
+        if (day !== 1) startOfWeek.setHours(-24 * (day - 1));
+        else startOfWeek.setHours(0, 0, 0, 0);
+
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(endOfWeek.getDate() + 6);
+        endOfWeek.setHours(23, 59, 59, 999);
+
+        // Fetch all bookings for this week
+        const bookings = await this.provider.getBookings(salonId, {
+            startDate: startOfWeek.toISOString().split('T')[0],
+            endDate: endOfWeek.toISOString().split('T')[0]
+        });
 
         const scheduleStats: Record<string, Record<string, { available: boolean; appointments: number }>> = {};
 
         for (const worker of workers) {
             scheduleStats[worker.name] = {};
-            for (const day of days) {
-                // Mock logic: 60% chance available, 0-5 appointments
-                const available = day !== 'Sun'; // Closed Sundays
-                scheduleStats[worker.name][day] = {
-                    available,
-                    appointments: available ? Math.floor(Math.random() * 5) : 0
+
+            // Get worker details for schedule
+            const workerDetails = await this.provider.getWorker(worker.workerId);
+            const weeklySchedule = workerDetails?.weeklySchedule || {};
+
+            for (let i = 0; i < days.length; i++) {
+                const dayName = days[i];
+
+                // Determine availability from worker schedule
+                let isAvailable = false;
+                if (weeklySchedule[dayName]) {
+                    isAvailable = weeklySchedule[dayName].active;
+                } else {
+                    // Default fallback if no schedule set: Mon-Fri 9-5
+                    isAvailable = i < 5;
+                }
+
+                // Count bookings for this worker on this day
+                // Calculate date for this day of week
+                const currentDayDate = new Date(startOfWeek);
+                currentDayDate.setDate(startOfWeek.getDate() + i);
+                const dateStr = currentDayDate.toISOString().split('T')[0];
+
+                const dayBookings = bookings.data.filter((b: Booking) => {
+                    // Check if worker is assigned
+                    const hasWorker = b.workerIds?.includes(worker.workerId);
+                    return b.date === dateStr && hasWorker && b.status !== 'Cancelled';
+                });
+
+                scheduleStats[worker.name][dayName] = {
+                    available: isAvailable,
+                    appointments: dayBookings.length
                 };
             }
         }
@@ -500,30 +692,29 @@ export class StatsService extends BaseService {
      * Get payroll stats for the current month
      */
     async getPayrollStats(salonId: number) {
-        const workers = await this.getAllWorkersStats(salonId);
+        const workers = await this.provider.getWorkers(salonId);
 
-        // Get default commission rate from settings
-        const settings = await this.provider.getSalonSettings(salonId);
-        const defaultSharePct = settings?.defaultWorkerSharePct || 40;
+        return Promise.all(workers.map(async (w: any) => {
+            const stats = await this.provider.getWorkerStats(w.id);
 
-        return workers.map(w => {
-            // Commission based on actual month revenue and worker share
-            const commissions = Math.round(w.monthRevenue * (defaultSharePct / 100));
-            // Tips estimation (would need separate tips tracking)
-            const tips = Math.round(w.monthRevenue * 0.05);
-            // Base salary (mock - would need worker contract data)
-            const baseSalary = 1500;
+            // Commission from explicit worker shares
+            const commissions = Math.round(stats?.monthCommission || 0);
+            // Actual tips stored in the database
+            const tips = Math.round(stats?.monthTips || 0);
+            // Base salary from worker profile
+            const baseSalary = w.baseSalary || 0;
 
             return {
-                id: w.workerId,
+                id: w.id,
+                userId: w.userId,
                 name: w.name,
                 baseSalary,
                 commission: commissions,
                 tips,
                 total: baseSalary + commissions + tips,
-                status: w.monthRevenue > 0 ? "pending" : "pending"
+                status: (stats?.monthRevenue || 0) > 0 ? "pending" : "pending"
             };
-        });
+        }));
     }
 
     /**
@@ -548,12 +739,18 @@ export class StatsService extends BaseService {
             targetDate.setDate(startDate.getDate() + index);
             const dateStr = targetDate.toISOString().split('T')[0];
 
-            const dayIncomes = validIncomes.filter((i: Income) => i.date === dateStr);
-            const totalIncome = dayIncomes.reduce((sum: number, i: Income) => sum + i.finalAmount, 0);
+            const dayIncomes = incomes.filter((i: Income) => i.date === dateStr);
+            const actualIncome = dayIncomes
+                .filter((i: Income) => i.status === 'Validated' || i.status === 'Closed')
+                .reduce((sum: number, i: Income) => sum + i.finalAmount, 0);
+            const potentialIncome = dayIncomes
+                .filter((i: Income) => i.status === 'Pending')
+                .reduce((sum: number, i: Income) => sum + i.finalAmount, 0);
 
             return {
                 day,
-                income: Math.round(totalIncome),
+                income: Math.round(actualIncome),
+                potentialIncome: Math.round(potentialIncome),
                 services: dayIncomes.length
             };
         });
@@ -603,20 +800,67 @@ export class StatsService extends BaseService {
         let productsTotal = 0;
 
         for (const income of validIncomes) {
-            const shares = await this.provider.getIncomeWorkerShares(income.id);
-            const workerShare = shares.find((s: IncomeWorkerShare) => s.workerId === workerId);
+            // Optimization: Use pre-joined workerShares
+            const workerShare = income.workerShares?.find((s: any) => s.workerId === workerId);
+
             if (workerShare) {
                 commissionTotal += workerShare.amount;
+                tipsTotal += workerShare.tips || 0;
+            } else {
+                // Fallback to separate fetch if not joined
+                const shares = await this.provider.getIncomeWorkerShares(income.id);
+                const share = shares.find((s: IncomeWorkerShare) => s.workerId === workerId);
+                if (share) {
+                    commissionTotal += share.amount;
+                    tipsTotal += share.tips || 0;
+                }
             }
-            // Tips and products would need separate tracking in a real system
-            // For now, estimating based on income metadata if available
+
+            // Calculate products sold by this worker (if tracked in income)
+            // Simplified: 0 for now until product sales are tracked per worker
+            productsTotal += 0;
         }
 
         return [
             { name: 'Commission', value: Math.round(commissionTotal), color: 'var(--color-primary)' },
-            { name: 'Tips', value: Math.round(commissionTotal * 0.15), color: 'var(--color-success)' }, // Estimate 15% tips
-            { name: 'Products', value: Math.round(commissionTotal * 0.05), color: 'var(--color-warning)' } // Estimate 5% products
+            { name: 'Tips', value: Math.round(tipsTotal), color: 'var(--color-success)' },
+            { name: 'Products', value: Math.round(productsTotal), color: 'var(--color-warning)' }
         ];
+    }
+
+    /**
+     * Get monthly earnings breakdown by service (last 6 months)
+     */
+    async getMonthlyEarningsByService(salonId: number, workerId: number) {
+        const incomes = await this.provider.getIncomes(salonId, { workerId });
+        const validIncomes = incomes.data.filter((i: Income) => i.status === 'Validated' || i.status === 'Closed');
+
+        // Last 6 months
+        const monthsData = [];
+        const now = new Date();
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+        for (let i = 5; i >= 0; i--) {
+            const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const monthKey = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+            const monthName = monthNames[date.getMonth()];
+
+            const monthIncomes = validIncomes.filter((inc: Income) => inc.date.startsWith(monthKey));
+            const entry: any = { month: monthName, fullDate: monthKey };
+
+            for (const income of monthIncomes) {
+                const services = income.serviceNames || ['Unique Service'];
+                // Distribute final amount across services in that income
+                const sharePerService = (income.finalAmount || income.amount || 0) / services.length;
+
+                for (const svc of services) {
+                    entry[svc] = (entry[svc] || 0) + sharePerService;
+                }
+            }
+            monthsData.push(entry);
+        }
+
+        return monthsData;
     }
 
     /**
@@ -638,14 +882,14 @@ export class StatsService extends BaseService {
 
             // Filter incomes for this specific day
             const filteredIncomes = dayIncomes.filter((i: Income) => i.date === dateStr && i.status === 'Validated');
-            const income = filteredIncomes.reduce((sum: number, i: Income) => sum + i.finalAmount, 0);
+            const income = filteredIncomes.reduce((sum: number, i: Income) => sum + (i.finalAmount || i.amount || 0), 0);
 
             // Filter bookings
             const uniqueClients = new Set(dayBookings.data.map((b: Booking) => b.clientId));
             const services = dayBookings.data.length;
 
             // Expenses (proportional allocation)
-            const expenses = dayExpenses.data.reduce((sum: number, e: Expense) => sum + e.amount, 0);
+            const expenses = dayExpenses.data.reduce((sum: number, e: Expense) => sum + (e.amount || 0), 0);
             const profit = income - expenses;
 
             days.push({
@@ -665,38 +909,170 @@ export class StatsService extends BaseService {
      * Get salary performance trend
      */
     async getSalaryPerformance(salonId: number, workerId: number) {
-        // Get last 6 months of income shares
-        const incomes = await this.provider.getIncomesByWorker(workerId);
-        const validIncomes = incomes.filter((i: Income) => i.status === 'Validated');
+        return this.getSalaryPerformanceByPeriod(salonId, workerId, 'Month');
+    }
 
-        const monthsData = [];
-        for (let i = 5; i >= 0; i--) {
-            const date = new Date();
-            date.setMonth(date.getMonth() - i);
-            const monthStr = date.toISOString().substring(0, 7);
-            const monthName = date.toLocaleDateString('en-US', { month: 'short' });
+    /**
+     * Get salary performance by specific period (Day, Week, Month, Year)
+     */
+    async getSalaryPerformanceByPeriod(salonId: number, workerId: number, period: string = 'Month', selectedDate: Date = new Date()) {
+        const incomesResponse = await this.provider.getIncomes(salonId, {
+            workerId: workerId > 0 ? workerId : undefined,
+            limit: 1000
+        });
+        const incomes = incomesResponse.data;
 
-            const monthIncomes = validIncomes.filter((inc: Income) => inc.date.startsWith(monthStr));
-            let totalCommission = 0;
+        const dataMap: Record<string, any> = {};
 
-            for (const income of monthIncomes) {
-                const shares = await this.provider.getIncomeWorkerShares(income.id);
-                const workerShare = shares.find((s: IncomeWorkerShare) => s.workerId === workerId);
-                if (workerShare) {
-                    totalCommission += workerShare.amount;
-                }
+        // Define range
+        let startDate: Date;
+        let endDate: Date;
+
+        switch (period) {
+            case 'Day':
+                startDate = subDays(selectedDate, 6);
+                endDate = selectedDate;
+                break;
+            case 'Week':
+                startDate = subWeeks(startOfWeek(selectedDate, { weekStartsOn: 1 }), 5);
+                endDate = endOfWeek(selectedDate, { weekStartsOn: 1 });
+                break;
+            case 'Month':
+                startDate = subMonths(startOfMonth(selectedDate), 5);
+                endDate = endOfMonth(selectedDate);
+                break;
+            case 'Year':
+                startDate = subYears(selectedDate, 2);
+                startDate.setMonth(0, 1);
+                endDate = selectedDate;
+                break;
+            default:
+                startDate = subMonths(startOfMonth(selectedDate), 5);
+                endDate = endOfMonth(selectedDate);
+        }
+
+        // Initialize markers
+        const curr = new Date(startDate);
+        while (curr <= endDate) {
+            let key: string;
+            let label: string;
+            if (period === 'Day') {
+                key = format(curr, 'yyyy-MM-dd');
+                label = format(curr, 'EEE');
+            } else if (period === 'Week') {
+                const sw = startOfWeek(curr, { weekStartsOn: 1 });
+                key = format(sw, 'yyyy-MM-dd');
+                label = format(sw, 'MMM dd');
+            } else if (period === 'Month') {
+                key = format(curr, 'yyyy-MM');
+                label = format(curr, 'MMM');
+            } else {
+                key = format(curr, 'yyyy');
+                label = format(curr, 'yyyy');
             }
 
-            monthsData.push({
-                month: monthName,
-                value1: Math.round(totalCommission), // Total earnings
-                value2: Math.round(totalCommission * 0.7), // Commission portion
-                value3: Math.round(totalCommission * 0.2), // Tips portion  
-                value4: Math.round(totalCommission * 0.1), // Bonuses portion
+            if (!dataMap[key]) {
+                dataMap[key] = {
+                    name: label,
+                    value1: 0,
+                    value1Potential: 0,
+                    value2: 0,
+                    value2Potential: 0,
+                    value3: 0,
+                    value4: 0,
+                };
+            }
+
+            if (period === 'Day') curr.setDate(curr.getDate() + 1);
+            else if (period === 'Week') curr.setDate(curr.getDate() + 7);
+            else if (period === 'Month') curr.setMonth(curr.getMonth() + 1);
+            else curr.setFullYear(curr.getFullYear() + 1);
+        }
+
+        // Fetch expenses if global view
+        let expenses: any[] = [];
+        if (workerId === 0) {
+            const expensesResp = await this.provider.getExpenses(salonId, { limit: 1000 });
+            expenses = expensesResp.data;
+        }
+
+        // Aggregation
+        incomes.forEach((inc: Income) => {
+            const incDate = new Date(inc.date);
+            if (incDate < startDate || incDate > endDate) return;
+
+            let key: string;
+            if (period === 'Day') key = format(incDate, 'yyyy-MM-dd');
+            else if (period === 'Week') key = format(startOfWeek(incDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+            else if (period === 'Month') key = format(incDate, 'yyyy-MM');
+            else key = format(incDate, 'yyyy');
+
+            if (!dataMap[key]) return;
+
+            const isActual = inc.status === 'Validated' || inc.status === 'Closed';
+
+            if (workerId > 0) {
+                const share = inc.workerShares?.find((s: any) => s.workerId === workerId);
+                if (share) {
+                    const workerRevenue = (inc.finalAmount || inc.amount) * (share.percentage / 100);
+                    if (isActual) {
+                        dataMap[key].value1 += workerRevenue;
+                        dataMap[key].value2 += share.amount || 0;
+                        dataMap[key].value3 += share.tips || 0;
+                    } else {
+                        dataMap[key].value1Potential += workerRevenue;
+                        dataMap[key].value2Potential += share.amount || 0;
+                    }
+                }
+            } else {
+                if (isActual) {
+                    dataMap[key].value1 += (inc.finalAmount || inc.amount || 0);
+                    inc.workerShares?.forEach((share: any) => {
+                        dataMap[key].value2 += (share.amount || 0);
+                        // For global view, we might not show tips separate unless requested
+                        // but let's keep it in value2 total for now or separate it
+                    });
+                } else {
+                    dataMap[key].value1Potential += (inc.finalAmount || inc.amount || 0);
+                    inc.workerShares?.forEach((share: any) => {
+                        dataMap[key].value2Potential += (share.amount || 0);
+                    });
+                }
+            }
+        });
+
+        // Aggregate Expenses for global view
+        if (workerId === 0) {
+            expenses.forEach((exp: Expense) => {
+                const expDate = new Date(exp.date);
+                if (expDate < startDate || expDate > endDate) return;
+
+                let key: string;
+                if (period === 'Day') key = format(expDate, 'yyyy-MM-dd');
+                else if (period === 'Week') key = format(startOfWeek(expDate, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+                else if (period === 'Month') key = format(expDate, 'yyyy-MM');
+                else key = format(expDate, 'yyyy');
+
+                if (dataMap[key]) {
+                    dataMap[key].value3 += exp.amount || 0;
+                }
             });
         }
 
-        return monthsData;
+        // Calculate Profit (Value 4)
+        Object.keys(dataMap).forEach(key => {
+            dataMap[key].value4 = dataMap[key].value1 - dataMap[key].value2 - dataMap[key].value3;
+        });
+
+        return Object.values(dataMap).map((d: any) => ({
+            ...d,
+            value1: Math.round(d.value1),
+            value1Potential: Math.round(d.value1Potential),
+            value2: Math.round(d.value2),
+            value2Potential: Math.round(d.value2Potential),
+            value3: Math.round(d.value3),
+            value4: Math.round(d.value4),
+        }));
     }
 
     /**
@@ -744,14 +1120,22 @@ export class StatsService extends BaseService {
             const monthName = date.toLocaleDateString('en-US', { month: 'short' });
 
             const monthBookings = bookings.data.filter((b: Booking) => b.date.startsWith(monthStr));
-            const monthIncomes = validIncomes.filter((inc: Income) => inc.date.startsWith(monthStr));
+            const monthIncomes = incomes.filter((inc: Income) => inc.date.startsWith(monthStr));
 
-            const totalIncome = monthIncomes.reduce((sum: number, i: Income) => sum + i.finalAmount, 0);
+            const actualIncome = monthIncomes
+                .filter((i: Income) => i.status === 'Validated' || i.status === 'Closed')
+                .reduce((sum: number, i: Income) => sum + (i.finalAmount || i.amount || 0), 0);
+
+            const potentialIncome = monthIncomes
+                .filter((i: Income) => i.status === 'Pending')
+                .reduce((sum: number, i: Income) => sum + (i.finalAmount || i.amount || 0), 0);
+
             const completedBookings = monthBookings.filter((b: Booking) => b.status === 'Finished');
 
             monthsData.push({
                 month: monthName,
-                value1: Math.round(totalIncome / 100), // Income index
+                value1: Math.round(actualIncome / 100), // Income index (Actual)
+                value1Potential: Math.round(potentialIncome / 100), // Income index (Potential)
                 value2: completedBookings.length, // Completed bookings
                 value3: monthBookings.length, // Total bookings
                 value4: new Set(monthBookings.map((b: Booking) => b.clientId)).size // Unique clients
@@ -932,11 +1316,50 @@ export class StatsService extends BaseService {
         ];
     }
     async getPayrollHistory(salonId: number) {
-        // Mock data logic
-        return [
-            { date: "2025-12-31", amount: 16500, workers: 6, status: "completed" },
-            { date: "2025-11-30", amount: 15800, workers: 6, status: "completed" },
-            { date: "2025-10-31", amount: 16200, workers: 6, status: "completed" },
+        const now = new Date();
+        const history = [];
+
+        // Aggregate last 6 months
+        for (let i = 1; i <= 6; i++) {
+            const date = subMonths(now, i);
+            const startStr = format(startOfMonth(date), 'yyyy-MM-dd');
+            const endStr = format(endOfMonth(date), 'yyyy-MM-dd');
+
+            try {
+                const incomes = await this.provider.getIncomes(salonId, {
+                    startDate: startStr,
+                    endDate: endStr,
+                    status: 'Validated'
+                });
+
+                if (incomes.data.length > 0) {
+                    const uniqueWorkers = new Set();
+                    let totalPayroll = 0;
+
+                    for (const inc of incomes.data) {
+                        // Aggregate worker shares if available
+                        if (inc.workerShares) {
+                            inc.workerShares.forEach((s: any) => {
+                                uniqueWorkers.add(s.workerId);
+                                totalPayroll += (s.amount || 0) + (s.tips || 0);
+                            });
+                        }
+                    }
+
+                    history.push({
+                        date: format(endOfMonth(date), 'yyyy-MM-dd'),
+                        amount: Math.round(totalPayroll),
+                        workers: uniqueWorkers.size,
+                        status: "completed"
+                    });
+                }
+            } catch (err) {
+                console.error(`Error fetching payroll history for ${startStr}:`, err);
+            }
+        }
+
+        return history.length > 0 ? history : [
+            { date: format(subMonths(now, 1), 'yyyy-MM-dd'), amount: 0, workers: 0, status: "completed" }
         ];
     }
 }

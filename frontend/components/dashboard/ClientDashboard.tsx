@@ -60,7 +60,7 @@ export default function ClientDashboard() {
                 // Fetch history (Finished bookings)
                 if (user?.id && activeSalonId) {
                     const response = await bookingService.getAll(Number(activeSalonId), { clientId: Number(user.id) });
-                    const finished = response.data.filter((b: any) => b.status === 'Finished' || b.status === 'Completed');
+                    const finished = response.data.filter((b: any) => b.status === 'Finished');
                     setPastBookings(finished);
                 }
             } catch (error) {
@@ -93,7 +93,7 @@ export default function ClientDashboard() {
     // Filter user's upcoming appointments
     const clientAppointments = React.useMemo(() => {
         return bookings
-            .filter(b => (b.clientId === Number(user?.id)) && !['Cancelled', 'Completed', 'Finished'].includes(b.status))
+            .filter(b => (b.clientId === Number(user?.id)) && !['Cancelled', 'Finished'].includes(b.status))
             .map(b => ({
                 ...b,
                 servicesLabel: (b as any).serviceNames?.join(", ") || "Service Personnalisé",

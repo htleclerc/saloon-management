@@ -36,8 +36,8 @@ export default function LoginPage() {
     const [fullName, setFullName] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
 
-    const handleDemoMode = (role: "super_admin" | "owner" | "manager" | "worker" | "client") => {
-        demoLogin(role);
+    const handleDemoMode = async (role: "super_admin" | "owner" | "manager" | "worker" | "client") => {
+        await demoLogin(role);
         router.push("/");
     };
 

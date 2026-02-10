@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import TeamLayout from "@/components/layout/TeamLayout";
 import Card from "@/components/ui/Card";
@@ -8,47 +8,135 @@ import Button from "@/components/ui/Button";
 import { Save, X, Trash2 } from "lucide-react";
 import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 import { useTranslation } from "@/i18n";
+import { useAuth } from "@/context/AuthProvider";
+import { useWorkers } from "@/hooks/useServices";
+import { workerService } from "@/lib/services/WorkerService";
+import { WorkerStatus } from "@/types";
+import { useToast } from "@/context/ToastProvider";
+import { useConfirm } from "@/context/ConfirmProvider";
 
-export default function EditTeamMemberPage({ params }: { params: { id: string } }) {
+export default function EditTeamMemberPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = use(params);
     const router = useRouter();
     const { t } = useTranslation();
+    const { canModify } = useAuth();
     const { handleReadOnlyClick } = useReadOnlyGuard();
+    const { updateWorker, deleteWorker } = useWorkers();
+
+    const [loading, setLoading] = useState(true);
     const [formData, setFormData] = useState({
-        firstName: "Orphelia",
-        lastName: "Smith",
-        email: "orphelia@adorablebraids.com",
-        phone: "+33 6 12 34 56 78",
-        sharingKey: 70,
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        sharingKey: 50,
         role: "worker",
-        address: "123 Rue de Paris",
-        city: "Paris",
-        zipCode: "75001",
+        address: "",
+        city: "",
+        zipCode: "",
         country: "France",
         status: "Active",
-        notes: "Top performer, specializes in Box Braids",
+        notes: "",
     });
 
-    const handleSubmit = (e: React.FormEvent) => {
+    useEffect(() => {
+        const loadWorker = async () => {
+            try {
+                const worker = await workerService.getById(Number(id));
+                if (worker) {
+                    setFormData({
+                        firstName: worker.firstName || "",
+                        lastName: worker.lastName || "",
+                        email: worker.email || "",
+                        phone: worker.phone || "",
+                        sharingKey: worker.sharingKey,
+                        role: (worker.employeeRole || "worker").toLowerCase(),
+                        address: worker.address || "",
+                        city: worker.city || "",
+                        zipCode: worker.postalCode || "",
+                        country: "France",
+                        status: worker.status,
+                        notes: worker.bio || "",
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to load worker", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadWorker();
+    }, [id]);
+
+    const { showToast } = useToast();
+    const { confirm } = useConfirm();
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (handleReadOnlyClick()) return;
-        if (handleReadOnlyClick()) return;
-        console.log("Updated team member data:", formData);
-        alert(t("team.updateSuccess"));
-        router.push("/team");
+        if (!canModify || handleReadOnlyClick()) return;
+
+        try {
+            await updateWorker(Number(id), {
+                name: `${formData.firstName} ${formData.lastName}`.trim(),
+                firstName: formData.firstName,
+                lastName: formData.lastName,
+                email: formData.email,
+                phone: formData.phone,
+                sharingKey: formData.sharingKey,
+                employeeRole: formData.role,
+                status: formData.status as WorkerStatus,
+                address: formData.address,
+                city: formData.city,
+                postalCode: formData.zipCode,
+                bio: formData.notes
+            });
+            showToast(t("common.success"), t("team.updateSuccess"), "success");
+            router.push("/team");
+        } catch (e) {
+            console.error(e);
+            showToast(t("common.error"), t("common.updateError"), "error");
+        }
     };
 
-    const handleDelete = () => {
-        if (handleReadOnlyClick()) return;
-        if (confirm(t("team.deleteConfirm"))) {
-            console.log("Deleting team member:", params.id);
-            alert(t("team.deleteSuccess"));
-            router.push("/team");
+    const handleDelete = async () => {
+        if (!canModify || handleReadOnlyClick()) return;
+        const confirmed = await confirm({
+            title: t("common.delete"),
+            message: t("team.deleteConfirm"),
+            type: "error",
+            confirmText: t("common.delete"),
+            cancelText: t("common.cancel")
+        });
+
+        if (confirmed) {
+            try {
+                await deleteWorker(Number(id));
+                showToast(t("common.success"), t("team.deleteSuccess"), "success");
+                router.push("/team");
+            } catch (e) {
+                console.error(e);
+                showToast(t("common.error"), t("common.deleteError"), "error");
+            }
         }
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        let value: any = e.target.value;
+        if (e.target.name === "sharingKey") {
+            value = parseInt(value);
+        }
+        setFormData({ ...formData, [e.target.name]: value });
     };
+
+    if (loading) {
+        return (
+            <TeamLayout title={t("team.editMember")} description={t("team.editMemberDesc")}>
+                <div className="flex justify-center p-12">
+                    <div className="w-8 h-8 border-4 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin"></div>
+                </div>
+            </TeamLayout>
+        );
+    }
 
     return (
         <TeamLayout title={t("team.editMember")} description={t("team.editMemberDesc")}>
@@ -152,9 +240,9 @@ export default function EditTeamMemberPage({ params }: { params: { id: string } 
                                     onChange={handleChange}
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                                 >
-                                    <option value="worker">Worker</option>
-                                    <option value="manager">Manager</option>
-                                    <option value="owner">Owner</option>
+                                    <option value="worker">{t("team.roles.worker")}</option>
+                                    <option value="manager">{t("team.roles.manager")}</option>
+                                    <option value="admin">{t("team.roles.admin")}</option>
                                 </select>
                             </div>
                             <div className="md:col-span-2">
@@ -195,8 +283,8 @@ export default function EditTeamMemberPage({ params }: { params: { id: string } 
                                     onChange={handleChange}
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                                 >
-                                    <option>Active</option>
-                                    <option>Inactive</option>
+                                    <option value="Active">Active</option>
+                                    <option value="Inactive">Inactive</option>
                                 </select>
                             </div>
                             <div className="md:col-span-2">

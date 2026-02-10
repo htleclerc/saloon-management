@@ -28,6 +28,9 @@ interface LocalStorageData {
     expenseCategories: ExpenseCategory[];
     serviceCategories: ServiceCategory[];
     salonSettings: SalonSettings[];
+    tokens: any[];
+    interactionHistory: InteractionHistory[];
+    comments: SalonComment[];
 }
 
 export class LocalStorageProvider implements IDataProvider {
@@ -81,6 +84,9 @@ export class LocalStorageProvider implements IDataProvider {
             expenseCategories: INITIAL_EXPENSE_CATEGORIES,
             serviceCategories: INITIAL_SERVICE_CATEGORIES,
             salonSettings: INITIAL_SALON_SETTINGS,
+            tokens: [],
+            interactionHistory: [],
+            comments: []
         };
     }
 
@@ -258,6 +264,16 @@ export class LocalStorageProvider implements IDataProvider {
         return newBooking;
     }
 
+    async clearBookingJunctions(bookingId: number): Promise<void> {
+        const allData = this.getData();
+        const booking = allData.bookings.find(b => b.id === bookingId);
+        if (booking) {
+            booking.serviceIds = [];
+            booking.workerIds = [];
+            this.saveData(allData);
+        }
+    }
+
     async updateBooking(id: number, updates: Partial<Booking>): Promise<Booking> {
         const allData = this.getData();
         const index = allData.bookings.findIndex(b => b.id === id);
@@ -283,13 +299,61 @@ export class LocalStorageProvider implements IDataProvider {
 
     // Incomes
     async getIncomes(salonId: number, filters?: IncomeFilters, pagination?: PaginationParams): Promise<PaginatedResponse<Income>> {
-        const incomes = this.getData().incomes.filter(i => i.salonId === salonId);
+        const incomes = this.getData().incomes.filter(i => {
+            if (i.salonId !== salonId) return false;
+
+            // Handle isActive filter
+            if (filters?.isActive !== undefined) {
+                if (i.isActive !== filters.isActive) return false;
+            } else {
+                // Default: show active ones (treat undefined/null as true)
+                if (i.isActive === false) return false;
+            }
+
+            if (filters?.clientId && i.clientId !== filters.clientId) return false;
+            if (filters?.status && i.status !== filters.status) return false;
+            if (filters?.startDate && i.date < filters.startDate) return false;
+            if (filters?.endDate && i.date > filters.endDate) return false;
+
+            return true;
+        });
+
+        const allData = this.getData();
+        const page = pagination?.page || 1;
+        const perPage = pagination?.perPage || 10;
+        const total = incomes.length;
+        const sliced = incomes.slice((page - 1) * perPage, page * perPage);
+
+        // Enhance incomes with joined data for consistency with SupabaseProvider
+        const data = sliced.map(income => {
+            const serviceNames = (income.serviceIds || []).map(id =>
+                allData.services.find(s => s.id === id)?.name
+            ).filter(Boolean) as string[];
+
+            // Estimate worker shares if not present (simple equal split for demo)
+            const workerShares: IncomeWorkerShare[] = (income.workerIds || []).map((workerId, idx) => ({
+                id: (income.id * 1000) + idx, // Synthetic ID
+                incomeId: income.id,
+                workerId,
+                amount: income.amount / (income.workerIds?.length || 1),
+                percentage: 100 / (income.workerIds?.length || 1),
+                tips: 0,
+                createdAt: income.createdAt || new Date()
+            }));
+
+            return {
+                ...income,
+                serviceNames,
+                workerShares: income.workerShares || workerShares
+            };
+        });
+
         return {
-            data: incomes,
-            total: incomes.length,
-            page: pagination?.page || 1,
-            perPage: pagination?.perPage || 10,
-            totalPages: 1
+            data,
+            total,
+            page,
+            perPage,
+            totalPages: Math.ceil(total / perPage)
         };
     }
 
@@ -318,6 +382,16 @@ export class LocalStorageProvider implements IDataProvider {
         allData.incomes.push(newIncome);
         this.saveData(allData);
         return newIncome;
+    }
+
+    async clearIncomeJunctions(incomeId: number): Promise<void> {
+        const allData = this.getData();
+        const income = allData.incomes.find(i => i.id === incomeId);
+        if (income) {
+            income.serviceIds = [];
+            income.workerIds = [];
+            this.saveData(allData);
+        }
     }
 
     async updateIncome(id: number, updates: Partial<Income>): Promise<Income> {
@@ -541,6 +615,7 @@ export class LocalStorageProvider implements IDataProvider {
             salonName,
             totalWorkers: salonWorkers.length,
             totalClients: salonClients.length,
+            newClients: salonClients.filter(c => new Date(c.createdAt) >= startOfMonth).length,
             totalBookings: salonBookings.length,
             completedBookings: salonBookings.filter(b => b.status === 'Finished' || b.status === 'Closed').length,
             totalRevenue: salonIncomes.filter(i => i.status === 'Validated' || i.status === 'Closed').reduce((sum, i) => sum + i.finalAmount, 0),
@@ -579,8 +654,10 @@ export class LocalStorageProvider implements IDataProvider {
             totalClients: new Set(workerBookings.map(b => b.clientId)).size,
             completedBookings: workerBookings.filter(b => b.status === 'Finished' || b.status === 'Closed').length,
             totalRevenue: workerIncomes.filter(i => i.status === 'Validated' || i.status === 'Closed').reduce((sum, i) => sum + i.finalAmount, 0),
-            monthRevenue: workerIncomes.filter(i => i.status === 'Validated' || i.status === 'Closed' && new Date(i.date) >= startOfMonth).reduce((sum, i) => sum + i.finalAmount, 0),
-            yearRevenue: workerIncomes.filter(i => i.status === 'Validated' || i.status === 'Closed' && new Date(i.date) >= startOfYear).reduce((sum, i) => sum + i.finalAmount, 0),
+            monthRevenue: workerIncomes.filter(i => (i.status === 'Validated' || i.status === 'Closed') && new Date(i.date) >= startOfMonth).reduce((sum, i) => sum + i.finalAmount, 0),
+            yearRevenue: workerIncomes.filter(i => (i.status === 'Validated' || i.status === 'Closed') && new Date(i.date) >= startOfYear).reduce((sum, i) => sum + i.finalAmount, 0),
+            monthCommission: 0, // Mock
+            monthTips: 0, // Mock
             avgRating: 0, // Mock
             totalReviews: 0 // Mock
         };
@@ -805,11 +882,38 @@ export class LocalStorageProvider implements IDataProvider {
     }
 
     async getIncomesByClient(clientId: number): Promise<Income[]> {
-        return this.getData().incomes.filter(i => i.clientId === clientId);
+        const incomes = this.getData().incomes.filter(i => i.clientId === clientId);
+        return this.enhanceIncomesForConsistency(incomes);
     }
 
     async getIncomesByWorker(workerId: number): Promise<Income[]> {
-        return this.getData().incomes.filter(i => (i.workerIds || []).includes(workerId));
+        const incomes = this.getData().incomes.filter(i => (i.workerIds || []).includes(workerId));
+        return this.enhanceIncomesForConsistency(incomes);
+    }
+
+    private enhanceIncomesForConsistency(incomes: Income[]): Income[] {
+        const allData = this.getData();
+        return incomes.map(income => {
+            const serviceNames = (income.serviceIds || []).map(id =>
+                allData.services.find(s => s.id === id)?.name
+            ).filter(Boolean) as string[];
+
+            const workerShares: IncomeWorkerShare[] = (income.workerIds || []).map((workerId, idx) => ({
+                id: (income.id * 1000) + idx,
+                incomeId: income.id,
+                workerId,
+                amount: income.amount / (income.workerIds?.length || 1),
+                percentage: 100 / (income.workerIds?.length || 1),
+                tips: 0,
+                createdAt: income.createdAt || new Date()
+            }));
+
+            return {
+                ...income,
+                serviceNames,
+                workerShares: income.workerShares || workerShares
+            };
+        });
     }
 
     async addWorkerToIncome(incomeId: number, workerId: number, amount: number, percentage: number): Promise<IncomeWorkerShare> {
@@ -959,23 +1063,45 @@ export class LocalStorageProvider implements IDataProvider {
     }
 
     async getInteractionHistory(entityType: string, entityId: number): Promise<InteractionHistory[]> {
-        return []; // Simplified, usually not stored in local storage for demo
+        return this.getData().interactionHistory
+            .filter(h => h.entityType === entityType && h.entityId === entityId)
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     }
 
     async createInteractionHistory(data: any): Promise<InteractionHistory> {
-        return { ...data, id: Date.now(), timestamp: new Date() }; // Mock
+        const allData = this.getData();
+        const history: InteractionHistory = {
+            ...data,
+            id: Date.now(),
+            timestamp: new Date()
+        };
+        allData.interactionHistory.push(history);
+        this.saveData(allData);
+        return history;
     }
 
     async getComments(entityType: string, entityId: number): Promise<SalonComment[]> {
-        return []; // Simplified
+        return this.getData().comments
+            .filter(c => c.entityType === entityType && c.entityId === entityId)
+            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     }
 
     async createComment(data: any): Promise<SalonComment> {
-        return { ...data, id: Date.now(), timestamp: new Date() }; // Mock
+        const allData = this.getData();
+        const comment: SalonComment = {
+            ...data,
+            id: Date.now(),
+            timestamp: new Date()
+        };
+        allData.comments.push(comment);
+        this.saveData(allData);
+        return comment;
     }
 
     async deleteComment(id: number): Promise<void> {
-        // Mock
+        const allData = this.getData();
+        allData.comments = allData.comments.filter(c => c.id !== id);
+        this.saveData(allData);
     }
 
     async initialize(): Promise<void> {
@@ -986,5 +1112,54 @@ export class LocalStorageProvider implements IDataProvider {
     async cleanup(): Promise<void> {
         if (typeof window === 'undefined') return;
         localStorage.removeItem(STORAGE_KEY);
+    }
+
+    // ============================================
+    // UTILS / TOKENS
+    // ============================================
+    async createOneTimeToken(type: string, payload: any, expiresInMinutes: number = 60): Promise<string | null> {
+        const allData = this.getData();
+        const id = crypto.randomUUID(); // Use native crypto UUID
+        const expiresAt = new Date(Date.now() + expiresInMinutes * 60000).toISOString();
+
+        const token = {
+            id,
+            type,
+            payload,
+            expires_at: expiresAt,
+            used_at: null,
+            created_at: new Date().toISOString()
+        };
+
+        allData.tokens.push(token);
+        this.saveData(allData);
+        return id;
+    }
+
+    async consumeOneTimeToken(tokenId: string): Promise<any | null> {
+        const allData = this.getData();
+        const tokenIndex = allData.tokens.findIndex(t => t.id === tokenId);
+
+        if (tokenIndex === -1) return null;
+
+        const token = allData.tokens[tokenIndex];
+
+        // Check expiration
+        if (new Date(token.expires_at) < new Date()) {
+            console.warn('Token expired');
+            return null;
+        }
+
+        // Check if used
+        if (token.used_at) {
+            console.warn('Token already used');
+            return null;
+        }
+
+        // Mark as used
+        allData.tokens[tokenIndex].used_at = new Date().toISOString();
+        this.saveData(allData);
+
+        return token.payload;
     }
 }

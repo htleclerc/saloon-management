@@ -20,6 +20,23 @@ export class IncomeService extends BaseService {
         return this.provider.getIncome(id);
     }
 
+    async getHistory(id: number) {
+        return this.getInteractionHistory('income', id);
+    }
+
+    /**
+     * Add comment to income
+     */
+    async addComment(id: number, text: string, userCode: string) {
+        return this.provider.createComment({
+            entityType: 'income',
+            entityId: id,
+            text,
+            userCode,
+            salonId: 0 // Only req for some implementations, generic
+        });
+    }
+
     /**
      * Get income with relations
      */
@@ -69,20 +86,26 @@ export class IncomeService extends BaseService {
         });
 
         // Add worker shares
+        income.workerIds = [];
         for (const share of data.workerShares) {
-            const workerAmount = (finalAmount * share.percentage) / 100;
+            const workerAmount = share.amount !== undefined ? share.amount : (finalAmount * share.percentage) / 100;
+            const workerTips = share.tips || 0;
             await this.provider.addWorkerToIncome(
                 income.id,
                 share.workerId,
                 workerAmount,
-                share.percentage
+                share.percentage,
+                workerTips
             );
+            income.workerIds.push(share.workerId);
         }
 
         // Add services
         if (data.serviceIds) {
+            income.serviceIds = [];
             for (const serviceId of data.serviceIds) {
                 await this.provider.addServiceToIncome(income.id, serviceId);
+                income.serviceIds.push(serviceId);
             }
         }
 
@@ -102,14 +125,72 @@ export class IncomeService extends BaseService {
     /**
      * Update income
      */
-    async update(id: number, data: Partial<Income>): Promise<Income> {
+    async update(id: number, data: Partial<Income> & { workerShares?: IncomeWorkerShare[] }): Promise<Income> {
+        const current = await this.getById(id);
+        if (!current) throw new Error('Income not found');
+
+        // Block updates for Validated records unless status is changing to Refused or Draft
+        if (current.status === 'Validated' && data.status !== 'Refused' && data.status !== 'Draft') {
+            throw new Error('Validated income cannot be modified. Contest it first.');
+        }
+
+        // If updating a Refused record, force it back to Pending/Draft if not specified
+        if (current.status === 'Refused' && !data.status) {
+            data.status = 'Pending';
+        }
+
+        // Recalculate finalAmount if base values change
+        if (data.amount !== undefined || data.discountAmount !== undefined) {
+            const amount = data.amount !== undefined ? data.amount : current.amount;
+            const discount = data.discountAmount !== undefined ? data.discountAmount : current.discountAmount;
+            (data as any).finalAmount = amount - discount;
+        }
+
         const income = await this.provider.updateIncome(id, {
             ...data,
             updatedBy: this.getCurrentUser()
         });
 
-        await this.logInteraction('income', id, 'updated');
+        // Sync Junctions if provided
+        if (data.serviceIds || data.workerShares || (data as any).products) {
+            await this.provider.clearIncomeJunctions(id);
 
+            const finalAmount = income.finalAmount;
+
+            // Re-add workers
+            if (data.workerShares) {
+                income.workerIds = [];
+                for (const share of data.workerShares) {
+                    const workerAmount = (share as any).amount !== undefined ? (share as any).amount : (finalAmount * share.percentage) / 100;
+                    await this.provider.addWorkerToIncome(
+                        id,
+                        share.workerId,
+                        workerAmount,
+                        share.percentage,
+                        share.tips || 0
+                    );
+                    income.workerIds.push(share.workerId);
+                }
+            }
+
+            // Re-add services
+            if (data.serviceIds) {
+                income.serviceIds = [];
+                for (const serviceId of data.serviceIds) {
+                    await this.provider.addServiceToIncome(id, serviceId);
+                    income.serviceIds.push(serviceId);
+                }
+            }
+
+            // Re-add products
+            if ((data as any).products) {
+                for (const product of (data as any).products) {
+                    await this.provider.addProductToIncome(id, product.productId, product.quantity);
+                }
+            }
+        }
+
+        await this.logInteraction('income', id, 'updated');
         return income;
     }
 
@@ -117,8 +198,23 @@ export class IncomeService extends BaseService {
      * Delete income
      */
     async delete(id: number): Promise<void> {
-        await this.provider.deleteIncome(id);
-        await this.logInteraction('income', id, 'deleted');
+        const income = await this.getById(id);
+        if (!income) return;
+
+        if (income.status === 'Draft') {
+            await this.provider.deleteIncome(id);
+            await this.logInteraction('income', id, 'deleted');
+        } else {
+            await this.provider.updateIncome(id, { isActive: false });
+            await this.logInteraction('income', id, 'archived');
+        }
+    }
+
+    /**
+     * Contest income (change status to Refused)
+     */
+    async contest(id: number): Promise<Income> {
+        return this.updateStatus(id, 'Refused');
     }
 
     /**
@@ -236,7 +332,7 @@ export class IncomeService extends BaseService {
             id: inc.id,
             date: inc.date,
             client: inc.clientName || 'Unknown',
-            service: 'Service', // Placeholder as we'd need relation
+            service: inc.serviceNames?.[0] || 'Unknown',
             amount: inc.finalAmount,
             status: inc.status
         }));
@@ -254,18 +350,26 @@ export class IncomeService extends BaseService {
      * Get worker performance stats
      */
     async getWorkerPerformanceStats(workerId: number, year: number) {
-        // Fetch all validated incomes for the year
+        // Fetch all validated incomes with relations for the worker
+        // This is more expensive but accurate for tips
         const incomes = await this.provider.getIncomesByWorker(workerId);
         const yearStr = year.toString();
 
         const validIncomes = incomes.filter((i: Income) =>
-            i.date.startsWith(yearStr)
+            i.status === 'Validated' && i.date.startsWith(yearStr)
         );
 
-        // We need to group by week, month, year
-        // This is a simplified implementation
+        // We need to fetch worker shares for each income to get the explicit tips
+        const incomesWithShares = await Promise.all(validIncomes.map(async (inc: Income) => {
+            const shares = await this.provider.getIncomeWorkerShares(inc.id);
+            const workerShare = shares.find((s: IncomeWorkerShare) => s.workerId === workerId);
+            return {
+                ...inc,
+                workerTips: workerShare?.tips || 0,
+                workerSalary: workerShare?.amount || 0
+            };
+        }));
 
-        // Helper to get week number
         const getWeek = (date: Date) => {
             const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
             const pastDays = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
@@ -279,54 +383,57 @@ export class IncomeService extends BaseService {
             clients: number;
             income: number;
             salary: number;
+            tips: number;
             status: string;
         }
 
         const weeks = new Map<number, PeriodStats>();
         const months = new Map<string, PeriodStats>();
 
-        // Initialize aggregation objects
-        validIncomes.forEach((inc: Income) => {
+        incomesWithShares.forEach((inc) => {
             const date = new Date(inc.date);
             const weekNum = getWeek(date);
             const monthName = date.toLocaleString('default', { month: 'long' });
 
             // Weekly
             if (!weeks.has(weekNum)) {
-                weeks.set(weekNum, { id: weekNum, period: `Week ${weekNum}`, services: 0, clients: 0, income: 0, salary: 0, status: 'Completed' });
+                weeks.set(weekNum, { id: weekNum, period: `Week ${weekNum}`, services: 0, clients: 0, income: 0, salary: 0, tips: 0, status: 'Validated' });
             }
             const w = weeks.get(weekNum)!;
-            w.services++; // Approx, per income
+            w.services++;
             w.clients++;
             w.income += inc.finalAmount;
-            // Salary approx (using default 50% for now or need worker share calculation)
-            // Ideally we fetch shares. For performance, we'll estimate or fetch shares if needed.
-            // Let's assume we can't easily get shares without N+1 queries here.
+            w.salary += inc.workerSalary;
+            w.tips += inc.workerTips;
 
             // Monthly
             if (!months.has(monthName)) {
-                months.set(monthName, { id: date.getMonth(), period: monthName, services: 0, clients: 0, income: 0, salary: 0, status: 'Completed' });
+                months.set(monthName, { id: date.getMonth(), period: monthName, services: 0, clients: 0, income: 0, salary: 0, tips: 0, status: 'Validated' });
             }
             const m = months.get(monthName)!;
             m.services++;
             m.clients++;
             m.income += inc.finalAmount;
+            m.salary += inc.workerSalary;
+            m.tips += inc.workerTips;
         });
 
-        // Convert Maps to Arrays and sort
         const weekData = Array.from(weeks.values()).sort((a, b) => b.id - a.id);
-        const monthData = Array.from(months.values()).sort((a, b) => b.id - a.id); // Sort logic might need adjustment
+        const monthData = Array.from(months.values()).sort((a, b) => b.id - a.id);
 
-        // Year aggregate
-        const yearTotal = validIncomes.reduce((acc: number, curr: Income) => acc + curr.finalAmount, 0);
+        const yearTotal = incomesWithShares.reduce((acc, curr) => acc + curr.finalAmount, 0);
+        const yearSalary = incomesWithShares.reduce((acc, curr) => acc + curr.workerSalary, 0);
+        const yearTips = incomesWithShares.reduce((acc, curr) => acc + curr.workerTips, 0);
+
         const yearData = [{
             id: 1,
             period: yearStr,
             services: validIncomes.length,
             clients: validIncomes.length,
             income: yearTotal,
-            salary: 0, // Fill later
-            status: 'Completed'
+            salary: yearSalary,
+            tips: yearTips,
+            status: 'Validated'
         }];
 
         return {

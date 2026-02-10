@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import Button from '@/components/ui/Button';
 import { X, Save, AlertCircle, BarChart3, Code } from 'lucide-react';
 import { PlanConfig } from '@/types';
+import { useToast } from '@/context/ToastProvider';
+import { useTranslation } from '@/i18n';
 
 interface PlanEditModalProps {
     isOpen: boolean;
@@ -12,6 +14,8 @@ interface PlanEditModalProps {
 
 export default function PlanEditModal({ isOpen, plan, onSave, onClose }: PlanEditModalProps) {
     const [formData, setFormData] = useState<PlanConfig | null>(null);
+    const { showToast } = useToast();
+    const { t } = useTranslation();
 
     useEffect(() => {
         if (plan) {
@@ -56,11 +60,11 @@ export default function PlanEditModal({ isOpen, plan, onSave, onClose }: PlanEdi
 
     const handleSave = () => {
         if (formData.price < 0) {
-            alert('Le prix ne peut pas être négatif');
+            showToast(t("common.warning"), t("superadmin.priceNegative"), "warning");
             return;
         }
         if (formData.limits.maxSalons <= 0) {
-            alert('Le nombre de salons doit être supérieur à 0');
+            showToast(t("common.warning"), t("superadmin.salonsGreaterZero"), "warning");
             return;
         }
         onSave(formData);
@@ -71,7 +75,7 @@ export default function PlanEditModal({ isOpen, plan, onSave, onClose }: PlanEdi
             <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
                 {/* Header */}
                 <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-                    <h2 className="text-2xl font-bold text-gray-900">Modifier le plan: {formData.name}</h2>
+                    <h2 className="text-2xl font-bold text-gray-900">{t("superadmin.editPlan", { name: formData.name })}</h2>
                     <button
                         onClick={onClose}
                         className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors"
@@ -86,7 +90,7 @@ export default function PlanEditModal({ isOpen, plan, onSave, onClose }: PlanEdi
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Nom du plan
+                                {t("superadmin.planName")}
                             </label>
                             <input
                                 type="text"
@@ -97,7 +101,7 @@ export default function PlanEditModal({ isOpen, plan, onSave, onClose }: PlanEdi
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Prix (€/mois)
+                                {t("superadmin.monthlyPrice")}
                             </label>
                             <input
                                 type="number"
@@ -114,12 +118,12 @@ export default function PlanEditModal({ isOpen, plan, onSave, onClose }: PlanEdi
                     <div>
                         <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
                             <BarChart3 className="w-5 h-5" />
-                            Limites
+                            {t("superadmin.limits")}
                         </h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Salons max
+                                    {t("superadmin.maxSalons")}
                                 </label>
                                 <input
                                     type="number"
@@ -128,11 +132,11 @@ export default function PlanEditModal({ isOpen, plan, onSave, onClose }: PlanEdi
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                     min="1"
                                 />
-                                <p className="text-xs text-gray-500 mt-1">999 = illimité</p>
+                                <p className="text-xs text-gray-500 mt-1">{t("superadmin.unlimited999")}</p>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Employés max
+                                    {t("superadmin.maxWorkers")}
                                 </label>
                                 <input
                                     type="number"
@@ -141,11 +145,11 @@ export default function PlanEditModal({ isOpen, plan, onSave, onClose }: PlanEdi
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                     min="1"
                                 />
-                                <p className="text-xs text-gray-500 mt-1">999 = illimité</p>
+                                <p className="text-xs text-gray-500 mt-1">{t("superadmin.unlimited999")}</p>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Réservations/mois
+                                    {t("superadmin.bookingsPerMonth")}
                                 </label>
                                 <input
                                     type="number"
@@ -154,7 +158,7 @@ export default function PlanEditModal({ isOpen, plan, onSave, onClose }: PlanEdi
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                     min="1"
                                 />
-                                <p className="text-xs text-gray-500 mt-1">99999 = illimité</p>
+                                <p className="text-xs text-gray-500 mt-1">{t("superadmin.unlimited99999")}</p>
                             </div>
                         </div>
                     </div>
@@ -163,7 +167,7 @@ export default function PlanEditModal({ isOpen, plan, onSave, onClose }: PlanEdi
                     <div>
                         <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
                             <Code className="w-5 h-5" />
-                            Fonctionnalités avancées
+                            {t("superadmin.advancedFeatures")}
                         </h3>
                         <div className="space-y-3">
                             <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
@@ -173,7 +177,7 @@ export default function PlanEditModal({ isOpen, plan, onSave, onClose }: PlanEdi
                                     onChange={(e) => updateLimitBoolean('hasAdvancedReports', e.target.checked)}
                                     className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
                                 />
-                                <span className="text-sm font-medium text-gray-700">Rapports avancés</span>
+                                <span className="text-sm font-medium text-gray-700">{t("settings.billing.advancedReports")}</span>
                             </label>
                             <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
                                 <input
@@ -182,14 +186,14 @@ export default function PlanEditModal({ isOpen, plan, onSave, onClose }: PlanEdi
                                     onChange={(e) => updateLimitBoolean('hasAPIAccess', e.target.checked)}
                                     className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
                                 />
-                                <span className="text-sm font-medium text-gray-700">Accès API</span>
+                                <span className="text-sm font-medium text-gray-700">{t("settings.billing.apiAccess")}</span>
                             </label>
                         </div>
                     </div>
 
                     {/* Features List */}
                     <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-3">Liste des fonctionnalités</h3>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-3">{t("superadmin.includedFeatures")}</h3>
                         <div className="space-y-2">
                             {formData.features.map((feature, index) => (
                                 <div key={index} className="flex items-center gap-2">
@@ -198,7 +202,7 @@ export default function PlanEditModal({ isOpen, plan, onSave, onClose }: PlanEdi
                                         value={feature}
                                         onChange={(e) => updateFeature(index, e.target.value)}
                                         className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                        placeholder="Description de la fonctionnalité"
+                                        placeholder={t("superadmin.addFeature")}
                                     />
                                     <button
                                         onClick={() => removeFeature(index)}
@@ -214,7 +218,7 @@ export default function PlanEditModal({ isOpen, plan, onSave, onClose }: PlanEdi
                                 onClick={addFeature}
                                 className="w-full"
                             >
-                                + Ajouter une fonctionnalité
+                                {t("superadmin.addFeature")}
                             </Button>
                         </div>
                     </div>
@@ -228,7 +232,7 @@ export default function PlanEditModal({ isOpen, plan, onSave, onClose }: PlanEdi
                                 onChange={(e) => updateField('isActive', e.target.checked)}
                                 className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
                             />
-                            <span className="text-sm font-medium text-gray-700">Plan actif</span>
+                            <span className="text-sm font-medium text-gray-700">{t("superadmin.planActive")}</span>
                         </label>
                         <label className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
                             <input
@@ -237,7 +241,7 @@ export default function PlanEditModal({ isOpen, plan, onSave, onClose }: PlanEdi
                                 onChange={(e) => updateField('isDefault', e.target.checked)}
                                 className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
                             />
-                            <span className="text-sm font-medium text-gray-700">Plan par défaut</span>
+                            <span className="text-sm font-medium text-gray-700">{t("superadmin.defaultTier")}</span>
                         </label>
                     </div>
 
@@ -245,8 +249,7 @@ export default function PlanEditModal({ isOpen, plan, onSave, onClose }: PlanEdi
                     <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 flex items-start gap-3">
                         <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
                         <div className="text-sm text-orange-800">
-                            <strong>Attention:</strong> Les modifications prendront effet immédiatement pour tous les utilisateurs.
-                            Les changements sont stockés localement en mode démo.
+                            <strong>{t("superadmin.attention")}:</strong> {t("superadmin.immediateEffect")}
                         </div>
                     </div>
                 </div>
@@ -254,7 +257,7 @@ export default function PlanEditModal({ isOpen, plan, onSave, onClose }: PlanEdi
                 {/* Footer */}
                 <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3">
                     <Button variant="outline" onClick={onClose}>
-                        Annuler
+                        {t("common.cancel")}
                     </Button>
                     <Button
                         variant="primary"
@@ -262,7 +265,7 @@ export default function PlanEditModal({ isOpen, plan, onSave, onClose }: PlanEdi
                         className="bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600"
                     >
                         <Save className="w-4 h-4 mr-2" />
-                        Enregistrer
+                        {t("common.save")}
                     </Button>
                 </div>
             </div>

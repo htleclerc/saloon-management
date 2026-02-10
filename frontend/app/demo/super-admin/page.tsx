@@ -10,13 +10,16 @@ export default function SuperAdminDemoPage() {
     const { demoLogin } = useAuth();
 
     useEffect(() => {
-        // Auto-login as super admin
-        demoLogin('super_admin');
+        const init = async () => {
+            // Auto-login as super admin
+            await demoLogin('super_admin');
 
-        // Redirect to admin dashboard after 1.5s
-        setTimeout(() => {
-            router.push('/admin/plans');
-        }, 1500);
+            // Redirect to admin dashboard after 1.5s
+            setTimeout(() => {
+                router.push('/admin/plans');
+            }, 1500);
+        };
+        init();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
