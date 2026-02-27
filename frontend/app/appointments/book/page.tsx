@@ -57,7 +57,8 @@ function BookAppointmentContent() {
         name: user?.name || "",
         phone: "",
         email: user?.email || "",
-        isAnonymous: false
+        isAnonymous: false,
+        isAddingNewClient: false
     });
 
     // Service & Admin State
@@ -315,7 +316,8 @@ function BookAppointmentContent() {
                     name: bookingToEdit.clientName || "",
                     email: client?.email || "",
                     phone: client?.phone || "",
-                    isAnonymous: bookingToEdit.clientId === 0
+                    isAnonymous: bookingToEdit.clientId === 0,
+                    isAddingNewClient: false
                 });
 
                 const salon = salons.find(s => s.id === Number(bookingToEdit.salonId));
@@ -409,18 +411,48 @@ function BookAppointmentContent() {
                 showToast(t("common.success"), t("booking.updateSuccess"), "success");
             }
         } else {
-            addBooking({
-                salonId: Number(selectedSalon?.id || urlSalonId || 1),
-                clientId: clientInfo.isAnonymous ? 0 : (user?.id ? Number(user.id) : 0),
-                serviceIds: selectedServices.map(s => s.id),
-                workerIds: selectedWorkers.map(w => w.id),
-                date: selectedDate,
-                time: selectedTime,
-                duration: totalDuration,
-                status: (isClient ? 'Pending' : 'Confirmed') as BookingStatus,
-                notes: bookingComment || undefined
-            });
-            showToast(t("common.success"), t("booking.createSuccess"), "success");
+            const processBooking = async () => {
+                let clientId = clientInfo.isAnonymous ? 0 : (user?.id ? Number(user.id) : 0);
+                let clientName = clientInfo.name;
+
+                // Create a new client if requested
+                if (clientInfo.isAddingNewClient && !clientInfo.isAnonymous) {
+                    try {
+                        const newClient = await clientService.create({
+                            salonId: Number(selectedSalon?.id || urlSalonId || 1),
+                            name: clientInfo.name,
+                            phone: clientInfo.phone,
+                            email: clientInfo.email,
+                            isActive: true
+                        });
+                        clientId = newClient.id;
+                        clientName = newClient.name;
+                    } catch (err: any) {
+                        console.error("Failed to create client", err);
+                        showToast(t("common.error"), err.message || t("booking.clientCreateFailed"), "error");
+                        return;
+                    }
+                }
+
+                addBooking({
+                    salonId: Number(selectedSalon?.id || urlSalonId || 1),
+                    clientId: clientId,
+                    clientName: clientName,
+                    serviceIds: selectedServices.map(s => s.id),
+                    workerIds: selectedWorkers.map(w => w.id),
+                    date: selectedDate,
+                    time: selectedTime,
+                    duration: totalDuration,
+                    status: (isClient ? 'Pending' : 'Confirmed') as BookingStatus,
+                    notes: bookingComment || undefined
+                });
+                showToast(t("common.success"), t("booking.createSuccess"), "success");
+                console.log("Booking created/updated");
+                router.push("/appointments");
+            };
+
+            processBooking();
+            return; // Exit as processBooking handles router.push
         }
 
         console.log("Booking created/updated");
@@ -535,7 +567,7 @@ function BookAppointmentContent() {
                             <div className="flex flex-col gap-4">
                                 <div className="grid grid-cols-2 gap-4">
                                     <button
-                                        onClick={() => setClientInfo({ ...clientInfo, isAnonymous: true, name: "Anonymous Client" })}
+                                        onClick={() => setClientInfo({ ...clientInfo, isAnonymous: true, isAddingNewClient: false, name: "Anonymous Client" })}
                                         className={`p-4 rounded-xl border-2 transition-all flex items-center justify-center gap-3 ${clientInfo.isAnonymous ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)]' : 'border-gray-100 hover:border-[var(--color-primary-light)]'}`}
                                     >
                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${clientInfo.isAnonymous ? 'bg-[var(--color-primary)] text-white' : 'bg-gray-100 text-gray-400 group-hover:bg-[var(--color-primary-light)] group-hover:text-[var(--color-primary)]'}`}>
@@ -548,16 +580,16 @@ function BookAppointmentContent() {
                                     </button>
 
                                     <button
-                                        onClick={() => setClientInfo({ ...clientInfo, isAnonymous: false, name: "" })}
-                                        className={`p-4 rounded-xl border-2 transition-all flex items-center justify-center gap-3 ${!clientInfo.isAnonymous && clientInfo.name === "" ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)]' : 'border-gray-100 hover:border-[var(--color-primary-light)]'}`}
+                                        onClick={() => setClientInfo({ ...clientInfo, isAnonymous: false, isAddingNewClient: true, name: "" })}
+                                        className={`p-4 rounded-xl border-2 transition-all flex items-center justify-center gap-3 ${clientInfo.isAddingNewClient ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)]' : 'border-gray-100 hover:border-[var(--color-primary-light)]'}`}
                                     >
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${!clientInfo.isAnonymous && clientInfo.name === "" ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-primary-light)] text-[var(--color-primary)]'}`}>
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${clientInfo.isAddingNewClient ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-primary-light)] text-[var(--color-primary)]'}`}>
                                             <Plus className="w-5 h-5" />
                                         </div>
                                         <div className="text-left">
                                             <span className="font-bold text-sm block">{t('booking.clientSelection.newClient')}</span>
                                         </div>
-                                        {!clientInfo.isAnonymous && clientInfo.name === "" && <Check className="w-5 h-5 text-[var(--color-primary)] ml-auto" />}
+                                        {clientInfo.isAddingNewClient && <Check className="w-5 h-5 text-[var(--color-primary)] ml-auto" />}
                                     </button>
                                 </div>
 
@@ -578,7 +610,7 @@ function BookAppointmentContent() {
                                     )}
 
                                     {/* New Client Form */}
-                                    {!clientInfo.isAnonymous && clientInfo.name === "" && (
+                                    {clientInfo.isAddingNewClient && (
                                         <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 animate-in fade-in slide-in-from-top-2">
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div className="space-y-2">
@@ -655,7 +687,7 @@ function BookAppointmentContent() {
                                                 <button
                                                     key={c.id}
                                                     onClick={() => {
-                                                        setClientInfo({ name: c.name, email: c.email || "", phone: c.phone || "", isAnonymous: false });
+                                                        setClientInfo({ name: c.name, email: c.email || "", phone: c.phone || "", isAnonymous: false, isAddingNewClient: false });
                                                         setStep(1);
                                                     }}
                                                     className="w-full flex items-center justify-between p-3 hover:bg-[var(--color-primary-light)] rounded-xl border border-gray-100 transition-all group text-left"

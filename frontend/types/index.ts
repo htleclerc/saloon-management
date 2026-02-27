@@ -313,6 +313,9 @@ export interface BookingCreateData {
     notes?: string;
     workerIds: number[];  // Will create junction records
     serviceIds: number[];  // Will create junction records
+    clientName?: string;  // For new clients
+    clientPhone?: string; // For new clients
+    clientEmail?: string; // For new clients
 }
 
 export interface DayCapacity {

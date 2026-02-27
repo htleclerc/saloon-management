@@ -37,7 +37,7 @@ export class ClientService extends BaseService {
      */
     async create(data: Omit<Client, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>): Promise<Client> {
         // Business validation
-        this.validateRequired(data, ['salonId', 'name', 'email', 'phone']);
+        this.validateRequired(data, ['salonId', 'name']); // Email and phone are optional
 
         if (data.email && !this.validateEmail(data.email)) {
             throw new Error('Valid email is required');
