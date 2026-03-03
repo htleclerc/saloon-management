@@ -2,7 +2,41 @@
 
 This document summarizes recent user prompts and objectives to track progress and identify areas for improvement.
 
+## Evolution Summary (Saloon Management)
+
+The platform has reached significant maturity through several specific development phases:
+
+1.  **Core Architecture (Jan 2026)**: Implementation of Next.js 14 App Router, DDD (Domain Driven Design) for services, and full internationalization (EN/FR/ES).
+2.  **Workflow & Permissions (late Jan 2026)**: Development of complex RBAC (Role-Based Access Control), read-only guards for workers, and the draft/pending/validated income lifecycle.
+3.  **Financial & Payroll Integrity (Feb 2026)**: Launch of worker-specific payroll history, audit logs for payment edits, and persistent discussion notes to prevent data loss during disputes.
+4.  **Data Visualization & UX (Feb 2026)**: Implementation of advanced "Safe Horizon" scaling for charts (preventing misleading small-volume spikes) and daily granularity for performance tracking.
+5.  **Technical Debt & Stability (Feb 2026)**: Deployment of full Vitest/Playwright testing suite and migration to Supabase-driven dynamic configuration.
+
 ## Recent Conversations (Reverse Chronological)
+
+### Debugging Booking Form (2026-02-12)
+**Objective**: Resolve issues with the "New Client" form on the booking page.
+- **UI Bug Fix**: Corrected the logic that caused the form to disappear unexpectedly.
+- **Client Creation**: Ensured new clients are correctly created during the booking process.
+
+### Creating Sp-Demo Branch & Repository Management (2026-02-10)
+**Objective**: Manage branch creation and cross-repo pushing.
+- **Branching**: Created `sp-demo` branch with an initialization message.
+- **Repo Sync**: Pushed the frontend folder to a separate repository for demo purposes.
+
+### Refining Payment Notes (2026-02-10)
+**Objective**: Maintain a complete history of payment discussions.
+- **Notes Appending**: Modified the salary payment system to append new notes instead of overwriting, preserving audit history.
+
+### Implementing Worker Audit Log (2026-02-09)
+**Objective**: Implement worker-specific audit logs for payments.
+- **Audit Tracking**: Tracked manual actions in payment history.
+- **Worker Context**: Enhanced the UI to display worker-specific history in the monthly overview.
+
+### Adding Income Unit Tests (2026-02-05)
+**Objective**: Improve test coverage for Income and Notification services.
+- **Service Tests**: Wrote comprehensive unit tests for `IncomeService` and `NotificationService`.
+- **i18n & Mocking**: Mocked `next/navigation` and handled hybrid notification logic verification.
 
 ### Implementing Refined Chart Filters & Consistent Scaling (2026-02-06)
 **Objective**: Implement period-based filtering for salary charts and ensure consistent Y-axis scaling.

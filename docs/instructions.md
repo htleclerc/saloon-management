@@ -5,8 +5,8 @@
 Système de gestion complet pour un salon de coiffure spécialisé dans les tresses (braids) avec gestion des salaires, revenus, dépenses et profits. Système multi-tenant permettant la gestion de plusieurs salons avec leurs propres utilisateurs et données.
 
 > [!NOTE]
-> **Status**: Cleanup & Optimization (Pre-Phase 3)
-> **Goal**: Strict type safety, no `any`, full i18n, and robust documentation.
+> **Status**: Project Launch & Routine Maintenance (2026-03-03)
+> **Goal**: Build and start the application, update recap of prompts, and ensure system stability.
 
 ## Fonctionnalités principales
 
