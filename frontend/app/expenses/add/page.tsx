@@ -6,9 +6,14 @@ import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { Save, X } from "lucide-react";
+import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
+import { useToast } from "@/context/ToastProvider";
+import { useTranslation } from "@/i18n";
 
 export default function AddExpensePage() {
     const router = useRouter();
+    const { t } = useTranslation();
+    const { handleReadOnlyClick } = useReadOnlyGuard();
     const [formData, setFormData] = useState({
         date: new Date().toISOString().split('T')[0],
         category: "",
@@ -20,17 +25,20 @@ export default function AddExpensePage() {
         status: "Pending", // Pending for admin validation if submitted by worker
     });
 
+    const { showToast } = useToast();
+
     // Check user role - in real app, get from auth context
-    const userRole = "Worker"; // or "Admin"
+    const userRole = "worker"; // or "admin"
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        if (handleReadOnlyClick()) return;
         console.log("Expense data:", formData);
 
-        if (userRole === "Worker") {
-            alert("Expense submitted for admin approval!");
+        if (userRole === "worker") {
+            showToast(t("common.info"), t("expenses.submittedInfo"), "info");
         } else {
-            alert("Expense added successfully!");
+            showToast(t("common.success"), t("expenses.addSuccess"), "success");
         }
         router.push("/expenses");
     };
@@ -45,19 +53,19 @@ export default function AddExpensePage() {
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">Add New Expense</h1>
-                        <p className="text-gray-500 mt-1">Record a new business expense</p>
+                        <h1 className="text-3xl font-bold text-gray-900">{t("expenses.addExpense")}</h1>
+                        <p className="text-gray-500 mt-1">{t("expenses.recordNew")}</p>
                     </div>
-                    <Button variant="outline" size="md" onClick={() => router.back()}>
+                    <Button variant="danger" size="md" onClick={() => router.back()}>
                         <X className="w-5 h-5" />
-                        Cancel
+                        {t("common.cancel")}
                     </Button>
                 </div>
 
                 {/* Form */}
                 <form onSubmit={handleSubmit}>
                     <Card>
-                        <h3 className="text-lg font-semibold mb-6">Expense Information</h3>
+                        <h3 className="text-lg font-semibold mb-6">{t("expenses.information")}</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* Date */}
                             <div>
@@ -70,7 +78,7 @@ export default function AddExpensePage() {
                                     value={formData.date}
                                     onChange={handleChange}
                                     required
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                                 />
                             </div>
 
@@ -84,7 +92,7 @@ export default function AddExpensePage() {
                                     value={formData.category}
                                     onChange={handleChange}
                                     required
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                                 >
                                     <option value="">Select a category</option>
                                     <option value="Office Rental">Office Rental</option>
@@ -110,7 +118,7 @@ export default function AddExpensePage() {
                                     value={formData.description}
                                     onChange={handleChange}
                                     required
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                                     placeholder="Brief description of the expense"
                                 />
                             </div>
@@ -128,7 +136,7 @@ export default function AddExpensePage() {
                                     min="0"
                                     step="0.01"
                                     required
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                                     placeholder="Enter amount"
                                 />
                             </div>
@@ -142,7 +150,7 @@ export default function AddExpensePage() {
                                     name="salon"
                                     value={formData.salon}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                                 >
                                     <option>Salon 1</option>
                                     <option>Salon 2</option>
@@ -159,7 +167,7 @@ export default function AddExpensePage() {
                                     name="paymentMethod"
                                     value={formData.paymentMethod}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                                 >
                                     <option>Cash</option>
                                     <option>Card</option>
@@ -176,22 +184,22 @@ export default function AddExpensePage() {
                                     value={formData.notes}
                                     onChange={handleChange}
                                     rows={4}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                                     placeholder="Add any additional notes..."
                                 />
                             </div>
 
                             {/* Status Info - Show only for Workers */}
-                            {userRole === "Worker" && (
+                            {userRole === "worker" && (
                                 <div className="md:col-span-2">
-                                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                    <div className="bg-[var(--color-warning-light)] border border-[var(--color-warning-light)] rounded-lg p-4">
                                         <div className="flex items-center gap-2">
-                                            <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                                            <p className="text-sm font-medium text-yellow-800">
+                                            <div className="w-2 h-2 bg-[var(--color-warning)] rounded-full"></div>
+                                            <p className="text-sm font-medium text-[var(--color-warning)]">
                                                 This expense will be submitted for admin approval
                                             </p>
                                         </div>
-                                        <p className="text-xs text-yellow-700 mt-1 ml-4">
+                                        <p className="text-xs text-[var(--color-warning)] opacity-80 mt-1 ml-4">
                                             As a worker, your expense submissions require administrator approval before being added to the records.
                                         </p>
                                     </div>
@@ -200,13 +208,13 @@ export default function AddExpensePage() {
                         </div>
 
                         <div className="flex gap-4 mt-8">
-                            <Button type="submit" variant="primary" size="lg" className="flex-1">
+                            <Button type="submit" variant="success" size="lg" className="flex-1">
                                 <Save className="w-5 h-5" />
-                                {userRole === "Worker" ? "Submit for Approval" : "Save Expense"}
+                                {userRole === "worker" ? t("expenses.submitForApproval") : t("expenses.saveExpense")}
                             </Button>
-                            <Button type="button" variant="outline" size="lg" onClick={() => router.back()}>
+                            <Button type="button" variant="danger" size="lg" onClick={() => router.back()}>
                                 <X className="w-5 h-5" />
-                                Cancel
+                                {t("common.cancel")}
                             </Button>
                         </div>
                     </Card>

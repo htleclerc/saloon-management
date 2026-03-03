@@ -1,0 +1,311 @@
+# =============================================================================
+# Rollback Workflow - GitHub Actions
+# =============================================================================
+# Template pour rollback d'urgence
+#
+# Usage:
+# 1. Copier ce fichier dans .github/workflows/rollback.yml
+# 2. Configurer les secrets et environments
+# 3. Déclencher manuellement via Actions > Rollback > Run workflow
+# =============================================================================
+
+name: 🔄 Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to rollback'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      version:
+        description: 'Version/tag to rollback to (leave empty for previous)'
+        required: false
+        type: string
+      reason:
+        description: 'Reason for rollback'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  # ===========================================================================
+  # JOB: Prepare Rollback
+  # ===========================================================================
+  prepare:
+    name: 📋 Prepare Rollback
+    runs-on: ubuntu-latest
+    outputs:
+      target_version: ${{ steps.version.outputs.target }}
+      current_version: ${{ steps.version.outputs.current }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine versions
+        id: version
+        run: |
+          # Current version (latest tag)
+          CURRENT=$(git describe --tags --abbrev=0 2>/dev/null || echo "unknown")
+          echo "current=$CURRENT" >> $GITHUB_OUTPUT
+          echo "📍 Current version: $CURRENT"
+
+          # Target version
+          if [[ -n "${{ inputs.version }}" ]]; then
+            TARGET="${{ inputs.version }}"
+          else
+            # Get previous version
+            TARGET=$(git tag --sort=-version:refname | head -2 | tail -1)
+            if [[ -z "$TARGET" ]]; then
+              echo "❌ No previous version found!"
+              exit 1
+            fi
+          fi
+          echo "target=$TARGET" >> $GITHUB_OUTPUT
+          echo "🎯 Target version: $TARGET"
+
+      - name: Validate target version
+        run: |
+          TARGET="${{ steps.version.outputs.target }}"
+          if ! git rev-parse "$TARGET" >/dev/null 2>&1; then
+            echo "❌ Version $TARGET does not exist!"
+            exit 1
+          fi
+          echo "✅ Version $TARGET exists"
+
+      - name: Log rollback details
+        run: |
+          echo "## Rollback Details" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | ${{ inputs.environment }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Current Version | ${{ steps.version.outputs.current }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Target Version | ${{ steps.version.outputs.target }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Reason | ${{ inputs.reason }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Initiated by | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Timestamp | $(date -u +%Y-%m-%dT%H:%M:%SZ) |" >> $GITHUB_STEP_SUMMARY
+
+  # ===========================================================================
+  # JOB: Rollback Staging
+  # ===========================================================================
+  rollback-staging:
+    name: 🔄 Rollback Staging
+    needs: prepare
+    if: inputs.environment == 'staging'
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://staging.example.com
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.target_version }}
+
+      - name: Deploy rollback version
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          alias-domains: staging.example.com
+
+      - name: Verify rollback
+        run: |
+          sleep 30
+          for i in {1..10}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://staging.example.com/api/health")
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ Staging rollback successful!"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "❌ Staging rollback verification failed!"
+          exit 1
+
+  # ===========================================================================
+  # JOB: Rollback Production
+  # ===========================================================================
+  rollback-production:
+    name: 🔄 Rollback Production
+    needs: prepare
+    if: inputs.environment == 'production'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://example.com
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.target_version }}
+
+      - name: Deploy rollback version
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+
+      - name: Verify rollback
+        run: |
+          sleep 60
+          for i in {1..15}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://example.com/api/health")
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ Production rollback successful!"
+              exit 0
+            fi
+            echo "Attempt $i: Status $STATUS"
+            sleep 15
+          done
+          echo "❌ Production rollback verification failed!"
+          exit 1
+
+      - name: Update Sentry
+        uses: getsentry/action-release@v1
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        with:
+          environment: production
+          version: ${{ needs.prepare.outputs.target_version }}
+
+  # ===========================================================================
+  # JOB: Create Incident Record
+  # ===========================================================================
+  incident:
+    name: 📝 Create Incident
+    needs: [prepare, rollback-staging, rollback-production]
+    if: always() && (needs.rollback-staging.result == 'success' || needs.rollback-production.result == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create incident in tracking system
+        run: |
+          # Example: Create issue in GitHub
+          gh issue create \
+            --title "🔄 Rollback: ${{ inputs.environment }} - $(date +%Y-%m-%d)" \
+            --body "## Rollback Incident
+
+          **Environment:** ${{ inputs.environment }}
+          **From Version:** ${{ needs.prepare.outputs.current_version }}
+          **To Version:** ${{ needs.prepare.outputs.target_version }}
+          **Reason:** ${{ inputs.reason }}
+          **Initiated by:** @${{ github.actor }}
+          **Timestamp:** $(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          ### Actions Required
+
+          - [ ] Investigate root cause
+          - [ ] Document findings
+          - [ ] Create fix PR
+          - [ ] Test fix thoroughly
+          - [ ] Close this incident
+
+          ### Related Links
+
+          - [Workflow Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          " \
+            --label "incident,rollback,${{ inputs.environment }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+  # ===========================================================================
+  # JOB: Notify
+  # ===========================================================================
+  notify:
+    name: 📢 Notify Team
+    needs: [prepare, rollback-staging, rollback-production, incident]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine status
+        id: status
+        run: |
+          if [[ "${{ inputs.environment }}" == "staging" ]]; then
+            RESULT="${{ needs.rollback-staging.result }}"
+          else
+            RESULT="${{ needs.rollback-production.result }}"
+          fi
+
+          if [[ "$RESULT" == "success" ]]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "color=warning" >> $GITHUB_OUTPUT
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+            echo "color=danger" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Notify Slack
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          custom_payload: |
+            {
+              "attachments": [{
+                "color": "${{ steps.status.outputs.color }}",
+                "blocks": [
+                  {
+                    "type": "header",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "🔄 ROLLBACK ${{ steps.status.outputs.status == 'success' && 'COMPLETED' || 'FAILED' }}"
+                    }
+                  },
+                  {
+                    "type": "section",
+                    "fields": [
+                      {"type": "mrkdwn", "text": "*Environment:*\n${{ inputs.environment }}"},
+                      {"type": "mrkdwn", "text": "*Target Version:*\n${{ needs.prepare.outputs.target_version }}"},
+                      {"type": "mrkdwn", "text": "*Previous Version:*\n${{ needs.prepare.outputs.current_version }}"},
+                      {"type": "mrkdwn", "text": "*Initiated by:*\n${{ github.actor }}"}
+                    ]
+                  },
+                  {
+                    "type": "section",
+                    "text": {
+                      "type": "mrkdwn",
+                      "text": "*Reason:*\n${{ inputs.reason }}"
+                    }
+                  },
+                  {
+                    "type": "context",
+                    "elements": [
+                      {"type": "mrkdwn", "text": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow>"}
+                    ]
+                  }
+                ]
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Alert on failure
+        if: steps.status.outputs.status == 'failure' && inputs.environment == 'production'
+        run: |
+          curl -X POST "https://events.pagerduty.com/v2/enqueue" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "routing_key": "${{ secrets.PAGERDUTY_ROUTING_KEY }}",
+              "event_action": "trigger",
+              "payload": {
+                "summary": "CRITICAL: Production rollback FAILED!",
+                "severity": "critical",
+                "source": "github-actions-rollback",
+                "custom_details": {
+                  "target_version": "${{ needs.prepare.outputs.target_version }}",
+                  "reason": "${{ inputs.reason }}",
+                  "initiated_by": "${{ github.actor }}"
+                }
+              }
+            }'

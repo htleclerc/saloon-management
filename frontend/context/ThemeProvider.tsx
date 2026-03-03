@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { useAuth } from "./AuthProvider";
 
 export type SubmenuLayout = "vertical" | "horizontal";
 export type DesignType = "modern" | "minimal" | "glassmorphism" | "gradient";
@@ -44,13 +45,14 @@ interface ThemeContextType {
     theme: ThemeSettings;
     updateTheme: (updates: Partial<ThemeSettings>) => void;
     toggleSidebar: () => void;
+    toggleDarkMode: () => void;
     currentPalette: ColorPalette;
     mobileMenuOpen: boolean;
     setMobileMenuOpen: (open: boolean) => void;
 }
 
 const defaultTheme: ThemeSettings = {
-    submenuLayout: "vertical",
+    submenuLayout: "horizontal",
     designType: "modern",
     sidebarCollapsed: false,
     colorPaletteId: "purple-pink",
@@ -86,7 +88,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         }
     }, []);
 
-    // Save theme to localStorage and apply to document
+    // Dynamic Salon Color Override (if provided by Auth)
+    const { currentTenant } = useAuth();
+
+    // Apply theme to document
     useEffect(() => {
         if (!mounted) return;
 
@@ -99,10 +104,69 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
         // Apply color palette CSS variables
         const palette = colorPalettes.find(p => p.id === theme.colorPaletteId) || colorPalettes[0];
-        document.documentElement.style.setProperty("--color-primary", palette.primary);
-        document.documentElement.style.setProperty("--color-secondary", palette.secondary);
-        document.documentElement.style.setProperty("--color-primary-light", palette.primaryLight);
-        document.documentElement.style.setProperty("--color-secondary-light", palette.secondaryLight);
+
+        // Priority logic based on useCustomColorOverride flag:
+        // - If useCustomColorOverride is true: ONLY custom colors (no palette fallback)
+        // - If useCustomColorOverride is false: Tenant logo colors > Palette colors (ignore custom)
+        const useCustom = currentTenant?.useCustomColorOverride ?? false;
+
+        const primaryColor = useCustom
+            ? (currentTenant?.customPrimaryColor || palette.primary)
+            : (currentTenant?.primaryColor || palette.primary);
+
+        const secondaryColor = useCustom
+            ? (currentTenant?.customSecondaryColor || palette.secondary)
+            : palette.secondary;
+
+        document.documentElement.style.setProperty("--color-primary", primaryColor);
+        document.documentElement.style.setProperty("--color-secondary", secondaryColor);
+
+        // For light colors: use custom if override is enabled and custom color exists, otherwise use palette light colors
+        const hasCustomPrimary = useCustom && currentTenant?.customPrimaryColor;
+        const hasCustomSecondary = useCustom && currentTenant?.customSecondaryColor;
+        const hasTenantPrimary = !useCustom && currentTenant?.primaryColor;
+
+        document.documentElement.style.setProperty(
+            "--color-primary-light",
+            (hasCustomPrimary || hasTenantPrimary) ? `${primaryColor}15` : palette.primaryLight
+        );
+        document.documentElement.style.setProperty(
+            "--color-secondary-light",
+            hasCustomSecondary ? `${secondaryColor}15` : palette.secondaryLight
+        );
+
+        // --- Semantic Colors (Success, Warning, Danger) ---
+        const semanticMode = currentTenant?.semanticColorMode || "default";
+
+        // Defaults from globals.css as fallback
+        const standardColors = {
+            success: "#22c55e",
+            warning: "#f59e0b",
+            error: "#ef4444"
+        };
+
+        let successColor = standardColors.success;
+        let warningColor = standardColors.warning;
+        let errorColor = standardColors.error;
+
+        if (semanticMode === "theme") {
+            successColor = primaryColor;
+            warningColor = secondaryColor;
+            errorColor = "#ef4444"; // Danger usually stays red unless customized
+        } else if (semanticMode === "custom") {
+            successColor = currentTenant?.customSuccessColor || standardColors.success;
+            warningColor = currentTenant?.customWarningColor || standardColors.warning;
+            errorColor = currentTenant?.customDangerColor || standardColors.error;
+        }
+
+        document.documentElement.style.setProperty("--color-success", successColor);
+        document.documentElement.style.setProperty("--color-warning", warningColor);
+        document.documentElement.style.setProperty("--color-error", errorColor);
+
+        // Generate light variants (15% opacity)
+        document.documentElement.style.setProperty("--color-success-light", `${successColor}15`);
+        document.documentElement.style.setProperty("--color-warning-light", `${warningColor}15`);
+        document.documentElement.style.setProperty("--color-error-light", `${errorColor}15`);
 
         // Apply font size
         const fontSizes = { small: "14px", normal: "16px", large: "18px" };
@@ -124,7 +188,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         } else {
             document.documentElement.classList.remove("no-animations");
         }
-    }, [theme, mounted]);
+    }, [theme, mounted, currentTenant]);
 
     const updateTheme = (updates: Partial<ThemeSettings>) => {
         setTheme((prev) => ({ ...prev, ...updates }));
@@ -134,12 +198,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         setTheme((prev) => ({ ...prev, sidebarCollapsed: !prev.sidebarCollapsed }));
     };
 
+    const toggleDarkMode = () => {
+        setTheme((prev) => ({ ...prev, darkMode: !prev.darkMode }));
+    };
+
     // Always provide the context, even before mount (using default values)
     return (
         <ThemeContext.Provider value={{
             theme,
             updateTheme,
             toggleSidebar,
+            toggleDarkMode,
             currentPalette,
             mobileMenuOpen,
             setMobileMenuOpen

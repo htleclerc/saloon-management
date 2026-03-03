@@ -1,138 +1,106 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import MainLayout from "@/components/layout/MainLayout";
-import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import { ArrowLeft, Save, Sparkles, Clock, Euro, Trash2 } from "lucide-react";
-import Link from "next/link";
+import { ArrowLeft, Trash2 } from "lucide-react";
+import ServiceForm from "@/components/services/ServiceForm";
+import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
+import { useTranslation } from "@/i18n";
+import { useToast } from "@/context/ToastProvider";
+import { useConfirm } from "@/context/ConfirmProvider";
 
 export default function EditServicePage() {
     const params = useParams();
     const router = useRouter();
+    const { t } = useTranslation();
+    const { showToast } = useToast();
+    const { confirm: confirmAction } = useConfirm();
+    const searchParams = useSearchParams();
     const id = params.id as string;
+    const mode = (searchParams.get("mode") as "simple" | "advanced") || "advanced";
+    const { handleReadOnlyClick } = useReadOnlyGuard();
 
-    const [formData, setFormData] = useState({
+    // In a real app, fetch this from API
+    const initialData = {
         name: "Box Braids",
         description: "Traditional box braids with various sizes",
         price: "120",
         duration: "3-4 hours",
         category: "Braiding",
-    });
+        status: "active",
+        image: "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=400",
+        gallery: [
+            "https://images.unsplash.com/photo-1595476108410-d3923412705e?w=400",
+            "https://images.unsplash.com/photo-1560869713-7d0a29430803?w=400"
+        ]
+    };
+
+    const handleSubmit = async (data: any) => {
+        if (handleReadOnlyClick()) return;
+        try {
+            // In a real app, send to API via serviceService.update(id, data)
+            console.log("Updating service:", data);
+            showToast(t("common.success"), t("dialogs.success"), "success");
+            router.push("/services");
+        } catch (err) {
+            console.error(err);
+            showToast(t("common.error"), t("errors.generic"), "error");
+        }
+    };
+
+    const handleArchive = async () => {
+        if (handleReadOnlyClick()) return;
+
+        const isConfirmed = await confirmAction({
+            title: t("common.delete"),
+            message: t("dialogs.confirmDelete"),
+            type: 'error',
+            confirmText: t("common.delete"),
+            cancelText: t("common.cancel")
+        });
+
+        if (isConfirmed) {
+            try {
+                // In a real app, send to API (soft delete)
+                console.log("Archiving service:", id);
+                showToast(t("common.success"), t("services.archiveSuccess"), "success");
+                router.push("/services");
+            } catch (err) {
+                console.error(err);
+                showToast(t("common.error"), t("errors.generic"), "error");
+            }
+        }
+    };
 
     return (
         <MainLayout>
-            <div className="max-w-4xl mx-auto space-y-6">
+            <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <button onClick={() => router.back()}>
-                            <Button variant="outline" size="sm" className="p-2">
-                                <ArrowLeft className="w-5 h-5" />
-                            </Button>
+                        <button onClick={() => router.back()} className="p-2.5 bg-white rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors">
+                            <ArrowLeft className="w-5 h-5 text-gray-600" />
                         </button>
                         <div>
-                            <h1 className="text-3xl font-bold text-gray-900">Edit Service</h1>
-                            <p className="text-gray-500">Modify service ID: #{id}</p>
+                            <h1 className="text-3xl font-bold text-gray-900">{t("services.editService")}</h1>
+                            <p className="text-gray-500 mt-1">{t("services.editingId")}: #{id}</p>
                         </div>
                     </div>
-                    <Button variant="outline" size="md" className="text-red-600 border-red-200 hover:bg-red-50">
-                        <Trash2 className="w-5 h-5" />
-                        Delete Service
-                    </Button>
+                    <ReadOnlyGuard>
+                        <Button variant="danger" size="md" onClick={handleArchive} className="rounded-xl px-6">
+                            <Trash2 className="w-5 h-5" />
+                            {t("services.archiveService")}
+                        </Button>
+                    </ReadOnlyGuard>
                 </div>
 
-                <form className="space-y-6">
-                    <Card>
-                        <div className="space-y-6">
-                            <div className="flex items-center gap-2 text-purple-600 mb-2">
-                                <Sparkles className="w-5 h-5" />
-                                <h3 className="font-bold">Service Details</h3>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Service Name</label>
-                                    <input
-                                        type="text"
-                                        placeholder="e.g., Box Braids"
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        required
-                                    />
-                                </div>
-
-                                <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                                    <textarea
-                                        rows={3}
-                                        placeholder="Describe the service details..."
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                        value={formData.description}
-                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
-                                        <Euro className="w-4 h-4 text-gray-400" />
-                                        Price (€)
-                                    </label>
-                                    <input
-                                        type="number"
-                                        placeholder="0.00"
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                        value={formData.price}
-                                        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                                        required
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
-                                        <Clock className="w-4 h-4 text-gray-400" />
-                                        Estimated Duration
-                                    </label>
-                                    <input
-                                        type="text"
-                                        placeholder="e.g., 3-4 hours"
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                        value={formData.duration}
-                                        onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                                        required
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                                    <select
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                        value={formData.category}
-                                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                    >
-                                        <option value="Braiding">Braiding</option>
-                                        <option value="Tailoring">Tailoring</option>
-                                        <option value="Mechanical">Mechanical</option>
-                                        <option value="Consultation">Consultation</option>
-                                        <option value="Other">Other</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </Card>
-
-                    <div className="flex justify-end gap-3">
-                        <Link href="/services">
-                            <Button variant="outline" size="lg">Cancel</Button>
-                        </Link>
-                        <Button variant="primary" size="lg" type="submit">
-                            <Save className="w-5 h-5" />
-                            Update Service
-                        </Button>
-                    </div>
-                </form>
+                <ServiceForm
+                    initialData={initialData}
+                    mode={mode}
+                    onSubmit={handleSubmit}
+                    onCancel={() => router.push("/services")}
+                />
             </div>
         </MainLayout>
     );

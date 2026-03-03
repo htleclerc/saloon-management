@@ -1,0 +1,43 @@
+{
+    "realm": "saloon-app",
+    "enabled": true,
+    "roles": {
+        "realm": [
+            {
+                "name": "super_admin",
+                "description": "SaaS Platform Owner"
+            },
+            {
+                "name": "owner",
+                "description": "Salon Owner"
+            },
+            {
+                "name": "manager",
+                "description": "Salon Manager"
+            },
+            {
+                "name": "worker",
+                "description": "Salon Worker"
+            },
+            {
+                "name": "client",
+                "description": "Salon Client"
+            }
+        ]
+    },
+    "clients": [
+        {
+            "clientId": "saloon-frontend",
+            "enabled": true,
+            "publicClient": true,
+            "directAccessGrantsEnabled": true,
+            "baseUrl": "http://localhost:3000",
+            "redirectUris": [
+                "http://localhost:3000/*"
+            ],
+            "webOrigins": [
+                "http://localhost:3000"
+            ]
+        }
+    ]
+}

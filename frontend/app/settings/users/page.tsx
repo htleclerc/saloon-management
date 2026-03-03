@@ -5,6 +5,8 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { useState } from "react";
 import { Plus, MoreHorizontal, Mail, Shield, User, Crown, Trash2 } from "lucide-react";
+import { useAuth } from "@/context/AuthProvider";
+import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 
 const teamMembers = [
     { id: 1, name: "Admin User", email: "admin@workshopmanager.com", role: "owner", avatar: "AU", status: "active", lastActive: "En ligne" },
@@ -28,6 +30,7 @@ const roleLabels: Record<string, string> = {
 };
 
 export default function UsersSettingsPage() {
+    const { canModify } = useAuth();
     const [showInviteModal, setShowInviteModal] = useState(false);
     const [inviteEmail, setInviteEmail] = useState("");
     const [inviteRole, setInviteRole] = useState("worker");
@@ -44,10 +47,12 @@ export default function UsersSettingsPage() {
                         <h3 className="font-semibold text-gray-900 text-lg">Membres de l'équipe</h3>
                         <p className="text-xs text-gray-500">{teamMembers.length} membres • {teamMembers.filter(m => m.status === "pending").length} invitation en attente</p>
                     </div>
-                    <Button variant="primary" size="sm" onClick={() => setShowInviteModal(true)}>
-                        <Plus className="w-4 h-4" />
-                        Inviter
-                    </Button>
+                    <ReadOnlyGuard>
+                        <Button variant="primary" size="sm" onClick={() => setShowInviteModal(true)}>
+                            <Plus className="w-4 h-4" />
+                            Inviter
+                        </Button>
+                    </ReadOnlyGuard>
                 </div>
 
                 <div className="space-y-3">
@@ -59,9 +64,9 @@ export default function UsersSettingsPage() {
                         >
                             <div className="flex items-center gap-3">
                                 <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold ${member.role === "owner" ? "bg-gradient-to-br from-purple-500 to-purple-700" :
-                                        member.role === "admin" ? "bg-gradient-to-br from-red-500 to-red-600" :
-                                            member.role === "manager" ? "bg-gradient-to-br from-blue-500 to-blue-600" :
-                                                "bg-gradient-to-br from-green-500 to-green-600"
+                                    member.role === "admin" ? "bg-gradient-to-br from-red-500 to-red-600" :
+                                        member.role === "manager" ? "bg-gradient-to-br from-blue-500 to-blue-600" :
+                                            "bg-gradient-to-br from-green-500 to-green-600"
                                     }`}>
                                     {member.avatar}
                                 </div>
@@ -81,9 +86,11 @@ export default function UsersSettingsPage() {
                                     {member.lastActive}
                                 </span>
                                 {member.role !== "owner" && (
-                                    <button className="text-gray-400 hover:text-gray-600">
-                                        <MoreHorizontal className="w-5 h-5" />
-                                    </button>
+                                    <ReadOnlyGuard>
+                                        <button className="text-gray-400 hover:text-gray-600">
+                                            <MoreHorizontal className="w-5 h-5" />
+                                        </button>
+                                    </ReadOnlyGuard>
                                 )}
                             </div>
                         </div>
@@ -111,6 +118,7 @@ export default function UsersSettingsPage() {
                                 value={inviteEmail}
                                 onChange={(e) => setInviteEmail(e.target.value)}
                                 placeholder="email@exemple.com"
+                                readOnly={!canModify}
                                 className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                             />
                         </div>
@@ -119,6 +127,7 @@ export default function UsersSettingsPage() {
                             <select
                                 value={inviteRole}
                                 onChange={(e) => setInviteRole(e.target.value)}
+                                disabled={!canModify}
                                 className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                             >
                                 <option value="admin">Administrateur</option>
@@ -129,10 +138,12 @@ export default function UsersSettingsPage() {
                     </div>
                     <div className="flex justify-end gap-3 mt-4">
                         <Button variant="outline" size="sm" onClick={() => setShowInviteModal(false)}>Annuler</Button>
-                        <Button variant="primary" size="sm">
-                            <Mail className="w-4 h-4" />
-                            Envoyer l'invitation
-                        </Button>
+                        <ReadOnlyGuard>
+                            <Button variant="primary" size="sm">
+                                <Mail className="w-4 h-4" />
+                                Envoyer l'invitation
+                            </Button>
+                        </ReadOnlyGuard>
                     </div>
                 </Card>
             )}

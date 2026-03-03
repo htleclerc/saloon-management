@@ -5,6 +5,8 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { useState } from "react";
 import { Save, Bell, Mail, MessageSquare, Smartphone } from "lucide-react";
+import { useAuth } from "@/context/AuthProvider";
+import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 
 const notificationCategories = [
     {
@@ -58,6 +60,7 @@ const notificationCategories = [
 ];
 
 export default function NotificationsSettingsPage() {
+    const { canModify } = useAuth();
     const [notifications, setNotifications] = useState(notificationCategories);
     const [digestFrequency, setDigestFrequency] = useState("daily");
     const [quietHoursEnabled, setQuietHoursEnabled] = useState(true);
@@ -65,6 +68,7 @@ export default function NotificationsSettingsPage() {
     const [quietHoursEnd, setQuietHoursEnd] = useState("08:00");
 
     const toggleNotification = (categoryId: string, type: "email" | "push" | "sms") => {
+        if (!canModify) return;
         setNotifications(notifications.map(n =>
             n.id === categoryId ? { ...n, [type]: !n[type] } : n
         ));
@@ -125,6 +129,7 @@ export default function NotificationsSettingsPage() {
                                                 type="checkbox"
                                                 checked={category.email}
                                                 onChange={() => toggleNotification(category.id, "email")}
+                                                disabled={!canModify}
                                                 className="sr-only peer"
                                             />
                                             <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
@@ -136,6 +141,7 @@ export default function NotificationsSettingsPage() {
                                                 type="checkbox"
                                                 checked={category.push}
                                                 onChange={() => toggleNotification(category.id, "push")}
+                                                disabled={!canModify}
                                                 className="sr-only peer"
                                             />
                                             <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
@@ -147,6 +153,7 @@ export default function NotificationsSettingsPage() {
                                                 type="checkbox"
                                                 checked={category.sms}
                                                 onChange={() => toggleNotification(category.id, "sms")}
+                                                disabled={!canModify}
                                                 className="sr-only peer"
                                             />
                                             <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
@@ -174,9 +181,10 @@ export default function NotificationsSettingsPage() {
                             key={freq.id}
                             onClick={() => setDigestFrequency(freq.id)}
                             className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all ${digestFrequency === freq.id
-                                    ? "border-purple-500 bg-purple-50 text-purple-700"
-                                    : "border-gray-200 text-gray-600 hover:border-purple-300"
-                                }`}
+                                ? "border-purple-500 bg-purple-50 text-purple-700"
+                                : "border-gray-200 text-gray-600 hover:border-purple-300"
+                                } ${!canModify ? "cursor-not-allowed opacity-80" : ""}`}
+                            disabled={!canModify}
                         >
                             {freq.name}
                         </button>
@@ -196,6 +204,7 @@ export default function NotificationsSettingsPage() {
                             type="checkbox"
                             checked={quietHoursEnabled}
                             onChange={(e) => setQuietHoursEnabled(e.target.checked)}
+                            disabled={!canModify}
                             className="sr-only peer"
                         />
                         <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
@@ -209,6 +218,7 @@ export default function NotificationsSettingsPage() {
                                 type="time"
                                 value={quietHoursStart}
                                 onChange={(e) => setQuietHoursStart(e.target.value)}
+                                readOnly={!canModify}
                                 className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                             />
                         </div>
@@ -218,6 +228,7 @@ export default function NotificationsSettingsPage() {
                                 type="time"
                                 value={quietHoursEnd}
                                 onChange={(e) => setQuietHoursEnd(e.target.value)}
+                                readOnly={!canModify}
                                 className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                             />
                         </div>
@@ -228,10 +239,12 @@ export default function NotificationsSettingsPage() {
             {/* Save Button */}
             <div className="flex justify-end gap-3">
                 <Button variant="outline" size="md">Annuler</Button>
-                <Button variant="primary" size="md">
-                    <Save className="w-4 h-4" />
-                    Sauvegarder
-                </Button>
+                <ReadOnlyGuard>
+                    <Button variant="primary" size="md">
+                        <Save className="w-4 h-4" />
+                        Sauvegarder
+                    </Button>
+                </ReadOnlyGuard>
             </div>
         </SettingsLayout>
     );

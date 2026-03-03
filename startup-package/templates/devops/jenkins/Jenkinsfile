@@ -1,0 +1,605 @@
+// =============================================================================
+// Jenkinsfile - Pipeline CI/CD Complet
+// =============================================================================
+// Template pour application Next.js avec tests, analyse de code et déploiement
+//
+// Prérequis:
+// - Jenkins avec plugins: NodeJS, Docker, SonarQube Scanner, Credentials
+// - Credentials configurés: docker-registry, sonar-token, vercel-token
+// - Outils: Node.js 20, Docker, SonarQube Scanner
+// =============================================================================
+
+pipeline {
+    agent any
+
+    // =========================================================================
+    // Environment Variables
+    // =========================================================================
+    environment {
+        // Application
+        APP_NAME = 'saloon-management'
+        NODE_VERSION = '20'
+
+        // Docker
+        DOCKER_REGISTRY = 'ghcr.io'
+        DOCKER_IMAGE = "${DOCKER_REGISTRY}/${env.GITHUB_ORG}/${APP_NAME}"
+
+        // SonarQube
+        SONAR_HOST_URL = 'https://sonarqube.example.com'
+        SONAR_PROJECT_KEY = "${APP_NAME}"
+
+        // Deployment
+        VERCEL_ORG_ID = credentials('vercel-org-id')
+        VERCEL_PROJECT_ID = credentials('vercel-project-id')
+
+        // Notifications
+        SLACK_CHANNEL = '#deployments'
+    }
+
+    // =========================================================================
+    // Pipeline Options
+    // =========================================================================
+    options {
+        // Timeout global
+        timeout(time: 30, unit: 'MINUTES')
+
+        // Garder les 10 derniers builds
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+
+        // Timestamps dans les logs
+        timestamps()
+
+        // Ne pas exécuter en parallèle
+        disableConcurrentBuilds()
+
+        // Variables d'environnement Git
+        gitLabConnection('gitlab')
+    }
+
+    // =========================================================================
+    // Parameters
+    // =========================================================================
+    parameters {
+        choice(
+            name: 'ENVIRONMENT',
+            choices: ['staging', 'production'],
+            description: 'Environment to deploy to'
+        )
+        booleanParam(
+            name: 'SKIP_TESTS',
+            defaultValue: false,
+            description: 'Skip test execution'
+        )
+        booleanParam(
+            name: 'SKIP_SONAR',
+            defaultValue: false,
+            description: 'Skip SonarQube analysis'
+        )
+        booleanParam(
+            name: 'FORCE_DEPLOY',
+            defaultValue: false,
+            description: 'Force deployment even if checks fail'
+        )
+    }
+
+    // =========================================================================
+    // Triggers
+    // =========================================================================
+    triggers {
+        // Polling SCM every 5 minutes
+        pollSCM('H/5 * * * *')
+
+        // Webhook from GitHub/GitLab
+        gitlab(triggerOnPush: true, triggerOnMergeRequest: true)
+    }
+
+    // =========================================================================
+    // Stages
+    // =========================================================================
+    stages {
+        // =====================================================================
+        // Stage: Checkout
+        // =====================================================================
+        stage('Checkout') {
+            steps {
+                checkout scm
+
+                script {
+                    // Get commit info
+                    env.GIT_COMMIT_SHORT = sh(
+                        script: 'git rev-parse --short HEAD',
+                        returnStdout: true
+                    ).trim()
+
+                    env.GIT_COMMIT_MSG = sh(
+                        script: 'git log -1 --pretty=%B',
+                        returnStdout: true
+                    ).trim()
+
+                    env.GIT_AUTHOR = sh(
+                        script: 'git log -1 --pretty=%an',
+                        returnStdout: true
+                    ).trim()
+
+                    // Determine branch type
+                    env.IS_MAIN = env.BRANCH_NAME ==~ /(main|master)/
+                    env.IS_DEVELOP = env.BRANCH_NAME == 'develop'
+                    env.IS_FEATURE = env.BRANCH_NAME ==~ /feature\/.*/
+                    env.IS_RELEASE = env.BRANCH_NAME ==~ /release\/.*/
+                    env.IS_HOTFIX = env.BRANCH_NAME ==~ /hotfix\/.*/
+                }
+
+                echo "Building ${APP_NAME} - ${env.GIT_COMMIT_SHORT}"
+                echo "Branch: ${env.BRANCH_NAME}"
+                echo "Author: ${env.GIT_AUTHOR}"
+            }
+        }
+
+        // =====================================================================
+        // Stage: Install Dependencies
+        // =====================================================================
+        stage('Install Dependencies') {
+            steps {
+                nodejs(nodeJSInstallationName: "NodeJS ${NODE_VERSION}") {
+                    sh '''
+                        echo "Node version: $(node -v)"
+                        echo "NPM version: $(npm -v)"
+
+                        # Use npm ci for reproducible builds
+                        npm ci --prefer-offline --no-audit
+
+                        # Verify installation
+                        npm ls --depth=0
+                    '''
+                }
+            }
+        }
+
+        // =====================================================================
+        // Stage: Quality Checks (Parallel)
+        // =====================================================================
+        stage('Quality Checks') {
+            parallel {
+                // Lint
+                stage('Lint') {
+                    steps {
+                        nodejs(nodeJSInstallationName: "NodeJS ${NODE_VERSION}") {
+                            sh 'npm run lint -- --format json --output-file eslint-report.json || true'
+                        }
+                    }
+                    post {
+                        always {
+                            recordIssues(
+                                enabledForFailure: true,
+                                tool: esLint(pattern: 'eslint-report.json')
+                            )
+                        }
+                    }
+                }
+
+                // Type Check
+                stage('Type Check') {
+                    steps {
+                        nodejs(nodeJSInstallationName: "NodeJS ${NODE_VERSION}") {
+                            sh 'npm run type-check'
+                        }
+                    }
+                }
+
+                // Security Audit
+                stage('Security Audit') {
+                    steps {
+                        nodejs(nodeJSInstallationName: "NodeJS ${NODE_VERSION}") {
+                            sh '''
+                                npm audit --audit-level=high --json > npm-audit.json || true
+                            '''
+                        }
+                    }
+                    post {
+                        always {
+                            archiveArtifacts artifacts: 'npm-audit.json', allowEmptyArchive: true
+                        }
+                    }
+                }
+            }
+        }
+
+        // =====================================================================
+        // Stage: Unit Tests
+        // =====================================================================
+        stage('Unit Tests') {
+            when {
+                expression { !params.SKIP_TESTS }
+            }
+            steps {
+                nodejs(nodeJSInstallationName: "NodeJS ${NODE_VERSION}") {
+                    sh '''
+                        npm run test:ci -- --coverage --reporters=default --reporters=jest-junit
+                    '''
+                }
+            }
+            post {
+                always {
+                    // JUnit results
+                    junit allowEmptyResults: true, testResults: 'junit.xml'
+
+                    // Coverage report
+                    publishHTML(target: [
+                        allowMissing: true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'coverage/lcov-report',
+                        reportFiles: 'index.html',
+                        reportName: 'Coverage Report'
+                    ])
+
+                    // Cobertura coverage
+                    cobertura coberturaReportFile: 'coverage/cobertura-coverage.xml',
+                        conditionalCoverageTargets: '70, 0, 0',
+                        lineCoverageTargets: '80, 0, 0',
+                        maxNumberOfBuilds: 10
+                }
+            }
+        }
+
+        // =====================================================================
+        // Stage: SonarQube Analysis
+        // =====================================================================
+        stage('SonarQube Analysis') {
+            when {
+                expression { !params.SKIP_SONAR }
+            }
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    nodejs(nodeJSInstallationName: "NodeJS ${NODE_VERSION}") {
+                        sh '''
+                            sonar-scanner \
+                                -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                                -Dsonar.projectName=${APP_NAME} \
+                                -Dsonar.projectVersion=${BUILD_NUMBER} \
+                                -Dsonar.sources=src,app,components,lib \
+                                -Dsonar.tests=__tests__ \
+                                -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info \
+                                -Dsonar.testExecutionReportPaths=test-report.xml \
+                                -Dsonar.typescript.tsconfigPath=tsconfig.json \
+                                -Dsonar.exclusions=**/node_modules/**,**/*.test.ts,**/*.spec.ts
+                        '''
+                    }
+                }
+            }
+        }
+
+        // =====================================================================
+        // Stage: Quality Gate
+        // =====================================================================
+        stage('Quality Gate') {
+            when {
+                expression { !params.SKIP_SONAR }
+            }
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: !params.FORCE_DEPLOY
+                }
+            }
+        }
+
+        // =====================================================================
+        // Stage: Build Application
+        // =====================================================================
+        stage('Build Application') {
+            steps {
+                nodejs(nodeJSInstallationName: "NodeJS ${NODE_VERSION}") {
+                    sh '''
+                        # Set environment
+                        export NEXT_PUBLIC_APP_VERSION=${BUILD_NUMBER}
+                        export NEXT_PUBLIC_GIT_COMMIT=${GIT_COMMIT_SHORT}
+
+                        # Build
+                        npm run build
+
+                        # Archive build info
+                        echo "{
+                            \\"version\\": \\"${BUILD_NUMBER}\\",
+                            \\"commit\\": \\"${GIT_COMMIT_SHORT}\\",
+                            \\"branch\\": \\"${BRANCH_NAME}\\",
+                            \\"timestamp\\": \\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\\"
+                        }" > .next/build-info.json
+                    '''
+                }
+            }
+            post {
+                success {
+                    archiveArtifacts artifacts: '.next/build-info.json', fingerprint: true
+                }
+            }
+        }
+
+        // =====================================================================
+        // Stage: Build Docker Image
+        // =====================================================================
+        stage('Build Docker Image') {
+            when {
+                anyOf {
+                    expression { env.IS_MAIN == 'true' }
+                    expression { env.IS_DEVELOP == 'true' }
+                    expression { env.IS_RELEASE == 'true' }
+                }
+            }
+            steps {
+                script {
+                    // Determine tag
+                    def imageTag = env.IS_MAIN == 'true' ? 'latest' : env.BRANCH_NAME.replaceAll('/', '-')
+
+                    docker.build("${DOCKER_IMAGE}:${imageTag}", """
+                        --build-arg BUILD_NUMBER=${BUILD_NUMBER}
+                        --build-arg GIT_COMMIT=${GIT_COMMIT_SHORT}
+                        --label org.opencontainers.image.revision=${GIT_COMMIT}
+                        --label org.opencontainers.image.created=\$(date -u +%Y-%m-%dT%H:%M:%SZ)
+                        -f Dockerfile
+                        .
+                    """)
+
+                    // Also tag with build number
+                    sh "docker tag ${DOCKER_IMAGE}:${imageTag} ${DOCKER_IMAGE}:${BUILD_NUMBER}"
+                }
+            }
+        }
+
+        // =====================================================================
+        // Stage: Push Docker Image
+        // =====================================================================
+        stage('Push Docker Image') {
+            when {
+                anyOf {
+                    expression { env.IS_MAIN == 'true' }
+                    expression { env.IS_DEVELOP == 'true' }
+                    expression { env.IS_RELEASE == 'true' }
+                }
+            }
+            steps {
+                script {
+                    docker.withRegistry("https://${DOCKER_REGISTRY}", 'docker-registry-credentials') {
+                        def imageTag = env.IS_MAIN == 'true' ? 'latest' : env.BRANCH_NAME.replaceAll('/', '-')
+
+                        sh """
+                            docker push ${DOCKER_IMAGE}:${imageTag}
+                            docker push ${DOCKER_IMAGE}:${BUILD_NUMBER}
+                        """
+                    }
+                }
+            }
+        }
+
+        // =====================================================================
+        // Stage: Deploy to Staging
+        // =====================================================================
+        stage('Deploy to Staging') {
+            when {
+                anyOf {
+                    expression { env.IS_DEVELOP == 'true' }
+                    expression { env.IS_RELEASE == 'true' }
+                    allOf {
+                        expression { params.ENVIRONMENT == 'staging' }
+                        expression { params.FORCE_DEPLOY }
+                    }
+                }
+            }
+            steps {
+                withCredentials([string(credentialsId: 'vercel-token', variable: 'VERCEL_TOKEN')]) {
+                    sh '''
+                        npm i -g vercel
+
+                        vercel pull --yes --environment=preview --token=${VERCEL_TOKEN}
+                        vercel build --token=${VERCEL_TOKEN}
+                        vercel deploy --prebuilt --token=${VERCEL_TOKEN}
+                    '''
+                }
+            }
+            post {
+                success {
+                    script {
+                        env.STAGING_URL = sh(
+                            script: 'vercel ls --token=${VERCEL_TOKEN} | grep staging | head -1 | awk "{print \\$2}"',
+                            returnStdout: true
+                        ).trim()
+                    }
+                }
+            }
+        }
+
+        // =====================================================================
+        // Stage: E2E Tests on Staging
+        // =====================================================================
+        stage('E2E Tests') {
+            when {
+                expression { env.STAGING_URL != null && !params.SKIP_TESTS }
+            }
+            steps {
+                nodejs(nodeJSInstallationName: "NodeJS ${NODE_VERSION}") {
+                    sh '''
+                        npx playwright install --with-deps chromium
+                        PLAYWRIGHT_BASE_URL=${STAGING_URL} npx playwright test --reporter=html
+                    '''
+                }
+            }
+            post {
+                always {
+                    publishHTML(target: [
+                        allowMissing: true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'playwright-report',
+                        reportFiles: 'index.html',
+                        reportName: 'Playwright Report'
+                    ])
+                }
+            }
+        }
+
+        // =====================================================================
+        // Stage: Deploy to Production
+        // =====================================================================
+        stage('Deploy to Production') {
+            when {
+                anyOf {
+                    expression { env.IS_MAIN == 'true' }
+                    allOf {
+                        expression { params.ENVIRONMENT == 'production' }
+                        expression { params.FORCE_DEPLOY }
+                    }
+                }
+            }
+            steps {
+                // Manual approval
+                timeout(time: 30, unit: 'MINUTES') {
+                    input message: 'Deploy to production?',
+                          ok: 'Deploy',
+                          submitter: 'admin,deployers'
+                }
+
+                withCredentials([string(credentialsId: 'vercel-token', variable: 'VERCEL_TOKEN')]) {
+                    sh '''
+                        vercel pull --yes --environment=production --token=${VERCEL_TOKEN}
+                        vercel build --prod --token=${VERCEL_TOKEN}
+                        vercel deploy --prebuilt --prod --token=${VERCEL_TOKEN}
+                    '''
+                }
+            }
+        }
+
+        // =====================================================================
+        // Stage: Smoke Tests Production
+        // =====================================================================
+        stage('Smoke Tests Production') {
+            when {
+                expression { env.IS_MAIN == 'true' }
+            }
+            steps {
+                sh '''
+                    # Wait for deployment
+                    sleep 30
+
+                    # Health check
+                    for i in {1..10}; do
+                        STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://example.com/api/health")
+                        if [ "$STATUS" = "200" ]; then
+                            echo "Health check passed"
+                            exit 0
+                        fi
+                        echo "Attempt $i: Status $STATUS"
+                        sleep 10
+                    done
+                    echo "Health check failed"
+                    exit 1
+                '''
+            }
+        }
+
+        // =====================================================================
+        // Stage: Create Release Tag
+        // =====================================================================
+        stage('Create Release Tag') {
+            when {
+                expression { env.IS_MAIN == 'true' }
+            }
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'github-token',
+                    usernameVariable: 'GIT_USER',
+                    passwordVariable: 'GIT_TOKEN'
+                )]) {
+                    sh '''
+                        git config user.email "jenkins@example.com"
+                        git config user.name "Jenkins CI"
+
+                        VERSION="v1.0.${BUILD_NUMBER}"
+                        git tag -a ${VERSION} -m "Release ${VERSION}"
+                        git push https://${GIT_USER}:${GIT_TOKEN}@github.com/${GITHUB_ORG}/${APP_NAME}.git ${VERSION}
+                    '''
+                }
+            }
+        }
+    }
+
+    // =========================================================================
+    // Post Actions
+    // =========================================================================
+    post {
+        always {
+            // Cleanup workspace
+            cleanWs(
+                cleanWhenNotBuilt: false,
+                deleteDirs: true,
+                disableDeferredWipeout: true,
+                notFailBuild: true,
+                patterns: [
+                    [pattern: 'node_modules', type: 'EXCLUDE'],
+                    [pattern: '.next/cache', type: 'EXCLUDE']
+                ]
+            )
+
+            // Clean Docker
+            sh 'docker system prune -f || true'
+        }
+
+        success {
+            slackSend(
+                channel: env.SLACK_CHANNEL,
+                color: 'good',
+                message: """
+                    :white_check_mark: *Build Successful*
+                    *Job:* ${env.JOB_NAME} #${env.BUILD_NUMBER}
+                    *Branch:* ${env.BRANCH_NAME}
+                    *Commit:* ${env.GIT_COMMIT_SHORT} - ${env.GIT_COMMIT_MSG}
+                    *Author:* ${env.GIT_AUTHOR}
+                    <${env.BUILD_URL}|View Build>
+                """
+            )
+        }
+
+        failure {
+            slackSend(
+                channel: env.SLACK_CHANNEL,
+                color: 'danger',
+                message: """
+                    :x: *Build Failed*
+                    *Job:* ${env.JOB_NAME} #${env.BUILD_NUMBER}
+                    *Branch:* ${env.BRANCH_NAME}
+                    *Commit:* ${env.GIT_COMMIT_SHORT}
+                    *Author:* ${env.GIT_AUTHOR}
+                    <${env.BUILD_URL}|View Build> | <${env.BUILD_URL}console|Console>
+                """
+            )
+
+            emailext(
+                subject: "FAILED: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                body: """
+                    Build failed for ${env.JOB_NAME} #${env.BUILD_NUMBER}
+
+                    Branch: ${env.BRANCH_NAME}
+                    Commit: ${env.GIT_COMMIT_SHORT}
+                    Author: ${env.GIT_AUTHOR}
+
+                    Check console output at ${env.BUILD_URL}
+                """,
+                recipientProviders: [
+                    [$class: 'CulpritsRecipientProvider'],
+                    [$class: 'RequesterRecipientProvider']
+                ]
+            )
+        }
+
+        unstable {
+            slackSend(
+                channel: env.SLACK_CHANNEL,
+                color: 'warning',
+                message: """
+                    :warning: *Build Unstable*
+                    *Job:* ${env.JOB_NAME} #${env.BUILD_NUMBER}
+                    Tests may have failed.
+                    <${env.BUILD_URL}|View Build>
+                """
+            )
+        }
+    }
+}

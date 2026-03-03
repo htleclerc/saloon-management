@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+
+# Cache
+.turbo/
+.cache/
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Package manager
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Prisma
+prisma/migrations/
+
+# Others
+coverage/
+.DS_Store

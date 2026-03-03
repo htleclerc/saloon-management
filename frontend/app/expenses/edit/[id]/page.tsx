@@ -6,9 +6,15 @@ import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { Save, X, Trash2 } from "lucide-react";
+import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
+import { useToast } from "@/context/ToastProvider";
+import { useConfirm } from "@/context/ConfirmProvider";
+import { useTranslation } from "@/i18n";
 
 export default function EditExpensePage({ params }: { params: { id: string } }) {
     const router = useRouter();
+    const { t } = useTranslation();
+    const { handleReadOnlyClick } = useReadOnlyGuard();
     const [formData, setFormData] = useState({
         date: "2026-01-10",
         category: "Beauty Supply",
@@ -20,17 +26,30 @@ export default function EditExpensePage({ params }: { params: { id: string } }) 
         status: "Approved",
     });
 
+    const { showToast } = useToast();
+    const { confirm } = useConfirm();
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        if (handleReadOnlyClick()) return;
         console.log("Updated expense data:", formData);
-        alert("Expense updated successfully!");
+        showToast(t("common.success"), t("expenses.updateSuccess"), "success");
         router.push("/expenses");
     };
 
-    const handleDelete = () => {
-        if (confirm("Are you sure you want to delete this expense record? This action cannot be undone.")) {
+    const handleDelete = async () => {
+        if (handleReadOnlyClick()) return;
+        const confirmed = await confirm({
+            title: t("common.delete"),
+            message: t("expenses.deleteConfirm"),
+            type: "error",
+            confirmText: t("common.delete"),
+            cancelText: t("common.cancel")
+        });
+
+        if (confirmed) {
             console.log("Deleting expense:", params.id);
-            alert("Expense record deleted!");
+            showToast(t("common.success"), t("expenses.deleteSuccess"), "success");
             router.push("/expenses");
         }
     };
@@ -45,17 +64,19 @@ export default function EditExpensePage({ params }: { params: { id: string } }) 
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">Edit Expense</h1>
-                        <p className="text-gray-500 mt-1">Modify an existing business expense</p>
+                        <h1 className="text-3xl font-bold text-gray-900">{t("expenses.editExpense")}</h1>
+                        <p className="text-gray-500 mt-1">{t("expenses.modifyExisting")}</p>
                     </div>
                     <div className="flex gap-3">
-                        <Button variant="danger" size="md" onClick={handleDelete}>
-                            <Trash2 className="w-5 h-5" />
-                            Delete
-                        </Button>
-                        <Button variant="outline" size="md" onClick={() => router.back()}>
+                        <ReadOnlyGuard>
+                            <Button variant="danger" size="md" onClick={handleDelete}>
+                                <Trash2 className="w-5 h-5" />
+                                {t("common.delete")}
+                            </Button>
+                        </ReadOnlyGuard>
+                        <Button variant="danger" size="md" onClick={() => router.back()}>
                             <X className="w-5 h-5" />
-                            Cancel
+                            {t("common.cancel")}
                         </Button>
                     </div>
                 </div>
@@ -200,13 +221,13 @@ export default function EditExpensePage({ params }: { params: { id: string } }) 
                         </div>
 
                         <div className="flex gap-4 mt-8">
-                            <Button type="submit" variant="primary" size="lg" className="flex-1">
+                            <Button type="submit" variant="success" size="lg" className="flex-1">
                                 <Save className="w-5 h-5" />
-                                Update Expense
+                                {t("expenses.updateExpense")}
                             </Button>
-                            <Button type="button" variant="outline" size="lg" onClick={() => router.back()}>
+                            <Button type="button" variant="danger" size="lg" onClick={() => router.back()}>
                                 <X className="w-5 h-5" />
-                                Cancel
+                                {t("common.cancel")}
                             </Button>
                         </div>
                     </Card>

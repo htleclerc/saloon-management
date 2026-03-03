@@ -1,0 +1,445 @@
+# =============================================================================
+# CD Pipeline - GitHub Actions
+# =============================================================================
+# Template de pipeline CD complet pour déploiement multi-environnement
+#
+# Usage:
+# 1. Copier ce fichier dans .github/workflows/cd.yml
+# 2. Configurer les environments dans GitHub Settings
+# 3. Configurer les secrets requis (VERCEL_*, SENTRY_*, SLACK_WEBHOOK)
+# 4. Adapter les URLs et variables d'environnement
+# =============================================================================
+
+name: CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      skip_tests:
+        description: 'Skip E2E tests (emergency deploy only)'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  deployments: write
+  id-token: write
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '8'
+
+jobs:
+  # ===========================================================================
+  # JOB: Prepare
+  # ===========================================================================
+  prepare:
+    name: 📋 Prepare
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      environment: ${{ steps.env.outputs.environment }}
+      short_sha: ${{ steps.sha.outputs.short_sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get short SHA
+        id: sha
+        run: echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Determine version
+        id: version
+        run: |
+          VERSION=$(git describe --tags --always --dirty 2>/dev/null || echo "0.0.0-${{ github.run_number }}")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Version: $VERSION"
+
+      - name: Determine environment
+        id: env
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            ENV="${{ inputs.environment }}"
+          else
+            ENV="staging"
+          fi
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
+          echo "🎯 Environment: $ENV"
+
+  # ===========================================================================
+  # JOB: Build
+  # ===========================================================================
+  build:
+    name: 🏗️ Build
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build application
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_VERSION: ${{ needs.prepare.outputs.version }}
+          NEXT_TELEMETRY_DISABLED: 1
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ needs.prepare.outputs.short_sha }}
+          path: |
+            .next/
+            public/
+            package.json
+            pnpm-lock.yaml
+          retention-days: 7
+
+  # ===========================================================================
+  # JOB: Deploy Staging
+  # ===========================================================================
+  deploy-staging:
+    name: 🚀 Deploy Staging
+    needs: [prepare, build]
+    if: needs.prepare.outputs.environment == 'staging'
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: ${{ steps.deploy.outputs.url }}
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build
+        uses: actions/download-artifact@v4
+        with:
+          name: build-${{ needs.prepare.outputs.short_sha }}
+
+      - name: Deploy to Vercel (Preview)
+        id: deploy
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          alias-domains: staging.example.com
+
+      - name: Output deployment URL
+        run: |
+          echo "url=${{ steps.deploy.outputs.preview-url }}" >> $GITHUB_OUTPUT
+          echo "🌐 Deployed to: ${{ steps.deploy.outputs.preview-url }}"
+
+  # ===========================================================================
+  # JOB: Smoke Tests Staging
+  # ===========================================================================
+  smoke-staging:
+    name: 💨 Smoke Tests
+    needs: [prepare, deploy-staging]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for deployment
+        run: sleep 30
+
+      - name: Health check
+        run: |
+          URL="${{ needs.deploy-staging.outputs.url }}"
+          echo "Testing: $URL"
+
+          for i in {1..10}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL/api/health" || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ Health check passed!"
+              exit 0
+            fi
+            echo "Attempt $i: Status $STATUS, retrying in 10s..."
+            sleep 10
+          done
+
+          echo "❌ Health check failed after 10 attempts"
+          exit 1
+
+      - name: Basic page checks
+        run: |
+          URL="${{ needs.deploy-staging.outputs.url }}"
+
+          # Check homepage
+          curl -s "$URL" | grep -q "<title>" || (echo "❌ Homepage failed" && exit 1)
+          echo "✅ Homepage OK"
+
+          # Check API
+          curl -s "$URL/api/health" | grep -q "ok\|healthy" || (echo "❌ API failed" && exit 1)
+          echo "✅ API OK"
+
+  # ===========================================================================
+  # JOB: E2E Tests Staging
+  # ===========================================================================
+  e2e-staging:
+    name: 🎭 E2E Tests
+    needs: [prepare, smoke-staging, deploy-staging]
+    if: inputs.skip_tests != true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        run: pnpm test:e2e:smoke
+        env:
+          BASE_URL: ${{ needs.deploy-staging.outputs.url }}
+          CI: true
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: e2e-staging-report
+          path: playwright-report/
+          retention-days: 7
+
+  # ===========================================================================
+  # JOB: Deploy Production
+  # ===========================================================================
+  deploy-production:
+    name: 🚀 Deploy Production
+    needs: [prepare, build, e2e-staging]
+    if: |
+      always() &&
+      (needs.prepare.outputs.environment == 'production' ||
+       (needs.e2e-staging.result == 'success' || needs.e2e-staging.result == 'skipped'))
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://example.com
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build
+        uses: actions/download-artifact@v4
+        with:
+          name: build-${{ needs.prepare.outputs.short_sha }}
+
+      - name: Deploy to Vercel (Production)
+        id: deploy
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+
+      - name: Create Sentry release
+        uses: getsentry/action-release@v1
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        with:
+          environment: production
+          version: ${{ needs.prepare.outputs.version }}
+
+  # ===========================================================================
+  # JOB: Verify Production
+  # ===========================================================================
+  verify-production:
+    name: ✅ Verify Production
+    needs: [prepare, deploy-production]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for propagation
+        run: sleep 60
+
+      - name: Health check
+        run: |
+          for i in {1..10}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://example.com/api/health")
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ Production is healthy!"
+              exit 0
+            fi
+            echo "Attempt $i: Status $STATUS, retrying in 15s..."
+            sleep 15
+          done
+          echo "❌ Production health check failed!"
+          exit 1
+
+      - name: Performance check
+        run: |
+          # Simple performance check
+          TIME=$(curl -s -o /dev/null -w "%{time_total}" "https://example.com")
+          echo "Response time: ${TIME}s"
+
+          if (( $(echo "$TIME > 3" | bc -l) )); then
+            echo "⚠️ Response time is slow (>3s)"
+          else
+            echo "✅ Response time OK"
+          fi
+
+  # ===========================================================================
+  # JOB: Create Release
+  # ===========================================================================
+  release:
+    name: 📦 Create Release
+    needs: [prepare, verify-production]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create git tag
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+
+          TAG="v${{ needs.prepare.outputs.version }}"
+          git tag -a "$TAG" -m "Release $TAG" || echo "Tag already exists"
+          git push origin "$TAG" || echo "Tag already pushed"
+
+      - name: Generate release notes
+        id: notes
+        run: |
+          # Get commits since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ]; then
+            COMMITS=$(git log $LAST_TAG..HEAD --pretty=format:"- %s (%h)" --no-merges)
+          else
+            COMMITS=$(git log --pretty=format:"- %s (%h)" --no-merges -10)
+          fi
+
+          echo "commits<<EOF" >> $GITHUB_OUTPUT
+          echo "$COMMITS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ needs.prepare.outputs.version }}
+          name: Release v${{ needs.prepare.outputs.version }}
+          body: |
+            ## Changes
+
+            ${{ steps.notes.outputs.commits }}
+
+            ## Deployment
+
+            - **Environment**: Production
+            - **Deployed at**: ${{ github.event.head_commit.timestamp }}
+            - **Commit**: ${{ github.sha }}
+          generate_release_notes: true
+
+  # ===========================================================================
+  # JOB: Notify
+  # ===========================================================================
+  notify:
+    name: 📢 Notify
+    needs: [prepare, deploy-staging, deploy-production, verify-production]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine status
+        id: status
+        run: |
+          if [[ "${{ needs.verify-production.result }}" == "success" ]]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "emoji=✅" >> $GITHUB_OUTPUT
+            echo "color=good" >> $GITHUB_OUTPUT
+          elif [[ "${{ needs.deploy-staging.result }}" == "success" && "${{ needs.prepare.outputs.environment }}" == "staging" ]]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "emoji=✅" >> $GITHUB_OUTPUT
+            echo "color=good" >> $GITHUB_OUTPUT
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+            echo "emoji=❌" >> $GITHUB_OUTPUT
+            echo "color=danger" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Notify Slack
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          custom_payload: |
+            {
+              "attachments": [{
+                "color": "${{ steps.status.outputs.color }}",
+                "blocks": [
+                  {
+                    "type": "header",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "${{ steps.status.outputs.emoji }} Deployment ${{ steps.status.outputs.status }}"
+                    }
+                  },
+                  {
+                    "type": "section",
+                    "fields": [
+                      {"type": "mrkdwn", "text": "*Environment:*\n${{ needs.prepare.outputs.environment }}"},
+                      {"type": "mrkdwn", "text": "*Version:*\n${{ needs.prepare.outputs.version }}"},
+                      {"type": "mrkdwn", "text": "*Branch:*\n${{ github.ref_name }}"},
+                      {"type": "mrkdwn", "text": "*Author:*\n${{ github.actor }}"}
+                    ]
+                  },
+                  {
+                    "type": "context",
+                    "elements": [
+                      {"type": "mrkdwn", "text": "<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View workflow>"}
+                    ]
+                  }
+                ]
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Create PagerDuty incident on failure
+        if: steps.status.outputs.status == 'failure' && needs.prepare.outputs.environment == 'production'
+        run: |
+          curl -X POST "https://events.pagerduty.com/v2/enqueue" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "routing_key": "${{ secrets.PAGERDUTY_ROUTING_KEY }}",
+              "event_action": "trigger",
+              "payload": {
+                "summary": "Production deployment failed for ${{ github.repository }}",
+                "severity": "critical",
+                "source": "github-actions",
+                "custom_details": {
+                  "version": "${{ needs.prepare.outputs.version }}",
+                  "run_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                }
+              }
+            }'

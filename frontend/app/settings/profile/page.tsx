@@ -5,19 +5,22 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { Save, Camera, Globe } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/context/AuthProvider";
+import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 
 export default function ProfileSettingsPage() {
+    const { canModify } = useAuth();
     const [firstName, setFirstName] = useState("Admin");
     const [lastName, setLastName] = useState("User");
     const [email, setEmail] = useState("admin@workshopmanager.com");
     const [phone, setPhone] = useState("+33 6 12 34 56 78");
-    const [language, setLanguage] = useState("fr");
-    const [timezone, setTimezone] = useState("Europe/Paris");
+    const [language, setLanguage] = useState("en");
+    const [timezone, setTimezone] = useState("Europe/London");
 
     return (
         <SettingsLayout
             title="Profile Settings"
-            description="Gérez vos informations personnelles et préférences de compte"
+            description="Manage your personal information and account preferences"
         >
             {/* Profile Photo */}
             <Card>
@@ -26,16 +29,22 @@ export default function ProfileSettingsPage() {
                         <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center text-white text-3xl font-bold">
                             AU
                         </div>
-                        <button className="absolute bottom-0 right-0 w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white shadow-lg hover:bg-purple-700 transition-colors">
-                            <Camera className="w-4 h-4" />
-                        </button>
+                        <ReadOnlyGuard>
+                            <button className="absolute bottom-0 right-0 w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white shadow-lg hover:bg-purple-700 transition-colors">
+                                <Camera className="w-4 h-4" />
+                            </button>
+                        </ReadOnlyGuard>
                     </div>
                     <div>
-                        <h3 className="font-semibold text-gray-900 text-lg">Photo de profil</h3>
-                        <p className="text-sm text-gray-500 mb-3">JPG, PNG ou GIF. 1MB max.</p>
+                        <h3 className="font-semibold text-gray-900 text-lg">Profile Photo</h3>
+                        <p className="text-sm text-gray-500 mb-3">JPG, PNG or GIF. 1MB max.</p>
                         <div className="flex gap-2">
-                            <Button variant="outline" size="sm">Changer la photo</Button>
-                            <Button variant="outline" size="sm" className="text-red-600 hover:bg-red-50">Supprimer</Button>
+                            <ReadOnlyGuard>
+                                <Button variant="outline" size="sm">Change photo</Button>
+                            </ReadOnlyGuard>
+                            <ReadOnlyGuard>
+                                <Button variant="outline" size="sm" className="text-red-600 hover:bg-red-50">Delete</Button>
+                            </ReadOnlyGuard>
                         </div>
                     </div>
                 </div>
@@ -43,27 +52,29 @@ export default function ProfileSettingsPage() {
 
             {/* Personal Information */}
             <Card>
-                <h3 className="font-semibold text-gray-900 text-lg mb-4">Informations personnelles</h3>
+                <h3 className="font-semibold text-gray-900 text-lg mb-4">Personal Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Prénom <span className="text-red-500">*</span>
+                            First Name <span className="text-red-500">*</span>
                         </label>
                         <input
                             type="text"
                             value={firstName}
                             onChange={(e) => setFirstName(e.target.value)}
+                            readOnly={!canModify}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                         />
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Nom <span className="text-red-500">*</span>
+                            Last Name <span className="text-red-500">*</span>
                         </label>
                         <input
                             type="text"
                             value={lastName}
                             onChange={(e) => setLastName(e.target.value)}
+                            readOnly={!canModify}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                         />
                     </div>
@@ -75,15 +86,17 @@ export default function ProfileSettingsPage() {
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
+                            readOnly={!canModify}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Téléphone</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
                         <input
                             type="tel"
                             value={phone}
                             onChange={(e) => setPhone(e.target.value)}
+                            readOnly={!canModify}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                         />
                     </div>
@@ -97,16 +110,17 @@ export default function ProfileSettingsPage() {
                         <Globe className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                        <h3 className="font-semibold text-gray-900">Paramètres régionaux</h3>
-                        <p className="text-xs text-gray-500">Langue et fuseau horaire</p>
+                        <h3 className="font-semibold text-gray-900">Regional Settings</h3>
+                        <p className="text-xs text-gray-500">Language and timezone</p>
                     </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Langue</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Language</label>
                         <select
                             value={language}
                             onChange={(e) => setLanguage(e.target.value)}
+                            disabled={!canModify}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                         >
                             <option value="fr">Français</option>
@@ -116,10 +130,11 @@ export default function ProfileSettingsPage() {
                         </select>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Fuseau horaire</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Timezone</label>
                         <select
                             value={timezone}
                             onChange={(e) => setTimezone(e.target.value)}
+                            disabled={!canModify}
                             className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                         >
                             <option value="Europe/Paris">Europe/Paris (GMT+1)</option>
@@ -133,11 +148,13 @@ export default function ProfileSettingsPage() {
 
             {/* Save Button */}
             <div className="flex justify-end gap-3">
-                <Button variant="outline" size="md">Annuler</Button>
-                <Button variant="primary" size="md">
-                    <Save className="w-4 h-4" />
-                    Sauvegarder les modifications
-                </Button>
+                <Button variant="outline" size="md">Cancel</Button>
+                <ReadOnlyGuard>
+                    <Button variant="primary" size="md">
+                        <Save className="w-4 h-4" />
+                        Save Changes
+                    </Button>
+                </ReadOnlyGuard>
             </div>
         </SettingsLayout>
     );

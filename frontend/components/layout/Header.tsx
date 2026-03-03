@@ -1,78 +1,36 @@
 "use client";
 
 import { useState, useRef, useEffect, Fragment } from "react";
-import { Bell, User, Search, Sun, Moon, Globe, ChevronDown, ChevronRight, Home, Menu } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { Bell, User, Search, Sun, Moon, Globe, ChevronDown, ChevronRight, Home, Menu, Building, FlaskConical, Settings, Power, X, Plus } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTheme, useResponsive } from "@/context/ThemeProvider";
 import { useAuth } from "@/context/AuthProvider";
 import { useTranslation, availableLanguages, languageFlags, languageNames, Language } from "@/i18n";
-import NotificationsPanel, { Notification } from "./NotificationsPanel";
+import { useNotifications } from "@/context/NotificationProvider";
+import NotificationsPanel from "./NotificationsPanel";
+import ModeSwitcher from "../ui/ModeSwitcher";
 
 export default function Header() {
     const pathname = usePathname();
-    const { theme, updateTheme, mobileMenuOpen, setMobileMenuOpen } = useTheme();
-    const { user } = useAuth();
+    const router = useRouter();
+    const { theme, updateTheme, toggleDarkMode, mobileMenuOpen, setMobileMenuOpen } = useTheme();
+    const { user, isDemoMode, currentTenant, switchTenant, logout, canCreateNewSalon, getSalonLimit, getCurrentSalonCount, isReadOnlyMode, readOnlySalonInfo } = useAuth();
     const { t, language, setLanguage } = useTranslation();
     const { isMobile, isTablet } = useResponsive();
+    const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
     const [langDropdownOpen, setLangDropdownOpen] = useState(false);
     const [notificationsOpen, setNotificationsOpen] = useState(false);
+    const [tenantDropdownOpen, setTenantDropdownOpen] = useState(false);
+    const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [isSearching, setIsSearching] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const notificationsRef = useRef<HTMLDivElement>(null);
+    const tenantDropdownRef = useRef<HTMLDivElement>(null);
+    const profileDropdownRef = useRef<HTMLDivElement>(null);
 
-    // Mock notifications data
-    const [notifications, setNotifications] = useState<Notification[]>([
-        {
-            id: '1',
-            type: 'validation',
-            title: 'Nouvelle demande de congé',
-            message: 'Marie Dupont demande 3 jours de congé du 15 au 17 janvier.',
-            timestamp: new Date(Date.now() - 2 * 60 * 1000), // 2 min ago
-            isRead: false,
-            actions: {
-                onView: () => console.log('Voir détails du congé de Marie'),
-                onApprove: () => console.log('Congé approuvé pour Marie'),
-                onReject: () => console.log('Congé rejeté pour Marie')
-            }
-        },
-        {
-            id: '2',
-            type: 'validation',
-            title: 'Validation de dépense',
-            message: 'Jean Martin a soumis une dépense de 125€ pour des fournitures.',
-            timestamp: new Date(Date.now() - 45 * 60 * 1000), // 45 min ago
-            isRead: false,
-            actions: {
-                onView: () => console.log('Voir détails de la dépense'),
-                onApprove: () => console.log('Dépense approuvée'),
-                onReject: () => console.log('Dépense rejetée')
-            }
-        },
-        {
-            id: '3',
-            type: 'booking',
-            title: 'Nouvelle réservation',
-            message: 'Client: Sophie Laurent - Box Braids - Demain à 14h00',
-            timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000), // 1 hour ago
-            isRead: false
-        },
-        {
-            id: '4',
-            type: 'success',
-            title: 'Paiement reçu',
-            message: 'Paiement de 120€ confirmé pour la réservation #4523',
-            timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000), // 3 hours ago
-            isRead: true
-        },
-        {
-            id: '5',
-            type: 'warning',
-            title: 'Stock faible',
-            message: 'Le stock de "Hair Care Products" est inférieur à 10 unités.',
-            timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000), // 5 hours ago
-            isRead: true
-        }
-    ]);
+    // Mock notifications removed in favor of NotificationProvider
 
     // Breadcrumbs logic
     const getBreadcrumbs = () => {
@@ -80,24 +38,37 @@ export default function Header() {
 
         const segments = pathname.split("/").filter(Boolean);
 
+        // Special case: Workers on /team/my-payroll should only see "My Payroll" (hide "Team")
+        if (pathname === "/team/my-payroll" && user?.role === "worker") {
+            return [
+                {
+                    label: "My Payroll",
+                    path: "/team/my-payroll",
+                    isLink: false
+                }
+            ];
+        }
+
         // Special path segment mappings (segment -> display label)
         const pathMappings: Record<string, string> = {
-            "workers": "Workers",
+            "team": "Team",
             "clients": "Clients",
             "services": "Services",
             "expenses": "Expenses",
             "daily": "Daily",
             "reports": "Reports",
-            "validation": "Validation",
+            "approvals": "Approvals",
             "settings": "Settings",
-            "add": "Add Worker",
-            "add-advanced": "Add Worker (Advanced)",
-            "edit": "Edit Worker",
-            "edit-advanced": "Edit Worker",
-            "detail": "Worker Profile",
+            "add": "Add",
+            "add-advanced": "Add (Advanced)",
+            "edit": "Edit",
+            "edit-advanced": "Edit",
+            "detail": "Profile",
             "performance": "Performance",
             "schedules": "Schedules",
             "payroll": "Payroll",
+            "income": "Income",
+            "dashboard": "Dashboard",
         };
 
         // Check if a segment is a dynamic ID (numeric or long string)
@@ -178,14 +149,18 @@ export default function Header() {
             if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
                 setNotificationsOpen(false);
             }
+            if (tenantDropdownRef.current && !tenantDropdownRef.current.contains(event.target as Node)) {
+                setTenantDropdownOpen(false);
+            }
+            if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
+                setProfileDropdownOpen(false);
+            }
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    const toggleDarkMode = () => {
-        updateTheme({ darkMode: !theme.darkMode });
-    };
+
 
     // Calculate left margin based on sidebar state
     const getLeftPosition = () => {
@@ -194,9 +169,20 @@ export default function Header() {
         return "left-64";
     };
 
+    // Dynamic header styles based on mode (View vs Manage)
+    const getHeaderStyles = () => {
+        if (isReadOnlyMode && readOnlySalonInfo) {
+            return "bg-[var(--color-warning-light)] border-[var(--color-warning-light)] shadow-sm";
+        }
+        if (!isReadOnlyMode && readOnlySalonInfo) {
+            return "bg-[var(--color-primary-light)] border-[var(--color-primary-light)] shadow-sm";
+        }
+        return "bg-white border-gray-200";
+    };
+
     return (
-        <header className={`fixed top-0 ${getLeftPosition()} right-0 h-16 bg-white border-b border-gray-200 z-40 transition-all duration-300`}>
-            <div className="h-full px-4 md:px-6 flex items-center justify-between gap-4">
+        <header className={`fixed ${isReadOnlyMode ? 'top-16' : 'top-0'} ${getLeftPosition()} right-0 h-16 ${getHeaderStyles()} border-b z-40 transition-all duration-300`}>
+            <div className="h-full px-5 md:px-6 flex items-center justify-between gap-4">
 
                 {/* Mobile Menu Button */}
                 {isMobile && (
@@ -212,57 +198,179 @@ export default function Header() {
                 {/* Breadcrumbs (Left side) */}
                 <div className="hidden md:flex items-center gap-1.5 overflow-hidden">
                     {!isMobile && (
-                        <Link href="/" className="text-gray-400 hover:text-purple-600 transition-colors flex-shrink-0">
-                            <Home className="w-5 h-5" />
-                        </Link>
+                        <div className="flex items-center gap-1.5 overflow-hidden whitespace-nowrap mask-linear-fade">
+                            {breadcrumbs.map((crumb, index) => {
+                                const isLast = index === breadcrumbs.length - 1;
+                                return (
+                                    <Fragment key={crumb.path}>
+                                        {index > 0 && <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />}
+                                        {crumb.isLink && !isLast ? (
+                                            <Link
+                                                href={crumb.path}
+                                                className="text-sm font-medium text-gray-500 hover:text-[var(--color-primary)] transition-colors truncate max-w-[150px]"
+                                            >
+                                                {crumb.label}
+                                            </Link>
+                                        ) : (
+                                            <span className={`text-sm font-medium truncate max-w-[150px] ${isLast ? "text-gray-900" : "text-gray-500"
+                                                }`}>
+                                                {crumb.label}
+                                            </span>
+                                        )}
+                                    </Fragment>
+                                );
+                            })}
+                            {breadcrumbs.length === 0 && (
+                                <h2 className="text-lg font-semibold text-gray-800 tracking-tight">Dashboard</h2>
+                            )}
+                        </div>
                     )}
-
-                    {breadcrumbs.length > 0 && !isMobile && (
-                        <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
-                    )}
-
-                    <div className="flex items-center gap-1.5 overflow-hidden whitespace-nowrap mask-linear-fade">
-                        {breadcrumbs.map((crumb, index) => {
-                            const isLast = index === breadcrumbs.length - 1;
-                            return (
-                                <Fragment key={crumb.path}>
-                                    {index > 0 && <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />}
-                                    {crumb.isLink && !isLast ? (
-                                        <Link
-                                            href={crumb.path}
-                                            className="text-sm font-medium text-gray-500 hover:text-purple-600 transition-colors truncate max-w-[150px]"
-                                        >
-                                            {crumb.label}
-                                        </Link>
-                                    ) : (
-                                        <span className={`text-sm font-medium truncate max-w-[150px] ${isLast ? "text-gray-900" : "text-gray-500"
-                                            }`}>
-                                            {crumb.label}
-                                        </span>
-                                    )}
-                                </Fragment>
-                            );
-                        })}
-                        {breadcrumbs.length === 0 && (
-                            <h2 className="text-lg font-semibold text-gray-800 tracking-tight">Dashboard</h2>
-                        )}
-                    </div>
                 </div>
 
                 {/* Right side controls */}
-                <div className="flex items-center gap-2 md:gap-4 ml-auto flex-shrink-0">
-
-                    {/* Search bar - hidden on mobile and tablet if needed */}
-                    {!isMobile && !isTablet && (
-                        <div className="relative mr-2 w-64">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
+                    {/* Search Bar */}
+                    {/* Search Bar - Hidden for now as requested */}
+                    <div className="hidden">
+                        <div className="hidden lg:flex items-center relative group">
                             <input
                                 type="text"
-                                placeholder={t("header.search")}
-                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                                placeholder={t("header.searchPlaceholder")}
+                                value={searchQuery}
+                                onChange={(e) => {
+                                    setSearchQuery(e.target.value);
+                                    setIsSearching(true);
+                                    // Simulation loop: clear searching state after a short delay
+                                    setTimeout(() => setIsSearching(false), 500);
+                                }}
+                                className="w-48 xl:w-64 h-10 pl-10 pr-4 bg-gray-100 border-transparent focus:bg-white focus:border-[var(--color-primary-light)] focus:ring-4 focus:ring-[var(--color-primary-light)] rounded-xl text-sm transition-all duration-300 outline-none"
                             />
+                            <Search className={`absolute left-3.5 w-4 h-4 transition-colors ${isSearching ? "text-[var(--color-primary)] animate-pulse" : "text-gray-400 group-focus-within:text-[var(--color-primary)]"}`} />
+                            {searchQuery && (
+                                <button
+                                    onClick={() => setSearchQuery("")}
+                                    className="absolute right-3 p-1 hover:bg-gray-200 rounded-full transition-colors"
+                                >
+                                    <X className="w-3 h-3 text-gray-500" />
+                                </button>
+                            )}
+
+                            {/* Mock Search Results dropdown if needed */}
+                            {searchQuery.length > 2 && (
+                                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                                    <p className="text-[10px] text-gray-400 uppercase font-bold px-2 py-1">Recent Results</p>
+                                    <div className="space-y-1">
+                                        <button className="w-full text-left px-2 py-2 hover:bg-[var(--color-primary-light)] rounded-lg text-sm text-gray-700 flex items-center gap-2 transition-colors">
+                                            <div className="w-2 h-2 rounded-full bg-[var(--color-primary)]"></div>
+                                            <span>Results for "{searchQuery}"...</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    {/* Demo Mode Badge */}
+                    {isDemoMode && (
+                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full shadow-sm animate-pulse">
+                            <FlaskConical className="w-4 h-4 text-white" />
+                            <span className="text-xs font-bold text-white tracking-wide">DEMO MODE</span>
                         </div>
                     )}
+
+                    {/* Tenant Selector - for users with multiple tenants (hidden on mobile and superadmin) */}
+                    {user?.tenants && user.tenants.length > 1 && !isMobile && !pathname.startsWith('/superadmin') && (
+                        <div className="relative" ref={tenantDropdownRef}>
+                            <button
+                                onClick={() => setTenantDropdownOpen(!tenantDropdownOpen)}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-primary-light)] hover:opacity-80 border border-[var(--color-primary-light)] rounded-lg transition text-sm"
+                                title="Switch Salon"
+                            >
+                                <Building className="w-4 h-4 text-[var(--color-primary)]" />
+                                <span className="text-[var(--color-primary)] font-medium max-w-[120px] truncate">
+                                    {currentTenant?.name || "Select Salon"}
+                                </span>
+                                <ChevronDown className={`w-3 h-3 text-[var(--color-primary)] transition-transform ${tenantDropdownOpen ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {tenantDropdownOpen && (
+                                <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-100 py-1 min-w-[200px] z-50">
+                                    <div className="px-3 py-2 border-b border-gray-100">
+                                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Your Salons</p>
+                                    </div>
+                                    {user.tenants.map((tenant) => (
+                                        <button
+                                            key={tenant.id}
+                                            onClick={() => {
+                                                switchTenant(tenant.id);
+                                                setTenantDropdownOpen(false);
+                                            }}
+                                            className={`w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 transition text-sm ${user.tenantId === tenant.id ? "bg-[var(--color-primary-light)]" : ""
+                                                }`}
+                                        >
+                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${user.tenantId === tenant.id
+                                                ? "bg-[var(--color-primary)] text-white"
+                                                : "bg-gray-100 text-gray-600"
+                                                }`}>
+                                                <Building className="w-4 h-4" />
+                                            </div>
+                                            <div className="flex-1 text-left">
+                                                <p className={`font-medium ${user.tenantId === tenant.id ? "text-[var(--color-primary)]" : "text-gray-700"
+                                                    }`}>
+                                                    {tenant.name}
+                                                </p>
+                                                <p className="text-xs text-gray-500">{tenant.slug}</p>
+                                            </div>
+                                            {user.tenantId === tenant.id && (
+                                                <div className="w-2 h-2 bg-[var(--color-primary)] rounded-full"></div>
+                                            )}
+                                        </button>
+                                    ))}
+
+                                    {/* Separator */}
+                                    <div className="border-t border-gray-200 my-2"></div>
+
+                                    {/* New Salon Option */}
+                                    <button
+                                        onClick={() => {
+                                            setTenantDropdownOpen(false);
+                                            if (!canCreateNewSalon()) {
+                                                // Redirect to upgrade page
+                                                router.push('/settings/billing/upgrade');
+                                            } else {
+                                                // Set flag to reset onboarding on next load
+                                                localStorage.setItem('reset_onboarding', 'true');
+                                                // Navigate to beginning of onboarding flow with step=1 to force restart
+                                                router.push('/onboarding/setup?step=1');
+                                            }
+                                        }}
+                                        className={`w-full px-3 py-2.5 flex items-center gap-3 text-left transition-colors ${canCreateNewSalon()
+                                            ? 'hover:bg-purple-50 text-purple-600'
+                                            : 'opacity-50 cursor-not-allowed text-gray-400'
+                                            }`}
+                                    >
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${canCreateNewSalon()
+                                            ? 'bg-gradient-to-br from-purple-500 to-pink-500'
+                                            : 'bg-gray-200'
+                                            }`}>
+                                            <Plus className="w-4 h-4 text-white" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="font-medium text-sm">Nouveau Salon</div>
+                                            <div className="text-xs text-gray-500">
+                                                {canCreateNewSalon()
+                                                    ? `${getCurrentSalonCount()} / ${getSalonLimit()} salons`
+                                                    : `Limite atteinte (${getSalonLimit()} max)`
+                                                }
+                                            </div>
+                                        </div>
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Mode Switcher - Data Mode Selection */}
+                    <ModeSwitcher />
 
                     {/* Language Selector */}
                     <div className="relative" ref={dropdownRef}>
@@ -288,7 +396,7 @@ export default function Header() {
                                             setLanguage(lang as Language);
                                             setLangDropdownOpen(false);
                                         }}
-                                        className={`w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-50 transition text-sm ${language === lang ? "bg-purple-50 text-purple-700" : "text-gray-700"
+                                        className={`w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-50 transition text-sm ${language === lang ? "bg-[var(--color-primary-light)] text-[var(--color-primary)]" : "text-gray-700"
                                             }`}
                                     >
                                         <span className="text-lg">{languageFlags[lang as Language]}</span>
@@ -312,48 +420,86 @@ export default function Header() {
                         )}
                     </button>
 
-                    {/* Notifications */}
-                    <div className="relative" ref={notificationsRef}>
-                        <button
-                            onClick={() => setNotificationsOpen(!notificationsOpen)}
-                            className="relative p-2 hover:bg-gray-100 rounded-lg transition"
-                            title={t("header.notifications")}
-                        >
-                            <Bell className="w-5 h-5 text-gray-600" />
-                            {notifications.filter(n => !n.isRead).length > 0 && (
-                                <span className="absolute top-1 right-1 flex items-center justify-center min-w-[16px] h-[16px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white shadow-sm">
-                                    {notifications.filter(n => !n.isRead).length > 99 ? '99+' : notifications.filter(n => !n.isRead).length}
-                                </span>
+                    {/* Notifications - Hidden for Super Admin Global View */}
+                    {!pathname.startsWith('/superadmin') && (
+                        <div className="relative" ref={notificationsRef}>
+                            <button
+                                onClick={() => setNotificationsOpen(!notificationsOpen)}
+                                className="relative p-2 hover:bg-gray-100 rounded-lg transition"
+                                title={t("header.notifications")}
+                            >
+                                <Bell className="w-5 h-5 text-gray-600" />
+                                {unreadCount > 0 && (
+                                    <span className="absolute top-1 right-1 flex items-center justify-center min-w-[16px] h-[16px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white shadow-sm">
+                                        {unreadCount > 99 ? '99+' : unreadCount}
+                                    </span>
+                                )}
+                            </button>
+
+                            {notificationsOpen && (
+                                <NotificationsPanel
+                                    notifications={notifications}
+                                    onMarkAsRead={markAsRead}
+                                    onMarkAllAsRead={markAllAsRead}
+                                    onClose={() => setNotificationsOpen(false)}
+                                />
                             )}
+                        </div>
+                    )}
+
+                    {/* User Profile with Dropdown */}
+                    <div className="relative" ref={profileDropdownRef}>
+                        <button
+                            onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                            className="flex items-center gap-2 ml-2 hover:opacity-80 transition"
+                        >
+                            {!isMobile && (
+                                <div className="text-right">
+                                    <p className="text-sm font-semibold text-gray-700">{user?.name || "Guest"}</p>
+                                    <p className="text-xs text-gray-500 capitalize">{user?.role || "Unknown"}</p>
+                                </div>
+                            )}
+                            <div className="w-9 h-9 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary)] rounded-full flex items-center justify-center cursor-pointer hover:shadow-lg transition">
+                                <User className="w-5 h-5 text-white" />
+                            </div>
                         </button>
 
-                        {notificationsOpen && (
-                            <NotificationsPanel
-                                notifications={notifications}
-                                onMarkAsRead={(id) => {
-                                    setNotifications(prev => prev.map(n =>
-                                        n.id === id ? { ...n, isRead: true } : n
-                                    ));
-                                }}
-                                onMarkAllAsRead={() => {
-                                    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-                                }}
-                                onClose={() => setNotificationsOpen(false)}
-                            />
-                        )}
-                    </div>
-
-                    {/* User Profile */}
-                    <div className="flex items-center gap-2 ml-2">
-                        {!isMobile && (
-                            <div className="text-right">
-                                <p className="text-sm font-semibold text-gray-700">{user?.name || "Guest"}</p>
-                                <p className="text-xs text-gray-500 capitalize">{user?.role || "Unknown"}</p>
+                        {profileDropdownOpen && (
+                            <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-100 py-1 min-w-[180px] z-50">
+                                <div className="px-3 py-2 border-b border-gray-100">
+                                    <p className="text-sm font-semibold text-gray-700">{user?.name || "Guest"}</p>
+                                    <p className="text-xs text-gray-500 capitalize">{user?.role || "Unknown"}</p>
+                                </div>
+                                <Link
+                                    href="/settings/profile"
+                                    onClick={() => setProfileDropdownOpen(false)}
+                                    className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-gray-50 transition text-sm text-gray-700"
+                                >
+                                    <User className="w-4 h-4 text-gray-500" />
+                                    <span>View Profile</span>
+                                </Link>
+                                <Link
+                                    href="/settings"
+                                    onClick={() => setProfileDropdownOpen(false)}
+                                    className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-gray-50 transition text-sm text-gray-700"
+                                >
+                                    <Settings className="w-4 h-4 text-gray-500" />
+                                    <span>Settings</span>
+                                </Link>
+                                <div className="border-t border-gray-100 mt-1 pt-1">
+                                    <button
+                                        onClick={() => {
+                                            setProfileDropdownOpen(false);
+                                            logout();
+                                        }}
+                                        className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-red-50 transition text-sm text-red-600"
+                                    >
+                                        <Power className="w-4 h-4" />
+                                        <span>Logout</span>
+                                    </button>
+                                </div>
                             </div>
                         )}
-                        <div className="w-9 h-9 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center cursor-pointer hover:shadow-lg transition">
-                            <User className="w-5 h-5 text-white" />
-                        </div>
                     </div>
                 </div>
             </div>

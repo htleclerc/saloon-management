@@ -6,6 +6,7 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { useTheme, DesignType, SubmenuLayout, FontSize, colorPalettes } from "@/context/ThemeProvider";
 import { useTranslation } from "@/i18n";
+import { useAuth } from "@/context/AuthProvider";
 import {
     Palette,
     Sun,
@@ -21,6 +22,7 @@ import {
     Type,
     Layers,
 } from "lucide-react";
+import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 
 const fonts = [
     { id: "Open Sans", name: "Open Sans", sample: "Aa" },
@@ -50,19 +52,61 @@ const submenuLayouts: { id: SubmenuLayout; name: string; description: string; ic
 export default function AppearanceSettingsPage() {
     const { theme, updateTheme } = useTheme();
     const { t } = useTranslation();
+    const { currentTenant, updateTenantColors, canModify } = useAuth();
     const [localTheme, setLocalTheme] = useState(theme);
+    const [customPrimaryColor, setCustomPrimaryColor] = useState<string>("");
+    const [customSecondaryColor, setCustomSecondaryColor] = useState<string>("");
+    const [useCustomOverride, setUseCustomOverride] = useState<boolean>(false);
+    const [semanticMode, setSemanticMode] = useState<"default" | "theme" | "custom">("default");
+    const [customSuccessColor, setCustomSuccessColor] = useState<string>("");
+    const [customWarningColor, setCustomWarningColor] = useState<string>("");
+    const [customDangerColor, setCustomDangerColor] = useState<string>("");
 
     useEffect(() => {
         setLocalTheme(theme);
-    }, [theme]);
+        // Initialize custom colors from current tenant
+        if (currentTenant) {
+            setCustomPrimaryColor(currentTenant.customPrimaryColor || "");
+            setCustomSecondaryColor(currentTenant.customSecondaryColor || "");
+            setUseCustomOverride(currentTenant.useCustomColorOverride ?? false);
+            setSemanticMode(currentTenant.semanticColorMode || "default");
+            setCustomSuccessColor(currentTenant.customSuccessColor || "");
+            setCustomWarningColor(currentTenant.customWarningColor || "");
+            setCustomDangerColor(currentTenant.customDangerColor || "");
+        }
+    }, [theme, currentTenant]);
 
     const handleApply = () => {
+        if (!canModify) return;
         updateTheme(localTheme);
+        // Save custom colors to tenant only if override is enabled
+        if (useCustomOverride) {
+            updateTenantColors(
+                customPrimaryColor || undefined,
+                customSecondaryColor || undefined,
+                useCustomOverride,
+                semanticMode,
+                customSuccessColor || undefined,
+                customWarningColor || undefined,
+                customDangerColor || undefined
+            );
+        } else {
+            updateTenantColors(
+                undefined,
+                undefined,
+                false,
+                semanticMode,
+                customSuccessColor || undefined,
+                customWarningColor || undefined,
+                customDangerColor || undefined
+            );
+        }
     };
 
     const handleReset = () => {
+        if (!canModify) return;
         const defaultSettings = {
-            submenuLayout: "vertical" as SubmenuLayout,
+            submenuLayout: "horizontal" as SubmenuLayout,
             designType: "modern" as DesignType,
             colorPaletteId: "purple-pink",
             fontFamily: "Open Sans",
@@ -102,6 +146,7 @@ export default function AppearanceSettingsPage() {
                             <button
                                 key={palette.id}
                                 onClick={() => setLocalTheme({ ...localTheme, colorPaletteId: palette.id })}
+                                disabled={!canModify}
                                 className={`relative p-3 rounded-xl border-2 transition-all duration-200 ${isSelected
                                     ? "border-gray-900 shadow-lg ring-1 ring-gray-900"
                                     : "border-gray-200 hover:border-gray-300 hover:shadow-md"
@@ -133,6 +178,222 @@ export default function AppearanceSettingsPage() {
                         );
                     })}
                 </div>
+
+                {/* Custom Colors Section */}
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <h4 className="text-sm font-semibold text-gray-900">Custom Brand Colors</h4>
+                            <p className="text-xs text-gray-500 mt-0.5">Override default logo-based colors</p>
+                        </div>
+                    </div>
+
+                    {/* Override Checkbox */}
+                    <label className="flex items-center gap-2 mb-4 p-3 bg-gray-50 rounded-lg cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={useCustomOverride}
+                            onChange={(e) => setUseCustomOverride(e.target.checked)}
+                            disabled={!canModify}
+                            className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+                        />
+                        <div>
+                            <p className="font-medium text-gray-900 text-sm">Override palette colors</p>
+                            <p className="text-xs text-gray-500">Use custom colors instead of selected palette</p>
+                        </div>
+                    </label>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        {/* Primary Color Picker */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">Primary Color</label>
+                            <div className="relative">
+                                <input
+                                    type="color"
+                                    value={customPrimaryColor || selectedPalette.primary}
+                                    onChange={(e) => setCustomPrimaryColor(e.target.value)}
+                                    disabled={!canModify}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                />
+                                <div className="h-10 rounded-lg border-2 border-gray-200 flex items-center gap-2 px-3 cursor-pointer hover:border-purple-300 transition">
+                                    <div
+                                        className="w-6 h-6 rounded border border-gray-300"
+                                        style={{ backgroundColor: customPrimaryColor || selectedPalette.primary }}
+                                    />
+                                    <span className="text-sm font-mono text-gray-600">
+                                        {customPrimaryColor || selectedPalette.primary}
+                                    </span>
+                                </div>
+                            </div>
+                            {customPrimaryColor && (
+                                <button
+                                    onClick={() => setCustomPrimaryColor("")}
+                                    disabled={!canModify}
+                                    className="text-xs text-purple-600 hover:text-purple-700 disabled:opacity-50"
+                                >
+                                    Reset to default
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Secondary Color Picker */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700">Secondary Color</label>
+                            <div className="relative">
+                                <input
+                                    type="color"
+                                    value={customSecondaryColor || selectedPalette.secondary}
+                                    onChange={(e) => setCustomSecondaryColor(e.target.value)}
+                                    disabled={!canModify}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                />
+                                <div className="h-10 rounded-lg border-2 border-gray-200 flex items-center gap-2 px-3 cursor-pointer hover:border-purple-300 transition">
+                                    <div
+                                        className="w-6 h-6 rounded border border-gray-300"
+                                        style={{ backgroundColor: customSecondaryColor || selectedPalette.secondary }}
+                                    />
+                                    <span className="text-sm font-mono text-gray-600">
+                                        {customSecondaryColor || selectedPalette.secondary}
+                                    </span>
+                                </div>
+                            </div>
+                            {customSecondaryColor && (
+                                <button
+                                    onClick={() => setCustomSecondaryColor("")}
+                                    disabled={!canModify}
+                                    className="text-xs text-primary hover:text-primary-dark disabled:opacity-50"
+                                >
+                                    Reset to default
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Preview */}
+                    <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                        <p className="text-xs text-gray-500 mb-2">Live Preview</p>
+                        <div
+                            className="h-12 rounded-lg shadow-sm"
+                            style={{ background: `linear-gradient(90deg, ${customPrimaryColor || selectedPalette.primary} 0%, ${customSecondaryColor || selectedPalette.secondary} 100%)` }}
+                        />
+                    </div>
+                </div>
+            </Card>
+
+            {/* Semantic Colors - Action & Status */}
+            <Card>
+                <div className="flex items-center gap-3 mb-4 pb-3 border-b border-gray-100">
+                    <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
+                        <Check className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                        <h3 className="font-semibold text-gray-900">Action & Status Colors</h3>
+                        <p className="text-xs text-gray-500">Configure success, warning and danger colors</p>
+                    </div>
+                </div>
+
+                <div className="space-y-6">
+                    {/* Mode Selection */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {[
+                            { id: "default", name: "Default", description: "Green / Orange / Red" },
+                            { id: "theme", name: "Theme-Aligned", description: "Match salon palette" },
+                            { id: "custom", name: "Custom", description: "Choose precision colors" },
+                        ].map((mode) => {
+                            const isSelected = semanticMode === mode.id;
+                            return (
+                                <button
+                                    key={mode.id}
+                                    onClick={() => setSemanticMode(mode.id as any)}
+                                    disabled={!canModify}
+                                    className={`p-4 rounded-xl border-2 text-left transition-all duration-200 ${isSelected
+                                        ? "border-success bg-success-light shadow-md"
+                                        : "border-gray-200 hover:border-success-light hover:shadow-md"
+                                        }`}
+                                >
+                                    <div className="flex items-center justify-between mb-1">
+                                        <p className="font-bold text-gray-900 text-sm">{mode.name}</p>
+                                        {isSelected && <Check className="w-4 h-4 text-success" />}
+                                    </div>
+                                    <p className="text-[10px] text-gray-500">{mode.description}</p>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* Custom Color Pickers */}
+                    {semanticMode === "custom" && (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-xl animate-in fade-in slide-in-from-top-2">
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-gray-700 uppercase">Success</label>
+                                <div className="relative">
+                                    <input
+                                        type="color"
+                                        value={customSuccessColor || "#22c55e"}
+                                        onChange={(e) => setCustomSuccessColor(e.target.value)}
+                                        disabled={!canModify}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    />
+                                    <div className="h-10 rounded-lg border-2 border-gray-200 flex items-center gap-2 px-3 bg-white">
+                                        <div className="w-5 h-5 rounded-full" style={{ backgroundColor: customSuccessColor || "#22c55e" }} />
+                                        <span className="text-xs font-mono">{customSuccessColor || "#22c55e"}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-gray-700 uppercase">Warning</label>
+                                <div className="relative">
+                                    <input
+                                        type="color"
+                                        value={customWarningColor || "#f59e0b"}
+                                        onChange={(e) => setCustomWarningColor(e.target.value)}
+                                        disabled={!canModify}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    />
+                                    <div className="h-10 rounded-lg border-2 border-gray-200 flex items-center gap-2 px-3 bg-white">
+                                        <div className="w-5 h-5 rounded-full" style={{ backgroundColor: customWarningColor || "#f59e0b" }} />
+                                        <span className="text-xs font-mono">{customWarningColor || "#f59e0b"}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold text-gray-700 uppercase">Danger</label>
+                                <div className="relative">
+                                    <input
+                                        type="color"
+                                        value={customDangerColor || "#ef4444"}
+                                        onChange={(e) => setCustomDangerColor(e.target.value)}
+                                        disabled={!canModify}
+                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    />
+                                    <div className="h-10 rounded-lg border-2 border-gray-200 flex items-center gap-2 px-3 bg-white">
+                                        <div className="w-5 h-5 rounded-full" style={{ backgroundColor: customDangerColor || "#ef4444" }} />
+                                        <span className="text-xs font-mono">{customDangerColor || "#ef4444"}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Preview Section */}
+                    <div className="pt-2">
+                        <p className="text-[10px] font-bold text-gray-400 uppercase mb-3 tracking-widest text-center">Live Component Preview</p>
+                        <div className="flex flex-wrap items-center justify-center gap-4">
+                            <div className="flex flex-col items-center gap-2">
+                                <div className="px-4 py-2 rounded-lg text-white font-bold text-xs shadow-sm bg-success">Success Action</div>
+                                <span className="text-[8px] text-gray-400 uppercase">Button / Badge</span>
+                            </div>
+                            <div className="flex flex-col items-center gap-2">
+                                <div className="px-4 py-2 rounded-lg text-white font-bold text-xs shadow-sm bg-warning">Warning Action</div>
+                                <span className="text-[8px] text-gray-400 uppercase">Attention / Pending</span>
+                            </div>
+                            <div className="flex flex-col items-center gap-2">
+                                <div className="px-4 py-2 rounded-lg text-white font-bold text-xs shadow-sm bg-error">Danger Action</div>
+                                <span className="text-[8px] text-gray-400 uppercase">Refuse / Cancel</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </Card>
 
             {/* Design Type */}
@@ -155,14 +416,15 @@ export default function AppearanceSettingsPage() {
                             <button
                                 key={type.id}
                                 onClick={() => setLocalTheme({ ...localTheme, designType: type.id })}
+                                disabled={!canModify}
                                 className={`p-4 rounded-xl border-2 text-left transition-all duration-200 ${isSelected
-                                    ? "border-purple-500 bg-purple-50 shadow-md"
-                                    : "border-gray-200 hover:border-purple-200 hover:shadow-md"
+                                    ? "border-primary bg-primary-light shadow-md"
+                                    : "border-gray-200 hover:border-primary-light hover:shadow-md"
                                     }`}
                             >
                                 <div className="flex items-center justify-between mb-2">
-                                    <Icon className={`w-5 h-5 ${isSelected ? "text-purple-600" : "text-gray-400"}`} />
-                                    {isSelected && <Check className="w-4 h-4 text-purple-600" />}
+                                    <Icon className={`w-5 h-5 ${isSelected ? "text-primary" : "text-gray-400"}`} />
+                                    {isSelected && <Check className="w-4 h-4 text-primary" />}
                                 </div>
                                 <p className="font-medium text-gray-900 text-sm">{type.name}</p>
                                 <p className="text-xs text-gray-500">{type.description}</p>
@@ -192,14 +454,15 @@ export default function AppearanceSettingsPage() {
                             <button
                                 key={layout.id}
                                 onClick={() => setLocalTheme({ ...localTheme, submenuLayout: layout.id })}
+                                disabled={!canModify}
                                 className={`p-4 rounded-xl border-2 text-left transition-all duration-200 ${isSelected
-                                    ? "border-purple-500 bg-purple-50 shadow-md"
-                                    : "border-gray-200 hover:border-purple-200 hover:shadow-md"
+                                    ? "border-primary bg-primary-light shadow-md"
+                                    : "border-gray-200 hover:border-primary-light hover:shadow-md"
                                     }`}
                             >
                                 <div className="flex items-center justify-between mb-2">
-                                    <Icon className={`w-5 h-5 ${isSelected ? "text-purple-600" : "text-gray-400"}`} />
-                                    {isSelected && <Check className="w-4 h-4 text-purple-600" />}
+                                    <Icon className={`w-5 h-5 ${isSelected ? "text-primary" : "text-gray-400"}`} />
+                                    {isSelected && <Check className="w-4 h-4 text-primary" />}
                                 </div>
                                 <p className="font-medium text-gray-900 text-sm">{layout.name}</p>
                                 <p className="text-xs text-gray-500">{layout.description}</p>
@@ -232,9 +495,10 @@ export default function AppearanceSettingsPage() {
                             <button
                                 key={mode.name}
                                 onClick={() => setLocalTheme({ ...localTheme, darkMode: mode.id })}
+                                disabled={!canModify}
                                 className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border-2 transition-all duration-200 ${isSelected
-                                    ? "border-purple-500 bg-purple-50 text-purple-700 shadow-md"
-                                    : "border-gray-200 hover:border-purple-200 text-gray-600 hover:shadow-md"
+                                    ? "border-primary bg-primary-light text-primary shadow-md"
+                                    : "border-gray-200 hover:border-primary-light text-gray-600 hover:shadow-md"
                                     }`}
                             >
                                 <Icon className="w-4 h-4" />
@@ -264,9 +528,10 @@ export default function AppearanceSettingsPage() {
                             <button
                                 key={font.id}
                                 onClick={() => setLocalTheme({ ...localTheme, fontFamily: font.id })}
+                                disabled={!canModify}
                                 className={`p-4 rounded-xl border-2 text-center transition-all duration-200 ${isSelected
-                                    ? "border-purple-500 bg-purple-50 shadow-md"
-                                    : "border-gray-200 hover:border-purple-200 hover:shadow-md"
+                                    ? "border-primary bg-primary-light shadow-md"
+                                    : "border-gray-200 hover:border-primary-light hover:shadow-md"
                                     }`}
                             >
                                 <span
@@ -301,9 +566,10 @@ export default function AppearanceSettingsPage() {
                             <button
                                 key={size.id}
                                 onClick={() => setLocalTheme({ ...localTheme, fontSize: size.id })}
+                                disabled={!canModify}
                                 className={`flex-1 flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all duration-200 ${isSelected
-                                    ? "border-purple-500 bg-purple-50 shadow-md"
-                                    : "border-gray-200 hover:border-purple-200 hover:shadow-md"
+                                    ? "border-primary bg-primary-light shadow-md"
+                                    : "border-gray-200 hover:border-primary-light hover:shadow-md"
                                     }`}
                             >
                                 <span className="font-medium text-gray-900 text-sm">{size.name}</span>
@@ -339,7 +605,8 @@ export default function AppearanceSettingsPage() {
                             step="0.05"
                             value={localTheme.transparency || 0.95}
                             onChange={(e) => setLocalTheme({ ...localTheme, transparency: parseFloat(e.target.value) })}
-                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                            disabled={!canModify}
+                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600 disabled:opacity-50"
                         />
                         <p className="text-xs text-gray-500 mt-1">Adjust the transparency level of cards (glass effect)</p>
                     </div>
@@ -354,6 +621,7 @@ export default function AppearanceSettingsPage() {
                                 type="checkbox"
                                 checked={localTheme.compactMode}
                                 onChange={(e) => setLocalTheme({ ...localTheme, compactMode: e.target.checked })}
+                                disabled={!canModify}
                                 className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
                             />
                         </label>
@@ -366,7 +634,8 @@ export default function AppearanceSettingsPage() {
                                 type="checkbox"
                                 checked={localTheme.animations}
                                 onChange={(e) => setLocalTheme({ ...localTheme, animations: e.target.checked })}
-                                className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
+                                disabled={!canModify}
+                                className="w-5 h-5 text-primary rounded focus:ring-primary"
                             />
                         </label>
                     </div>
@@ -375,14 +644,18 @@ export default function AppearanceSettingsPage() {
 
             {/* Action Buttons */}
             <div className="flex gap-3 justify-end">
-                <Button variant="outline" size="md" onClick={handleReset}>
-                    <RotateCcw className="w-4 h-4" />
-                    Reset
-                </Button>
-                <Button variant="primary" size="md" onClick={handleApply}>
-                    <Check className="w-4 h-4" />
-                    {t("common.apply")}
-                </Button>
+                <ReadOnlyGuard>
+                    <Button variant="outline" size="md" onClick={handleReset}>
+                        <RotateCcw className="w-4 h-4" />
+                        Reset
+                    </Button>
+                </ReadOnlyGuard>
+                <ReadOnlyGuard>
+                    <Button variant="primary" size="md" onClick={handleApply}>
+                        <Check className="w-4 h-4" />
+                        {t("common.apply")}
+                    </Button>
+                </ReadOnlyGuard>
             </div>
         </SettingsLayout>
     );
