@@ -88,7 +88,7 @@ export default function ModeSwitcher() {
 
                         <div className="mt-2 pt-2 border-t border-gray-100">
                             <p className="text-xs text-gray-500 px-3">
-                                💡 Switching modes will reload the app
+                                💡 Switching modes will change the data source
                             </p>
                         </div>
                     </div>

@@ -1,11 +1,35 @@
 /**
  * Base Service Class
- * 
+ *
  * Provides common functionality for all business services
  */
 
 import { DataProviderFactory } from '../providers/types';
-import { useDataMode } from '@/context/DataModeProvider';
+
+/**
+ * User context registry - allows services (non-React) to access current user.
+ * Set by AuthProvider on login/logout.
+ */
+let _currentUserCode: string = 'SYSTEM';
+let _currentUserId: string | null = null;
+
+export function setServiceUserContext(userCode: string, userId: string | null) {
+    _currentUserCode = userCode || 'SYSTEM';
+    _currentUserId = userId;
+}
+
+export function clearServiceUserContext() {
+    _currentUserCode = 'SYSTEM';
+    _currentUserId = null;
+}
+
+export function getServiceUserCode(): string {
+    return _currentUserCode;
+}
+
+export function getServiceUserId(): string | null {
+    return _currentUserId;
+}
 
 export abstract class BaseService {
     protected getProvider() {
@@ -15,13 +39,13 @@ export abstract class BaseService {
         return DataProviderFactory.create(mode);
     }
 
-    protected get provider(): any {
+    protected get provider() {
         return this.getProvider();
     }
 
-    protected validateRequired(data: any, fields: string[]) {
+    protected validateRequired(data: Record<string, unknown>, fields: string[]) {
         for (const field of fields) {
-            if (data[field] === undefined || data[field] === null || (typeof data[field] === 'string' && data[field].trim() === '')) {
+            if (data[field] === undefined || data[field] === null || (typeof data[field] === 'string' && (data[field] as string).trim() === '')) {
                 throw new Error(`${field} is required`);
             }
         }
@@ -39,8 +63,11 @@ export abstract class BaseService {
     }
 
     protected getCurrentUser(): string {
-        // Placeholder: should return current authenticated user's code or ID
-        return 'SYSTEM';
+        return _currentUserCode;
+    }
+
+    protected getCurrentUserId(): string | null {
+        return _currentUserId;
     }
 
     protected async logInteraction(entityType: string, entityId: number, action: string, comment?: string) {

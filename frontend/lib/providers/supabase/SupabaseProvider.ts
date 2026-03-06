@@ -7,6 +7,7 @@
 
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import type { IDataProvider } from '@/lib/providers/types';
+import { handleQueryError, validateSalonId, validateId } from './errorHandler';
 import type {
     User, UserSalon, Salon, SalonSettings, SalonStats,
     SalonWorker, WorkerStats,

@@ -42,7 +42,11 @@ export class PromoCodeService extends BaseService {
      * Create promo code
      */
     async create(data: Omit<PromoCode, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>): Promise<PromoCode> {
-        return this.provider.createPromoCode(data);
+        return this.provider.createPromoCode({
+            ...data,
+            createdBy: this.getCurrentUser(),
+            updatedBy: this.getCurrentUser()
+        });
     }
 
     /**

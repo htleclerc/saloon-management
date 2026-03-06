@@ -11,13 +11,14 @@ vi.mock('../providers/types', () => ({
 
 describe('IncomeService', () => {
     let service: IncomeService;
-    let mockProvider: any;
+    let mockProvider: Record<string, ReturnType<typeof vi.fn>>;
 
     beforeEach(() => {
         vi.clearAllMocks();
         mockProvider = {
             getIncomes: vi.fn(),
             getIncome: vi.fn(),
+            getBooking: vi.fn(),
             createIncome: vi.fn(),
             updateIncome: vi.fn(),
             deleteIncome: vi.fn(),
@@ -29,7 +30,7 @@ describe('IncomeService', () => {
             getIncomesByWorker: vi.fn(),
             clearIncomeJunctions: vi.fn()
         };
-        (DataProviderFactory.create as any).mockReturnValue(mockProvider);
+        (DataProviderFactory.create as ReturnType<typeof vi.fn>).mockReturnValue(mockProvider);
         service = new IncomeService();
     });
 
@@ -41,7 +42,7 @@ describe('IncomeService', () => {
             workerShares: [{ workerId: 1, percentage: 100 }]
         };
 
-        await expect(service.create(data as any)).rejects.toThrow('Amount must be positive');
+        await expect(service.create(data as Parameters<typeof service.create>[0])).rejects.toThrow(/Validation failed/);
     });
 
     it('should throw error if shares do not sum to 100%', async () => {
@@ -55,7 +56,7 @@ describe('IncomeService', () => {
             ]
         };
 
-        await expect(service.create(data as any)).rejects.toThrow(/Worker shares must sum to 100%/);
+        await expect(service.create(data as Parameters<typeof service.create>[0])).rejects.toThrow(/Worker shares must sum to 100%/);
     });
 
     it('should call provider methods in correct order during creation', async () => {
@@ -70,11 +71,12 @@ describe('IncomeService', () => {
 
         mockProvider.createIncome.mockResolvedValue({ id: 50, ...data, finalAmount: 90 });
 
-        const result = await service.create(data as any);
+        const result = await service.create(data as Parameters<typeof service.create>[0]);
 
         expect(mockProvider.createIncome).toHaveBeenCalled();
         // finalAmount = 100 - 10 = 90. Share is 100% of 90 = 90.
-        expect(mockProvider.addWorkerToIncome).toHaveBeenCalledWith(50, 1, 90, 100, 0);
+        // addWorkerToIncome now takes 4 args (no tips param in IDataProvider)
+        expect(mockProvider.addWorkerToIncome).toHaveBeenCalledWith(50, 1, 90, 100);
         expect(mockProvider.addServiceToIncome).toHaveBeenCalledWith(50, 101);
         expect(result.id).toBe(50);
     });
@@ -129,10 +131,11 @@ describe('IncomeService', () => {
 
         mockProvider.createIncome.mockResolvedValue({ id: 51, ...data, finalAmount: 145 });
 
-        await service.create(data as any);
+        await service.create(data as Parameters<typeof service.create>[0]);
 
         // Should use explicitly provided 50€, NOT 100% of 145€
-        expect(mockProvider.addWorkerToIncome).toHaveBeenCalledWith(51, 1, 50, 100, 0);
+        // addWorkerToIncome now takes 4 args (no tips param)
+        expect(mockProvider.addWorkerToIncome).toHaveBeenCalledWith(51, 1, 50, 100);
     });
 
     it('should block updates on Validated income unless changing status', async () => {
@@ -140,7 +143,7 @@ describe('IncomeService', () => {
         mockProvider.getIncome.mockResolvedValue({ id: incomeId, status: 'Validated', amount: 100 });
 
         // Try to update amount without changing status
-        await expect(service.update(incomeId, { amount: 200 } as any))
+        await expect(service.update(incomeId, { amount: 200 } as Partial<Parameters<typeof service.update>[1]>))
             .rejects.toThrow('Validated income cannot be modified');
     });
 
@@ -177,11 +180,11 @@ describe('IncomeService', () => {
             workerShares: [{ workerId: 1, percentage: 100 }]
         };
 
-        await service.update(incomeId, updateData as any);
+        await service.update(incomeId, updateData as Parameters<typeof service.update>[1]);
 
         // finalAmount calculation: 200 - 20 = 180
-        // Expect junctions to be cleared and re-added
+        // Expect junctions to be cleared and re-added (4 args, no tips)
         expect(mockProvider.clearIncomeJunctions).toHaveBeenCalledWith(incomeId);
-        expect(mockProvider.addWorkerToIncome).toHaveBeenCalledWith(incomeId, 1, 180, 100, 0);
+        expect(mockProvider.addWorkerToIncome).toHaveBeenCalledWith(incomeId, 1, 180, 100);
     });
 });

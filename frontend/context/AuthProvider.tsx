@@ -5,6 +5,7 @@ import { getPlanLimits, canCreateSalon } from "@/lib/utils/subscriptionHelpers";
 import { UserRole as DomainUserRole, Salon } from "@/types";
 import { salonService } from "@/lib/services/SalonService";
 import { useDataMode } from "@/context/DataModeProvider";
+import { setServiceUserContext, clearServiceUserContext } from "@/lib/services/BaseService";
 
 export type UserRole = DomainUserRole;
 
@@ -128,8 +129,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     }
                 }
                 setUser(parsedUser);
+                // Sync service layer user context
+                setServiceUserContext(parsedUser.userCode || 'SYSTEM', parsedUser.id || null);
             } catch {
                 setUser(null);
+                clearServiceUserContext();
             }
         }
         setIsLoading(false);
@@ -138,10 +142,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         if (mounted && user) {
             localStorage.setItem("workshop-user", JSON.stringify(user));
+            // Keep service layer user context in sync
+            setServiceUserContext(user.userCode || 'SYSTEM', user.id || null);
         }
     }, [user, mounted]);
 
-    const login = (userData: User) => setUser(userData);
+    const login = (userData: User) => {
+        setServiceUserContext(userData.userCode || 'SYSTEM', userData.id || null);
+        setUser(userData);
+    };
 
     const mapSalonToTenant = (salon: Salon): Tenant => ({
         id: salon.id.toString(),
@@ -230,6 +239,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const logout = () => {
         setUser(null);
+        clearServiceUserContext();
         localStorage.removeItem("workshop-user");
     };
 

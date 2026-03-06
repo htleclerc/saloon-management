@@ -1,10 +1,11 @@
 /**
  * Booking Service
- * 
- * Business logic for booking management with conflict detection
+ *
+ * Business logic for booking management with conflict detection and Zod validation
  */
 
 import { BaseService } from './BaseService';
+import { bookingCreateSchema, bookingUpdateSchema, validateData } from '../validation/schemas';
 import type { Booking, BookingWithRelations, BookingCreateData, BookingFilters, SalonWorker, Service, PaginatedResponse } from '@/types';
 
 export class BookingService extends BaseService {
@@ -51,19 +52,11 @@ export class BookingService extends BaseService {
     }
 
     /**
-     * Create a new booking
+     * Create a new booking with Zod validation
      */
     async create(data: BookingCreateData): Promise<Booking> {
-        // Validation
-        this.validateRequired(data, ['salonId', 'clientId', 'date', 'time', 'duration']);
-
-        if (!data.workerIds || data.workerIds.length === 0) {
-            throw new Error('At least one worker must be assigned');
-        }
-
-        if (!data.serviceIds || data.serviceIds.length === 0) {
-            throw new Error('At least one service must be selected');
-        }
+        // Zod validation
+        validateData(bookingCreateSchema, data);
 
         // Check for conflicts
         const hasConflict = await this.checkConflicts(
@@ -75,11 +68,17 @@ export class BookingService extends BaseService {
         );
 
         // Create booking
-        const booking = await this.provider.createBooking({
+        const bookingData: BookingCreateData = {
             ...data,
             status: data.status || 'Pending',
-            isSensitive: hasConflict
-        });
+        };
+        const booking = await this.provider.createBooking(bookingData);
+
+        // Mark as sensitive if conflict detected
+        if (hasConflict) {
+            await this.provider.updateBooking(booking.id, { isSensitive: true });
+            booking.isSensitive = true;
+        }
 
         // Add workers
         booking.workerIds = [];
@@ -102,9 +101,12 @@ export class BookingService extends BaseService {
     }
 
     /**
-     * Update booking
+     * Update booking with Zod validation
      */
     async update(id: number, data: Partial<Booking>): Promise<Booking> {
+        // Validate update fields
+        validateData(bookingUpdateSchema, data);
+
         const booking = await this.provider.updateBooking(id, {
             ...data,
             updatedBy: this.getCurrentUser()
@@ -182,7 +184,7 @@ export class BookingService extends BaseService {
     }
 
     /**
-     * Check for booking conflicts
+     * Check for booking conflicts (worker time overlaps)
      */
     private async checkConflicts(
         salonId: number,

@@ -1,10 +1,12 @@
 /**
  * Income Service
- * 
+ *
  * Business logic for income and revenue management
+ * Uses Zod validation for all inputs
  */
 
 import { BaseService } from './BaseService';
+import { incomeCreateSchema, incomeUpdateSchema, validateData } from '../validation/schemas';
 import type { Income, IncomeWithRelations, IncomeCreateData, IncomeFilters, IncomeWorkerShare, PaginatedResponse } from '@/types';
 
 export class IncomeService extends BaseService {
@@ -32,8 +34,7 @@ export class IncomeService extends BaseService {
             entityType: 'income',
             entityId: id,
             text,
-            userCode,
-            salonId: 0 // Only req for some implementations, generic
+            userCode
         });
     }
 
@@ -46,72 +47,73 @@ export class IncomeService extends BaseService {
 
     /**
      * Get income by booking ID
+     * Searches incomes linked to a specific booking
      */
     async getByBooking(bookingId: number): Promise<Income | null> {
-        // TODO: Implement getIncomesByBooking in IDataProvider or use filters
-        // const incomes = await this.provider.getIncomesByBooking(bookingId); 
-        return null;
+        try {
+            // Strategy 1: Use the bookingId field on Income
+            // We need a salonId-agnostic way. Try to get the booking first.
+            const booking = await this.provider.getBooking(bookingId);
+            if (!booking) return null;
+
+            // Use filters to find incomes for this salon with this bookingId
+            const response = await this.provider.getIncomes(booking.salonId, {
+                isActive: true
+            });
+
+            // Search for income linked to this booking
+            const matchingIncome = response.data.find(
+                (income: Income) => income.bookingId === bookingId ||
+                    (income.bookingIds && income.bookingIds.includes(bookingId))
+            );
+
+            return matchingIncome || null;
+        } catch (error) {
+            console.error(`Failed to get income for booking ${bookingId}:`, error);
+            return null;
+        }
     }
 
     /**
-     * Create new income
+     * Create new income with Zod validation
      */
     async create(data: IncomeCreateData): Promise<Income> {
-        // Validation
-        this.validateRequired(data, ['salonId', 'amount', 'date']);
-
-        if (data.amount < 0) {
-            throw new Error('Amount must be positive');
-        }
-
-        if (data.discountAmount && data.discountAmount < 0) {
-            throw new Error('Discount amount must be positive');
-        }
-
-        if (!data.workerShares || data.workerShares.length === 0) {
-            throw new Error('At least one worker share must be specified');
-        }
-
-        // Validate percentages sum to 100
-        const totalPercentage = data.workerShares.reduce((sum, share) => sum + share.percentage, 0);
-        if (Math.abs(totalPercentage - 100) > 0.01) {
-            throw new Error(`Worker shares must sum to 100% (currently ${totalPercentage}%)`);
-        }
+        // Zod validation (validates amount, percentages sum, discount <= amount, etc.)
+        const validated = validateData(incomeCreateSchema, data);
 
         // Create income
-        const finalAmount = data.amount - (data.discountAmount || 0);
+        const finalAmount = validated.amount - (validated.discountAmount || 0);
         const income = await this.provider.createIncome({
-            ...data,
-            status: data.status || 'Draft'
+            ...validated,
+            status: validated.status || 'Draft'
         });
 
         // Add worker shares
         income.workerIds = [];
-        for (const share of data.workerShares) {
+        for (const share of validated.workerShares) {
             const workerAmount = share.amount !== undefined ? share.amount : (finalAmount * share.percentage) / 100;
             const workerTips = share.tips || 0;
             await this.provider.addWorkerToIncome(
                 income.id,
                 share.workerId,
                 workerAmount,
-                share.percentage,
-                workerTips
+                share.percentage
             );
             income.workerIds.push(share.workerId);
         }
 
         // Add services
-        if (data.serviceIds) {
+        if (validated.serviceIds) {
             income.serviceIds = [];
-            for (const serviceId of data.serviceIds) {
+            for (const serviceId of validated.serviceIds) {
                 await this.provider.addServiceToIncome(income.id, serviceId);
                 income.serviceIds.push(serviceId);
             }
         }
 
         // Add products
-        if (data.products) {
-            for (const product of data.products) {
+        if (validated.products) {
+            for (const product of validated.products) {
                 await this.provider.addProductToIncome(income.id, product.productId, product.quantity);
             }
         }
@@ -123,7 +125,7 @@ export class IncomeService extends BaseService {
     }
 
     /**
-     * Update income
+     * Update income with Zod validation
      */
     async update(id: number, data: Partial<Income> & { workerShares?: IncomeWorkerShare[] }): Promise<Income> {
         const current = await this.getById(id);
@@ -134,6 +136,9 @@ export class IncomeService extends BaseService {
             throw new Error('Validated income cannot be modified. Contest it first.');
         }
 
+        // Validate update fields with Zod
+        validateData(incomeUpdateSchema, data);
+
         // If updating a Refused record, force it back to Pending/Draft if not specified
         if (current.status === 'Refused' && !data.status) {
             data.status = 'Pending';
@@ -143,7 +148,7 @@ export class IncomeService extends BaseService {
         if (data.amount !== undefined || data.discountAmount !== undefined) {
             const amount = data.amount !== undefined ? data.amount : current.amount;
             const discount = data.discountAmount !== undefined ? data.discountAmount : current.discountAmount;
-            (data as any).finalAmount = amount - discount;
+            (data as Record<string, unknown>).finalAmount = amount - discount;
         }
 
         const income = await this.provider.updateIncome(id, {
@@ -152,7 +157,7 @@ export class IncomeService extends BaseService {
         });
 
         // Sync Junctions if provided
-        if (data.serviceIds || data.workerShares || (data as any).products) {
+        if (data.serviceIds || data.workerShares || (data as Record<string, unknown>).products) {
             await this.provider.clearIncomeJunctions(id);
 
             const finalAmount = income.finalAmount;
@@ -161,13 +166,14 @@ export class IncomeService extends BaseService {
             if (data.workerShares) {
                 income.workerIds = [];
                 for (const share of data.workerShares) {
-                    const workerAmount = (share as any).amount !== undefined ? (share as any).amount : (finalAmount * share.percentage) / 100;
+                    const shareAmount = share.amount !== undefined
+                        ? share.amount
+                        : (finalAmount * share.percentage) / 100;
                     await this.provider.addWorkerToIncome(
                         id,
                         share.workerId,
-                        workerAmount,
-                        share.percentage,
-                        share.tips || 0
+                        shareAmount,
+                        share.percentage
                     );
                     income.workerIds.push(share.workerId);
                 }
@@ -183,8 +189,9 @@ export class IncomeService extends BaseService {
             }
 
             // Re-add products
-            if ((data as any).products) {
-                for (const product of (data as any).products) {
+            const products = (data as Record<string, unknown>).products as Array<{ productId: number; quantity: number }> | undefined;
+            if (products) {
+                for (const product of products) {
                     await this.provider.addProductToIncome(id, product.productId, product.quantity);
                 }
             }
@@ -291,13 +298,6 @@ export class IncomeService extends BaseService {
      * Get worker transactions (paginated)
      */
     async getWorkerTransactions(workerId: number, page: number = 1, limit: number = 10, filters?: { search?: string, year?: number, month?: number }): Promise<PaginatedResponse<{ id: number, date: string, client: string, service: string, amount: number, status: Income['status'] }>> {
-        // Since provider.getIncomesByWorker doesn't support pagination params in the signature shown in earlier views,
-        // we might need to filter manually or use getIncomes with workerId filter if supported by provider
-        // Based on types/index.ts, IncomeFilters has workerId.
-
-        // We need salonId for getIncomes. 
-        // If we don't have salonId, we might need a specific provider method
-        // Using getIncomesByWorker from provider which likely returns all
         const allIncomes = await this.provider.getIncomesByWorker(workerId);
 
         // Apply text filter if any
@@ -310,7 +310,6 @@ export class IncomeService extends BaseService {
             );
         }
 
-        // Apply date filter
         // Apply date filter
         if (filters?.year) {
             const yearStr = filters.year.toString();
@@ -350,8 +349,6 @@ export class IncomeService extends BaseService {
      * Get worker performance stats
      */
     async getWorkerPerformanceStats(workerId: number, year: number) {
-        // Fetch all validated incomes with relations for the worker
-        // This is more expensive but accurate for tips
         const incomes = await this.provider.getIncomesByWorker(workerId);
         const yearStr = year.toString();
 
@@ -359,7 +356,6 @@ export class IncomeService extends BaseService {
             i.status === 'Validated' && i.date.startsWith(yearStr)
         );
 
-        // We need to fetch worker shares for each income to get the explicit tips
         const incomesWithShares = await Promise.all(validIncomes.map(async (inc: Income) => {
             const shares = await this.provider.getIncomeWorkerShares(inc.id);
             const workerShare = shares.find((s: IncomeWorkerShare) => s.workerId === workerId);

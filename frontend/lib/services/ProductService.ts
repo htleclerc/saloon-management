@@ -26,7 +26,11 @@ export class ProductService extends BaseService {
      * Create a new product
      */
     async create(data: Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>): Promise<Product> {
-        return this.provider.createProduct(data);
+        return this.provider.createProduct({
+            ...data,
+            createdBy: this.getCurrentUser(),
+            updatedBy: this.getCurrentUser()
+        });
     }
 
     /**

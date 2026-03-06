@@ -37,7 +37,7 @@ describe('WorkerService', () => {
             sharingKey: 150
         };
 
-        await expect(service.create(invalidWorker as any)).rejects.toThrow('Sharing key must be between 0 and 100');
+        await expect(service.create(invalidWorker as any)).rejects.toThrow(/Validation failed.*sharingKey/);
     });
 
     it('should validate email format during creation', async () => {
@@ -49,7 +49,7 @@ describe('WorkerService', () => {
             email: 'invalid-email'
         };
 
-        await expect(service.create(invalidWorker as any)).rejects.toThrow('Invalid email format');
+        await expect(service.create(invalidWorker as any)).rejects.toThrow(/Validation failed.*email/);
     });
 
     it('should validate phone format during creation', async () => {
@@ -61,7 +61,7 @@ describe('WorkerService', () => {
             phone: '123' // Too short
         };
 
-        await expect(service.create(invalidWorker as any)).rejects.toThrow('Invalid phone format');
+        await expect(service.create(invalidWorker as any)).rejects.toThrow(/Validation failed.*phone/);
     });
 
     it('should call provider.createWorker with correct data', async () => {

@@ -13,7 +13,7 @@ export function ModeSwitcher() {
 
         const isConfirmed = await confirm({
             title: 'Change Data Mode',
-            message: `Switch to ${newMode} mode? This will reload the application.`,
+            message: `Switch to ${newMode} mode? The data source will change.`,
             confirmText: 'Yes, Switch',
             cancelText: 'Cancel',
             type: 'warning'

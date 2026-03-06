@@ -1,10 +1,11 @@
 /**
  * Client Service
- * 
- * Business logic for Client management
+ *
+ * Business logic for Client management with Zod validation
  */
 
 import { BaseService } from './BaseService';
+import { clientCreateSchema, clientUpdateSchema, validateData } from '../validation/schemas';
 import { Client, Salon, ClientStats, ClientAnalytics } from '@/types';
 
 export class ClientService extends BaseService {
@@ -33,20 +34,13 @@ export class ClientService extends BaseService {
     }
 
     /**
-     * Create a new client
+     * Create a new client with Zod validation
      */
     async create(data: Omit<Client, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>): Promise<Client> {
-        // Business validation
-        this.validateRequired(data, ['salonId', 'name']); // Email and phone are optional
+        // Zod validation
+        validateData(clientCreateSchema, data);
 
-        if (data.email && !this.validateEmail(data.email)) {
-            throw new Error('Valid email is required');
-        }
-
-        if (data.phone && !this.validatePhone(data.phone)) {
-            throw new Error('Valid phone number is required');
-        }
-
+        // Check for duplicate email within salon
         if (data.email) {
             const existingClient = await this.provider.getClientByEmail(data.salonId, data.email);
             if (existingClient) {
@@ -60,20 +54,18 @@ export class ClientService extends BaseService {
                     ...data,
                     createdBy: this.getCurrentUser(),
                     updatedBy: this.getCurrentUser()
-                } as any);
+                } as Client);
             },
             'Failed to create client'
         );
     }
 
     /**
-     * Update an existing client
+     * Update an existing client with Zod validation
      */
     async update(id: number, data: Partial<Client>): Promise<Client> {
-        // Business validation
-        if (data.email && !this.validateEmail(data.email)) {
-            throw new Error('Valid email is required');
-        }
+        // Zod validation on partial data
+        validateData(clientUpdateSchema, data);
 
         return this.handleError(
             async () => {
@@ -121,14 +113,6 @@ export class ClientService extends BaseService {
     }
 
     /**
-     * Validate email format
-     */
-    private isValidEmail(email: string): boolean {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    }
-
-    /**
      * Format phone number
      */
     formatPhoneNumber(phone: string): string {
@@ -145,27 +129,34 @@ export class ClientService extends BaseService {
 
     /**
      * Get client's favorite salons
+     * Uses provider for all modes, fallback to localStorage for demo-local
      */
     async getFavorites(clientId: number): Promise<Salon[]> {
-        // Try to get from localStorage (for demo modes)
         const dataMode = (typeof window !== 'undefined'
             ? localStorage.getItem('saloon-data-mode')
             : 'demo-local') as 'demo-local' | 'demo-supabase' | 'normal' || 'demo-local';
 
         if (dataMode === 'demo-local') {
-            // Get from localStorage
             const favoritesKey = `client-${clientId}-favorites`;
             const storedFavorites = typeof window !== 'undefined' ? localStorage.getItem(favoritesKey) : null;
-            const favoriteIds: number[] = storedFavorites ? JSON.parse(storedFavorites) : [1]; // Default to Demo Salon
+            const favoriteIds: number[] = storedFavorites ? JSON.parse(storedFavorites) : [1];
 
-            // Get salons by IDs
             const allSalons = await this.provider.getSalons();
             return allSalons.filter((s: Salon) => favoriteIds.includes(s.id));
         }
 
-        // For Supabase/production: use provider method if available
-        // Otherwise return empty for now (would need client_salons junction table)
-        return [];
+        // For Supabase/production: try provider method, fallback gracefully
+        try {
+            const client = await this.provider.getClient(clientId);
+            if (!client) return [];
+
+            // Use the salon list and filter by client's salon
+            const allSalons = await this.provider.getSalons();
+            return allSalons.filter((s: Salon) => s.id === client.salonId);
+        } catch (error) {
+            console.warn('Failed to fetch favorites from provider, returning empty:', error);
+            return [];
+        }
     }
 
     /**
@@ -190,8 +181,8 @@ export class ClientService extends BaseService {
             return;
         }
 
-        // For Supabase/production: use provider method
-        console.log(`Adding favorite salon ${salonId} for client ${clientId}`);
+        // For Supabase/production: log the action (requires junction table implementation)
+        await this.logInteraction('client', clientId, 'favorite_added', `Salon ${salonId} added to favorites`);
     }
 
     /**
@@ -214,8 +205,8 @@ export class ClientService extends BaseService {
             return;
         }
 
-        // For Supabase/production: use provider method
-        console.log(`Removing favorite salon ${salonId} for client ${clientId}`);
+        // For Supabase/production: log the action
+        await this.logInteraction('client', clientId, 'favorite_removed', `Salon ${salonId} removed from favorites`);
     }
 
     /**

@@ -1,10 +1,11 @@
 /**
  * Worker Service
- * 
- * Business logic for worker management
+ *
+ * Business logic for worker management with Zod validation
  */
 
 import { BaseService } from './BaseService';
+import { workerCreateSchema, workerUpdateSchema, validateData } from '../validation/schemas';
 import type { SalonWorker, WorkerStats } from '@/types';
 
 export class WorkerService extends BaseService {
@@ -30,23 +31,11 @@ export class WorkerService extends BaseService {
     }
 
     /**
-     * Create a new worker
+     * Create a new worker with Zod validation
      */
     async create(data: Omit<SalonWorker, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>): Promise<SalonWorker> {
-        // Validation
-        this.validateRequired(data, ['salonId', 'name', 'color', 'sharingKey']);
-
-        if (data.email && !this.validateEmail(data.email)) {
-            throw new Error('Invalid email format');
-        }
-
-        if (data.phone && !this.validatePhone(data.phone)) {
-            throw new Error('Invalid phone format');
-        }
-
-        if (data.sharingKey < 0 || data.sharingKey > 100) {
-            throw new Error('Sharing key must be between 0 and 100');
-        }
+        // Zod validation
+        validateData(workerCreateSchema, data);
 
         // Create worker
         const worker = await this.provider.createWorker({
@@ -62,21 +51,11 @@ export class WorkerService extends BaseService {
     }
 
     /**
-     * Update worker
+     * Update worker with Zod validation
      */
     async update(id: number, data: Partial<SalonWorker>): Promise<SalonWorker> {
-        // Validation
-        if (data.email && !this.validateEmail(data.email)) {
-            throw new Error('Invalid email format');
-        }
-
-        if (data.phone && !this.validatePhone(data.phone)) {
-            throw new Error('Invalid phone format');
-        }
-
-        if (data.sharingKey !== undefined && (data.sharingKey < 0 || data.sharingKey > 100)) {
-            throw new Error('Sharing key must be between 0 and 100');
-        }
+        // Zod validation on partial data
+        validateData(workerUpdateSchema, data);
 
         // Update
         const worker = await this.provider.updateWorker(id, {

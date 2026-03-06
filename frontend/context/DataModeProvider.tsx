@@ -1,23 +1,26 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useTransition, ReactNode } from "react";
 import { DataMode } from "@/lib/providers/types";
 
 interface DataModeContextType {
     mode: DataMode;
     switchMode: (newMode: DataMode) => void;
     isDemo: boolean;
+    isSwitching: boolean;
 }
 
 const DataModeContext = createContext<DataModeContextType | undefined>(undefined);
 
 /**
  * DataModeProvider - Manages the application's data mode
- * 
+ *
  * Allows switching between:
  * - demo-local: localStorage (offline, fast)
  * - demo-supabase: Supabase cloud (online demo, auto-cleanup)
  * - normal: Go API backend (production)
+ *
+ * Uses React transitions for smooth mode switching without full page reload.
  */
 export function DataModeProvider({ children }: { children: ReactNode }) {
     const [mode, setMode] = useState<DataMode>(() => {
@@ -34,31 +37,24 @@ export function DataModeProvider({ children }: { children: ReactNode }) {
         return "demo-local";
     });
 
-    const switchMode = async (newMode: DataMode) => {
+    const [isPending, startTransition] = useTransition();
+
+    const switchMode = useCallback((newMode: DataMode) => {
         if (newMode === mode) return;
 
-        // Since this causes a full reload, and we are inside a provider that might be above ConfirmProvider,
-        // we should check if we can access the confirm context. 
-        // If this provider is wrapping the app, we might need to handle this differently.
-        // However, for now, let's assume we can use the confirm dialog if we move this logic or if we accept that
-        // this specific action might need a different UX.
-
-        // But the user specifically complained about THIS alert.
-        // "il reste encore des alertes" and showed this one.
-
-        // Let's try to use valid UI.
-        // We will persist the pending mode and show a UI, or use useConfirm if available.
-        // But we can't use useConfirm inside DataModeProvider if DataModeProvider wraps ConfirmProvider.
-
+        // Persist the new mode
         localStorage.setItem("saloon-data-mode", newMode);
-        setMode(newMode);
-        window.location.reload();
-    };
+
+        // Use React transition for a smooth switch
+        startTransition(() => {
+            setMode(newMode);
+        });
+    }, [mode]);
 
     const isDemo = mode === "demo-local" || mode === "demo-supabase";
 
     return (
-        <DataModeContext.Provider value={{ mode, switchMode, isDemo }}>
+        <DataModeContext.Provider value={{ mode, switchMode, isDemo, isSwitching: isPending }}>
             {children}
         </DataModeContext.Provider>
     );

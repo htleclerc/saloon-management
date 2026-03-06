@@ -608,6 +608,7 @@ export interface BookingFilters {
     endDate?: string;
     isSensitive?: boolean;
     isActive?: boolean;
+    limit?: number;
 }
 
 export interface IncomeFilters {
@@ -619,6 +620,7 @@ export interface IncomeFilters {
     endDate?: string;
     hasInvoice?: boolean;
     isActive?: boolean;
+    limit?: number;
 }
 
 export interface ExpenseFilters {
@@ -627,6 +629,7 @@ export interface ExpenseFilters {
     startDate?: string;
     endDate?: string;
     status?: ExpenseStatus;
+    limit?: number;
 }
 
 export interface ReviewFilters {
@@ -638,6 +641,7 @@ export interface ReviewFilters {
     isPublic?: boolean;
     minRating?: number;
     maxRating?: number;
+    limit?: number;
 }
 
 // ============================================================
