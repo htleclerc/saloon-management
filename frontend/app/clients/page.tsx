@@ -19,19 +19,30 @@ import { useAuth } from "@/context/AuthProvider";
 import { useTranslation } from "@/i18n";
 import { useToast } from "@/context/ToastProvider";
 import { useConfirm } from "@/context/ConfirmProvider";
-import { statsService } from "@/lib/services/StatsService";
-import { Review } from "@/types";
+import { performanceStatsService } from "@/lib/services";
+
+interface DisplayReview {
+    id: number;
+    client: string;
+    rating: number;
+    comment: string;
+    date: string;
+    service: string;
+    avatar: string;
+    color: string;
+}
+
+type ClientWithStats = Client & { stats?: ClientStats | null; type?: string };
 
 export default function ClientsPage() {
     const { t } = useTranslation();
     const { activeSalonId } = useAuth();
-    const [clients, setClients] = useState<(Client & { stats?: ClientStats | null })[]>([]);
-    const [analytics, setAnalytics] = useState<ClientAnalytics | null>(null);
-    const [reviews, setReviews] = useState<any[]>([]);
+    const [clients, setClients] = useState<ClientWithStats[]>([]);
+    const [reviews, setReviews] = useState<DisplayReview[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const { getCardStyle } = useKpiCardStyle();
-    const [selectedClient, setSelectedClient] = useState<any>(null);
+    const [selectedClient, setSelectedClient] = useState<ClientWithStats | null>(null);
     const [selectedClientIds, setSelectedClientIds] = useState<Set<number>>(new Set());
 
     useEffect(() => {
@@ -46,10 +57,9 @@ export default function ClientsPage() {
             const salonId = Number(activeSalonId);
 
             // Parallel loading of clients, analytics and reviews
-            const [clientsData, analyticsData, reviewsData] = await Promise.all([
+            const [clientsData, reviewsData] = await Promise.all([
                 clientService.getAll(salonId),
-                clientService.getClientAnalytics(salonId),
-                statsService.getAllReviews(salonId, 6)
+                performanceStatsService.getAllReviews(salonId, 6)
             ]);
 
             // Fetch stats for each client
@@ -59,7 +69,6 @@ export default function ClientsPage() {
             }));
 
             setClients(clientsWithStats);
-            setAnalytics(analyticsData);
             setReviews(reviewsData);
         } catch (error) {
             console.error("Failed to load clients data:", error);
@@ -83,6 +92,64 @@ export default function ClientsPage() {
         return totalClients > 0 ? Math.round((returningClients / totalClients) * 100) : 0;
     }, [clients, totalClients]);
 
+    const analytics = useMemo<ClientAnalytics | null>(() => {
+        if (!clients.length) return null;
+
+        const now = new Date();
+        const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const twoMonthsStart = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+
+        const thisMonthCount = clients.filter(c => new Date(c.createdAt) >= thisMonthStart).length;
+        const lastMonthCount = clients.filter(c => {
+            const date = new Date(c.createdAt);
+            return date >= lastMonthStart && date < thisMonthStart;
+        }).length;
+        const twoMonthsCount = clients.filter(c => {
+            const date = new Date(c.createdAt);
+            return date >= twoMonthsStart && date < lastMonthStart;
+        }).length;
+
+        const regularClients = clients.filter(c => (c.stats?.totalBookings || 0) > 5).length;
+        const occasionalClients = clients.filter(c => {
+            const bookings = c.stats?.totalBookings || 0;
+            return bookings > 1 && bookings <= 5;
+        }).length;
+        const newClients = clients.filter(c => {
+            const bookings = c.stats?.totalBookings || 0;
+            return bookings <= 1 && new Date(c.createdAt) >= lastMonthStart;
+        }).length;
+        const inactiveClients = clients.filter(c => !c.isActive).length;
+
+        // Recent activity (latest 2 clients created)
+        const sortedClients = [...clients].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        const recentActivity = sortedClients.slice(0, 2).map((c, idx) => ({
+            id: c.id,
+            type: "registration",
+            titleKey: "clients.activity.newRegistration",
+            descKey: "clients.activity.newRegistrationDesc",
+            params: { name: c.name },
+            timeKey: idx === 0 ? "clients.activity.times.2hours" : "clients.activity.times.5hours",
+            icon: "plus",
+            color: "bg-green-500"
+        }));
+
+        return {
+            trend: [
+                { name: "This Month", clients: thisMonthCount, key: "clients.trend.thisMonth" },
+                { name: "Last Month", clients: lastMonthCount, key: "clients.trend.lastMonth" },
+                { name: "2 Months ago", clients: twoMonthsCount, key: "clients.trend.twoMonthsAgo" },
+            ],
+            distribution: [
+                { name: "Regular Clients", value: regularClients, color: "#8B5CF6", key: "clients.distribution.regular" },
+                { name: "Occasional Clients", value: occasionalClients, color: "#EC4899", key: "clients.distribution.occasional" },
+                { name: "New Clients", value: newClients, color: "#F59E0B", key: "clients.distribution.new" },
+                { name: "Inactive Members", value: inactiveClients, color: "#6B7280", key: "clients.distribution.inactive" },
+            ],
+            recentActivity
+        };
+    }, [clients]);
+
     const totalDistribution = useMemo(() => {
         if (!analytics?.distribution) return 0;
         return analytics.distribution.reduce((sum, item) => sum + item.value, 0);
@@ -103,6 +170,7 @@ export default function ClientsPage() {
             distribution: dist.reverse() // [5, 4, 3, 2, 1] for display
         };
     }, [reviews]);
+
 
     const toggleClientSelection = (id: number) => {
         const newSelected = new Set(selectedClientIds);
@@ -180,7 +248,7 @@ export default function ClientsPage() {
                     <div className="flex w-full md:w-auto items-center justify-end">
                         <ReadOnlyGuard>
                             <Link href="/clients/add">
-                                <Button variant="primary" size="md" className="rounded-2xl h-14 w-14 md:h-12 md:w-auto md:px-6 flex items-center justify-center p-0 md:p-auto shadow-xl shadow-purple-500/30 active:scale-95 transition-all">
+                                <Button variant="primary" size="md" className="rounded-2xl h-14 w-14 md:h-12 md:w-auto md:px-6 flex items-center justify-center p-0 md:p-auto shadow-xl shadow-[color:var(--color-primary)]/20 active:scale-95 transition-all">
                                     <Plus className="w-8 h-8 md:w-6 md:h-6" />
                                     <span className="hidden md:inline ml-2 font-bold whitespace-nowrap">{t("clients.addClient")}</span>
                                 </Button>
@@ -202,8 +270,14 @@ export default function ClientsPage() {
                             <p className="text-sm opacity-90 mb-1">{t("clients.stats.total")}</p>
                             <h3 className="text-3xl font-bold">{totalClients}</h3>
                             <div className="flex items-center gap-1 mt-1 text-sm opacity-80">
-                                <ArrowUp className="w-3 h-3" />
-                                <span>+23 {t("dashboard.thisMonth")}</span>
+                                {newClientsThisMonth > 0 ? (
+                                    <>
+                                        <ArrowUp className="w-3 h-3" />
+                                        <span>+{newClientsThisMonth} {t("dashboard.thisMonth")}</span>
+                                    </>
+                                ) : (
+                                    <span>{t("dashboard.thisMonth")}</span>
+                                )}
                             </div>
                         </div>
                     </Card>
@@ -284,7 +358,7 @@ export default function ClientsPage() {
                             </button>
                         </ReadOnlyGuard>
                         <ReadOnlyGuard>
-                            <button className="flex-1 h-14 flex items-center justify-center gap-2 bg-[#EC4899] hover:bg-[#DB2777] text-white rounded-2xl transition-all font-bold active:scale-95">
+                            <button className="flex-1 h-14 flex items-center justify-center gap-2 bg-[var(--color-secondary)] hover:bg-[#DB2777] text-white rounded-2xl transition-all font-bold active:scale-95">
                                 <Upload className="w-6 h-6" />
                                 <span className="hidden sm:inline">{t("clients.actions.import")}</span>
                             </button>
@@ -298,7 +372,7 @@ export default function ClientsPage() {
                     <div className="flex flex-col md:flex-row gap-4 items-end">
                         <div className="w-full">
                             <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">{t("clients.filters.type")}</label>
-                            <select className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#A855F7] focus:border-transparent">
+                            <select className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent">
                                 <option>{t("clients.filters.allTypes")}</option>
                                 <option>{t("clients.filters.regular")}</option>
                                 <option>{t("clients.filters.vip")}</option>
@@ -306,7 +380,7 @@ export default function ClientsPage() {
                         </div>
                         <div className="w-full">
                             <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">{t("clients.filters.status")}</label>
-                            <select className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#A855F7] focus:border-transparent">
+                            <select className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent">
                                 <option>{t("clients.filters.allStatus")}</option>
                                 <option>{t("clients.filters.active")}</option>
                                 <option>{t("clients.filters.inactive")}</option>
@@ -314,7 +388,7 @@ export default function ClientsPage() {
                         </div>
                         <div className="w-full">
                             <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">{t("clients.filters.regDate")}</label>
-                            <select className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#A855F7] focus:border-transparent">
+                            <select className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent">
                                 <option>{t("clients.filters.allTime")}</option>
                                 <option>{t("clients.filters.thisMonth")}</option>
                                 <option>{t("clients.filters.last3Months")}</option>
@@ -322,7 +396,7 @@ export default function ClientsPage() {
                         </div>
                         <div className="w-full">
                             <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">{t("clients.filters.sortBy")}</label>
-                            <select className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#A855F7] focus:border-transparent">
+                            <select className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent">
                                 <option>{t("clients.filters.nameAsc")}</option>
                                 <option>{t("clients.filters.nameDesc")}</option>
                                 <option>{t("clients.filters.totalSpent")}</option>
@@ -330,7 +404,7 @@ export default function ClientsPage() {
                             </select>
                         </div>
                         <div className="w-full md:w-auto">
-                            <Button variant="primary" size="md" className="w-full md:w-auto bg-[#A855F7] hover:bg-[#9333EA] border-none h-[42px] px-6">
+                            <Button variant="primary" size="md" className="w-full md:w-auto bg-[var(--color-primary)] hover:bg-[#9333EA] border-none h-[42px] px-6">
                                 {t("clients.actions.applyFilters")}
                             </Button>
                         </div>
@@ -363,7 +437,7 @@ export default function ClientsPage() {
                                             type="checkbox"
                                             checked={selectedClientIds.size === clients.length && clients.length > 0}
                                             onChange={toggleSelectAll}
-                                            className="rounded border-gray-300 text-[#A855F7] focus:ring-[#A855F7]"
+                                            className="rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                                         />
                                     </th>
                                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">{t("clients.table.id")}</th>
@@ -391,13 +465,13 @@ export default function ClientsPage() {
                                                     checked={selectedClientIds.has(client.id)}
                                                     onChange={() => toggleClientSelection(client.id)}
                                                     onClick={(e) => e.stopPropagation()}
-                                                    className="rounded border-gray-300 text-[#A855F7] focus:ring-[#A855F7]"
+                                                    className="rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
                                                 />
                                             </td>
                                             <td className="px-6 py-4 text-sm text-gray-500 font-mono hidden lg:table-cell">{client.id}</td>
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-col md:flex-row items-center gap-1 md:gap-3">
-                                                    <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-purple-200 rounded-full flex items-center justify-center text-[#A855F7] font-bold text-sm border border-purple-200">
+                                                    <div className="w-10 h-10 bg-gradient-to-br from-primary to-[var(--color-primary-light)] rounded-full flex items-center justify-center text-[var(--color-primary)] font-bold text-sm border border-color-primary/30">
                                                         {client.name.charAt(0)}
                                                     </div>
                                                     <div className="text-center md:text-left">
@@ -431,7 +505,7 @@ export default function ClientsPage() {
                                                 <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                                                     <ReadOnlyGuard>
                                                         <Link href={`/clients/edit/${client.id}`}>
-                                                            <button className="p-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors">
+                                                            <button className="p-2 bg-primary-light text-color-primary rounded-lg hover:bg-primary-light transition-colors">
                                                                 <Edit className="w-4 h-4" />
                                                             </button>
                                                         </Link>
@@ -479,7 +553,7 @@ export default function ClientsPage() {
                     <h3 className="text-lg font-semibold mb-4 text-gray-900">{t("clients.actions.bulkActions")}</h3>
                     <div className="flex flex-wrap gap-4">
                         <ReadOnlyGuard>
-                            <Button variant="secondary" size="md" className="bg-purple-100 text-purple-700 hover:bg-purple-200 border-none flex-1 md:flex-none justify-center">
+                            <Button variant="secondary" size="md" className="bg-primary-light text-color-primary hover:bg-primary border-none flex-1 md:flex-none justify-center">
                                 <Users className="w-4 h-4 mr-2" />
                                 {t("clients.actions.sendEmail")}
                             </Button>
@@ -516,7 +590,7 @@ export default function ClientsPage() {
                                             <p className="text-sm text-gray-500 mb-1">{t(item.key)}</p>
                                             <h4 className="text-2xl font-bold text-gray-900">{item.clients} {t("clients.trend.clientsSuffix")}</h4>
                                         </div>
-                                        <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-sm ${idx === 0 ? "bg-[#A855F7] shadow-purple-200" : idx === 1 ? "bg-[#EC4899] shadow-pink-200" : "bg-[#F59E0B] shadow-orange-200"}`}>
+                                        <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-sm ${idx === 0 ? "bg-[var(--color-primary)] shadow-[color:var(--color-primary)]/20" : idx === 1 ? "bg-[var(--color-secondary)] shadow-[color:var(--color-secondary)]/20" : "bg-[#F59E0B] shadow-orange-200"}`}>
                                             +{item.clients}
                                         </div>
                                     </div>
@@ -609,7 +683,7 @@ export default function ClientsPage() {
                     {/* Client Comments & Reviews */}
                     <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col">
                         <h3 className="text-lg font-semibold mb-6 text-gray-900 flex items-center gap-2">
-                            <MessageSquare className="w-5 h-5 text-purple-500" />
+                            <MessageSquare className="w-5 h-5 text-color-primary" />
                             {t("clients.reviews.title")}
                         </h3>
                         <div className="space-y-4 flex-1 overflow-y-auto max-h-[350px] pr-2 custom-scrollbar">
@@ -618,7 +692,7 @@ export default function ClientsPage() {
                                     <div key={review.id} className="p-4 rounded-xl bg-gray-50 border border-gray-100 space-y-2 hover:bg-white hover:shadow-md transition-all duration-300">
                                         <div className="flex justify-between items-start">
                                             <div className="flex items-center gap-2">
-                                                <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-bold text-xs">
+                                                <div className="w-8 h-8 rounded-full bg-primary-light flex items-center justify-center text-color-primary font-bold text-xs">
                                                     {review.avatar || review.client?.charAt(0) || "C"}
                                                 </div>
                                                 <div>
@@ -690,7 +764,7 @@ export default function ClientsPage() {
                         </button>
                         <div className="px-6 pt-6 pb-6">
                             <div className="flex justify-between items-center mb-4">
-                                <div className="w-24 h-24 bg-gradient-to-br from-purple-100 to-purple-200 rounded-full flex items-center justify-center text-[#A855F7] font-bold text-3xl border-2 border-purple-200">
+                                <div className="w-24 h-24 bg-gradient-to-br from-primary to-[var(--color-primary-light)] rounded-full flex items-center justify-center text-[var(--color-primary)] font-bold text-3xl border-2 border-color-primary/30">
                                     {selectedClient.name.charAt(0)}
                                 </div>
                                 <div className="flex gap-2">
@@ -710,7 +784,7 @@ export default function ClientsPage() {
 
                             <div className="grid gap-4 mb-6">
                                 <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-100">
-                                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-purple-600">
+                                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-color-primary">
                                         <Phone className="w-5 h-5" />
                                     </div>
                                     <div>
@@ -719,7 +793,7 @@ export default function ClientsPage() {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-100">
-                                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-pink-600">
+                                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-color-secondary">
                                         <Mail className="w-5 h-5" />
                                     </div>
                                     <div>
@@ -739,8 +813,8 @@ export default function ClientsPage() {
                             </div>
 
                             <div className="grid grid-cols-2 gap-4 mb-6">
-                                <div className="p-4 rounded-xl bg-purple-50 border border-purple-100 text-center">
-                                    <p className="text-purple-600 text-sm font-semibold mb-1">{t("clients.totalSpent")}</p>
+                                <div className="p-4 rounded-xl bg-primary-light border border-color-primary/30 text-center">
+                                    <p className="text-color-primary text-sm font-semibold mb-1">{t("clients.totalSpent")}</p>
                                     <p className="text-2xl font-bold text-gray-900">{selectedClient.stats?.totalSpent || 0}€</p>
                                 </div>
                                 <div className="p-4 rounded-xl bg-blue-50 border border-blue-100 text-center">

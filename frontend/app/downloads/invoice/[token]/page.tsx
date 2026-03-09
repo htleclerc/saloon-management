@@ -73,7 +73,7 @@ export default function InvoiceDownloadPage() {
             <div className="flex items-center justify-center min-h-[60vh]">
                 <Card className="max-w-md w-full text-center p-8">
                     <div className="mb-6 flex justify-center">
-                        {status === 'loading' && <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-purple-600"></div>}
+                        {status === 'loading' && <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-color-primary"></div>}
                         {status === 'success' && <CheckCircle className="w-16 h-16 text-green-500" />}
                         {(status === 'error' || status === 'expired') && <XCircle className="w-16 h-16 text-red-500" />}
                     </div>

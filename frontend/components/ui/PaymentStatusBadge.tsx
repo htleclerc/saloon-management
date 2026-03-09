@@ -73,9 +73,9 @@ export default function PaymentStatusBadge({ status, className = '' }: PaymentSt
         refunded: {
             labelKey: 'team.paymentStatuses.refunded',
             defaultLabel: 'Refunded',
-            color: 'text-purple-700',
-            bgColor: 'bg-purple-50',
-            borderColor: 'border-purple-200',
+            color: 'text-color-primary',
+            bgColor: 'bg-primary-light',
+            borderColor: 'border-color-primary/30',
             icon: RotateCcw,
         },
     };

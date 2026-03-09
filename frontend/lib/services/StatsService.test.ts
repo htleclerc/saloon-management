@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { StatsService } from './StatsService';
+import { PerformanceStatsService } from './PerformanceStatsService';
 import { DataProviderFactory } from '../providers/types';
 
 // Mock DataProviderFactory
@@ -11,20 +12,18 @@ vi.mock('../providers/types', () => ({
 
 describe('StatsService', () => {
     let service: StatsService;
-    let mockProvider: any;
+    let mockProvider: Record<string, ReturnType<typeof vi.fn>>;
 
     beforeEach(() => {
         vi.clearAllMocks();
         mockProvider = {
             getSalonStats: vi.fn(),
-            getWorkerStats: vi.fn(),
-            getIncomes: vi.fn(),
-            getIncomesByWorker: vi.fn(),
-            getExpenses: vi.fn(),
-            getBookings: vi.fn(),
-            createInteractionHistory: vi.fn()
+            getDashboardAnalytics: vi.fn(),
+            getClientStats: vi.fn(),
+            getClients: vi.fn(),
+            getBookingsByClient: vi.fn(),
         };
-        (DataProviderFactory.create as any).mockReturnValue(mockProvider);
+        (DataProviderFactory.create as ReturnType<typeof vi.fn>).mockReturnValue(mockProvider);
         service = new StatsService();
     });
 
@@ -44,6 +43,38 @@ describe('StatsService', () => {
 
         expect(mockProvider.getSalonStats).toHaveBeenCalledWith(1);
         expect(stats.totalRevenue).toBe(5000);
+    });
+
+    it('should fetch dashboard analytics', async () => {
+        const mockAnalytics = { revenue: 1000, expenses: 500 };
+        mockProvider.getDashboardAnalytics.mockResolvedValue(mockAnalytics);
+
+        const result = await service.getDashboardAnalytics(1);
+        expect(mockProvider.getDashboardAnalytics).toHaveBeenCalledWith(1);
+        expect(result).toEqual(mockAnalytics);
+    });
+});
+
+describe('PerformanceStatsService', () => {
+    let service: PerformanceStatsService;
+    let mockProvider: Record<string, ReturnType<typeof vi.fn>>;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mockProvider = {
+            getWorkerStats: vi.fn(),
+            getWorkers: vi.fn(),
+            getIncomes: vi.fn(),
+            getIncomesByWorker: vi.fn(),
+            getExpenses: vi.fn(),
+            getBookings: vi.fn(),
+            getBookingServices: vi.fn(),
+            getIncomeWorkerShares: vi.fn(),
+            getReviews: vi.fn(),
+            getWorker: vi.fn(),
+        };
+        (DataProviderFactory.create as ReturnType<typeof vi.fn>).mockReturnValue(mockProvider);
+        service = new PerformanceStatsService();
     });
 
     it('should fetch and return worker stats', async () => {
@@ -71,12 +102,12 @@ describe('StatsService', () => {
 
             mockProvider.getBookings.mockResolvedValue({ data: [] });
             mockProvider.getIncomesByWorker.mockResolvedValue([
-                { id: 1, date: dateStr, status: 'Validated' } as any,
-                { id: 2, date: dateStr, status: 'Validated', amount: 100 } as any,
+                { id: 1, date: dateStr, status: 'Validated' },
+                { id: 2, date: dateStr, status: 'Validated', amount: 100 },
             ]);
             mockProvider.getExpenses.mockResolvedValue({
                 data: [
-                    { id: 1, amount: null } as any
+                    { id: 1, amount: null }
                 ]
             });
 
@@ -110,8 +141,6 @@ describe('StatsService', () => {
             expect(data).toHaveLength(6);
             const currentEntry = data.find(d => d.fullDate === currentMonthStr);
             expect(currentEntry).toBeDefined();
-            // id 1: 100 for Haircut
-            // id 2: 25 for Haircut, 25 for Wash
             expect(currentEntry?.Haircut).toBe(125);
             expect(currentEntry?.Wash).toBe(25);
         });

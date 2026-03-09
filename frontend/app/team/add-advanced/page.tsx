@@ -443,7 +443,7 @@ export default function AddAdvancedTeamMemberPage() {
                     value={baseSalary}
                     onChange={(e) => setBaseSalary(e.target.value)}
                     disabled={!canModify}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm disabled:opacity-50"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm disabled:opacity-50"
                     placeholder="0.00"
                 />
             </div>
@@ -561,7 +561,7 @@ export default function AddAdvancedTeamMemberPage() {
                                     value={schedule[day].start}
                                     onChange={(e) => updateScheduleTime(day, "start", e.target.value)}
                                     disabled={!canModify}
-                                    className="px-2 py-1.5 md:px-3 md:py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 w-24 md:w-auto disabled:opacity-50"
+                                    className="px-2 py-1.5 md:px-3 md:py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary w-24 md:w-auto disabled:opacity-50"
                                 />
                                 <span className="text-gray-400 text-xs md:text-sm">{t("common.to")}</span>
                                 <input
@@ -569,7 +569,7 @@ export default function AddAdvancedTeamMemberPage() {
                                     value={schedule[day].end}
                                     onChange={(e) => updateScheduleTime(day, "end", e.target.value)}
                                     disabled={!canModify}
-                                    className="px-2 py-1.5 md:px-3 md:py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 w-24 md:w-auto disabled:opacity-50"
+                                    className="px-2 py-1.5 md:px-3 md:py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary w-24 md:w-auto disabled:opacity-50"
                                 />
                             </div>
                         )}

@@ -34,7 +34,7 @@ describe('ServiceService', () => {
             duration: 30
         };
 
-        await expect(service.create(data as any)).rejects.toThrow('name is required');
+        await expect(service.create(data as any)).rejects.toThrow(/expected string/i);
     });
 
     it('should throw error if price is negative', async () => {
@@ -45,7 +45,7 @@ describe('ServiceService', () => {
             duration: 30
         };
 
-        await expect(service.create(data as any)).rejects.toThrow('Price must be positive');
+        await expect(service.create(data as any)).rejects.toThrow('Must be zero or positive');
     });
 
     it('should throw error if duration is invalid', async () => {
@@ -56,7 +56,7 @@ describe('ServiceService', () => {
             duration: 0
         };
 
-        await expect(service.create(data as any)).rejects.toThrow('Duration must be greater than 0');
+        await expect(service.create(data as any)).rejects.toThrow('Must be a positive integer');
     });
 
     it('should call provider.createService with correct data', async () => {

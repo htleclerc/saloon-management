@@ -132,7 +132,7 @@ export default function NotificationsSettingsPage() {
                                                 disabled={!canModify}
                                                 className="sr-only peer"
                                             />
-                                            <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+                                            <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
                                         </label>
                                     </td>
                                     <td className="text-center py-3 px-2">
@@ -144,7 +144,7 @@ export default function NotificationsSettingsPage() {
                                                 disabled={!canModify}
                                                 className="sr-only peer"
                                             />
-                                            <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+                                            <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
                                         </label>
                                     </td>
                                     <td className="text-center py-3 px-2">
@@ -156,7 +156,7 @@ export default function NotificationsSettingsPage() {
                                                 disabled={!canModify}
                                                 className="sr-only peer"
                                             />
-                                            <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+                                            <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
                                         </label>
                                     </td>
                                 </tr>
@@ -181,8 +181,8 @@ export default function NotificationsSettingsPage() {
                             key={freq.id}
                             onClick={() => setDigestFrequency(freq.id)}
                             className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all ${digestFrequency === freq.id
-                                ? "border-purple-500 bg-purple-50 text-purple-700"
-                                : "border-gray-200 text-gray-600 hover:border-purple-300"
+                                ? "border-color-primary bg-primary-light text-color-primary"
+                                : "border-gray-200 text-gray-600 hover:border-color-primary/30"
                                 } ${!canModify ? "cursor-not-allowed opacity-80" : ""}`}
                             disabled={!canModify}
                         >
@@ -207,7 +207,7 @@ export default function NotificationsSettingsPage() {
                             disabled={!canModify}
                             className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                     </label>
                 </div>
                 {quietHoursEnabled && (
@@ -219,7 +219,7 @@ export default function NotificationsSettingsPage() {
                                 value={quietHoursStart}
                                 onChange={(e) => setQuietHoursStart(e.target.value)}
                                 readOnly={!canModify}
-                                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                             />
                         </div>
                         <div>
@@ -229,7 +229,7 @@ export default function NotificationsSettingsPage() {
                                 value={quietHoursEnd}
                                 onChange={(e) => setQuietHoursEnd(e.target.value)}
                                 readOnly={!canModify}
-                                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                             />
                         </div>
                     </div>

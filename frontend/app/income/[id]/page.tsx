@@ -55,20 +55,17 @@ export default function IncomeDetailPage() {
                 setProductsList(pList);
 
                 if (incomeData && incomeData.status === 'Validated') {
-                    console.log("[Debug] Attempting to create token for income:", incomeData.id);
                     try {
                         const token = await tokenService.createToken('invoice_download', { incomeId: incomeData.id });
-                        console.log("[Debug] Token creation result:", token);
 
                         if (token) {
                             setDownloadToken(token);
                             setTokenError(false);
                         } else {
-                            console.warn("[Debug] Token creation returned null");
                             setTokenError(true);
                         }
                     } catch (err) {
-                        console.error("[Debug] Token creation threw error:", err);
+                        console.error("Token creation error:", err);
                         setTokenError(true);
                     }
                 }
@@ -115,7 +112,7 @@ export default function IncomeDetailPage() {
         return (
             <MainLayout>
                 <div className="flex h-[50vh] items-center justify-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-700"></div>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-color-primary"></div>
                 </div>
             </MainLayout>
         );
@@ -199,7 +196,7 @@ export default function IncomeDetailPage() {
                         </div>
                         <div className="text-right">
                             <p className="text-sm font-bold text-gray-500 uppercase">{t("common.totalAmount")}</p>
-                            <p className="text-3xl font-black text-purple-600">€{income.amount}</p>
+                            <p className="text-3xl font-black text-color-primary">€{income.amount}</p>
                         </div>
                     </div>
                 </Card>
@@ -243,7 +240,7 @@ export default function IncomeDetailPage() {
                 </div>
 
                 {/* Worker Split */}
-                <Card className="border-l-4 border-l-pink-500">
+                <Card className="border-l-4 border-l-[var(--color-secondary)]">
                     <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
                         <Users className="w-5 h-5 text-gray-400" />
                         {t("income.staffDetails")}
@@ -288,7 +285,7 @@ export default function IncomeDetailPage() {
                                     {canView && (
                                         <div className="pt-2 mt-auto border-t border-gray-200 flex justify-between items-center">
                                             <span className="text-xs font-bold uppercase text-gray-400 border-gray-200">{t("common.total")}</span>
-                                            <span className="font-black text-lg text-purple-700">€{((share.amount || 0) + (share.tips || 0)).toFixed(2)}</span>
+                                            <span className="font-black text-lg text-color-primary">€{((share.amount || 0) + (share.tips || 0)).toFixed(2)}</span>
                                         </div>
                                     )}
                                 </div>
@@ -311,7 +308,7 @@ export default function IncomeDetailPage() {
                                     return (
                                         <div key={sId} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
                                             <span className="font-bold text-gray-900">{service?.name || `Service #${sId}`}</span>
-                                            <span className="font-bold text-purple-600">€{service?.price || "?"}</span>
+                                            <span className="font-bold text-color-primary">€{service?.price || "?"}</span>
                                         </div>
                                     );
                                 })}
@@ -340,7 +337,7 @@ export default function IncomeDetailPage() {
                                                 <p className="font-bold text-gray-900">{productName}</p>
                                                 <p className="text-xs text-gray-500">x {p.quantity}</p>
                                             </div>
-                                            <span className="font-bold text-purple-600">€{(productPrice * p.quantity).toFixed(2)}</span>
+                                            <span className="font-bold text-color-primary">€{(productPrice * p.quantity).toFixed(2)}</span>
                                         </div>
                                     );
                                 })}
@@ -360,8 +357,8 @@ export default function IncomeDetailPage() {
                     {(income.notes || (income.comments && income.comments.length > 0)) ? (
                         <div className="space-y-4">
                             {income.notes && (
-                                <div className="p-4 bg-purple-50 rounded-2xl border border-purple-100 text-purple-900 text-sm whitespace-pre-wrap font-medium">
-                                    <div className="flex items-center gap-2 mb-2 text-purple-700 font-bold uppercase text-[10px] tracking-wider">
+                                <div className="p-4 bg-primary-light rounded-2xl border border-color-primary/30 text-color-primary text-sm whitespace-pre-wrap font-medium">
+                                    <div className="flex items-center gap-2 mb-2 text-color-primary font-bold uppercase text-[10px] tracking-wider">
                                         <MessageSquare size={12} /> {t("common.notes")}
                                     </div>
                                     {income.notes}

@@ -29,7 +29,7 @@ function getPlanColor(planId: string) {
         case 'starter':
             return 'from-gray-500 to-gray-600';
         case 'pro':
-            return 'from-purple-600 to-pink-500';
+            return 'from-primary to-secondary';
         case 'enterprise':
             return 'from-amber-500 to-orange-600';
         default:

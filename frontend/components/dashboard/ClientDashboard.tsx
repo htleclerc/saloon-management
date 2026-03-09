@@ -136,13 +136,13 @@ export default function ClientDashboard() {
                             <Sparkles className="w-3 h-3" />
                             Espace Client Privilège
                         </div>
-                        <h1 className="text-4xl md:text-5xl font-black tracking-tight">Ravi de vous revoir, <span className="text-purple-200">{user?.name}</span> !</h1>
-                        <p className="text-purple-100 text-lg font-medium italic opacity-90 max-w-xl">
+                        <h1 className="text-4xl md:text-5xl font-black tracking-tight">Ravi de vous revoir, <span className="text-color-primary">{user?.name}</span> !</h1>
+                        <p className="text-color-primary text-lg font-medium italic opacity-90 max-w-xl">
                             Consultez vos prochains rendez-vous et votre historique beauté en un clin d'œil.
                         </p>
                     </div>
                     <Link href="/appointments/book" className="w-full md:w-auto">
-                        <Button variant="outline" className="w-full md:w-auto px-10 py-8 rounded-[2rem] bg-white text-[var(--color-primary)] hover:bg-purple-50 border-none shadow-xl active:scale-95 transition-all text-xl font-black uppercase tracking-wider flex items-center gap-3">
+                        <Button variant="outline" className="w-full md:w-auto px-10 py-8 rounded-[2rem] bg-white text-[var(--color-primary)] hover:bg-primary-light border-none shadow-xl active:scale-95 transition-all text-xl font-black uppercase tracking-wider flex items-center gap-3">
                             <Plus className="w-6 h-6" />
                             Réserver
                         </Button>
@@ -178,7 +178,7 @@ export default function ClientDashboard() {
                                         <span className="text-xs font-black uppercase tracking-widest">{format(new Date(apt.date), "MMM")}</span>
                                     </div>
                                     <div className="flex-1 space-y-2 text-center md:text-left">
-                                        <div className="flex items-center justify-center md:justify-start gap-2 text-purple-600 font-black text-sm uppercase tracking-wider">
+                                        <div className="flex items-center justify-center md:justify-start gap-2 text-color-primary font-black text-sm uppercase tracking-wider">
                                             <Clock className="w-4 h-4" />
                                             <span>{apt.time}</span>
                                         </div>
@@ -210,7 +210,7 @@ export default function ClientDashboard() {
                                 <h4 className="text-xl font-black text-gray-400">Aucun rendez-vous prévu</h4>
                                 <p className="text-gray-400 font-medium italic">Envie d'une nouvelle coiffure ? Réservez votre prochaine séance maintenant !</p>
                                 <Link href="/appointments/book" className="inline-block pt-2">
-                                    <Button variant="primary" className="rounded-2xl px-8 shadow-lg shadow-purple-500/20 font-black uppercase text-xs tracking-widest">
+                                    <Button variant="primary" className="rounded-2xl px-8 shadow-lg shadow-[color:var(--color-primary)]/20 font-black uppercase text-xs tracking-widest">
                                         Réserver
                                     </Button>
                                 </Link>
@@ -224,7 +224,7 @@ export default function ClientDashboard() {
                     {/* Quick Profile */}
                     <Card className="p-8 border-none bg-white rounded-[2.5rem] shadow-lg text-center space-y-6">
                         <div className="relative inline-block">
-                            <div className="w-24 h-24 bg-gradient-to-br from-purple-100 to-purple-200 rounded-[2rem] flex items-center justify-center text-[var(--color-primary)] text-4xl font-black shadow-inner">
+                            <div className="w-24 h-24 bg-gradient-to-br from-primary to-[var(--color-primary-light)] rounded-[2rem] flex items-center justify-center text-[var(--color-primary)] text-4xl font-black shadow-inner">
                                 {user?.name?.charAt(0)}
                             </div>
                             <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-emerald-500 border-4 border-white rounded-2xl"></div>
@@ -320,7 +320,7 @@ export default function ClientDashboard() {
                         />
                         <div className="flex gap-4 pt-4">
                             <Button variant="outline" className="flex-1 rounded-2xl font-black uppercase text-[10px] tracking-widest py-6" onClick={() => setRatingModal({ open: false, serviceId: null })}>Annuler</Button>
-                            <Button variant="primary" className="flex-1 rounded-2xl font-black uppercase text-[10px] tracking-widest py-6 shadow-xl shadow-purple-500/20" onClick={submitRating}>Enregistrer</Button>
+                            <Button variant="primary" className="flex-1 rounded-2xl font-black uppercase text-[10px] tracking-widest py-6 shadow-xl shadow-[color:var(--color-primary)]/20" onClick={submitRating}>Enregistrer</Button>
                         </div>
                     </Card>
                 </div>

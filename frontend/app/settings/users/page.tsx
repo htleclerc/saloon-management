@@ -16,7 +16,7 @@ const teamMembers = [
 ];
 
 const roleColors: Record<string, string> = {
-    owner: "bg-purple-100 text-purple-700",
+    owner: "bg-primary-light text-color-primary",
     admin: "bg-red-100 text-red-700",
     manager: "bg-blue-100 text-blue-700",
     worker: "bg-green-100 text-green-700",
@@ -63,7 +63,7 @@ export default function UsersSettingsPage() {
                                 }`}
                         >
                             <div className="flex items-center gap-3">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold ${member.role === "owner" ? "bg-gradient-to-br from-purple-500 to-purple-700" :
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold ${member.role === "owner" ? "bg-gradient-to-br from-primary to-[var(--color-primary)]" :
                                     member.role === "admin" ? "bg-gradient-to-br from-red-500 to-red-600" :
                                         member.role === "manager" ? "bg-gradient-to-br from-blue-500 to-blue-600" :
                                             "bg-gradient-to-br from-green-500 to-green-600"
@@ -119,7 +119,7 @@ export default function UsersSettingsPage() {
                                 onChange={(e) => setInviteEmail(e.target.value)}
                                 placeholder="email@exemple.com"
                                 readOnly={!canModify}
-                                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                             />
                         </div>
                         <div>
@@ -128,7 +128,7 @@ export default function UsersSettingsPage() {
                                 value={inviteRole}
                                 onChange={(e) => setInviteRole(e.target.value)}
                                 disabled={!canModify}
-                                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                             >
                                 <option value="admin">Administrateur</option>
                                 <option value="manager">Manager</option>

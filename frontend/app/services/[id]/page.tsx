@@ -46,7 +46,7 @@ const services = [
         image: "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=800",
         rating: 4.9,
         popularity: 95,
-        color: "from-purple-500 to-purple-700",
+        color: "from-primary to-[var(--color-primary)]",
         stats: {
             thisMonth: 190,
             revenue: 22800,
@@ -229,7 +229,7 @@ export default function ServiceDetailPage() {
                         {isAdmin ? (
                             <>
                                 {/* Admin Only: Financial Insights */}
-                                <Card className="p-6 border-none shadow-xl shadow-purple-500/10 bg-gradient-to-br from-purple-500 to-purple-700 text-white rounded-[2rem]">
+                                <Card className="p-6 border-none shadow-xl shadow-[color:var(--color-primary)]/20 bg-gradient-to-br from-primary to-[var(--color-primary)] text-white rounded-[2rem]">
                                     <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
                                         <DollarSign className="w-5 h-5 bg-white/20 p-1 rounded-full" />
                                         {t("services.financialInsights")}
@@ -350,7 +350,7 @@ export default function ServiceDetailPage() {
                                         <span className="text-xs font-black text-gray-400">TOTAL</span>
                                     </div>
                                 </div>
-                                <Button className="w-full py-6 rounded-2xl font-black text-lg shadow-xl shadow-purple-500/20">
+                                <Button className="w-full py-6 rounded-2xl font-black text-lg shadow-xl shadow-[color:var(--color-primary)]/20">
                                     MY BOOKINGS
                                     <ChevronRight className="ml-2 w-5 h-5" />
                                 </Button>

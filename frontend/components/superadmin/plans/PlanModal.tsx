@@ -94,12 +94,12 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
             <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95 duration-300">
                 {/* Header */}
-                <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-8 py-6 flex items-center justify-between">
+                <div className="bg-gradient-to-r from-primary to-indigo-600 px-8 py-6 flex items-center justify-between">
                     <div>
                         <h2 className="text-2xl font-black text-white">
                             {plan ? t("superadmin.editPlan", { name: plan.name }) : t("superadmin.createPlan")}
                         </h2>
-                        <p className="text-purple-100 text-sm opacity-80 mt-1">
+                        <p className="text-color-primary text-sm opacity-80 mt-1">
                             {t("superadmin.planSubtitle")}
                         </p>
                     </div>
@@ -115,7 +115,7 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
                 <div className="flex-1 overflow-y-auto p-8 space-y-8">
                     {/* Basic Info Section */}
                     <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-purple-600 mb-2">
+                        <div className="flex items-center gap-2 text-color-primary mb-2">
                             <Info className="w-5 h-5" />
                             <h3 className="font-black uppercase tracking-wider text-xs">{t("superadmin.generalSettings")}</h3>
                         </div>
@@ -127,7 +127,7 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
                                     placeholder="e.g. Professional"
                                     value={formData.name}
                                     onChange={(e) => updateField('name', e.target.value)}
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 outline-none transition-all font-medium"
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-color-primary outline-none transition-all font-medium"
                                 />
                             </div>
                             <div>
@@ -136,7 +136,7 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
                                     type="number"
                                     value={formData.price}
                                     onChange={(e) => updateField('price', parseFloat(e.target.value) || 0)}
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 outline-none transition-all font-bold"
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-color-primary outline-none transition-all font-bold"
                                     min="0"
                                     step="0.01"
                                 />
@@ -147,7 +147,7 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
                                     type="number"
                                     value={formData.displayOrder}
                                     onChange={(e) => updateField('displayOrder', parseInt(e.target.value) || 0)}
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 outline-none transition-all font-medium"
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-color-primary outline-none transition-all font-medium"
                                 />
                             </div>
                         </div>
@@ -166,7 +166,7 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
                                     type="number"
                                     value={formData.limits.maxSalons}
                                     onChange={(e) => updateLimit('maxSalons', parseInt(e.target.value) || 1)}
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 outline-none transition-all font-bold"
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-color-primary outline-none transition-all font-bold"
                                     min="1"
                                 />
                                 <p className="text-[10px] text-gray-400 mt-1 font-bold italic">{t("superadmin.unlimited999")}</p>
@@ -177,7 +177,7 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
                                     type="number"
                                     value={formData.limits.maxWorkers}
                                     onChange={(e) => updateLimit('maxWorkers', parseInt(e.target.value) || 1)}
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 outline-none transition-all font-bold"
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-color-primary outline-none transition-all font-bold"
                                     min="1"
                                 />
                                 <p className="text-[10px] text-gray-400 mt-1 font-bold italic">{t("superadmin.unlimited999")}</p>
@@ -188,7 +188,7 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
                                     type="number"
                                     value={formData.limits.maxBookingsPerMonth}
                                     onChange={(e) => updateLimit('maxBookingsPerMonth', parseInt(e.target.value) || 1)}
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-purple-500/10 focus:border-purple-500 outline-none transition-all font-bold"
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-color-primary outline-none transition-all font-bold"
                                     min="1"
                                 />
                                 <p className="text-[10px] text-gray-400 mt-1 font-bold italic">{t("superadmin.unlimited99999")}</p>
@@ -204,22 +204,22 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
                                 <h3 className="font-black uppercase tracking-wider text-xs">{t("superadmin.premiumFeatures")}</h3>
                             </div>
                             <div className="space-y-3">
-                                <label className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-200 cursor-pointer group hover:border-purple-200 transition-all">
+                                <label className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-200 cursor-pointer group hover:border-color-primary/30 transition-all">
                                     <span className="text-sm font-bold text-gray-700">Advanced Analytics & Reports</span>
                                     <input
                                         type="checkbox"
                                         checked={formData.limits.hasAdvancedReports}
                                         onChange={(e) => updateLimitBoolean('hasAdvancedReports', e.target.checked)}
-                                        className="w-6 h-6 text-purple-600 rounded-lg focus:ring-purple-500 transition-all cursor-pointer"
+                                        className="w-6 h-6 text-color-primary rounded-lg focus:ring-primary transition-all cursor-pointer"
                                     />
                                 </label>
-                                <label className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-200 cursor-pointer group hover:border-purple-200 transition-all">
+                                <label className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-200 cursor-pointer group hover:border-color-primary/30 transition-all">
                                     <span className="text-sm font-bold text-gray-700">Full API Access (Developer Tools)</span>
                                     <input
                                         type="checkbox"
                                         checked={formData.limits.hasAPIAccess}
                                         onChange={(e) => updateLimitBoolean('hasAPIAccess', e.target.checked)}
-                                        className="w-6 h-6 text-purple-600 rounded-lg focus:ring-purple-500 transition-all cursor-pointer"
+                                        className="w-6 h-6 text-color-primary rounded-lg focus:ring-primary transition-all cursor-pointer"
                                     />
                                 </label>
                             </div>
@@ -243,7 +243,7 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
                                         type="checkbox"
                                         checked={formData.isDefault}
                                         onChange={(e) => updateField('isDefault', e.target.checked)}
-                                        className="w-5 h-5 text-purple-600 rounded-md focus:ring-purple-500"
+                                        className="w-5 h-5 text-color-primary rounded-md focus:ring-primary"
                                     />
                                     <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">{t("superadmin.defaultTier")}</span>
                                 </label>
@@ -263,7 +263,7 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
                                                 type="text"
                                                 value={feature}
                                                 onChange={(e) => updateFeature(index, e.target.value)}
-                                                className="w-full pl-4 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:border-purple-500 outline-none text-sm font-medium"
+                                                className="w-full pl-4 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:border-color-primary outline-none text-sm font-medium"
                                                 placeholder="Feature description..."
                                             />
                                             <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -282,7 +282,7 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
                                     variant="outline"
                                     size="md"
                                     onClick={addFeature}
-                                    className="w-full rounded-2xl border-dashed border-2 hover:border-purple-400 hover:bg-purple-50 hover:text-purple-600 font-bold"
+                                    className="w-full rounded-2xl border-dashed border-2 hover:border-color-primary hover:bg-primary-light hover:text-color-primary font-bold"
                                 >
                                     {t("superadmin.addFeature")}
                                 </Button>
@@ -319,7 +319,7 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
                     <Button
                         variant="primary"
                         onClick={handleSave}
-                        className="rounded-2xl shadow-xl shadow-purple-500/30 font-black uppercase tracking-widest text-xs px-8 py-3 flex items-center gap-2"
+                        className="rounded-2xl shadow-xl shadow-[color:var(--color-primary)]/20 font-black uppercase tracking-widest text-xs px-8 py-3 flex items-center gap-2"
                     >
                         <Save className="w-4 h-4" />
                         {t("superadmin.saveConfiguration")}

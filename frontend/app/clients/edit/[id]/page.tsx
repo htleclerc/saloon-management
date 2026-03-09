@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
@@ -17,7 +17,8 @@ import { useTranslation } from "@/i18n";
 import { useToast } from "@/context/ToastProvider";
 import { useConfirm } from "@/context/ConfirmProvider";
 
-export default function EditClientPage({ params }: { params: { id: string } }) {
+export default function EditClientPage(props: { params: Promise<{ id: string }> }) {
+    const { id } = use(props.params);
     const router = useRouter();
     const { t } = useTranslation();
     const { showToast } = useToast();
@@ -40,15 +41,15 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
     });
 
     useEffect(() => {
-        if (params.id) {
+        if (id) {
             loadClient();
         }
-    }, [params.id]);
+    }, [id]);
 
     const loadClient = async () => {
         setIsLoading(true);
         try {
-            const client = await clientService.getById(Number(params.id));
+            const client = await clientService.getById(Number(id));
             if (client) {
                 setFormData({
                     name: client.name,
@@ -78,7 +79,7 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
         setError(null);
 
         try {
-            await clientService.update(Number(params.id), {
+            await clientService.update(Number(id), {
                 name: formData.name,
                 email: formData.email,
                 phone: formData.phone,
@@ -111,7 +112,7 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
         if (isConfirmed) {
             setIsSubmitting(true);
             try {
-                await clientService.delete(Number(params.id));
+                await clientService.delete(Number(id));
                 showToast(t("common.success"), t("clients.deleteSuccess"), "success");
                 router.push("/clients");
             } catch (err: any) {
@@ -152,7 +153,7 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
                 {/* Content */}
                 {isLoading ? (
                     <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl shadow-sm border border-gray-100">
-                        <Loader2 className="w-10 h-10 text-purple-600 animate-spin mb-4" />
+                        <Loader2 className="w-10 h-10 text-color-primary animate-spin mb-4" />
                         <p className="text-gray-500">{t("common.loading")}</p>
                     </div>
                 ) : (
@@ -178,7 +179,7 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
                                         value={formData.name}
                                         onChange={handleChange}
                                         required
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                                     />
                                 </div>
                                 <div>
@@ -191,7 +192,7 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
                                         value={formData.email}
                                         onChange={handleChange}
                                         required
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                                     />
                                 </div>
                                 <div>
@@ -204,7 +205,7 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
                                         value={formData.phone}
                                         onChange={handleChange}
                                         required
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                                     />
                                 </div>
                                 <div className="md:col-span-2">
@@ -214,7 +215,7 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
                                         name="address"
                                         value={formData.address}
                                         onChange={handleChange}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                                     />
                                 </div>
                                 <div>
@@ -224,7 +225,7 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
                                         name="city"
                                         value={formData.city}
                                         onChange={handleChange}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                                     />
                                 </div>
                                 <div>
@@ -234,7 +235,7 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
                                         name="zipCode"
                                         value={formData.zipCode}
                                         onChange={handleChange}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                                     />
                                 </div>
                                 <div>
@@ -243,7 +244,7 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
                                         name="country"
                                         value={formData.country}
                                         onChange={handleChange}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                                     >
                                         <option>France</option>
                                         <option>Belgium</option>
@@ -258,7 +259,7 @@ export default function EditClientPage({ params }: { params: { id: string } }) {
                                         value={formData.notes}
                                         onChange={handleChange}
                                         rows={4}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                                     />
                                 </div>
                             </div>

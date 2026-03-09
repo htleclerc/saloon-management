@@ -65,7 +65,7 @@ export default function LoginPage() {
     return (
         <div className="min-h-screen flex flex-col md:flex-row bg-white font-poppins">
             {/* Left Panel - Marketing */}
-            <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-[#8B5CF6] via-[#EC4899] to-[#F59E0B] p-12 text-white flex-col justify-between relative overflow-hidden">
+            <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-[var(--color-primary)] via-[var(--color-secondary)] to-[#F59E0B] p-12 text-white flex-col justify-between relative overflow-hidden">
                 {/* Subtle background patterns */}
                 <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
                     <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-white rounded-full blur-[120px]"></div>
@@ -183,11 +183,11 @@ export default function LoginPage() {
                     </div>
 
                     <div className="space-y-3 mb-5">
-                        <Button variant="outline" className="w-full py-3 border-gray-200 hover:bg-gray-50 text-gray-700 flex items-center justify-center gap-3 rounded-xl transition-all hover:border-purple-200">
+                        <Button variant="outline" className="w-full py-3 border-gray-200 hover:bg-gray-50 text-gray-700 flex items-center justify-center gap-3 rounded-xl transition-all hover:border-color-primary/30">
                             <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google" />
                             <span className="font-bold">{t("auth.googleLogin")}</span>
                         </Button>
-                        <Button variant="outline" className="w-full py-3 border-gray-200 hover:bg-gray-50 text-gray-700 flex items-center justify-center gap-3 rounded-xl transition-all hover:border-purple-200">
+                        <Button variant="outline" className="w-full py-3 border-gray-200 hover:bg-gray-50 text-gray-700 flex items-center justify-center gap-3 rounded-xl transition-all hover:border-color-primary/30">
                             <img src="https://www.svgrepo.com/show/475647/facebook-color.svg" className="w-5 h-5" alt="Facebook" />
                             <span className="font-bold">{t("auth.facebookLogin")}</span>
                         </Button>
@@ -210,14 +210,14 @@ export default function LoginPage() {
                                     {t("auth.emailOrPhone")}
                                 </label>
                                 <div className="relative group">
-                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[#8B5CF6] transition-colors">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[var(--color-primary)] transition-colors">
                                         <Mail className="w-5 h-5" />
                                     </div>
                                     <input
                                         type="text"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
-                                        className="block w-full pl-12 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]/20 focus:border-[#8B5CF6] transition-all"
+                                        className="block w-full pl-12 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] transition-all"
                                         placeholder={t("auth.emailPlaceholder")}
                                     />
                                 </div>
@@ -228,14 +228,14 @@ export default function LoginPage() {
                                     {t("auth.password")}
                                 </label>
                                 <div className="relative group">
-                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[#8B5CF6] transition-colors">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[var(--color-primary)] transition-colors">
                                         <Lock className="w-5 h-5" />
                                     </div>
                                     <input
                                         type={showPassword ? "text" : "password"}
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
-                                        className="block w-full pl-12 pr-12 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]/20 focus:border-[#8B5CF6] transition-all"
+                                        className="block w-full pl-12 pr-12 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] transition-all"
                                         placeholder={t("auth.passwordPlaceholder")}
                                     />
                                     <button
@@ -254,14 +254,14 @@ export default function LoginPage() {
                                         id="remember-me"
                                         name="remember-me"
                                         type="checkbox"
-                                        className="h-5 w-5 text-[#8B5CF6] focus:ring-[#8B5CF6] border-gray-300 rounded-md cursor-pointer"
+                                        className="h-5 w-5 text-[var(--color-primary)] focus:ring-[var(--color-primary)] border-gray-300 rounded-md cursor-pointer"
                                     />
                                     <label htmlFor="remember-me" className="ml-3 block text-sm font-medium text-gray-600 cursor-pointer">
                                         {t("auth.rememberMe")}
                                     </label>
                                 </div>
                                 <div className="text-sm">
-                                    <a href="#" className="font-bold text-[#8B5CF6] hover:text-[#7C3AED] transition-colors">
+                                    <a href="#" className="font-bold text-[var(--color-primary)] hover:text-[var(--color-primary-dark)] transition-colors">
                                         {t("auth.forgotPassword")}
                                     </a>
                                 </div>
@@ -269,7 +269,7 @@ export default function LoginPage() {
 
                             <button
                                 type="submit"
-                                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#8B5CF6] to-[#D946EF] text-white transform transition-all border-none hover:scale-[1.02] shadow-[0_10px_20px_-5px_rgba(139,92,246,0.3)] active:scale-[0.98] font-extrabold text-base"
+                                className="w-full py-3.5 rounded-xl bg-gradient-primary text-white transform transition-all border-none hover:scale-[1.02] shadow-[0_10px_20px_-5px_rgba(139,92,246,0.3)] active:scale-[0.98] font-extrabold text-base"
                             >
                                 {t("auth.login")}
                             </button>
@@ -284,14 +284,14 @@ export default function LoginPage() {
                                     {t("auth.fullName")}
                                 </label>
                                 <div className="relative group">
-                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[#8B5CF6] transition-colors">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[var(--color-primary)] transition-colors">
                                         <User className="w-5 h-5" />
                                     </div>
                                     <input
                                         type="text"
                                         value={fullName}
                                         onChange={(e) => setFullName(e.target.value)}
-                                        className="block w-full pl-12 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]/20 focus:border-[#8B5CF6] transition-all"
+                                        className="block w-full pl-12 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] transition-all"
                                         placeholder={t("auth.fullNamePlaceholder")}
                                         required
                                     />
@@ -303,14 +303,14 @@ export default function LoginPage() {
                                     {t("auth.emailOrPhone")}
                                 </label>
                                 <div className="relative group">
-                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[#8B5CF6] transition-colors">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[var(--color-primary)] transition-colors">
                                         <Mail className="w-5 h-5" />
                                     </div>
                                     <input
                                         type="text"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
-                                        className="block w-full pl-12 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]/20 focus:border-[#8B5CF6] transition-all"
+                                        className="block w-full pl-12 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] transition-all"
                                         placeholder={t("auth.emailPlaceholder")}
                                         required
                                     />
@@ -322,14 +322,14 @@ export default function LoginPage() {
                                     {t("auth.password")}
                                 </label>
                                 <div className="relative group">
-                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[#8B5CF6] transition-colors">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[var(--color-primary)] transition-colors">
                                         <Lock className="w-5 h-5" />
                                     </div>
                                     <input
                                         type={showPassword ? "text" : "password"}
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
-                                        className="block w-full pl-12 pr-12 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]/20 focus:border-[#8B5CF6] transition-all"
+                                        className="block w-full pl-12 pr-12 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] transition-all"
                                         placeholder={t("auth.passwordPlaceholder")}
                                         required
                                     />
@@ -348,14 +348,14 @@ export default function LoginPage() {
                                     {t("auth.confirmPassword")}
                                 </label>
                                 <div className="relative group">
-                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[#8B5CF6] transition-colors">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[var(--color-primary)] transition-colors">
                                         <Lock className="w-5 h-5" />
                                     </div>
                                     <input
                                         type={showConfirmPassword ? "text" : "password"}
                                         value={confirmPassword}
                                         onChange={(e) => setConfirmPassword(e.target.value)}
-                                        className="block w-full pl-12 pr-12 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]/20 focus:border-[#8B5CF6] transition-all"
+                                        className="block w-full pl-12 pr-12 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] transition-all"
                                         placeholder={t("auth.passwordPlaceholder")}
                                         required
                                     />
@@ -371,14 +371,14 @@ export default function LoginPage() {
 
                             <p className="text-xs text-gray-500 text-center px-2">
                                 {t("auth.termsAccept")}{" "}
-                                <a href="#" className="text-[#8B5CF6] hover:underline">{t("auth.termsOfService")}</a>
+                                <a href="#" className="text-[var(--color-primary)] hover:underline">{t("auth.termsOfService")}</a>
                                 {" "}{t("auth.and")}{" "}
-                                <a href="#" className="text-[#8B5CF6] hover:underline">{t("auth.privacyPolicy")}</a>
+                                <a href="#" className="text-[var(--color-primary)] hover:underline">{t("auth.privacyPolicy")}</a>
                             </p>
 
                             <button
                                 type="submit"
-                                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#8B5CF6] to-[#D946EF] text-white transform transition-all border-none hover:scale-[1.02] shadow-[0_10px_20px_-5px_rgba(139,92,246,0.3)] active:scale-[0.98] font-extrabold text-base"
+                                className="w-full py-3.5 rounded-xl bg-gradient-primary text-white transform transition-all border-none hover:scale-[1.02] shadow-[0_10px_20px_-5px_rgba(139,92,246,0.3)] active:scale-[0.98] font-extrabold text-base"
                             >
                                 {t("auth.createAccount")}
                             </button>
@@ -390,7 +390,7 @@ export default function LoginPage() {
                             {activeTab === "login" ? t("auth.notRegistered") : t("auth.alreadyRegistered")}{" "}
                             <button
                                 onClick={() => setActiveTab(activeTab === "login" ? "signup" : "login")}
-                                className="text-[#8B5CF6] font-bold hover:underline"
+                                className="text-[var(--color-primary)] font-bold hover:underline"
                             >
                                 {activeTab === "login" ? t("auth.createAccount") : t("auth.loginNow")}
                             </button>

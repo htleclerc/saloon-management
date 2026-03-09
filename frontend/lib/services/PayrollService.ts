@@ -1,262 +1,103 @@
-import { supabase } from '@/lib/supabase/client';
+/**
+ * Payroll Service
+ *
+ * Business logic for salary payments and payroll management.
+ * Uses the IDataProvider abstraction instead of direct Supabase access.
+ */
 
-export type PaymentStatus = 'pending' | 'approved' | 'rejected' | 'disputed' | 'auto_approved' | 'cancelled' | 'refunded';
+import { BaseService } from './BaseService';
+import { PaymentRecordSchema, PaymentRejectionSchema, PaymentDisputeSchema } from '@/lib/validators';
+import type {
+    SalaryPayment,
+    PaymentStatus,
+    PaymentStatusHistory,
+    PaymentWithHistory,
+    SalonWorker,
+} from '@/types';
 
-export interface SalaryPayment {
-    id?: number;
-    workerId: number;
-    salonId: number;
-    paymentMonth: string; // ISO format date string (first day of month)
-    baseSalary: number;
-    commission: number;
-    tips: number;
-    totalAmount: number;
-    paidAmount: number;
-    paidDate: string; // ISO format date string
-    paidBy?: number;
-    notes?: string;
-    status?: PaymentStatus;
-    workerApprovedAt?: string;
-    workerRejectedAt?: string;
-    rejectionReason?: string;
-    lastStatusChangeAt?: string;
-    lastStatusChangedBy?: number;
-    createdAt?: string;
-    updatedAt?: string;
-}
+/** Re-export types for backward compatibility */
+export type { SalaryPayment, PaymentStatus, PaymentStatusHistory, PaymentWithHistory } from '@/types';
 
-export interface PaymentStatusHistory {
+/** @deprecated Use PayrollSummary from '@/types' instead */
+export type { PayrollSummary } from '@/types';
+
+interface PaymentHistoryEntry {
     id: number;
-    paymentId: number;
-    previousStatus?: PaymentStatus;
-    newStatus: PaymentStatus;
-    changedBy?: number;
-    changedByName?: string;
-    changedByRole?: string;
-    changedAt: string;
-    reason?: string;
-    metadata?: Record<string, any>;
-}
-
-export interface PaymentWithHistory extends SalaryPayment {
-    history: PaymentStatusHistory[];
-}
-
-export interface PayrollSummary {
+    date: string;
     workerId: number;
     workerName: string;
-    baseSalary: number;
-    commission: number;
-    tips: number;
-    total: number;
-    paidAmount: number;
-    remainingAmount: number;
-    status: 'paid' | 'partial' | 'pending' | 'auto-paid';
-    lastPaymentDate?: string;
+    amount: number;
+    status: PaymentStatus | undefined;
+    paymentMethod: string;
+    notes: string | undefined;
 }
 
-class PayrollService {
+export class PayrollService extends BaseService {
+    /**
+     * Format a Date to YYYY-MM-01 month string
+     */
+    private formatMonth(month: Date): string {
+        return `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}-01`;
+    }
+
     /**
      * Record a salary payment for a worker
      */
     async recordPayment(payment: Omit<SalaryPayment, 'id' | 'createdAt' | 'updatedAt'>): Promise<SalaryPayment> {
-        const { data, error } = await supabase
-            .from('salary_payments')
-            .insert({
-                worker_id: payment.workerId,
-                salon_id: payment.salonId,
-                payment_month: payment.paymentMonth,
-                base_salary: payment.baseSalary,
-                commission: payment.commission,
-                tips: payment.tips,
-                total_amount: payment.totalAmount,
-                paid_amount: payment.paidAmount,
-                paid_date: payment.paidDate,
-                paid_by: payment.paidBy,
-                notes: payment.notes,
-                // Set status to 'approved' by default for manager-created payments
-                status: payment.status || 'approved',
-                last_status_changed_by: payment.paidBy,
-                last_status_change_at: new Date().toISOString(),
-            })
-            .select()
-            .single();
+        PaymentRecordSchema.parse(payment);
 
-        if (error) throw error;
+        const created = await this.provider.createSalaryPayment({
+            ...payment,
+            status: payment.status || 'approved',
+            lastStatusChangedBy: payment.paidBy,
+            lastStatusChangeAt: new Date().toISOString(),
+        });
 
         // Log the creation event in history
-        if (data.id) {
-            await supabase.from('payment_status_history').insert({
-                payment_id: data.id,
-                new_status: data.status,
-                changed_by: payment.paidBy,
-                changed_at: new Date().toISOString(),
+        if (created.id) {
+            await this.provider.createPaymentStatusHistory({
+                paymentId: created.id,
+                newStatus: (created.status || 'approved') as PaymentStatus,
+                changedBy: payment.paidBy,
+                changedAt: new Date().toISOString(),
                 reason: payment.notes || 'Payment recorded',
-                metadata: { action: 'created', amount: data.paid_amount }
+                metadata: { action: 'created', amount: created.paidAmount },
             });
         }
 
-        return {
-            id: data.id,
-            workerId: data.worker_id,
-            salonId: data.salon_id,
-            paymentMonth: data.payment_month,
-            baseSalary: data.base_salary || 0,
-            commission: data.commission || 0,
-            tips: data.tips || 0,
-            totalAmount: data.total_amount,
-            paidAmount: data.paid_amount,
-            paidDate: data.paid_date,
-            paidBy: data.paid_by,
-            notes: data.notes,
-            createdAt: data.created_at,
-            updatedAt: data.updated_at,
-        };
+        return created;
     }
 
     /**
      * Get all payments for a specific month and salon
      */
     async getPaymentsByMonth(salonId: number, month: Date): Promise<SalaryPayment[]> {
-        // Format month as first day: YYYY-MM-01
-        const monthStr = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}-01`;
-
-        const { data, error } = await supabase
-            .from('salary_payments')
-            .select('*')
-            .eq('salon_id', salonId)
-            .eq('payment_month', monthStr)
-            .order('paid_date', { ascending: false });
-
-        if (error) throw error;
-
-        return (data || []).map((item: any) => ({
-            id: item.id,
-            workerId: item.worker_id,
-            salonId: item.salon_id,
-            paymentMonth: item.payment_month,
-            baseSalary: item.base_salary || 0,
-            commission: item.commission || 0,
-            tips: item.tips || 0,
-            totalAmount: item.total_amount,
-            paidAmount: item.paid_amount,
-            paidDate: item.paid_date,
-            paidBy: item.paid_by,
-            notes: item.notes,
-            status: item.status,
-            workerApprovedAt: item.worker_approved_at,
-            workerRejectedAt: item.worker_rejected_at,
-            rejectionReason: item.rejection_reason,
-            lastStatusChangeAt: item.last_status_change_at,
-            lastStatusChangedBy: item.last_status_changed_by,
-            createdAt: item.created_at,
-            updatedAt: item.updated_at,
-        }));
+        const monthStr = this.formatMonth(month);
+        return this.provider.getSalaryPaymentsByMonth(salonId, monthStr);
     }
 
     /**
      * Update payment status
      */
     async updatePaymentStatus(paymentId: number, status: PaymentStatus, userId: number, reason?: string): Promise<void> {
-        const { error } = await supabase.rpc('update_payment_status', {
-            p_payment_id: paymentId,
-            p_new_status: status,
-            p_reason: reason,
-            p_changed_by: userId
-        });
-
-        // Fallback if RPC fails or doesn't exist
-        if (error) {
-            // Fetch current notes first to allow appending in fallback
-            const { data: currentPayment } = await supabase
-                .from('salary_payments')
-                .select('notes')
-                .eq('id', paymentId)
-                .single();
-
-            const existingNotes = currentPayment?.notes || "";
-            const dateStr = new Date().toLocaleDateString();
-
-            // Try direct update if RPC fails
-            const updates: any = {
-                status: status,
-                last_status_changed_by: userId,
-                last_status_change_at: new Date().toISOString()
-            };
-
-            // If a reason is provided, append it
-            if (reason) {
-                updates.notes = existingNotes
-                    ? `${existingNotes}\n[${dateStr}] ${reason}`
-                    : reason;
-            }
-
-            const { error: updateError } = await supabase
-                .from('salary_payments')
-                .update(updates)
-                .eq('id', paymentId);
-
-            if (updateError) throw updateError;
-        } else if (reason) {
-            // Even if RPC succeeded, if we have a reason, let's append it to the notes column
-            // Fetch current notes first
-            const { data: currentPayment } = await supabase
-                .from('salary_payments')
-                .select('notes')
-                .eq('id', paymentId)
-                .single();
-
-            const existingNotes = currentPayment?.notes || "";
-            const dateStr = new Date().toLocaleDateString();
-            const newNotes = existingNotes
-                ? `${existingNotes}\n[${dateStr}] ${reason}`
-                : reason;
-
-            await supabase
-                .from('salary_payments')
-                .update({ notes: newNotes })
-                .eq('id', paymentId);
-        }
+        await this.provider.updateSalaryPaymentStatus(paymentId, status, userId, reason);
     }
 
     /**
      * Update payment details (amount, notes, date)
      */
     async updatePayment(paymentId: number, updates: Partial<SalaryPayment>): Promise<void> {
-        const dbUpdates: any = {
-            paid_amount: updates.paidAmount,
-            notes: updates.notes,
-            paid_date: updates.paidDate,
-            updated_at: new Date().toISOString()
-        };
-
-        if (updates.status) {
-            dbUpdates.status = updates.status;
-        }
-
-        if (updates.lastStatusChangedBy) {
-            dbUpdates.last_status_changed_by = updates.lastStatusChangedBy;
-            dbUpdates.last_status_change_at = new Date().toISOString();
-        }
-
-        const { data: updatedData, error: updateError } = await supabase
-            .from('salary_payments')
-            .update(dbUpdates)
-            .select('status, last_status_changed_by')
-            .eq('id', paymentId)
-            .single();
-
-        if (updateError) throw updateError;
+        const updated = await this.provider.updateSalaryPayment(paymentId, updates);
 
         // Log the modification event in history
-        if (updatedData) {
-            await supabase.from('payment_status_history').insert({
-                payment_id: paymentId,
-                new_status: updatedData.status,
-                changed_by: updatedData.last_status_changed_by,
-                changed_at: new Date().toISOString(),
+        if (updated) {
+            await this.provider.createPaymentStatusHistory({
+                paymentId,
+                newStatus: (updated.status || 'approved') as PaymentStatus,
+                changedBy: updated.lastStatusChangedBy,
+                changedAt: new Date().toISOString(),
                 reason: updates.notes || 'Payment details modified',
-                metadata: { action: 'modified', ...updates }
+                metadata: { action: 'modified' },
             });
         }
     }
@@ -265,62 +106,46 @@ class PayrollService {
      * Get payment summary for a worker in a specific month
      */
     async getWorkerPaymentSummary(workerId: number, month: Date): Promise<{ totalPaid: number; lastPaymentDate?: string }> {
-        const monthStr = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}-01`;
+        const monthStr = this.formatMonth(month);
 
-        const { data, error } = await supabase
-            .from('salary_payments')
-            .select('*')
-            .eq('worker_id', workerId)
-            .eq('payment_month', monthStr)
-            .order('paid_date', { ascending: false });
+        // Get all payments for this worker+month via provider
+        const payments = await this.provider.getSalaryPaymentsByWorker(workerId);
+        const monthPayments = payments.filter(p => p.paymentMonth === monthStr);
 
-        if (error) throw error;
-
-        const totalPaid = (data || []).reduce((sum: number, payment: any) => sum + (payment.paid_amount || 0), 0);
-        const lastPaymentDate = (data && data.length > 0) ? data[0].paid_date : undefined;
+        const totalPaid = monthPayments.reduce((sum, payment) => sum + (payment.paidAmount || 0), 0);
+        const sorted = monthPayments.sort((a, b) => (b.paidDate || '').localeCompare(a.paidDate || ''));
+        const lastPaymentDate = sorted.length > 0 ? sorted[0].paidDate : undefined;
 
         return { totalPaid, lastPaymentDate };
     }
 
     /**
-     * Get payment history for a salon (all months)
+     * Get recent payment history with worker names
      */
-    /**
-     * Get recent payment history
-     */
-    async getPaymentHistory(salonId: number, limit: number = 10): Promise<any[]> {
-        const { data, error } = await supabase
-            .from('salary_payments')
-            .select('*')
-            .eq('salon_id', salonId)
-            .order('paid_date', { ascending: false })
-            .limit(limit);
+    async getPaymentHistory(salonId: number, limit: number = 10): Promise<PaymentHistoryEntry[]> {
+        const payments = await this.provider.getSalaryPayments(salonId);
+        const recentPayments = payments.slice(0, limit);
 
-        if (error) throw error;
+        // Get unique worker IDs and fetch names
+        const workerIds = [...new Set(recentPayments.map(p => p.workerId))];
+        const workerMap = new Map<number, string>();
 
-        // Get worker details for these payments
-        const workerIds = [...new Set((data || []).map((p: any) => p.worker_id))];
-        const { data: workers, error: workersError } = await supabase
-            .from('workers')
-            .select('id, name') // Assuming name is in workers table, or use join if normalized
-            .in('id', workerIds);
-
-        if (workersError) {
-            console.error("Error fetching workers for history:", workersError);
+        for (const wId of workerIds) {
+            const worker = await this.provider.getWorker(wId);
+            if (worker) {
+                workerMap.set(wId, worker.name);
+            }
         }
 
-        const workerMap = new Map();
-        (workers || []).forEach((w: any) => workerMap.set(w.id, w.name));
-
-        return (data || []).map((payment: any) => ({
-            id: payment.id,
-            date: payment.paid_date,
-            workerId: payment.worker_id,
-            workerName: workerMap.get(payment.worker_id) || 'Unknown Worker',
-            amount: payment.paid_amount || 0,
+        return recentPayments.map(payment => ({
+            id: payment.id || 0,
+            date: payment.paidDate,
+            workerId: payment.workerId,
+            workerName: workerMap.get(payment.workerId) || 'Unknown Worker',
+            amount: payment.paidAmount || 0,
             status: payment.status,
-            paymentMethod: 'Cash', // Default for now, ideally from DB if column exists
-            notes: payment.notes
+            paymentMethod: 'Cash',
+            notes: payment.notes,
         }));
     }
 
@@ -328,155 +153,39 @@ class PayrollService {
      * Get status change history for a specific payment
      */
     async getPaymentStatusHistory(paymentId: number): Promise<PaymentStatusHistory[]> {
-        // Use RPC function to bypass permission issues
-        const { data, error } = await supabase
-            .rpc('get_payment_history_secure', { p_payment_id: paymentId });
-
-        if (error) {
-            console.error('RPC Error fetching history:', error);
-            throw error;
-        }
-
-        return (data || []).map((item: any) => ({
-            id: item.id,
-            paymentId: item.payment_id,
-            previousStatus: item.previous_status,
-            newStatus: item.new_status,
-            changedBy: item.changed_by,
-            changedByName: item.changed_by_name,
-            changedByRole: item.changed_by_role,
-            changedAt: item.changed_at,
-            reason: item.reason,
-            metadata: item.metadata,
-        }));
+        return this.provider.getPaymentStatusHistory(paymentId);
     }
 
     /**
      * Get consolidated history for all payments of a worker in a specific month
      */
     async getWorkerPaymentHistory(workerId: number, month: Date): Promise<PaymentStatusHistory[]> {
-        const monthStr = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}-01`;
+        const monthStr = this.formatMonth(month);
 
-        // 1. Get all payment IDs for this worker and month
-        const { data: payments, error: paymentsError } = await supabase
-            .from('salary_payments')
-            .select('id')
-            .eq('worker_id', workerId)
-            .eq('payment_month', monthStr);
+        // Get all payments for this worker and month
+        const allPayments = await this.provider.getSalaryPaymentsByWorker(workerId);
+        const monthPayments = allPayments.filter(p => p.paymentMonth === monthStr);
+        if (monthPayments.length === 0) return [];
 
-        if (paymentsError) throw paymentsError;
-        if (!payments || payments.length === 0) return [];
+        const paymentIds = monthPayments.map(p => p.id).filter((id): id is number => id !== undefined);
 
-        const paymentIds = payments.map((p: any) => p.id);
-
-        // 2. Get history for all those payments
-        const { data: history, error: historyError } = await supabase
-            .rpc('get_payment_history_secure_bulk', { p_payment_ids: paymentIds });
-
-        // Fallback if bulk secure RPC doesn't exist yet
-        if (historyError) {
-            console.warn('get_payment_history_secure_bulk failed, falling back to basic query:', historyError);
-            const { data: basicHistory, error: basicError } = await supabase
-                .from('payment_status_history')
-                .select('*')
-                .in('payment_id', paymentIds)
-                .order('changed_at', { ascending: false });
-
-            if (basicError) throw basicError;
-            return basicHistory.map((h: any) => ({
-                id: h.id,
-                paymentId: h.payment_id,
-                previousStatus: h.previous_status,
-                newStatus: h.new_status,
-                changedBy: h.changed_by,
-                changedAt: h.changed_at,
-                reason: h.reason,
-                metadata: h.metadata,
-            }));
-        }
-
-        return (history || []).map((item: any) => ({
-            id: item.id,
-            paymentId: item.payment_id,
-            previousStatus: item.previous_status,
-            newStatus: item.new_status,
-            changedBy: item.changed_by,
-            changedByName: item.changed_by_name,
-            changedByRole: item.changed_by_role,
-            changedAt: item.changed_at,
-            reason: item.reason,
-            metadata: item.metadata,
-        }));
+        return this.provider.getPaymentStatusHistoryBulk(paymentIds);
     }
 
     /**
      * Get all payments for a specific worker
      */
     async getWorkerPayments(workerId: number, limit: number = 20): Promise<SalaryPayment[]> {
-        const { data, error } = await supabase
-            .from('salary_payments')
-            .select('*')
-            .eq('worker_id', workerId)
-            .order('paid_date', { ascending: false })
-            .limit(limit);
-
-        if (error) throw error;
-
-        return (data || []).map((payment: any) => ({
-            id: payment.id,
-            workerId: payment.worker_id,
-            salonId: payment.salon_id,
-            paymentMonth: payment.payment_month,
-            baseSalary: payment.base_salary,
-            commission: payment.commission,
-            tips: payment.tips,
-            totalAmount: payment.total_amount,
-            paidAmount: payment.paid_amount,
-            paidDate: payment.paid_date,
-            paidBy: payment.paid_by,
-            notes: payment.notes,
-            createdAt: payment.created_at,
-            updatedAt: payment.updated_at,
-        }));
+        return this.provider.getSalaryPaymentsByWorker(workerId, limit);
     }
 
     /**
      * Get worker payments for a specific month
      */
     async getWorkerPaymentsByMonth(workerId: number, month: Date): Promise<SalaryPayment[]> {
-        const monthStr = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}-01`;
-
-        const { data, error } = await supabase
-            .from('salary_payments')
-            .select('*')
-            .eq('worker_id', workerId)
-            .eq('payment_month', monthStr)
-            .order('paid_date', { ascending: false });
-
-        if (error) throw error;
-
-        return (data || []).map((payment: any) => ({
-            id: payment.id,
-            workerId: payment.worker_id,
-            salonId: payment.salon_id,
-            paymentMonth: payment.payment_month,
-            baseSalary: payment.base_salary,
-            commission: payment.commission,
-            tips: payment.tips,
-            totalAmount: payment.total_amount,
-            paidAmount: payment.paid_amount,
-            paidDate: payment.paid_date,
-            paidBy: payment.paid_by,
-            notes: payment.notes,
-            status: payment.status,
-            workerApprovedAt: payment.worker_approved_at,
-            workerRejectedAt: payment.worker_rejected_at,
-            rejectionReason: payment.rejection_reason,
-            lastStatusChangeAt: payment.last_status_change_at,
-            lastStatusChangedBy: payment.last_status_changed_by,
-            createdAt: payment.created_at,
-            updatedAt: payment.updated_at,
-        }));
+        const allPayments = await this.provider.getSalaryPaymentsByWorker(workerId);
+        const monthStr = this.formatMonth(month);
+        return allPayments.filter(p => p.paymentMonth === monthStr);
     }
 
     /**
@@ -494,14 +203,8 @@ class PayrollService {
      * Delete a payment record
      */
     async deletePayment(paymentId: number): Promise<void> {
-        const { error } = await supabase
-            .from('salary_payments')
-            .delete()
-            .eq('id', paymentId);
-
-        if (error) throw error;
+        await this.provider.deleteSalaryPayment(paymentId);
     }
-
 
     /**
      * Worker approves a payment
@@ -512,15 +215,9 @@ class PayrollService {
         userId: number
     ): Promise<void> {
         // Verify the payment belongs to this worker
-        const { data: payment, error: fetchError } = await supabase
-            .from('salary_payments')
-            .select('worker_id, status')
-            .eq('id', paymentId)
-            .single();
-
-        if (fetchError) throw fetchError;
+        const payment = await this.provider.getSalaryPayment(paymentId);
         if (!payment) throw new Error('Payment not found');
-        if (payment.worker_id !== workerId) {
+        if (payment.workerId !== workerId) {
             throw new Error('Unauthorized: Payment does not belong to this worker');
         }
         if (payment.status !== 'pending') {
@@ -538,20 +235,11 @@ class PayrollService {
         workerId: number,
         reason: string
     ): Promise<void> {
-        if (!reason || reason.trim().length === 0) {
-            throw new Error('Rejection reason is required');
-        }
+        PaymentRejectionSchema.parse({ paymentId, workerId, reason });
 
-        // Verify the payment belongs to this worker
-        const { data: payment, error: fetchError } = await supabase
-            .from('salary_payments')
-            .select('worker_id, status')
-            .eq('id', paymentId)
-            .single();
-
-        if (fetchError) throw fetchError;
+        const payment = await this.provider.getSalaryPayment(paymentId);
         if (!payment) throw new Error('Payment not found');
-        if (payment.worker_id !== workerId) {
+        if (payment.workerId !== workerId) {
             throw new Error('Unauthorized: Payment does not belong to this worker');
         }
         if (payment.status !== 'approved') {
@@ -569,20 +257,11 @@ class PayrollService {
         workerId: number,
         disputeNote: string
     ): Promise<void> {
-        if (!disputeNote || disputeNote.trim().length === 0) {
-            throw new Error('Dispute note is required');
-        }
+        PaymentDisputeSchema.parse({ paymentId, workerId, disputeNote });
 
-        // Verify the payment belongs to this worker
-        const { data: payment, error: fetchError } = await supabase
-            .from('salary_payments')
-            .select('worker_id, status')
-            .eq('id', paymentId)
-            .single();
-
-        if (fetchError) throw fetchError;
+        const payment = await this.provider.getSalaryPayment(paymentId);
         if (!payment) throw new Error('Payment not found');
-        if (payment.worker_id !== workerId) {
+        if (payment.workerId !== workerId) {
             throw new Error('Unauthorized: Payment does not belong to this worker');
         }
         if (payment.status !== 'approved') {
@@ -596,58 +275,10 @@ class PayrollService {
      * Get payment with full history
      */
     async getPaymentWithHistory(paymentId: number): Promise<PaymentWithHistory> {
-        // Fetch payment
-        const { data: paymentData, error: paymentError } = await supabase
-            .from('salary_payments')
-            .select('*')
-            .eq('id', paymentId)
-            .single();
+        const payment = await this.provider.getSalaryPayment(paymentId);
+        if (!payment) throw new Error('Payment not found');
 
-        if (paymentError) throw paymentError;
-        if (!paymentData) throw new Error('Payment not found');
-
-        // Fetch history
-        const { data: historyData, error: historyError } = await supabase
-            .from('payment_status_history')
-            .select('*')
-            .eq('payment_id', paymentId)
-            .order('changed_at', { ascending: false });
-
-        if (historyError) throw historyError;
-
-        const payment: SalaryPayment = {
-            id: paymentData.id,
-            workerId: paymentData.worker_id,
-            salonId: paymentData.salon_id,
-            paymentMonth: paymentData.payment_month,
-            baseSalary: paymentData.base_salary,
-            commission: paymentData.commission,
-            tips: paymentData.tips,
-            totalAmount: paymentData.total_amount,
-            paidAmount: paymentData.paid_amount,
-            paidDate: paymentData.paid_date,
-            paidBy: paymentData.paid_by,
-            notes: paymentData.notes,
-            status: paymentData.status,
-            workerApprovedAt: paymentData.worker_approved_at,
-            workerRejectedAt: paymentData.worker_rejected_at,
-            rejectionReason: paymentData.rejection_reason,
-            lastStatusChangeAt: paymentData.last_status_change_at,
-            lastStatusChangedBy: paymentData.last_status_changed_by,
-            createdAt: paymentData.created_at,
-            updatedAt: paymentData.updated_at,
-        };
-
-        const history: PaymentStatusHistory[] = (historyData || []).map((h: any) => ({
-            id: h.id,
-            paymentId: h.payment_id,
-            previousStatus: h.previous_status,
-            newStatus: h.new_status,
-            changedBy: h.changed_by,
-            changedAt: h.changed_at,
-            reason: h.reason,
-            metadata: h.metadata,
-        }));
+        const history = await this.provider.getPaymentStatusHistory(paymentId);
 
         return { ...payment, history };
     }
@@ -659,37 +290,7 @@ class PayrollService {
         salonId: number,
         status: PaymentStatus
     ): Promise<SalaryPayment[]> {
-        const { data, error } = await supabase
-            .from('salary_payments')
-            .select('*')
-            .eq('salon_id', salonId)
-            .eq('status', status)
-            .order('paid_date', { ascending: false });
-
-        if (error) throw error;
-
-        return (data || []).map((payment: any) => ({
-            id: payment.id,
-            workerId: payment.worker_id,
-            salonId: payment.salon_id,
-            paymentMonth: payment.payment_month,
-            baseSalary: payment.base_salary,
-            commission: payment.commission,
-            tips: payment.tips,
-            totalAmount: payment.total_amount,
-            paidAmount: payment.paid_amount,
-            paidDate: payment.paid_date,
-            paidBy: payment.paid_by,
-            notes: payment.notes,
-            status: payment.status,
-            workerApprovedAt: payment.worker_approved_at,
-            workerRejectedAt: payment.worker_rejected_at,
-            rejectionReason: payment.rejection_reason,
-            lastStatusChangeAt: payment.last_status_change_at,
-            lastStatusChangedBy: payment.last_status_changed_by,
-            createdAt: payment.created_at,
-            updatedAt: payment.updated_at,
-        }));
+        return this.provider.getSalaryPaymentsByStatus(salonId, status);
     }
 }
 

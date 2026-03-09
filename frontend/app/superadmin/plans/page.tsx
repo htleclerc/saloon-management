@@ -87,7 +87,7 @@ export default function SuperAdminPlansPage() {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
                     <div className="flex items-center gap-3 mb-1">
-                        <div className="p-2 bg-purple-600 rounded-xl shadow-lg shadow-purple-500/20">
+                        <div className="p-2 bg-primary rounded-xl shadow-lg shadow-[color:var(--color-primary)]/20">
                             <Layers className="w-6 h-6 text-white" />
                         </div>
                         <h1 className="text-3xl font-black text-gray-900 tracking-tight">Plan Management</h1>
@@ -106,7 +106,7 @@ export default function SuperAdminPlansPage() {
                     <Button
                         variant="primary"
                         onClick={handleCreatePlan}
-                        className="rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 shadow-xl shadow-purple-500/25 h-12 px-8 uppercase tracking-widest text-[10px] font-black"
+                        className="rounded-2xl bg-gradient-to-r from-primary to-indigo-600 shadow-xl shadow-[color:var(--color-primary)]/20 h-12 px-8 uppercase tracking-widest text-[10px] font-black"
                     >
                         <Plus className="w-4 h-4 mr-2" />
                         Create New Plan
@@ -127,9 +127,9 @@ export default function SuperAdminPlansPage() {
                         </div>
                     </div>
                 </Card>
-                <Card className="border-l-4 border-l-purple-500">
+                <Card className="border-l-4 border-l-[var(--color-primary)]">
                     <div className="flex items-center gap-4">
-                        <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl">
+                        <div className="p-3 bg-primary-light text-color-primary rounded-2xl">
                             <Layers className="w-6 h-6" />
                         </div>
                         <div>
@@ -154,7 +154,7 @@ export default function SuperAdminPlansPage() {
             {/* Plans Grid */}
             {isLoading ? (
                 <div className="flex flex-col items-center justify-center py-20 bg-gray-50/50 rounded-[40px] border-4 border-dashed border-gray-100">
-                    <RefreshCw className="w-12 h-12 text-purple-300 animate-spin mb-4" />
+                    <RefreshCw className="w-12 h-12 text-color-primary animate-spin mb-4" />
                     <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Synchronizing platform configurations...</p>
                 </div>
             ) : plans.length > 0 ? (
@@ -178,9 +178,9 @@ export default function SuperAdminPlansPage() {
             {/* Help / Docs Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-12">
                 <div className="p-8 bg-gradient-to-br from-gray-900 to-gray-800 rounded-[32px] text-white shadow-2xl relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-purple-600/10 blur-[100px] rounded-full group-hover:bg-purple-600/20 transition-all duration-700" />
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 blur-[100px] rounded-full group-hover:bg-primary/20 transition-all duration-700" />
                     <h3 className="text-xl font-black mb-4 flex items-center gap-3">
-                        <ShieldCheck className="w-6 h-6 text-purple-400" />
+                        <ShieldCheck className="w-6 h-6 text-color-primary" />
                         System Tiers Guide
                     </h3>
                     <div className="space-y-4 text-gray-400 text-sm leading-relaxed">
@@ -190,11 +190,11 @@ export default function SuperAdminPlansPage() {
                         </p>
                         <div className="grid grid-cols-2 gap-4 pt-4 font-bold">
                             <div className="p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors">
-                                <p className="text-[10px] text-purple-400 uppercase mb-1">New Tenants</p>
+                                <p className="text-[10px] text-color-primary uppercase mb-1">New Tenants</p>
                                 <p className="text-white">Assigned the "Default" marked plan immediately.</p>
                             </div>
                             <div className="p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors">
-                                <p className="text-[10px] text-purple-400 uppercase mb-1">Enforcement</p>
+                                <p className="text-[10px] text-color-primary uppercase mb-1">Enforcement</p>
                                 <p className="text-white">Limits are checked during salon creation and booking.</p>
                             </div>
                         </div>
@@ -214,7 +214,7 @@ export default function SuperAdminPlansPage() {
                             </div>
                         </div>
                         <div className="flex gap-4">
-                            <div className="w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <div className="w-10 h-10 bg-primary-light text-color-primary rounded-xl flex items-center justify-center flex-shrink-0">
                                 <Users className="w-5 h-5" />
                             </div>
                             <div>

@@ -224,7 +224,7 @@ function TeamLayoutContent({ children, title, description }: TeamLayoutProps) {
                             {!submenuCollapsed && (
                                 <div>
                                     <h2 className="text-sm font-bold text-white">Team</h2>
-                                    <p className="text-white opacity-80 text-xs text-purple-200">Team management</p>
+                                    <p className="text-white opacity-80 text-xs text-color-primary">Team management</p>
                                 </div>
                             )}
                             <button

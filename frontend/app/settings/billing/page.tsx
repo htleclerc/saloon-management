@@ -20,15 +20,15 @@ export default function BillingSettingsPage() {
             description="Gérez votre abonnement, méthodes de paiement et factures"
         >
             {/* Current Plan */}
-            <Card className="bg-gradient-to-br from-purple-600 to-purple-800 text-white border-0">
+            <Card className="bg-gradient-to-br from-primary to-[var(--color-primary)] text-white border-0">
                 <div className="flex items-start justify-between">
                     <div>
                         <div className="flex items-center gap-2 mb-2">
                             <Star className="w-5 h-5 text-yellow-400" />
-                            <span className="text-sm font-medium text-purple-200">Plan actuel</span>
+                            <span className="text-sm font-medium text-color-primary">Plan actuel</span>
                         </div>
                         <h3 className="text-2xl font-bold mb-1">Workshop Pro</h3>
-                        <p className="text-purple-200 text-sm mb-4">€29/mois • Renouvelé le 01/02/2026</p>
+                        <p className="text-color-primary text-sm mb-4">€29/mois • Renouvelé le 01/02/2026</p>
                         <div className="flex gap-3">
                             <ReadOnlyGuard>
                                 <Button variant="outline" size="sm" className="bg-white/10 border-white/30 text-white hover:bg-white/20">
@@ -44,7 +44,7 @@ export default function BillingSettingsPage() {
                     </div>
                     <div className="text-right">
                         <p className="text-4xl font-bold">€29</p>
-                        <p className="text-purple-200 text-sm">/mois</p>
+                        <p className="text-color-primary text-sm">/mois</p>
                     </div>
                 </div>
             </Card>
@@ -83,8 +83,8 @@ export default function BillingSettingsPage() {
                 </Card>
                 <Card>
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                            <CheckCircle className="w-5 h-5 text-purple-600" />
+                        <div className="w-10 h-10 bg-primary-light rounded-lg flex items-center justify-center">
+                            <CheckCircle className="w-5 h-5 text-color-primary" />
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-gray-900">50%</p>
@@ -92,7 +92,7 @@ export default function BillingSettingsPage() {
                         </div>
                     </div>
                     <div className="mt-3 h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-purple-500 rounded-full" style={{ width: "50%" }}></div>
+                        <div className="h-full bg-primary-light0 rounded-full" style={{ width: "50%" }}></div>
                     </div>
                     <p className="text-xs text-gray-500 mt-1">2.5 GB / 5 GB</p>
                 </Card>
@@ -170,7 +170,7 @@ export default function BillingSettingsPage() {
                                         </span>
                                     </td>
                                     <td className="py-3 px-2 text-right">
-                                        <button className="text-purple-600 hover:text-purple-800 text-sm font-medium">
+                                        <button className="text-color-primary hover:text-color-primary text-sm font-medium">
                                             <Download className="w-4 h-4 inline mr-1" />
                                             PDF
                                         </button>

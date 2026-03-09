@@ -84,7 +84,7 @@ export function useSmartSuggestions() {
                 message: 'Conflit horaire détecté ! Le worker est déjà réservé à cette heure.',
                 action: {
                     label: 'Voir alternatives',
-                    onClick: () => console.log('Show alternatives')
+                    onClick: () => { /* TODO: Show alternatives */ }
                 }
             };
         }
@@ -103,7 +103,7 @@ export function useSmartSuggestions() {
             message: 'Prix recommandé basé sur l\'historique : 120€',
             action: {
                 label: 'Appliquer',
-                onClick: () => console.log('Apply suggested price')
+                onClick: () => { /* TODO: Apply suggested price */ }
             }
         };
     };

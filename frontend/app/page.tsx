@@ -51,6 +51,11 @@ import { BookingStatus, SalonStats, DashboardAnalytics } from "@/types";
 import OnboardingGuard from "@/components/guards/OnboardingGuard";
 import { salonService } from "@/lib/services/SalonService";
 import { statsService } from "@/lib/services/StatsService";
+import { workerService } from "@/lib/services/WorkerService";
+import { serviceService } from "@/lib/services/ServiceService";
+
+import type { SalonWorker, Service as ServiceType, Booking, ExpenseDistributionPoint } from "@/types";
+import type { AuthContextType } from "@/context/AuthProvider";
 
 export default function Dashboard() {
   const { t } = useTranslation();
@@ -61,11 +66,13 @@ export default function Dashboard() {
   const { bookings, startBooking } = useBooking();
   const { confirm } = useConfirm();
   const auth = useAuth();
-  const permissions = useActionPermissions(auth as any);
+  const permissions = useActionPermissions(auth as AuthContextType);
 
   const [loading, setLoading] = useState(true);
   const [salonStats, setSalonStats] = useState<SalonStats | null>(null);
   const [analytics, setAnalytics] = useState<DashboardAnalytics | null>(null);
+  const [workers, setWorkers] = useState<SalonWorker[]>([]);
+  const [services, setServices] = useState<ServiceType[]>([]);
 
   useEffect(() => {
     if (isSuperAdmin && pathname === "/" && !auth.readOnlySalonInfo) {
@@ -79,14 +86,18 @@ export default function Dashboard() {
       try {
         const salonId = Number(activeSalonId);
 
-        // Parallel loading of stats and analytics
-        const [stats, analyticsData] = await Promise.all([
+        // Parallel loading of stats, analytics, workers, and services
+        const [stats, analyticsData, workersData, servicesData] = await Promise.all([
           salonService.getStats(salonId),
-          statsService.getDashboardAnalytics(salonId)
+          statsService.getDashboardAnalytics(salonId),
+          workerService.getAll(salonId).catch(() => []),
+          serviceService.getAll(salonId).catch(() => [])
         ]);
 
         setSalonStats(stats);
         setAnalytics(analyticsData);
+        setWorkers(workersData);
+        setServices(servicesData);
       } catch (error) {
         console.error("Error loading dashboard data:", error);
       } finally {
@@ -119,7 +130,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleViewBookingHistory = (session: any) => {
+  const handleViewBookingHistory = (session: Booking & { type?: string; history?: HistoryEvent[] }) => {
     setSelectedHistory({
       title: t("appointments.viewHistory"),
       subtitle: `${t("common.client")}: ${session.clientName || session.clientId} | ${t("common.service")}: ${session.type || '#' + session.id}`,
@@ -170,7 +181,7 @@ export default function Dashboard() {
           <WorkerDashboard
             workerName={workerName}
             revenueData={displayRevenueTrend}
-            sessions={todaysBookings.map((b: any) => ({
+            sessions={todaysBookings.map((b: Booking & { totalPrice?: number }) => ({
               id: b.id,
               time: b.time,
               client: b.clientName || `Client #${b.clientId}`,
@@ -223,7 +234,7 @@ export default function Dashboard() {
           {/* --- Stats Gradient Cards --- */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Revenue */}
-            <div className="rounded-2xl p-6 text-white shadow-lg relative overflow-hidden transition-all hover:scale-[1.02] hover:shadow-purple-500/20" style={getCardStyle(0)}>
+            <div className="rounded-2xl p-6 text-white shadow-lg relative overflow-hidden transition-all hover:scale-[1.02] hover:shadow-[color:var(--color-primary)]/20" style={getCardStyle(0)}>
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-white/80 text-xs font-bold uppercase tracking-wider mb-1">{t("dashboard.totalRevenueDesc")}</p>
@@ -237,7 +248,7 @@ export default function Dashboard() {
             </div>
 
             {/* Expenses */}
-            <div className="rounded-2xl p-6 text-white shadow-lg relative overflow-hidden transition-all hover:scale-[1.02] hover:shadow-pink-500/20" style={getCardStyle(1)}>
+            <div className="rounded-2xl p-6 text-white shadow-lg relative overflow-hidden transition-all hover:scale-[1.02] hover:shadow-[color:var(--color-secondary)]/20" style={getCardStyle(1)}>
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-white/80 text-xs font-bold uppercase tracking-wider mb-1">{t("dashboard.expenses")}</p>
@@ -288,7 +299,7 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {permissions.isManager && (
                 <Link href="/income/add" className="group">
-                  <button className="w-full flex items-center justify-center gap-3 bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white py-5 rounded-2xl font-black transition-all shadow-xl shadow-purple-500/20 active:scale-95 text-lg overflow-hidden relative">
+                  <button className="w-full flex items-center justify-center gap-3 bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] text-white py-5 rounded-2xl font-black transition-all shadow-xl shadow-[color:var(--color-primary)]/20 active:scale-95 text-lg overflow-hidden relative">
                     <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-bl-full transition-transform group-hover:scale-125"></div>
                     <Plus className="w-7 h-7" />
                     <span>{t("dashboard.newIncome")}</span>
@@ -297,7 +308,7 @@ export default function Dashboard() {
               )}
               {permissions.isManager && (
                 <Link href="/expenses/add" className="group">
-                  <button className="w-full flex items-center justify-center gap-3 bg-[var(--color-secondary)] hover:bg-[var(--color-secondary-dark)] text-white py-5 rounded-2xl font-black transition-all shadow-xl shadow-pink-500/20 active:scale-95 text-lg overflow-hidden relative">
+                  <button className="w-full flex items-center justify-center gap-3 bg-[var(--color-secondary)] hover:bg-[var(--color-secondary-dark)] text-white py-5 rounded-2xl font-black transition-all shadow-xl shadow-[color:var(--color-secondary)]/20 active:scale-95 text-lg overflow-hidden relative">
                     <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-bl-full transition-transform group-hover:scale-125"></div>
                     <Wallet className="w-7 h-7" />
                     <span>{t("dashboard.newExpense")}</span>
@@ -327,16 +338,32 @@ export default function Dashboard() {
                 </div>
                 <div className="p-2 bg-[var(--color-primary-light)] rounded-xl"><DollarSign className="w-5 h-5 text-[var(--color-primary)]" /></div>
               </div>
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={displayRevenueTrend}>
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={displayRevenueTrend} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={1} />
+                      <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0.3} />
+                    </linearGradient>
+                  </defs>
                   <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="#f3f4f6" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF', fontWeight: 600 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF', fontWeight: 600 }} />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF', fontWeight: 600 }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF', fontWeight: 600 }} dx={-10} />
                   <Tooltip
-                    cursor={{ fill: 'var(--color-primary-light)', opacity: 0.4 }}
-                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', padding: '12px' }}
+                    cursor={{ fill: 'var(--color-primary-light)', opacity: 0.2 }}
+                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', padding: '12px', backgroundColor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(8px)' }}
+                    itemStyle={{ color: '#111827', fontWeight: 800, fontSize: '16px' }}
+                    labelStyle={{ color: '#6B7280', fontWeight: 600, marginBottom: '4px' }}
+                    formatter={(value: number | undefined) => [`€${(value ?? 0).toLocaleString()}`, t("dashboard.revenue")]}
                   />
-                  <Bar dataKey="value" fill="var(--color-primary)" radius={[6, 6, 6, 6]} barSize={24} />
+                  <Bar
+                    dataKey="value"
+                    fill="url(#colorRevenue)"
+                    radius={[8, 8, 0, 0]}
+                    barSize={32}
+                    animationDuration={1500}
+                    animationEasing="ease-out"
+                  />
                 </BarChart>
               </ResponsiveContainer>
             </Card>
@@ -357,15 +384,29 @@ export default function Dashboard() {
                       <Pie
                         data={displayExpenseCategories}
                         cx="50%" cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
-                        paddingAngle={8}
+                        innerRadius={65}
+                        outerRadius={85}
+                        paddingAngle={6}
                         dataKey="value"
+                        stroke="none"
+                        animationDuration={1500}
+                        animationEasing="ease-out"
                       >
-                        {displayExpenseCategories.map((entry: any, index: number) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                        {displayExpenseCategories.map((entry: ExpenseDistributionPoint) => (
+                          <Cell
+                            key={`cell-${entry.key}`}
+                            fill={entry.color}
+                            stroke="#ffffff"
+                            strokeWidth={3}
+                            className="hover:opacity-80 transition-opacity duration-300 cursor-pointer drop-shadow-sm"
+                          />
                         ))}
                       </Pie>
+                      <Tooltip
+                        contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', padding: '12px', backgroundColor: 'rgba(255, 255, 255, 0.95)' }}
+                        itemStyle={{ fontWeight: 800 }}
+                        formatter={(value: number | undefined) => [`€${(value ?? 0).toLocaleString()}`, t("common.amount")]}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -376,7 +417,7 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="w-full md:w-1/2 space-y-4">
-                  {displayExpenseCategories.map((cat: any) => (
+                  {displayExpenseCategories.map((cat: ExpenseDistributionPoint) => (
                     <div key={cat.name} className="flex items-center justify-between text-sm group/item">
                       <div className="flex items-center gap-3">
                         <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: cat.color }}></div>
@@ -398,8 +439,8 @@ export default function Dashboard() {
                 {t("dashboard.topPerformers")}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {analytics.topPerformers.map((worker, idx) => (
-                  <Card key={idx} className="p-6 border-none bg-white shadow-md hover:shadow-xl transition-all group overflow-hidden relative">
+                {analytics.topPerformers.map((worker) => (
+                  <Card key={worker.name} className="p-6 border-none bg-white shadow-md hover:shadow-xl transition-all group overflow-hidden relative">
                     <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
                       <TrendingUp className="w-12 h-12" />
                     </div>
@@ -460,8 +501,8 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {todaysBookings.length > 0 ? todaysBookings.map((session, index) => (
-                    <tr key={index} className="group hover:bg-gray-50/80 transition-all duration-300">
+                  {todaysBookings.length > 0 ? todaysBookings.map((session) => (
+                    <tr key={session.id} className="group hover:bg-gray-50/80 transition-all duration-300">
                       <td className="py-5 pl-2 text-sm font-black text-gray-900 tabular-nums">{session.time}</td>
                       <td className="py-5">
                         <div className="flex items-center gap-3">
@@ -471,8 +512,16 @@ export default function Dashboard() {
                           <span className="text-sm text-gray-900 font-bold group-hover:text-[var(--color-primary)] transition-colors">{session.clientName || `Client #${session.clientId}`}</span>
                         </div>
                       </td>
-                      <td className="py-5 text-sm font-medium text-gray-500 italic">{t("common.service")} #{session.id}</td>
-                      <td className="py-5 text-sm font-bold text-gray-700">{t("dashboard.teamStats")}</td>
+                      <td className="py-5 text-sm font-medium text-gray-500 italic">
+                        {session.serviceIds && session.serviceIds.length > 0
+                          ? session.serviceIds.map((id: number) => services.find((s: ServiceType) => s.id === id)?.name || `${t("common.service")} #${id}`).join(", ")
+                          : t("common.noService")}
+                      </td>
+                      <td className="py-5 text-sm font-bold text-gray-700">
+                        {session.workerIds && session.workerIds.length > 0
+                          ? session.workerIds.map((id: number) => workers.find((w: SalonWorker) => w.id === id)?.name || t("common.unknown")).join(", ")
+                          : t("common.anyProfessional")}
+                      </td>
                       <td className="py-5">
                         <div className="flex items-center gap-2">
                           <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border ${session.status === 'Finished' ? 'bg-green-50 text-green-700 border-green-100' :

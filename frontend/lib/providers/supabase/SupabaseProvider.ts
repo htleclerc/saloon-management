@@ -20,7 +20,9 @@ import type {
     PromoCode,
     // Audit
     InteractionHistory, SalonComment,
-    PaginationParams, PaginatedResponse
+    PaginationParams, PaginatedResponse,
+    // Payroll
+    SalaryPayment, PaymentStatusHistory, PaymentStatus, PayrollFilters
 } from '@/types/index';
 
 export class SupabaseProvider implements IDataProvider {
@@ -353,13 +355,17 @@ export class SupabaseProvider implements IDataProvider {
 
     async getDashboardAnalytics(salonId: number): Promise<DashboardAnalytics> {
         try {
-            // 1. Fetch Revenue Trend from view
-            const { data: revenueData, error: revError } = await supabase
-                .from('revenue_by_month')
-                .select('month, revenue')
+            // 1. Fetch Incomes for Revenue Trend (last 6 months)
+            const now = new Date();
+            const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+            const startDateStr = sixMonthsAgo.toISOString().split('T')[0];
+
+            const { data: incomes, error: revError } = await supabase
+                .from('incomes')
+                .select('date, final_amount')
                 .eq('salon_id', salonId)
-                .order('month', { ascending: true })
-                .limit(12);
+                .in('status', ['Validated', 'Closed'])
+                .gte('date', startDateStr);
 
             // 2. Fetch Expenses for distribution
             // We'll aggregate this in JS for flexibility
@@ -373,9 +379,25 @@ export class SupabaseProvider implements IDataProvider {
                 return { revenueTrend: [], expenseDistribution: [] };
             }
 
-            const revenueTrend = (revenueData || []).map((r: any) => ({
-                name: new Date(r.month).toLocaleDateString('en-US', { month: 'short' }),
-                value: r.revenue
+            // Aggregate incomes by month
+            const monthMap = new Map<string, number>();
+            for (let i = 5; i >= 0; i--) {
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                const monthKey = d.toISOString().substring(0, 7); // YYYY-MM
+                monthMap.set(monthKey, 0);
+            }
+
+            (incomes || []).forEach((inc: any) => {
+                if (!inc.date) return;
+                const monthKey = inc.date.substring(0, 7);
+                if (monthMap.has(monthKey)) {
+                    monthMap.set(monthKey, monthMap.get(monthKey)! + Number(inc.final_amount || 0));
+                }
+            });
+
+            const revenueTrend = Array.from(monthMap.entries()).map(([monthKey, revenue]) => ({
+                name: new Date(monthKey + '-01').toLocaleDateString('en-US', { month: 'short' }),
+                value: revenue
             }));
 
             // Aggregate expenses by category
@@ -1248,7 +1270,7 @@ export class SupabaseProvider implements IDataProvider {
         return data ? this.mapProductFromDB(data) : null;
     }
 
-    async createProduct(data: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>): Promise<Product> {
+    async createProduct(data: Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>): Promise<Product> {
         const dbProduct = {
             salon_id: data.salonId,
             name: data.name,
@@ -1335,11 +1357,7 @@ export class SupabaseProvider implements IDataProvider {
             *,
             client:clients(name),
             booking_services(service_id),
-            *,
-            client:clients(name),
-            booking_services(service_id),
-            booking_workers(worker_id),
-            incomes(id)
+            booking_workers(worker_id)
         `, { count: 'exact' })
             .eq('salon_id', salonId);
 
@@ -1397,9 +1415,7 @@ export class SupabaseProvider implements IDataProvider {
             *,
             client:clients(name),
             booking_services(service_id),
-            booking_services(service_id),
-            booking_workers(worker_id),
-            incomes(id)
+            booking_workers(worker_id)
         `)
             .eq('id', id)
             .single();
@@ -1431,7 +1447,10 @@ export class SupabaseProvider implements IDataProvider {
     async getBookingsByClient(clientId: number): Promise<Booking[]> {
         const { data, error } = await supabase
             .from('bookings')
-            .select('*')
+            .select(`
+                *,
+                client:clients(name)
+            `)
             .eq('client_id', clientId)
             .order('date', { ascending: false });
 
@@ -1452,7 +1471,10 @@ export class SupabaseProvider implements IDataProvider {
 
         const { data: bookings, error: bookingsError } = await supabase
             .from('bookings')
-            .select('*')
+            .select(`
+                *,
+                client:clients(name)
+            `)
             .in('id', bookingIds)
             .order('date', { ascending: false });
 
@@ -1463,7 +1485,10 @@ export class SupabaseProvider implements IDataProvider {
     async getBookingsByDate(salonId: number, date: string): Promise<Booking[]> {
         const { data, error } = await supabase
             .from('bookings')
-            .select('*')
+            .select(`
+                *,
+                client:clients(name)
+            `)
             .eq('salon_id', salonId)
             .eq('date', date)
             .order('time', { ascending: true });
@@ -1493,7 +1518,10 @@ export class SupabaseProvider implements IDataProvider {
                 notes: data.notes,
                 is_sensitive: false
             }])
-            .select()
+            .select(`
+                *,
+                client:clients(name)
+            `)
             .single();
 
         if (error) throw new Error(`Failed to create booking: ${error.message}`);
@@ -1719,8 +1747,8 @@ export class SupabaseProvider implements IDataProvider {
             clientId: db.client_id,
             clientName: db.client?.name || 'Unknown',
             date: db.date,
-            time: db.time,
-            endTime: db.end_time || '',
+            time: db.time?.slice(0, 5),
+            endTime: db.end_time?.slice(0, 5) || '',
             duration: db.duration || 0,
             status: db.status,
             notes: db.notes,
@@ -2440,7 +2468,7 @@ export class SupabaseProvider implements IDataProvider {
         return data ? this.mapPromoCodeFromDB(data) : null;
     }
 
-    async createPromoCode(data: Omit<PromoCode, 'id' | 'createdAt' | 'updatedAt'>): Promise<PromoCode> {
+    async createPromoCode(data: Omit<PromoCode, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>): Promise<PromoCode> {
         const { data: created, error } = await supabase
             .from('promo_codes')
             .insert([this.mapPromoCodeToDB(data)])
@@ -2880,5 +2908,232 @@ export class SupabaseProvider implements IDataProvider {
             console.error('Error consuming token:', error);
             return null;
         }
+    }
+
+    // ============================================
+    // PAYROLL / SALARY PAYMENTS
+    // ============================================
+
+    private mapPaymentFromDB(db: Record<string, unknown>): SalaryPayment {
+        return {
+            id: db.id as number,
+            workerId: db.worker_id as number,
+            salonId: db.salon_id as number,
+            paymentMonth: db.payment_month as string,
+            baseSalary: (db.base_salary as number) || 0,
+            commission: (db.commission as number) || 0,
+            tips: (db.tips as number) || 0,
+            totalAmount: db.total_amount as number,
+            paidAmount: db.paid_amount as number,
+            paidDate: db.paid_date as string,
+            paidBy: db.paid_by as number | undefined,
+            notes: db.notes as string | undefined,
+            status: db.status as PaymentStatus | undefined,
+            workerApprovedAt: db.worker_approved_at as string | undefined,
+            workerRejectedAt: db.worker_rejected_at as string | undefined,
+            rejectionReason: db.rejection_reason as string | undefined,
+            lastStatusChangeAt: db.last_status_change_at as string | undefined,
+            lastStatusChangedBy: db.last_status_changed_by as number | undefined,
+            createdAt: db.created_at as string | undefined,
+            updatedAt: db.updated_at as string | undefined,
+        };
+    }
+
+    private mapPaymentToDB(payment: Partial<SalaryPayment>): Record<string, unknown> {
+        const db: Record<string, unknown> = {};
+        if (payment.workerId !== undefined) db.worker_id = payment.workerId;
+        if (payment.salonId !== undefined) db.salon_id = payment.salonId;
+        if (payment.paymentMonth !== undefined) db.payment_month = payment.paymentMonth;
+        if (payment.baseSalary !== undefined) db.base_salary = payment.baseSalary;
+        if (payment.commission !== undefined) db.commission = payment.commission;
+        if (payment.tips !== undefined) db.tips = payment.tips;
+        if (payment.totalAmount !== undefined) db.total_amount = payment.totalAmount;
+        if (payment.paidAmount !== undefined) db.paid_amount = payment.paidAmount;
+        if (payment.paidDate !== undefined) db.paid_date = payment.paidDate;
+        if (payment.paidBy !== undefined) db.paid_by = payment.paidBy;
+        if (payment.notes !== undefined) db.notes = payment.notes;
+        if (payment.status !== undefined) db.status = payment.status;
+        if (payment.lastStatusChangedBy !== undefined) db.last_status_changed_by = payment.lastStatusChangedBy;
+        if (payment.lastStatusChangeAt !== undefined) db.last_status_change_at = payment.lastStatusChangeAt;
+        return db;
+    }
+
+    private mapHistoryFromDB(db: Record<string, unknown>): PaymentStatusHistory {
+        return {
+            id: db.id as number,
+            paymentId: db.payment_id as number,
+            previousStatus: db.previous_status as PaymentStatus | undefined,
+            newStatus: db.new_status as PaymentStatus,
+            changedBy: db.changed_by as number | undefined,
+            changedByName: db.changed_by_name as string | undefined,
+            changedByRole: db.changed_by_role as string | undefined,
+            changedAt: db.changed_at as string,
+            reason: db.reason as string | undefined,
+            metadata: db.metadata as Record<string, unknown> | undefined,
+        };
+    }
+
+    async getSalaryPayments(salonId: number, filters?: PayrollFilters): Promise<SalaryPayment[]> {
+        let query = supabase.from('salary_payments').select('*').eq('salon_id', salonId);
+        if (filters?.workerId) query = query.eq('worker_id', filters.workerId);
+        if (filters?.status) query = query.eq('status', filters.status);
+        if (filters?.month) query = query.eq('payment_month', filters.month);
+        if (filters?.startDate) query = query.gte('paid_date', filters.startDate);
+        if (filters?.endDate) query = query.lte('paid_date', filters.endDate);
+        query = query.order('paid_date', { ascending: false });
+        const { data, error } = await query;
+        if (error) throw new Error(`Failed to fetch salary payments: ${error.message}`);
+        return (data || []).map((item: Record<string, unknown>) => this.mapPaymentFromDB(item));
+    }
+
+    async getSalaryPayment(id: number): Promise<SalaryPayment | null> {
+        const { data, error } = await supabase
+            .from('salary_payments')
+            .select('*')
+            .eq('id', id)
+            .single();
+        if (error) return null;
+        return data ? this.mapPaymentFromDB(data as Record<string, unknown>) : null;
+    }
+
+    async getSalaryPaymentsByWorker(workerId: number, limit: number = 20): Promise<SalaryPayment[]> {
+        const { data, error } = await supabase
+            .from('salary_payments')
+            .select('*')
+            .eq('worker_id', workerId)
+            .order('paid_date', { ascending: false })
+            .limit(limit);
+        if (error) throw new Error(`Failed to fetch worker payments: ${error.message}`);
+        return (data || []).map((item: Record<string, unknown>) => this.mapPaymentFromDB(item));
+    }
+
+    async getSalaryPaymentsByMonth(salonId: number, month: string): Promise<SalaryPayment[]> {
+        const { data, error } = await supabase
+            .from('salary_payments')
+            .select('*')
+            .eq('salon_id', salonId)
+            .eq('payment_month', month)
+            .order('paid_date', { ascending: false });
+        if (error) throw new Error(`Failed to fetch payments by month: ${error.message}`);
+        return (data || []).map((item: Record<string, unknown>) => this.mapPaymentFromDB(item));
+    }
+
+    async getSalaryPaymentsByStatus(salonId: number, status: PaymentStatus): Promise<SalaryPayment[]> {
+        const { data, error } = await supabase
+            .from('salary_payments')
+            .select('*')
+            .eq('salon_id', salonId)
+            .eq('status', status)
+            .order('paid_date', { ascending: false });
+        if (error) throw new Error(`Failed to fetch payments by status: ${error.message}`);
+        return (data || []).map((item: Record<string, unknown>) => this.mapPaymentFromDB(item));
+    }
+
+    async createSalaryPayment(data: Omit<SalaryPayment, 'id' | 'createdAt' | 'updatedAt'>): Promise<SalaryPayment> {
+        const dbData = this.mapPaymentToDB(data);
+        dbData.last_status_change_at = new Date().toISOString();
+        const { data: created, error } = await supabase
+            .from('salary_payments')
+            .insert([dbData])
+            .select()
+            .single();
+        if (error) throw new Error(`Failed to create salary payment: ${error.message}`);
+        return this.mapPaymentFromDB(created as Record<string, unknown>);
+    }
+
+    async updateSalaryPayment(id: number, data: Partial<SalaryPayment>): Promise<SalaryPayment> {
+        const dbData = this.mapPaymentToDB(data);
+        dbData.updated_at = new Date().toISOString();
+        const { data: updated, error } = await supabase
+            .from('salary_payments')
+            .update(dbData)
+            .eq('id', id)
+            .select()
+            .single();
+        if (error) throw new Error(`Failed to update salary payment: ${error.message}`);
+        return this.mapPaymentFromDB(updated as Record<string, unknown>);
+    }
+
+    async updateSalaryPaymentStatus(id: number, status: PaymentStatus, userId: number, reason?: string): Promise<void> {
+        // Try RPC first
+        const { error: rpcError } = await supabase.rpc('update_payment_status', {
+            p_payment_id: id,
+            p_new_status: status,
+            p_reason: reason,
+            p_changed_by: userId
+        });
+        if (rpcError) {
+            // Fallback to direct update
+            const updates: Record<string, unknown> = {
+                status,
+                last_status_changed_by: userId,
+                last_status_change_at: new Date().toISOString(),
+            };
+            if (reason) updates.notes = reason;
+            const { error: updateError } = await supabase
+                .from('salary_payments')
+                .update(updates)
+                .eq('id', id);
+            if (updateError) throw new Error(`Failed to update payment status: ${updateError.message}`);
+        }
+    }
+
+    async deleteSalaryPayment(id: number): Promise<void> {
+        const { error } = await supabase
+            .from('salary_payments')
+            .delete()
+            .eq('id', id);
+        if (error) throw new Error(`Failed to delete salary payment: ${error.message}`);
+    }
+
+    async getPaymentStatusHistory(paymentId: number): Promise<PaymentStatusHistory[]> {
+        // Use RPC to bypass permission issues
+        const { data, error } = await supabase.rpc('get_payment_history_secure', { p_payment_id: paymentId });
+        if (error) {
+            // Fallback to direct query
+            const { data: directData, error: directError } = await supabase
+                .from('payment_status_history')
+                .select('*')
+                .eq('payment_id', paymentId)
+                .order('changed_at', { ascending: false });
+            if (directError) throw new Error(`Failed to fetch payment history: ${directError.message}`);
+            return (directData || []).map((item: Record<string, unknown>) => this.mapHistoryFromDB(item));
+        }
+        return (data || []).map((item: Record<string, unknown>) => this.mapHistoryFromDB(item));
+    }
+
+    async getPaymentStatusHistoryBulk(paymentIds: number[]): Promise<PaymentStatusHistory[]> {
+        if (paymentIds.length === 0) return [];
+        // Try RPC for bulk
+        const { data, error } = await supabase.rpc('get_payment_history_secure_bulk', { p_payment_ids: paymentIds });
+        if (error) {
+            // Fallback
+            const { data: directData, error: directError } = await supabase
+                .from('payment_status_history')
+                .select('*')
+                .in('payment_id', paymentIds)
+                .order('changed_at', { ascending: false });
+            if (directError) throw new Error(`Failed to fetch bulk payment history: ${directError.message}`);
+            return (directData || []).map((item: Record<string, unknown>) => this.mapHistoryFromDB(item));
+        }
+        return (data || []).map((item: Record<string, unknown>) => this.mapHistoryFromDB(item));
+    }
+
+    async createPaymentStatusHistory(data: Omit<PaymentStatusHistory, 'id'>): Promise<PaymentStatusHistory> {
+        const { data: created, error } = await supabase
+            .from('payment_status_history')
+            .insert([{
+                payment_id: data.paymentId,
+                previous_status: data.previousStatus,
+                new_status: data.newStatus,
+                changed_by: data.changedBy,
+                changed_at: data.changedAt || new Date().toISOString(),
+                reason: data.reason,
+                metadata: data.metadata,
+            }])
+            .select()
+            .single();
+        if (error) throw new Error(`Failed to create payment status history: ${error.message}`);
+        return this.mapHistoryFromDB(created as Record<string, unknown>);
     }
 }

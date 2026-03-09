@@ -57,8 +57,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
                 // Check if this notification is for us
                 // NOTE: We permit string 'ADM-000' matches or general broadcasts if we ever need them
                 if (notif.user_code === currentUserCode) {
-                    console.log("Received broadcast notification:", notif);
-
                     // Add to state
                     const mappedNotif: Notification = {
                         id: notif.id,

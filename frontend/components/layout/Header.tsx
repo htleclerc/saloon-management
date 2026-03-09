@@ -42,7 +42,7 @@ export default function Header() {
         if (pathname === "/team/my-payroll" && user?.role === "worker") {
             return [
                 {
-                    label: "My Payroll",
+                    label: t("header.breadcrumbs.myPayroll"),
                     path: "/team/my-payroll",
                     isLink: false
                 }
@@ -51,24 +51,24 @@ export default function Header() {
 
         // Special path segment mappings (segment -> display label)
         const pathMappings: Record<string, string> = {
-            "team": "Team",
-            "clients": "Clients",
-            "services": "Services",
-            "expenses": "Expenses",
-            "daily": "Daily",
-            "reports": "Reports",
-            "approvals": "Approvals",
-            "settings": "Settings",
-            "add": "Add",
-            "add-advanced": "Add (Advanced)",
-            "edit": "Edit",
-            "edit-advanced": "Edit",
-            "detail": "Profile",
-            "performance": "Performance",
-            "schedules": "Schedules",
-            "payroll": "Payroll",
-            "income": "Income",
-            "dashboard": "Dashboard",
+            "team": t("nav.team"),
+            "clients": t("nav.clients"),
+            "services": t("nav.services"),
+            "expenses": t("nav.expenses"),
+            "daily": t("nav.daily"),
+            "reports": t("nav.reports"),
+            "approvals": t("nav.approvals"),
+            "settings": t("nav.settings"),
+            "add": t("header.breadcrumbs.add"),
+            "add-advanced": t("header.breadcrumbs.addAdvanced"),
+            "edit": t("header.breadcrumbs.edit"),
+            "edit-advanced": t("header.breadcrumbs.edit"),
+            "detail": t("header.breadcrumbs.profile"),
+            "performance": t("header.breadcrumbs.performance"),
+            "schedules": t("header.breadcrumbs.schedules"),
+            "payroll": t("header.breadcrumbs.payroll"),
+            "income": t("nav.income"),
+            "dashboard": t("nav.dashboard"),
         };
 
         // Check if a segment is a dynamic ID (numeric or long string)
@@ -99,11 +99,11 @@ export default function Header() {
             if (isDynamicId(segment)) {
                 // Don't show ID as label, show a descriptive name based on context
                 if (previousSegment === "detail") {
-                    label = "Profile";
+                    label = t("header.breadcrumbs.profile");
                 } else if (previousSegment === "edit" || previousSegment === "edit-advanced") {
                     label = ""; // Hide ID for edit pages, the previous segment already says "Edit Worker"
                 } else {
-                    label = "Details";
+                    label = t("header.breadcrumbs.details");
                 }
                 isLink = false; // IDs should not be clickable links
             } else if (pathMappings[segment]) {
@@ -189,7 +189,7 @@ export default function Header() {
                     <button
                         onClick={() => setMobileMenuOpen(true)}
                         className="p-2 -ml-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600"
-                        title="Navigation"
+                        title={t("header.navigation")}
                     >
                         <Menu className="w-6 h-6" />
                     </button>
@@ -221,7 +221,7 @@ export default function Header() {
                                 );
                             })}
                             {breadcrumbs.length === 0 && (
-                                <h2 className="text-lg font-semibold text-gray-800 tracking-tight">Dashboard</h2>
+                                <h2 className="text-lg font-semibold text-gray-800 tracking-tight">{t("nav.dashboard")}</h2>
                             )}
                         </div>
                     )}
@@ -237,6 +237,7 @@ export default function Header() {
                                 type="text"
                                 placeholder={t("header.searchPlaceholder")}
                                 value={searchQuery}
+                                aria-label={t("header.searchPlaceholder")}
                                 onChange={(e) => {
                                     setSearchQuery(e.target.value);
                                     setIsSearching(true);
@@ -258,7 +259,7 @@ export default function Header() {
                             {/* Mock Search Results dropdown if needed */}
                             {searchQuery.length > 2 && (
                                 <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                                    <p className="text-[10px] text-gray-400 uppercase font-bold px-2 py-1">Recent Results</p>
+                                    <p className="text-[10px] text-gray-400 uppercase font-bold px-2 py-1">{t("header.recentResults")}</p>
                                     <div className="space-y-1">
                                         <button className="w-full text-left px-2 py-2 hover:bg-[var(--color-primary-light)] rounded-lg text-sm text-gray-700 flex items-center gap-2 transition-colors">
                                             <div className="w-2 h-2 rounded-full bg-[var(--color-primary)]"></div>
@@ -273,7 +274,7 @@ export default function Header() {
                     {isDemoMode && (
                         <div className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full shadow-sm animate-pulse">
                             <FlaskConical className="w-4 h-4 text-white" />
-                            <span className="text-xs font-bold text-white tracking-wide">DEMO MODE</span>
+                            <span className="text-xs font-bold text-white tracking-wide">{t("header.demoMode")}</span>
                         </div>
                     )}
 
@@ -283,11 +284,11 @@ export default function Header() {
                             <button
                                 onClick={() => setTenantDropdownOpen(!tenantDropdownOpen)}
                                 className="flex items-center gap-2 px-3 py-1.5 bg-[var(--color-primary-light)] hover:opacity-80 border border-[var(--color-primary-light)] rounded-lg transition text-sm"
-                                title="Switch Salon"
+                                title={t("header.switchSalon")}
                             >
                                 <Building className="w-4 h-4 text-[var(--color-primary)]" />
                                 <span className="text-[var(--color-primary)] font-medium max-w-[120px] truncate">
-                                    {currentTenant?.name || "Select Salon"}
+                                    {currentTenant?.name || t("header.selectSalon")}
                                 </span>
                                 <ChevronDown className={`w-3 h-3 text-[var(--color-primary)] transition-transform ${tenantDropdownOpen ? 'rotate-180' : ''}`} />
                             </button>
@@ -295,7 +296,7 @@ export default function Header() {
                             {tenantDropdownOpen && (
                                 <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-100 py-1 min-w-[200px] z-50">
                                     <div className="px-3 py-2 border-b border-gray-100">
-                                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Your Salons</p>
+                                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{t("header.yourSalons")}</p>
                                     </div>
                                     {user.tenants.map((tenant) => (
                                         <button
@@ -344,22 +345,22 @@ export default function Header() {
                                             }
                                         }}
                                         className={`w-full px-3 py-2.5 flex items-center gap-3 text-left transition-colors ${canCreateNewSalon()
-                                            ? 'hover:bg-purple-50 text-purple-600'
+                                            ? 'hover:bg-primary-light text-color-primary'
                                             : 'opacity-50 cursor-not-allowed text-gray-400'
                                             }`}
                                     >
                                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${canCreateNewSalon()
-                                            ? 'bg-gradient-to-br from-purple-500 to-pink-500'
+                                            ? 'bg-gradient-primary'
                                             : 'bg-gray-200'
                                             }`}>
                                             <Plus className="w-4 h-4 text-white" />
                                         </div>
                                         <div className="flex-1">
-                                            <div className="font-medium text-sm">Nouveau Salon</div>
+                                            <div className="font-medium text-sm">{t("header.newSalon")}</div>
                                             <div className="text-xs text-gray-500">
                                                 {canCreateNewSalon()
                                                     ? `${getCurrentSalonCount()} / ${getSalonLimit()} salons`
-                                                    : `Limite atteinte (${getSalonLimit()} max)`
+                                                    : t("header.limitReached", { max: getSalonLimit() })
                                                 }
                                             </div>
                                         </div>
@@ -427,6 +428,7 @@ export default function Header() {
                                 onClick={() => setNotificationsOpen(!notificationsOpen)}
                                 className="relative p-2 hover:bg-gray-100 rounded-lg transition"
                                 title={t("header.notifications")}
+                                aria-label={t("header.notifications")}
                             >
                                 <Bell className="w-5 h-5 text-gray-600" />
                                 {unreadCount > 0 && (
@@ -452,11 +454,12 @@ export default function Header() {
                         <button
                             onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                             className="flex items-center gap-2 ml-2 hover:opacity-80 transition"
+                            aria-label="Profile menu"
                         >
                             {!isMobile && (
                                 <div className="text-right">
-                                    <p className="text-sm font-semibold text-gray-700">{user?.name || "Guest"}</p>
-                                    <p className="text-xs text-gray-500 capitalize">{user?.role || "Unknown"}</p>
+                                    <p className="text-sm font-semibold text-gray-700">{user?.name || t("header.profile")}</p>
+                                    <p className="text-xs text-gray-500 capitalize">{user?.role || ""}</p>
                                 </div>
                             )}
                             <div className="w-9 h-9 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary)] rounded-full flex items-center justify-center cursor-pointer hover:shadow-lg transition">
@@ -467,8 +470,8 @@ export default function Header() {
                         {profileDropdownOpen && (
                             <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-gray-100 py-1 min-w-[180px] z-50">
                                 <div className="px-3 py-2 border-b border-gray-100">
-                                    <p className="text-sm font-semibold text-gray-700">{user?.name || "Guest"}</p>
-                                    <p className="text-xs text-gray-500 capitalize">{user?.role || "Unknown"}</p>
+                                    <p className="text-sm font-semibold text-gray-700">{user?.name || t("header.profile")}</p>
+                                    <p className="text-xs text-gray-500 capitalize">{user?.role || ""}</p>
                                 </div>
                                 <Link
                                     href="/settings/profile"
@@ -476,7 +479,7 @@ export default function Header() {
                                     className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-gray-50 transition text-sm text-gray-700"
                                 >
                                     <User className="w-4 h-4 text-gray-500" />
-                                    <span>View Profile</span>
+                                    <span>{t("header.viewProfile")}</span>
                                 </Link>
                                 <Link
                                     href="/settings"
@@ -484,7 +487,7 @@ export default function Header() {
                                     className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-gray-50 transition text-sm text-gray-700"
                                 >
                                     <Settings className="w-4 h-4 text-gray-500" />
-                                    <span>Settings</span>
+                                    <span>{t("nav.settings")}</span>
                                 </Link>
                                 <div className="border-t border-gray-100 mt-1 pt-1">
                                     <button
@@ -495,7 +498,7 @@ export default function Header() {
                                         className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-red-50 transition text-sm text-red-600"
                                     >
                                         <Power className="w-4 h-4" />
-                                        <span>Logout</span>
+                                        <span>{t("header.logout")}</span>
                                     </button>
                                 </div>
                             </div>

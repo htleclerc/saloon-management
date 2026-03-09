@@ -24,7 +24,7 @@ import {
 } from "recharts";
 import { useState, useEffect } from "react";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
-import { statsService } from "@/lib/services";
+import { revenueStatsService } from "@/lib/services";
 import { useTranslation } from "@/i18n";
 
 export default function ReportsPage() {
@@ -69,15 +69,15 @@ export default function ReportsPage() {
             const year = new Date().getFullYear();
 
             Promise.all([
-                statsService.getFinancialReport(Number(activeSalonId), year),
-                statsService.getExpenseDistribution(Number(activeSalonId), year),
-                statsService.getMonthlyFinancials(Number(activeSalonId), year),
-                statsService.getQuarterlyFinancials(Number(activeSalonId), year),
-                statsService.getTaxSummary(Number(activeSalonId), year),
-                statsService.getPurchaseTrends(Number(activeSalonId), year),
-                statsService.getFeeBreakdown(Number(activeSalonId), year),
-                statsService.getMonthlyWeeklyAnalysis(Number(activeSalonId), year),
-                statsService.getRecommendations(Number(activeSalonId))
+                revenueStatsService.getFinancialReport(Number(activeSalonId), year),
+                revenueStatsService.getExpenseDistribution(Number(activeSalonId), year),
+                revenueStatsService.getMonthlyFinancials(Number(activeSalonId), year),
+                revenueStatsService.getQuarterlyFinancials(Number(activeSalonId), year),
+                revenueStatsService.getTaxSummary(Number(activeSalonId), year),
+                revenueStatsService.getPurchaseTrends(Number(activeSalonId), year),
+                revenueStatsService.getFeeBreakdown(Number(activeSalonId), year),
+                revenueStatsService.getMonthlyWeeklyAnalysis(Number(activeSalonId), year),
+                revenueStatsService.getRecommendations(Number(activeSalonId))
             ]).then(([report, distribution, monthly, quarterly, tax, purchases, fees, analysis, recs]) => {
                 setFinancialReport(report);
                 setExpenseDistribution(distribution);
@@ -103,7 +103,7 @@ export default function ReportsPage() {
             <ProtectedRoute requiredRole={['manager', 'super_admin']}>
                 <MainLayout>
                     <div className="flex items-center justify-center h-full min-h-[400px]">
-                        <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+                        <Loader2 className="w-8 h-8 animate-spin text-color-primary" />
                     </div>
                 </MainLayout>
             </ProtectedRoute>

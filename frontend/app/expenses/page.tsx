@@ -17,6 +17,9 @@ import { expenseService } from "@/lib/services";
 import { useToast } from "@/context/ToastProvider";
 import { useConfirm } from "@/context/ConfirmProvider";
 import { useTranslation } from "@/i18n";
+import { Expense, ExpenseCategory } from "@/types";
+
+type ExpenseWithCategory = Expense & { categoryName?: string };
 
 // Export columns configuration
 const expenseExportColumns: ExportColumn[] = [
@@ -39,8 +42,8 @@ export default function ExpensesPage() {
     const canEdit = canPerformExpenseAction("edit", user?.role as UserRole);
     const canDelete = canPerformExpenseAction("delete", user?.role as UserRole);
     // Real Data State
-    const [expenses, setExpenses] = useState<any[]>([]);
-    const [categories, setCategories] = useState<any[]>([]);
+    const [expenses, setExpenses] = useState<ExpenseWithCategory[]>([]);
+    const [categories, setCategories] = useState<ExpenseCategory[]>([]);
     const [loading, setLoading] = useState(true);
 
     const fetchData = async () => {
@@ -51,7 +54,12 @@ export default function ExpensesPage() {
                 expenseService.getAll(sid),
                 expenseService.getCategories(sid)
             ]);
-            setExpenses(fetchedExpenses);
+            // Enrich expenses with category names
+            const enrichedExpenses: ExpenseWithCategory[] = fetchedExpenses.map(e => ({
+                ...e,
+                categoryName: fetchedCategories.find(c => c.id === e.categoryId)?.name || "Unknown"
+            }));
+            setExpenses(enrichedExpenses);
             // Ensure derived category data works - service returns categories, we calculate totals below
             setCategories(fetchedCategories);
         } catch (error) {
@@ -153,8 +161,8 @@ export default function ExpensesPage() {
                     {/* Header */}
                     <div className="flex items-center justify-between">
                         <div>
-                            <h1 className="text-3xl font-bold text-gray-900">Expense Management</h1>
-                            <p className="text-gray-500 mt-1">Track and manage all business expenses</p>
+                            <h1 className="text-3xl font-bold text-gray-900">{t("expenses.management")}</h1>
+                            <p className="text-gray-500 mt-1">{t("expenses.subtitle")}</p>
                         </div>
                         <div className="flex w-full md:w-auto items-center justify-end gap-3">
                             <Button variant="outline" size="md" onClick={handleExportCSV} className="hidden sm:flex">
@@ -168,9 +176,9 @@ export default function ExpensesPage() {
                             {canAdd && (
                                 <ReadOnlyGuard>
                                     <Link href="/expenses/add">
-                                        <Button variant="primary" size="md" className="rounded-2xl h-14 w-14 md:h-12 md:w-auto md:px-6 flex items-center justify-center p-0 md:p-auto shadow-xl shadow-purple-500/30 active:scale-95 transition-all">
+                                        <Button variant="primary" size="md" className="rounded-2xl h-14 w-14 md:h-12 md:w-auto md:px-6 flex items-center justify-center p-0 md:p-auto shadow-xl shadow-[color:var(--color-primary)]/20 active:scale-95 transition-all">
                                             <Plus className="w-8 h-8 md:w-6 md:h-6" />
-                                            <span className="hidden md:inline ml-2 text-sm font-bold">Add Expense</span>
+                                            <span className="hidden md:inline ml-2 text-sm font-bold">{t("expenses.addExpense")}</span>
                                         </Button>
                                     </Link>
                                 </ReadOnlyGuard>
@@ -181,30 +189,30 @@ export default function ExpensesPage() {
                     {/* Summary */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <Card className="text-white" style={getCardStyle(0)}>
-                            <p className="text-sm opacity-90 mb-1">Total Expenses</p>
+                            <p className="text-sm opacity-90 mb-1">{t("expenses.totalExpenses")}</p>
                             <h3 className="text-3xl font-bold">€{totalExpenses.toLocaleString()}</h3>
-                            <p className="text-sm opacity-80 mt-1">This month</p>
+                            <p className="text-sm opacity-80 mt-1">{t("expenses.thisMonth")}</p>
                         </Card>
                         <Card className="text-white" style={getCardStyle(1)}>
-                            <p className="text-sm opacity-90 mb-1">Categories</p>
+                            <p className="text-sm opacity-90 mb-1">{t("expenses.activeCategories")}</p>
                             <h3 className="text-3xl font-bold">{categories.length}</h3>
-                            <p className="text-sm opacity-80 mt-1">Active categories</p>
+                            <p className="text-sm opacity-80 mt-1">{t("expenses.activeCategories")}</p>
                         </Card>
                         <Card className="text-white" style={getCardStyle(2)}>
-                            <p className="text-sm opacity-90 mb-1">Highest Category</p>
+                            <p className="text-sm opacity-90 mb-1">{t("expenses.highestCategory")}</p>
                             <h3 className="text-2xl font-bold">{highestCategory.name}</h3>
                             <p className="text-sm opacity-80 mt-1">€{highestCategory.amount.toLocaleString()}</p>
                         </Card>
                         <Card className="text-white" style={getCardStyle(3)}>
-                            <p className="text-sm opacity-90 mb-1">Average/Month</p>
+                            <p className="text-sm opacity-90 mb-1">{t("expenses.averageMonth")}</p>
                             <h3 className="text-3xl font-bold">€{Math.round(totalExpenses / 6).toLocaleString()}</h3>
-                            <p className="text-sm opacity-80 mt-1">Last 6 months</p>
+                            <p className="text-sm opacity-80 mt-1">{t("expenses.last6Months")}</p>
                         </Card>
                     </div>
 
                     {/* Categories Grid */}
                     <div>
-                        <h3 className="text-xl font-semibold mb-4">Expense Categories</h3>
+                        <h3 className="text-xl font-semibold mb-4">{t("expenses.expenseCategories")}</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {categoriesWithTotals.map((category) => (
                                 <Card key={category.id} className="hover:shadow-xl transition-shadow">
@@ -215,7 +223,7 @@ export default function ExpensesPage() {
                                             </div>
                                             <div>
                                                 <h4 className="font-semibold text-gray-900">{category.name}</h4>
-                                                <p className="text-xs text-gray-500">This month</p>
+                                                <p className="text-xs text-gray-500">{t("expenses.thisMonth")}</p>
                                             </div>
                                         </div>
                                         <div className="text-right">
@@ -229,7 +237,7 @@ export default function ExpensesPage() {
 
                     {/* Chart */}
                     <Card>
-                        <h3 className="text-lg font-semibold mb-4">Expense Distribution</h3>
+                        <h3 className="text-lg font-semibold mb-4">{t("expenses.expenseDistribution")}</h3>
                         <ResponsiveContainer width="100%" height={350}>
                             <BarChart data={chartData} layout="vertical">
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -244,8 +252,8 @@ export default function ExpensesPage() {
                     {/* Recent Expenses Table */}
                     <Card>
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-semibold">Recent Expenses</h3>
-                            <Button variant="outline" size="sm">View All</Button>
+                            <h3 className="text-lg font-semibold">{t("expenses.recentTitle")}</h3>
+                            <Button variant="outline" size="sm">{t("common.viewAll")}</Button>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full">
@@ -282,7 +290,7 @@ export default function ExpensesPage() {
                                                     {canEdit && (
                                                         <ReadOnlyGuard>
                                                             <Link href={`/expenses/edit/${expense.id}`}>
-                                                                <button className="p-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors shadow-sm" title="Edit">
+                                                                <button className="p-2 bg-primary-light text-color-primary rounded-lg hover:bg-primary-light transition-colors shadow-sm" title="Edit">
                                                                     <Edit size={16} />
                                                                 </button>
                                                             </Link>

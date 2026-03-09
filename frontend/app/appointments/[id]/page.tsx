@@ -91,7 +91,7 @@ export default function AppointmentDetailPage() {
         return (
             <MainLayout>
                 <div className="flex items-center justify-center min-h-[50vh]">
-                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-color-primary"></div>
                 </div>
             </MainLayout>
         );
@@ -206,7 +206,7 @@ export default function AppointmentDetailPage() {
                                 </h3>
                                 <div className="space-y-4">
                                     {comments.map((comment: any) => (
-                                        <div key={comment.id} className="bg-purple-50 p-5 rounded-3xl border border-purple-100">
+                                        <div key={comment.id} className="bg-primary-light p-5 rounded-3xl border border-color-primary/30">
                                             <div className="flex items-center justify-between mb-2">
                                                 <span className="font-black text-xs text-[var(--color-primary)] uppercase tracking-wider">{comment.userCode || comment.user || 'System'}</span>
                                                 <span className="text-[10px] font-bold text-gray-400">
@@ -234,7 +234,7 @@ export default function AppointmentDetailPage() {
                                     <div className="absolute left-[9px] top-2 bottom-2 w-0.5 bg-gray-50"></div>
                                     {history.slice().reverse().map((interaction: any) => (
                                         <div key={interaction.id} className="flex gap-4 relative z-10">
-                                            <div className="w-5 h-5 rounded-full bg-white border-4 border-purple-200 shrink-0"></div>
+                                            <div className="w-5 h-5 rounded-full bg-white border-4 border-color-primary/30 shrink-0"></div>
                                             <div className="min-w-0">
                                                 <p className="text-sm font-bold text-gray-900 leading-tight truncate">
                                                     {interaction.action}

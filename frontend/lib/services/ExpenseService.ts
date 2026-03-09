@@ -6,6 +6,7 @@
 
 import { BaseService } from './BaseService';
 import type { Expense, ExpenseCategory, ExpenseFilters, PaginatedResponse } from '@/types';
+import { ExpenseCreateSchema, ExpenseCategoryCreateSchema } from '@/lib/validators';
 
 export class ExpenseService extends BaseService {
     /**
@@ -34,19 +35,23 @@ export class ExpenseService extends BaseService {
      * Create new expense category
      */
     async createCategory(data: Omit<ExpenseCategory, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>): Promise<ExpenseCategory> {
+        // Zod validation
+        ExpenseCategoryCreateSchema.parse(data);
+
         return this.provider.createExpenseCategory({
             ...data,
             isActive: true, // Ensure active by default
             createdBy: this.getCurrentUser(),
             updatedBy: this.getCurrentUser()
-        } as any); // Type assertion if needed pending provider update, or assume provider handles it
+        });
     }
 
     /**
      * Create new expense
      */
     async create(data: Omit<Expense, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>): Promise<Expense> {
-        this.validateRequired(data, ['salonId', 'categoryId', 'amount', 'date']);
+        // Zod validation (covers required fields, amount >= 0, date format)
+        ExpenseCreateSchema.parse(data);
 
         const expense = await this.provider.createExpense({
             ...data,

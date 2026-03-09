@@ -6,6 +6,7 @@
 
 import { BaseService } from './BaseService';
 import type { Salon, SalonSettings, SalonStats } from '@/types';
+import { SalonCreateSchema } from '@/lib/validators';
 
 export class SalonService extends BaseService {
     /**
@@ -73,7 +74,8 @@ export class SalonService extends BaseService {
      * Create new salon
      */
     async create(data: Omit<Salon, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>): Promise<Salon> {
-        this.validateRequired(data, ['name', 'slug']);
+        // Zod validation (covers required name + slug)
+        SalonCreateSchema.parse(data);
 
         // Generate slug if not provided
         if (!data.slug) {

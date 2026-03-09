@@ -150,7 +150,7 @@ export default function MyPayrollPage() {
                     title={t("team.lastPayment")}
                     value={summary.lastPaymentDate || t("common.none")}
                     icon={Calendar}
-                    gradient="bg-gradient-to-br from-purple-500 to-purple-600"
+                    gradient="bg-gradient-to-br from-primary to-[var(--color-primary)]"
                 />
             </div>
 

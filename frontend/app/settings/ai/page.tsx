@@ -32,7 +32,7 @@ export default function AISettingsPage() {
                     <div className="flex items-start justify-between">
                         <div>
                             <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                                <Sparkles className="w-6 h-6 text-purple-500" />
+                                <Sparkles className="w-6 h-6 text-color-primary" />
                                 Assistant IA
                             </h2>
                             <p className="text-sm text-gray-600 mt-1">
@@ -56,7 +56,7 @@ export default function AISettingsPage() {
                                 type="checkbox"
                                 checked={config.enabled}
                                 onChange={(e) => updateConfig({ enabled: e.target.checked })}
-                                className="w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                                className="w-5 h-5 text-color-primary border-gray-300 rounded focus:ring-primary"
                             />
                             <div>
                                 <span className="font-medium text-gray-900">Activer l'Intelligence Artificielle</span>
@@ -75,7 +75,7 @@ export default function AISettingsPage() {
                             <select
                                 value={config.provider}
                                 onChange={(e) => updateConfig({ provider: e.target.value as any })}
-                                className="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                className="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                             >
                                 <option value="gemini">Google Gemini (Rapide, économique)</option>
                                 <option value="gpt-4">OpenAI GPT-4 (Précis, plus cher)</option>
@@ -103,12 +103,12 @@ export default function AISettingsPage() {
                                     type="checkbox"
                                     checked={config.features.commandAssistant}
                                     onChange={() => toggleFeature('commandAssistant')}
-                                    className="mt-1 w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                                    className="mt-1 w-5 h-5 text-color-primary border-gray-300 rounded focus:ring-primary"
                                 />
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2">
                                         <span className="font-medium text-gray-900">Assistant de commande</span>
-                                        <span className="px-2 py-0.5 text-xs font-semibold bg-purple-100 text-purple-700 rounded-full">
+                                        <span className="px-2 py-0.5 text-xs font-semibold bg-primary-light text-color-primary rounded-full">
                                             Cmd+K
                                         </span>
                                     </div>
@@ -127,7 +127,7 @@ export default function AISettingsPage() {
                                     type="checkbox"
                                     checked={config.features.suggestions}
                                     onChange={() => toggleFeature('suggestions')}
-                                    className="mt-1 w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                                    className="mt-1 w-5 h-5 text-color-primary border-gray-300 rounded focus:ring-primary"
                                 />
                                 <div className="flex-1">
                                     <span className="font-medium text-gray-900">Suggestions intelligentes</span>
@@ -143,7 +143,7 @@ export default function AISettingsPage() {
                                     type="checkbox"
                                     checked={config.features.autoComplete}
                                     onChange={() => toggleFeature('autoComplete')}
-                                    className="mt-1 w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                                    className="mt-1 w-5 h-5 text-color-primary border-gray-300 rounded focus:ring-primary"
                                 />
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2">
@@ -167,7 +167,7 @@ export default function AISettingsPage() {
                                     type="checkbox"
                                     checked={config.features.analytics}
                                     onChange={() => toggleFeature('analytics')}
-                                    className="mt-1 w-5 h-5 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                                    className="mt-1 w-5 h-5 text-color-primary border-gray-300 rounded focus:ring-primary"
                                 />
                                 <div className="flex-1">
                                     <span className="font-medium text-gray-900">Insights & Analytics</span>

@@ -22,7 +22,7 @@ const integrations = [
         name: "Stripe",
         description: "Acceptez les paiements en ligne",
         icon: CreditCard,
-        color: "from-purple-500 to-purple-600",
+        color: "from-primary to-[var(--color-primary)]",
         connected: true,
         account: "Workshop Pro Account",
     },

@@ -29,18 +29,44 @@ import Link from "next/link";
 import { canPerformServiceAction } from "@/lib/permissions";
 import { UserRole } from "@/context/AuthProvider";
 import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
-import { serviceService } from "@/lib/services";
+import { useBooking } from "@/context/BookingProvider";
+import { incomeService, serviceService, workerService, performanceStatsService } from "@/lib/services";
+import { Service } from "@/types";
+
+interface ServiceRevenueStats {
+    name: string;
+    service: string;
+    count: number;
+    income: number;
+    potentialIncome: number;
+    totalIncome: number;
+    percentage: number;
+    lastPerformed: Date;
+}
+
+interface EnrichedService extends Service {
+    description: string;
+    image: string | null;
+    rating: number;
+    popularity: number;
+    color: string;
+    bookings: number;
+    revenue: number;
+}
 
 export default function ServicesPage() {
     const [searchTerm, setSearchTerm] = useState("");
-    const [services, setServices] = useState<any[]>([]);
+    const [services, setServices] = useState<Service[]>([]);
     const { getCardStyle } = useKpiCardStyle();
     const { user, activeSalonId } = useAuth();
     const { t } = useTranslation();
 
+    const [serviceStats, setServiceStats] = useState<ServiceRevenueStats[]>([]);
+
     useMemo(() => {
         if (activeSalonId) {
             serviceService.getAll(Number(activeSalonId)).then(setServices);
+            performanceStatsService.getServicesByRevenue(Number(activeSalonId), undefined, 100).then(setServiceStats);
         }
     }, [activeSalonId]);
 
@@ -50,20 +76,25 @@ export default function ServicesPage() {
     const isManager = ["manager", "admin", "owner", "super_admin"].includes(user?.role || "");
 
     // Mobile Modal State
-    const [selectedService, setSelectedService] = useState<any>(null);
+    const [selectedService, setSelectedService] = useState<EnrichedService | null>(null);
 
     // Enrich services with display properties
     const enrichedServices = useMemo(() =>
-        services.map((service, idx) => ({
-            ...service,
-            description: service.description || `Professional ${service.name} service`,
-            image: service.image || `https://images.unsplash.com/photo-${1580618672591 + idx}?w=400`,
-            rating: 4.5 + (idx % 5) * 0.1,
-            popularity: 70 + (idx % 30),
-            color: idx % 2 === 0 ? "from-[var(--color-primary)] to-[var(--color-primary-dark)]" : "from-[var(--color-secondary)] to-[var(--color-secondary-dark)]",
-            price: typeof service.price === 'string' ? parseFloat(service.price) : service.price
-        })),
-        [services]
+        services.map((service, idx) => {
+            const stat = serviceStats.find(s => s.name === service.name) || { percentage: 0, count: 0, income: 0 };
+            return {
+                ...service,
+                description: service.description || `Professional ${service.name} service`,
+                image: (service as Service & { image?: string }).image || null,
+                rating: 5.0, // Assuming a baseline 5.0 since no distinct review endpoint per service is currently implemented
+                popularity: Math.round(stat.percentage || 0),
+                color: idx % 2 === 0 ? "from-[var(--color-primary)] to-[var(--color-primary-dark)]" : "from-[var(--color-secondary)] to-[var(--color-secondary-dark)]",
+                price: typeof service.price === 'string' ? parseFloat(service.price) : service.price,
+                bookings: stat.count || 0,
+                revenue: stat.income || 0
+            };
+        }),
+        [services, serviceStats]
     );
 
     const totalServices = enrichedServices.length;
@@ -233,8 +264,8 @@ export default function ServicesPage() {
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
                                     {displayServices.map((service, idx) => {
-                                        const bookings = Math.round(service.popularity * 2);
-                                        const revenue = bookings * service.price;
+                                        const bookings = service.bookings || 0;
+                                        const revenue = service.revenue || 0;
                                         return (
                                             <tr
                                                 key={service.id}
@@ -259,7 +290,7 @@ export default function ServicesPage() {
                                                     </div>
                                                 </td>
                                                 <td className="hidden lg:table-cell px-4 py-4 text-sm text-gray-600 font-medium">{service.duration}</td>
-                                                <td className="hidden sm:table-cell px-4 py-4 text-right font-bold text-purple-600 text-sm">€{service.price}</td>
+                                                <td className="hidden sm:table-cell px-4 py-4 text-right font-bold text-color-primary text-sm">€{service.price}</td>
                                                 <td className="hidden md:table-cell px-4 py-4 text-center">
                                                     <div className="flex items-center justify-center gap-1 bg-warning-light px-2 py-1 rounded-lg w-fit mx-auto">
                                                         <Star className="w-3.5 h-3.5 text-warning fill-warning" />
@@ -359,7 +390,7 @@ export default function ServicesPage() {
                                 </div>
                                 <div className="p-4 bg-success-light rounded-2xl">
                                     <p className="text-[10px] font-black text-success uppercase tracking-widest mb-1">{t("services.bookings")}</p>
-                                    <p className="text-lg font-black text-success">{Math.round(selectedService.popularity * 2)}</p>
+                                    <p className="text-lg font-black text-success">{selectedService.bookings}</p>
                                 </div>
                             </div>
 

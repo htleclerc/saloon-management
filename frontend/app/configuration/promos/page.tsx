@@ -118,7 +118,7 @@ export default function PromosPage() {
                 {promoCodes.map((promo) => (
                     <Card key={promo.id} className="flex justify-between items-center p-4">
                         <div className="flex items-center gap-4">
-                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${promo.isActive ? 'bg-purple-100 text-purple-600' : 'bg-gray-100 text-gray-400'}`}>
+                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${promo.isActive ? 'bg-primary-light text-color-primary' : 'bg-gray-100 text-gray-400'}`}>
                                 <Tag className="w-6 h-6" />
                             </div>
                             <div>
@@ -138,7 +138,7 @@ export default function PromosPage() {
                                 {promo.isActive ? 'Active' : 'Inactive'}
                             </button>
                             <ReadOnlyGuard>
-                                <button onClick={() => handleOpenModal(promo)} className="p-2 text-gray-400 hover:text-purple-600 transition-colors">
+                                <button onClick={() => handleOpenModal(promo)} className="p-2 text-gray-400 hover:text-color-primary transition-colors">
                                     <Pencil className="w-4 h-4" />
                                 </button>
                             </ReadOnlyGuard>
@@ -175,7 +175,7 @@ export default function PromosPage() {
                                 value={code}
                                 onChange={(e) => setCode(e.target.value.toUpperCase())}
                                 disabled={!canModify}
-                                className="w-full p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-purple-500 font-bold uppercase tracking-wider disabled:opacity-50"
+                                className="w-full p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary font-bold uppercase tracking-wider disabled:opacity-50"
                                 placeholder="SUMMER2026"
                             />
                         </div>
@@ -187,7 +187,7 @@ export default function PromosPage() {
                                     value={type}
                                     onChange={(e) => setType(e.target.value as any)}
                                     disabled={!canModify}
-                                    className="w-full p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
+                                    className="w-full p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary disabled:opacity-50"
                                 >
                                     <option value="percentage">Percentage (%)</option>
                                     <option value="fixed">Fixed Amount (€)</option>
@@ -200,7 +200,7 @@ export default function PromosPage() {
                                     value={value}
                                     onChange={(e) => setValue(Number(e.target.value))}
                                     disabled={!canModify}
-                                    className="w-full p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-purple-500 font-bold disabled:opacity-50"
+                                    className="w-full p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary font-bold disabled:opacity-50"
                                 />
                             </div>
                         </div>
@@ -213,7 +213,7 @@ export default function PromosPage() {
                                     value={endDate}
                                     onChange={(e) => setEndDate(e.target.value)}
                                     disabled={!canModify}
-                                    className="w-full p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
+                                    className="w-full p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary disabled:opacity-50"
                                     min={new Date().toISOString().split('T')[0]}
                                 />
                             </div>
@@ -224,7 +224,7 @@ export default function PromosPage() {
                                         checked={affectWorkerShare}
                                         onChange={(e) => setAffectWorkerShare(e.target.checked)}
                                         disabled={!canModify}
-                                        className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500 disabled:opacity-50"
+                                        className="w-5 h-5 text-color-primary rounded focus:ring-primary disabled:opacity-50"
                                     />
                                     <span className="text-sm font-medium text-gray-700">Affect Worker Share?</span>
                                 </label>

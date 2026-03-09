@@ -62,9 +62,9 @@ export default function ClientInvoicesPage() {
                         </div>
                     ) : (
                         clientInvoices.map((inc) => (
-                            <Card key={inc.id} className="p-6 flex flex-col gap-4 border-t-4 border-purple-500">
+                            <Card key={inc.id} className="p-6 flex flex-col gap-4 border-t-4 border-color-primary">
                                 <div className="flex justify-between items-start">
-                                    <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600">
+                                    <div className="w-12 h-12 bg-primary-light rounded-xl flex items-center justify-center text-color-primary">
                                         <FileText className="w-6 h-6" />
                                     </div>
                                     <div className="text-right">

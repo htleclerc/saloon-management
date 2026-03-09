@@ -6,6 +6,7 @@
 
 import { BaseService } from './BaseService';
 import type { Service, ServiceCategory } from '@/types';
+import { ServiceCreateSchema, ServiceUpdateSchema } from '@/lib/validators';
 
 export class ServiceService extends BaseService {
     /**
@@ -40,16 +41,8 @@ export class ServiceService extends BaseService {
      * Create a new service
      */
     async create(data: Omit<Service, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>): Promise<Service> {
-        // Validation
-        this.validateRequired(data, ['salonId', 'name', 'price', 'duration']);
-
-        if (data.price < 0) {
-            throw new Error('Price must be positive');
-        }
-
-        if (data.duration <= 0) {
-            throw new Error('Duration must be greater than 0');
-        }
+        // Zod validation (covers required fields, price >= 0, duration > 0)
+        ServiceCreateSchema.parse(data);
 
         // Create
         const service = await this.provider.createService({
@@ -68,13 +61,8 @@ export class ServiceService extends BaseService {
      * Update an existing service
      */
     async update(id: number, data: Partial<Service>): Promise<Service> {
-        if (data.price !== undefined && data.price < 0) {
-            throw new Error('Price must be positive');
-        }
-
-        if (data.duration !== undefined && data.duration <= 0) {
-            throw new Error('Duration must be greater than 0');
-        }
+        // Zod validation (covers price >= 0, duration > 0 when present)
+        ServiceUpdateSchema.parse(data);
 
         const service = await this.provider.updateService(id, {
             ...data,

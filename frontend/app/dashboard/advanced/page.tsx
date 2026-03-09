@@ -11,7 +11,7 @@ import { useAuth, RequirePermission } from "@/context/AuthProvider";
 import { useBooking } from "@/context/BookingProvider";
 import {
     salonService,
-    statsService,
+    revenueStatsService,
     bookingService,
     incomeService,
     expenseService,
@@ -85,13 +85,13 @@ export default function AdvancedDashboardPage() {
                 const salonStats = await salonService.getStats(salonId);
                 setStats(salonStats);
 
-                const revTrend = await statsService.getRevenueTrend(salonId);
+                const revTrend = await revenueStatsService.getRevenueTrend(salonId);
                 setRevenueTrend(revTrend.map(item => ({
                     name: format(new Date(item.month + "-01"), "MMM"),
                     value: item.revenue
                 })));
 
-                const expTrendResult = await statsService.getExpenseTrend(salonId);
+                const expTrendResult = await revenueStatsService.getExpenseTrend(salonId);
                 setExpenseTrend(expTrendResult.map(item => ({
                     name: format(new Date(item.month + "-01"), "MMM"),
                     value: item.amount
@@ -252,19 +252,19 @@ export default function AdvancedDashboardPage() {
                     <div>
                         <h3 className="text-lg font-black text-gray-900 mb-5 tracking-tight uppercase text-xs opacity-50">Actions de Gestion</h3>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <button onClick={() => handleAction("/services")} className="flex items-center justify-between px-8 py-5 bg-white hover:bg-purple-50 text-gray-900 rounded-2xl font-black transition-all shadow-sm border-2 border-transparent hover:border-purple-100 group active:scale-[0.98]">
+                            <button onClick={() => handleAction("/services")} className="flex items-center justify-between px-8 py-5 bg-white hover:bg-primary-light text-gray-900 rounded-2xl font-black transition-all shadow-sm border-2 border-transparent hover:border-color-primary/30 group active:scale-[0.98]">
                                 <div className="flex items-center gap-4">
-                                    <div className="p-3 bg-purple-100 text-purple-600 rounded-xl group-hover:scale-110 transition-transform"><Plus className="w-5 h-5" /></div>
+                                    <div className="p-3 bg-primary-light text-color-primary rounded-xl group-hover:scale-110 transition-transform"><Plus className="w-5 h-5" /></div>
                                     <span className="text-sm">Gérer les Services</span>
                                 </div>
-                                <ArrowUpRight className="w-5 h-5 text-gray-300 group-hover:text-purple-600 group-hover:translate-x-1 transition-all" />
+                                <ArrowUpRight className="w-5 h-5 text-gray-300 group-hover:text-color-primary group-hover:translate-x-1 transition-all" />
                             </button>
-                            <button onClick={() => handleAction("/expenses")} className="flex items-center justify-between px-8 py-5 bg-white hover:bg-pink-50 text-gray-900 rounded-2xl font-black transition-all shadow-sm border-2 border-transparent hover:border-pink-100 group active:scale-[0.98]">
+                            <button onClick={() => handleAction("/expenses")} className="flex items-center justify-between px-8 py-5 bg-white hover:bg-secondary-light text-gray-900 rounded-2xl font-black transition-all shadow-sm border-2 border-transparent hover:border-color-secondary group active:scale-[0.98]">
                                 <div className="flex items-center gap-4">
-                                    <div className="p-3 bg-pink-100 text-pink-600 rounded-xl group-hover:scale-110 transition-transform"><Wallet className="w-5 h-5" /></div>
+                                    <div className="p-3 bg-secondary-light text-color-secondary rounded-xl group-hover:scale-110 transition-transform"><Wallet className="w-5 h-5" /></div>
                                     <span className="text-sm">Nouvelle Dépense</span>
                                 </div>
-                                <ArrowUpRight className="w-5 h-5 text-gray-300 group-hover:text-pink-600 group-hover:translate-x-1 transition-all" />
+                                <ArrowUpRight className="w-5 h-5 text-gray-300 group-hover:text-color-secondary group-hover:translate-x-1 transition-all" />
                             </button>
                             <button onClick={() => handleAction("/team")} className="flex items-center justify-between px-8 py-5 bg-white hover:bg-emerald-50 text-gray-900 rounded-2xl font-black transition-all shadow-sm border-2 border-transparent hover:border-emerald-100 group active:scale-[0.98]">
                                 <div className="flex items-center gap-4">
@@ -284,7 +284,7 @@ export default function AdvancedDashboardPage() {
                                     <h3 className="text-xl font-black text-gray-900 tracking-tight group-hover:text-[var(--color-primary)] transition-colors italic">Chiffre d'Affaires Mensuel</h3>
                                     <p className="text-sm text-gray-400 font-medium italic">Evolution annuelle de vos revenus</p>
                                 </div>
-                                <span className="bg-purple-50 text-purple-700 text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest border border-purple-100"> Annuel </span>
+                                <span className="bg-primary-light text-color-primary text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest border border-color-primary/30"> Annuel </span>
                             </div>
                             <div className="h-[250px]">
                                 <ResponsiveContainer width="100%" height="100%">
@@ -305,7 +305,7 @@ export default function AdvancedDashboardPage() {
                                     <h3 className="text-xl font-black text-gray-900 tracking-tight group-hover:text-[var(--color-secondary)] transition-colors italic">Dépenses Mensuelles</h3>
                                     <p className="text-sm text-gray-400 font-medium italic">Evolution annuelle de vos frais</p>
                                 </div>
-                                <span className="bg-pink-50 text-pink-700 text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest border border-pink-100"> Annuel </span>
+                                <span className="bg-secondary-light text-color-secondary text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest border border-color-secondary"> Annuel </span>
                             </div>
                             <div className="h-[250px]">
                                 <ResponsiveContainer width="100%" height="100%">
@@ -407,7 +407,7 @@ export default function AdvancedDashboardPage() {
                             <h3 className="text-xl font-black text-gray-900 tracking-tight mb-8 italic">Détails des Dépenses</h3>
                             <div className="space-y-5">
                                 {expenseCategories.map((cat, idx) => (
-                                    <div key={idx} className="flex items-center justify-between p-6 bg-gray-50 rounded-2xl hover:bg-white hover:shadow-xl hover:border-purple-100 border border-transparent transition-all duration-300 group">
+                                    <div key={idx} className="flex items-center justify-between p-6 bg-gray-50 rounded-2xl hover:bg-white hover:shadow-xl hover:border-color-primary/30 border border-transparent transition-all duration-300 group">
                                         <div className="flex items-center gap-5">
                                             <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform" style={{ backgroundColor: cat.color }}>
                                                 <Briefcase className="w-7 h-7" />
@@ -447,7 +447,7 @@ export default function AdvancedDashboardPage() {
                                 <Card key={worker.workerId} className="p-6 flex flex-col gap-4 hover:shadow-2xl transition-all duration-300 border-none rounded-3xl group cursor-pointer" onClick={() => handleAction(`/team/detail/${worker.workerId}`)}>
                                     <div className="flex items-center gap-4">
                                         <div className="relative">
-                                            <div className="w-16 h-16 rounded-2xl bg-purple-100 flex items-center justify-center text-[var(--color-primary)] font-black text-2xl shadow-inner group-hover:scale-105 transition-transform duration-500">
+                                            <div className="w-16 h-16 rounded-2xl bg-primary-light flex items-center justify-center text-[var(--color-primary)] font-black text-2xl shadow-inner group-hover:scale-105 transition-transform duration-500">
                                                 {worker.name.charAt(0)}
                                             </div>
                                             <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 border-4 border-white rounded-full"></div>
@@ -470,7 +470,7 @@ export default function AdvancedDashboardPage() {
                                         </div>
                                     </div>
                                     <div className="w-full h-1.5 bg-gray-50 rounded-full mt-2 overflow-hidden shadow-inner">
-                                        <div className="h-full bg-[var(--color-primary)] rounded-full group-hover:bg-purple-600 transition-all duration-700" style={{ width: `${Math.random() * 40 + 60}%` }}></div>
+                                        <div className="h-full bg-[var(--color-primary)] rounded-full group-hover:bg-primary transition-all duration-700" style={{ width: `${Math.random() * 40 + 60}%` }}></div>
                                     </div>
                                 </Card>
                             ))}
@@ -500,7 +500,7 @@ export default function AdvancedDashboardPage() {
                                 </thead>
                                 <tbody className="divide-y divide-gray-50">
                                     {recentSessions.length > 0 ? recentSessions.map((session, index) => (
-                                        <tr key={index} className="hover:bg-purple-50/30 transition-colors group">
+                                        <tr key={index} className="hover:bg-primary-light/30 transition-colors group">
                                             <td className="py-6 pr-4 text-sm font-black text-gray-900 tabular-nums">{session.time}</td>
                                             <td className="py-6 pr-4">
                                                 <div className="flex items-center gap-4">
@@ -526,7 +526,7 @@ export default function AdvancedDashboardPage() {
                                                 </span>
                                             </td>
                                             <td className="py-6 text-right">
-                                                <button onClick={() => handleAction(`/bookings`)} className="p-3 bg-white text-gray-300 rounded-xl hover:text-purple-600 border border-gray-100 hover:border-purple-200 shadow-sm transition-all active:scale-90">
+                                                <button onClick={() => handleAction(`/bookings`)} className="p-3 bg-white text-gray-300 rounded-xl hover:text-color-primary border border-gray-100 hover:border-color-primary/30 shadow-sm transition-all active:scale-90">
                                                     <Calendar className="w-5 h-5" />
                                                 </button>
                                             </td>

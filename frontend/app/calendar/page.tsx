@@ -201,7 +201,7 @@ export default function CalendarPage() {
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                     {DEFAULT_TIME_SLOTS.map((time) => {
                         const isClosed = capacity.closedSlots.includes(time) || capacity.isClosed;
-                        const bookingsInSlot = activeBookings.filter(b => b.time === time);
+                        const bookingsInSlot = activeBookings.filter(b => b.time?.slice(0, 5) === time);
                         const isFull = bookingsInSlot.length >= capacity.maxSlots;
                         const isOverbooked = bookingsInSlot.length > capacity.maxSlots;
 
@@ -253,7 +253,7 @@ export default function CalendarPage() {
                                 {/* Floating Tooltip with appointments list on hover */}
                                 {bookingsInSlot.length > 0 && (
                                     <div className="absolute left-0 bottom-full mb-2 w-48 bg-gray-900 text-white p-2 rounded-lg text-[10px] invisible group-hover:visible z-50 shadow-xl border border-gray-800 animate-in fade-in slide-in-from-bottom-1">
-                                        <p className="font-bold border-b border-gray-700 pb-1 mb-1 text-purple-400">Bookings ({bookingsInSlot.length})</p>
+                                        <p className="font-bold border-b border-gray-700 pb-1 mb-1 text-color-primary">Bookings ({bookingsInSlot.length})</p>
                                         <div className="space-y-1 max-h-32 overflow-y-auto">
                                             {bookingsInSlot.map((b, i) => (
                                                 <div key={i} className="flex items-center justify-between">

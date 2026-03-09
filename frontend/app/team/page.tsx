@@ -13,7 +13,7 @@ import { Users, DollarSign, TrendingUp, Star, Plus, Eye, Edit, Filter, Download,
 import { RequirePermission, useAuth } from "@/context/AuthProvider";
 import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
 import { useCurrency } from "@/hooks/useCurrency";
-import { workerService, statsService } from "@/lib/services";
+import { workerService, revenueStatsService, performanceStatsService } from "@/lib/services";
 import {
     LineChart,
     Line,
@@ -31,9 +31,130 @@ import {
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 import { useTranslation } from "@/i18n";
+import type { SalonWorker, Booking, Income } from "@/types";
 
+// ── Local types for enriched worker and chart data ──
 
+interface EnrichedWorker extends SalonWorker {
+    totalRevenue: number;
+    monthRevenue: number;
+    yearRevenue: number;
+    totalSalary: number;
+    monthSalary: number;
+    yearSalary: number;
+    clients: number;
+    rating: number;
+    services: number;
+}
 
+interface TeamStats {
+    activeWorkers: number;
+    totalRevenue: number;
+    totalSalary: number;
+    totalClients: number;
+}
+
+interface ChartPoint {
+    name: string;
+    value: number;
+    actualValue: number;
+}
+
+interface ClientVolumePoint {
+    month: string;
+    value: number;
+    actualValue: number;
+}
+
+interface EarningsBreakdownPoint {
+    name: string;
+    value: number;
+    actualValue: number;
+    color: string;
+}
+
+interface WeeklyPerformanceRow {
+    date: string;
+    clients: number;
+    services: number;
+    income: number;
+    expenses: number;
+    profit: number;
+}
+
+interface SalaryPerformancePoint {
+    name: string;
+    value1: number;
+    value1Potential: number;
+    value2: number;
+    value2Potential: number;
+    value3: number;
+    value4: number;
+    v1Potential: number;
+    actual1: number;
+    actual2: number;
+    actual3: number;
+    actual4: number;
+    actualPotential1: number;
+}
+
+interface RecentActivityItem {
+    id: string;
+    type: string;
+    metadata: {
+        status?: string;
+        client?: string;
+        amount?: number;
+    };
+    time: Date;
+    original: Booking | Income;
+    action?: string;
+}
+
+interface ReviewItem {
+    id: number;
+    client: string;
+    rating: number;
+    comment: string;
+    date: string;
+    service: string;
+    avatar: string;
+    color: string;
+}
+
+interface ServiceTimeDistItem {
+    [key: string]: unknown;
+    name: string;
+    value: number;
+    actualValue: number;
+    color: string;
+}
+
+interface TopServiceItem {
+    name: string;
+    service: string;
+    count: number;
+    income: number;
+    potentialIncome: number;
+    totalIncome: number;
+    percentage: number;
+    actualPercentage: number;
+    lastPerformed: Date;
+    color?: string;
+}
+
+interface OverallPerformancePoint {
+    month: string;
+    value1: number;
+    value1Potential: number;
+    value2: number;
+    value3: number;
+    value4: number;
+    actual1: number;
+    actual2: number;
+    actual3: number;
+    actual4: number;
+}
 
 function TeamPageContent() {
     const searchParams = useSearchParams();
@@ -48,9 +169,9 @@ function TeamPageContent() {
     const [sortBy, setSortBy] = useState("Highest Income");
 
     // Real Data State
-    const [workers, setWorkers] = useState<any[]>([]);
+    const [workers, setWorkers] = useState<EnrichedWorker[]>([]);
     const [loading, setLoading] = useState(true);
-    const [stats, setStats] = useState<any>({
+    const [stats, setStats] = useState<TeamStats>({
         activeWorkers: 0,
         totalRevenue: 0,
         totalSalary: 0,
@@ -58,18 +179,18 @@ function TeamPageContent() {
     });
 
     // Chart states
-    const [revenueTrend, setRevenueTrend] = useState<any[]>([]);
-    const [clientVolume, setClientVolume] = useState<any[]>([]);
-    const [earningsBreakdown, setEarningsBreakdown] = useState<any[]>([]);
-    const [weeklyPerformance, setWeeklyPerformance] = useState<any[]>([]);
+    const [revenueTrend, setRevenueTrend] = useState<ChartPoint[]>([]);
+    const [clientVolume, setClientVolume] = useState<ClientVolumePoint[]>([]);
+    const [earningsBreakdown, setEarningsBreakdown] = useState<EarningsBreakdownPoint[]>([]);
+    const [weeklyPerformance, setWeeklyPerformance] = useState<WeeklyPerformanceRow[]>([]);
 
-    const [salaryPerformance, setSalaryPerformance] = useState<any[]>([]);
+    const [salaryPerformance, setSalaryPerformance] = useState<SalaryPerformancePoint[]>([]);
     const [salaryPeriod, setSalaryPeriod] = useState('Month');
-    const [recentActivity, setRecentActivity] = useState<any[]>([]);
-    const [recentReviews, setRecentReviews] = useState<any[]>([]);
-    const [serviceTimeDist, setServiceTimeDist] = useState<any[]>([]);
-    const [topServices, setTopServices] = useState<any[]>([]);
-    const [overallPerformance, setOverallPerformance] = useState<any[]>([]);
+    const [recentActivity, setRecentActivity] = useState<RecentActivityItem[]>([]);
+    const [recentReviews, setRecentReviews] = useState<ReviewItem[]>([]);
+    const [serviceTimeDist, setServiceTimeDist] = useState<ServiceTimeDistItem[]>([]);
+    const [topServices, setTopServices] = useState<TopServiceItem[]>([]);
+    const [overallPerformance, setOverallPerformance] = useState<OverallPerformancePoint[]>([]);
 
     useEffect(() => {
         if (!activeSalonId) return;
@@ -79,17 +200,17 @@ function TeamPageContent() {
                 // Fetch workers and stats
                 const [workersList, workersStats, trend, clientVol, earnings, weeklyPerf, salaryPerf, activity, reviews, serviceTime, topSvc, overallPerf] = await Promise.all([
                     workerService.getAll(salonId),
-                    statsService.getAllWorkersStats(salonId),
-                    statsService.getRevenueTrend(salonId, 6),
-                    statsService.getClientVolumeTrend(salonId, 0),
-                    statsService.getEarningsBreakdown(salonId, 0),
-                    statsService.getWeeklyPerformanceDetails(salonId, 0),
-                    statsService.getSalaryPerformanceByPeriod(salonId, 0, salaryPeriod),
-                    statsService.getRecentWorkerActivity(salonId, 0, 5),
-                    statsService.getAllReviews(salonId, 5),
-                    statsService.getServiceTimeDistribution(salonId, 0),
-                    statsService.getServicesByRevenue(salonId, undefined, 5),
-                    statsService.getOverallPerformance(salonId, 0)
+                    performanceStatsService.getAllWorkersStats(salonId),
+                    revenueStatsService.getRevenueTrend(salonId, 6),
+                    performanceStatsService.getClientVolumeTrend(salonId, 0),
+                    performanceStatsService.getEarningsBreakdown(salonId, 0),
+                    performanceStatsService.getWeeklyPerformanceDetails(salonId, 0),
+                    performanceStatsService.getSalaryPerformanceByPeriod(salonId, 0, salaryPeriod),
+                    performanceStatsService.getRecentWorkerActivity(salonId, 0, 5),
+                    performanceStatsService.getAllReviews(salonId, 5),
+                    performanceStatsService.getServiceTimeDistribution(salonId, 0),
+                    performanceStatsService.getServicesByRevenue(salonId, undefined, 5),
+                    performanceStatsService.getOverallPerformance(salonId, 0)
                 ]);
 
                 // Merge data
@@ -403,7 +524,7 @@ function TeamPageContent() {
                                         <h4 className="font-semibold text-sm md:text-base text-gray-900 truncate">{worker.name}</h4>
                                         <div className="flex items-center gap-2 md:mt-1">
                                             <span className={`text-[10px] md:text-xs px-1.5 md:px-2 py-0.5 rounded-full ${worker.status === "Active" ? "bg-[var(--color-success-light)] text-[var(--color-success)]" : "bg-gray-100 text-gray-700"}`}>
-                                                {worker.status}
+                                                {worker.status === "Active" ? t("common.active") : t("common.inactive")}
                                             </span>
                                             <div className="flex items-center gap-0.5 md:gap-1">
                                                 <Star className="w-2.5 h-2.5 md:w-3 md:h-3 text-[var(--color-warning)] fill-[var(--color-warning)]" />
@@ -550,7 +671,7 @@ function TeamPageContent() {
                                         </td>
                                         <td className="px-4 py-4">
                                             <span className={`text-xs px-2 py-1 rounded-full ${worker.status === "Active" ? "bg-[var(--color-success-light)] text-[var(--color-success)]" : "bg-gray-100 text-gray-700"}`}>
-                                                {worker.status}
+                                                {worker.status === "Active" ? t("common.active") : t("common.inactive")}
                                             </span>
                                         </td>
                                         <td className="px-4 py-4 text-[var(--color-primary)] font-semibold">{worker.sharingKey}%</td>
@@ -678,19 +799,19 @@ function TeamPageContent() {
                 <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-600">{t("team.timePeriod")}</span>
                     <select value={timeFilter} onChange={(e) => setTimeFilter(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]">
-                        <option>{t("team.currentMonth")}</option><option>{t("team.lastMonth")}</option><option>{t("team.last3Months")}</option><option>{t("team.thisYear")}</option>
+                        <option value="Current Month">{t("team.currentMonth")}</option><option value="Last Month">{t("team.lastMonth")}</option><option value="Last 3 Months">{t("team.last3Months")}</option><option value="This Year">{t("team.thisYear")}</option>
                     </select>
                 </div>
                 <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-600">{t("common.status")}</span>
                     <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]">
-                        <option>{t("common.allStatuses")}</option><option>{t("common.active")}</option><option>{t("common.inactive")}</option>
+                        <option value="All Status">{t("common.allStatuses")}</option><option value="Active">{t("common.active")}</option><option value="Inactive">{t("common.inactive")}</option>
                     </select>
                 </div>
                 <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-600">{t("team.sortBy")}</span>
                     <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]">
-                        <option>{t("team.highestIncome")}</option><option>{t("team.lowestIncome")}</option><option>{t("team.highestRating")}</option><option>{t("team.mostClients")}</option>
+                        <option value="Highest Income">{t("team.highestIncome")}</option><option value="Lowest Income">{t("team.lowestIncome")}</option><option value="Highest Rating">{t("team.highestRating")}</option><option value="Most Clients">{t("team.mostClients")}</option>
                     </select>
                 </div>
                 <div className="flex-1"></div>
@@ -756,9 +877,9 @@ function TeamPageContent() {
                                         <td className="px-4 py-4 text-right font-semibold text-[var(--color-secondary)]">{format(worker.monthSalary)}</td>
                                         <td className="px-4 py-4 text-right font-semibold text-gray-900">{format(worker.yearRevenue)}</td>
                                         <td className="px-4 py-4 text-right font-semibold text-[var(--color-success)]">{format(worker.yearSalary)}</td>
-                                        <td className="px-4 py-4 text-center"><span className="text-gray-900 font-medium">{worker.clients}</span><br /><span className="text-xs text-gray-500">clients</span></td>
+                                        <td className="px-4 py-4 text-center"><span className="text-gray-900 font-medium">{worker.clients}</span><br /><span className="text-xs text-gray-500">{t("common.clients")}</span></td>
                                         <td className="px-4 py-4 text-center"><div className="flex items-center justify-center gap-1"><Star className="w-4 h-4 text-[var(--color-warning)] fill-[var(--color-warning)]" /><span className="font-semibold text-gray-900">{worker.rating}</span></div></td>
-                                        <td className="px-4 py-4 text-center"><span className={`px-2 py-1 rounded-full text-xs font-medium ${worker.status === "Active" ? "bg-[var(--color-success-light)] text-[var(--color-success)]" : "bg-[var(--color-error-light)] text-[var(--color-error)]"}`}>{worker.status}</span></td>
+                                        <td className="px-4 py-4 text-center"><span className={`px-2 py-1 rounded-full text-xs font-medium ${worker.status === "Active" ? "bg-[var(--color-success-light)] text-[var(--color-success)]" : "bg-[var(--color-error-light)] text-[var(--color-error)]"}`}>{worker.status === "Active" ? t("common.active") : t("common.inactive")}</span></td>
                                         <td className="px-4 py-4"><div className="flex items-center justify-center gap-2"><Link href={`/team/detail/${worker.id}`}><button className="p-2 hover:bg-[var(--color-primary-light)] rounded-lg transition text-[var(--color-primary)]"><Eye className="w-4 h-4" /></button></Link><RequirePermission role={['manager']}><ReadOnlyGuard><Link href={`/team/edit-advanced/${worker.id}`}><button className="p-2 hover:bg-[var(--color-secondary-light)] rounded-lg transition text-[var(--color-secondary)]"><Edit className="w-4 h-4" /></button></Link></ReadOnlyGuard></RequirePermission></div></td>
                                     </tr>
                                 ))
@@ -823,7 +944,7 @@ function TeamPageContent() {
                             <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
                             <Tooltip
                                 contentStyle={{ borderRadius: "8px", border: "none", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}
-                                formatter={(value: any, name: string | undefined, props: any) => [props.payload.actualValue || 0, t("common.revenue")]}
+                                formatter={(_value, _name, item) => [(item.payload as ChartPoint).actualValue || 0, t("common.revenue")]}
                             />
                             <Bar dataKey="value" fill="var(--color-primary)" radius={[4, 4, 0, 0]} />
                         </BarChart>
@@ -845,7 +966,7 @@ function TeamPageContent() {
                             />
                             <Tooltip
                                 contentStyle={{ borderRadius: "8px", border: "none", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}
-                                formatter={(value: any, name: string | undefined, props: any) => [props.payload.actualValue || 0, t("common.client")]}
+                                formatter={(_value, _name, item) => [(item.payload as ClientVolumePoint).actualValue || 0, t("common.client")]}
                             />
                             <Line type="monotone" dataKey="value" stroke="var(--color-secondary)" strokeWidth={3} dot={{ fill: "var(--color-secondary)", r: 4 }} />
                         </LineChart>
@@ -870,7 +991,7 @@ function TeamPageContent() {
                         />
                         <Tooltip
                             contentStyle={{ borderRadius: "8px", border: "none", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}
-                            formatter={(value: any, name: string | undefined, props: any) => [props.payload.actualValue || 0, t("common.value")]}
+                            formatter={(_value, _name, item) => [(item.payload as EarningsBreakdownPoint).actualValue || 0, t("common.value")]}
                         />
                         <Bar dataKey="value" fill="var(--color-primary)" radius={[4, 4, 0, 0]}>
                             {earningsBreakdown.map((entry, index) => (
@@ -909,7 +1030,7 @@ function TeamPageContent() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
-                            {weeklyPerformance.map((row: any, idx) => (
+                            {weeklyPerformance.map((row: WeeklyPerformanceRow, idx) => (
                                 <tr key={idx} className="hover:bg-gray-50">
                                     <td className="px-3 py-3 text-gray-900 font-medium">{row.date}</td>
                                     <td className="px-3 py-3 text-center text-gray-600">{row.clients}</td>
@@ -968,8 +1089,9 @@ function TeamPageContent() {
                         />
                         <Tooltip
                             contentStyle={{ borderRadius: "8px", border: "none", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}
-                            formatter={(value: any, name: string | undefined, props: any) => {
-                                const payload = props.payload;
+                            formatter={(value, name, item) => {
+                                const payload = item.payload as SalaryPerformancePoint;
+                                const dataKey = item.dataKey as string;
                                 const labels: Record<string, string> = {
                                     value1: t("team.income"),
                                     v1Potential: t("common.potential"),
@@ -977,9 +1099,9 @@ function TeamPageContent() {
                                     value3: t("common.expenses"),
                                     value4: t("team.profit")
                                 };
-                                const key = props.dataKey;
+                                const key = dataKey as keyof SalaryPerformancePoint;
                                 const val = payload[key] || value || 0;
-                                return [format(val), labels[key] || (name || "")];
+                                return [format(val as number), labels[dataKey] || (name || "")];
                             }}
                         />
                         <Bar dataKey="value1" stackId="income" fill="var(--color-primary)" name={t("team.income")} />
@@ -1064,7 +1186,7 @@ function TeamPageContent() {
                                         {serviceTimeDist.map((entry, index) => (<Cell key={`cell - ${index} `} fill={entry.color} />))}
                                     </Pie>
                                     <Tooltip
-                                        formatter={(value: any, name: string | undefined, props: any) => [`${props.payload.actualValue || 0}%`, name]}
+                                        formatter={(_value, name, item) => [`${(item.payload as ServiceTimeDistItem).actualValue || 0}%`, name]}
                                     />
                                 </PieChart>
                             </ResponsiveContainer>
@@ -1118,8 +1240,9 @@ function TeamPageContent() {
                         />
                         <Tooltip
                             contentStyle={{ borderRadius: "8px", border: "none", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}
-                            formatter={(value: any, name: string | undefined, props: any) => {
-                                const payload = props.payload;
+                            formatter={(value, name, item) => {
+                                const payload = item.payload as OverallPerformancePoint;
+                                const dataKey = item.dataKey as string;
                                 const labels: Record<string, string> = {
                                     value1: t("team.income"),
                                     v1Potential: t("common.potential"),
@@ -1127,9 +1250,9 @@ function TeamPageContent() {
                                     value3: t("common.expenses"),
                                     value4: t("team.profit")
                                 };
-                                const key = props.dataKey;
+                                const key = dataKey as keyof OverallPerformancePoint;
                                 const val = payload[key] || value || 0;
-                                return [format(val), labels[key] || (name || "")];
+                                return [format(val as number), labels[dataKey] || (name || "")];
                             }}
                         />
                         <Bar dataKey="value1" fill="var(--color-primary)" name={t("team.income")} />
@@ -1150,15 +1273,15 @@ function TeamPageContent() {
             {/* Annual Summary Table */}
             <Card className="overflow-hidden">
                 <div className="p-8 text-center text-gray-400">
-                    <p className="font-medium">Annual Performance Summary</p>
-                    <p className="text-sm mt-1">Detailed annual breakdown coming soon</p>
+                    <p className="font-medium">{t("team.annualPerformanceSummary")}</p>
+                    <p className="text-sm mt-1">{t("team.annualBreakdownSoon")}</p>
                 </div>
             </Card>
         </div >
     );
 
     return (
-        <TeamLayout title="Team Overview" description="Manage your team and track their performance">
+        <TeamLayout title={t("common.team")} description={t("team.manageDescription") || "Manage your team and track their performance"}>
             <div className="space-y-6">
                 {/* View Toggle + Quick Actions */}
                 <div className="flex flex-wrap items-center justify-between gap-4">
@@ -1171,7 +1294,7 @@ function TeamPageContent() {
                                 }`}
                         >
                             <LayoutGrid className="w-4 h-4" />
-                            <span>Simple List</span>
+                            <span>{t("common.simpleList")}</span>
                         </button>
                         <button
                             onClick={() => setViewMode("advanced")}
@@ -1181,7 +1304,7 @@ function TeamPageContent() {
                                 }`}
                         >
                             <Table className="w-4 h-4" />
-                            <span>Advanced View</span>
+                            <span>{t("common.advancedView")}</span>
                         </button>
                     </div>
                     <div className="flex w-full md:w-auto items-center justify-end gap-3">
@@ -1190,15 +1313,15 @@ function TeamPageContent() {
                                 <Link href="/team/add">
                                     <Button variant="outline" size="md" className="rounded-2xl h-14 w-14 md:h-12 md:w-auto md:px-6 flex items-center justify-center p-0 md:p-auto shadow-sm active:scale-95 transition-all">
                                         <Plus className="w-8 h-8 md:w-6 md:h-6" />
-                                        <span className="hidden md:inline ml-2 text-sm font-bold whitespace-nowrap">Quick Add</span>
+                                        <span className="hidden md:inline ml-2 text-sm font-bold whitespace-nowrap">{t("team.quickAdd")}</span>
                                     </Button>
                                 </Link>
                             </ReadOnlyGuard>
                             <ReadOnlyGuard>
                                 <Link href="/team/add-advanced">
-                                    <Button variant="primary" size="md" className="rounded-2xl h-14 w-14 md:h-12 md:w-auto md:px-6 flex items-center justify-center p-0 md:p-auto shadow-xl shadow-purple-500/30 active:scale-95 transition-all">
+                                    <Button variant="primary" size="md" className="rounded-2xl h-14 w-14 md:h-12 md:w-auto md:px-6 flex items-center justify-center p-0 md:p-auto shadow-xl shadow-[color:var(--color-primary)]/20 active:scale-95 transition-all">
                                         <Plus className="w-8 h-8 md:w-6 md:h-6" />
-                                        <span className="hidden md:inline ml-2 text-sm font-bold whitespace-nowrap">Complete Form</span>
+                                        <span className="hidden md:inline ml-2 text-sm font-bold whitespace-nowrap">{t("team.completeForm")}</span>
                                     </Button>
                                 </Link>
                             </ReadOnlyGuard>

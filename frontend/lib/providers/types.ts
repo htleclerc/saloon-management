@@ -26,6 +26,8 @@ import {
     Review, ReviewFilters,
     // Promo
     PromoCode,
+    // Payroll
+    SalaryPayment, PaymentStatusHistory, PaymentStatus, PayrollFilters,
     // Audit
     InteractionHistory, SalonComment,
     // Filters
@@ -44,6 +46,7 @@ export type {
     ExpenseCategory, Expense, ExpenseFilters,
     Review, ReviewFilters,
     PromoCode,
+    SalaryPayment, PaymentStatusHistory, PaymentStatus, PayrollFilters,
     InteractionHistory, SalonComment,
     PaginationParams, PaginatedResponse
 };
@@ -156,7 +159,7 @@ export interface IDataProvider {
     getProducts(salonId: number): Promise<Product[]>;
     getProduct(id: number): Promise<Product | null>;
     getProductBySku(salonId: number, sku: string): Promise<Product | null>;
-    createProduct(data: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>): Promise<Product>;
+    createProduct(data: Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>): Promise<Product>;
     updateProduct(id: number, data: Partial<Product>): Promise<Product>;
     deleteProduct(id: number): Promise<void>;
     updateProductStock(id: number, quantity: number): Promise<Product>;
@@ -197,7 +200,7 @@ export interface IDataProvider {
     deleteIncome(id: number): Promise<void>;
 
     // Income-Worker Junction
-    addWorkerToIncome(incomeId: number, workerId: number, amount: number, percentage: number): Promise<IncomeWorkerShare>;
+    addWorkerToIncome(incomeId: number, workerId: number, amount: number, percentage: number, tips?: number): Promise<IncomeWorkerShare>;
     removeWorkerFromIncome(incomeId: number, workerId: number): Promise<void>;
     getIncomeWorkerShares(incomeId: number): Promise<IncomeWorkerShare[]>;
 
@@ -250,7 +253,7 @@ export interface IDataProvider {
     getPromoCodes(salonId: number): Promise<PromoCode[]>;
     getPromoCode(id: number): Promise<PromoCode | null>;
     getPromoCodeByCode(salonId: number, code: string): Promise<PromoCode | null>;
-    createPromoCode(data: Omit<PromoCode, 'id' | 'createdAt' | 'updatedAt'>): Promise<PromoCode>;
+    createPromoCode(data: Omit<PromoCode, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>): Promise<PromoCode>;
     updatePromoCode(id: number, data: Partial<PromoCode>): Promise<PromoCode>;
     deletePromoCode(id: number): Promise<void>;
     incrementPromoCodeUsage(id: number): Promise<void>;
@@ -266,10 +269,28 @@ export interface IDataProvider {
     deleteComment(id: number): Promise<void>;
 
     // ============================================
+    // PAYROLL / SALARY PAYMENTS
+    // ============================================
+    getSalaryPayments(salonId: number, filters?: PayrollFilters): Promise<SalaryPayment[]>;
+    getSalaryPayment(id: number): Promise<SalaryPayment | null>;
+    getSalaryPaymentsByWorker(workerId: number, limit?: number): Promise<SalaryPayment[]>;
+    getSalaryPaymentsByMonth(salonId: number, month: string): Promise<SalaryPayment[]>;
+    getSalaryPaymentsByStatus(salonId: number, status: PaymentStatus): Promise<SalaryPayment[]>;
+    createSalaryPayment(data: Omit<SalaryPayment, 'id' | 'createdAt' | 'updatedAt'>): Promise<SalaryPayment>;
+    updateSalaryPayment(id: number, data: Partial<SalaryPayment>): Promise<SalaryPayment>;
+    updateSalaryPaymentStatus(id: number, status: PaymentStatus, userId: number, reason?: string): Promise<void>;
+    deleteSalaryPayment(id: number): Promise<void>;
+
+    // Payment Status History
+    getPaymentStatusHistory(paymentId: number): Promise<PaymentStatusHistory[]>;
+    getPaymentStatusHistoryBulk(paymentIds: number[]): Promise<PaymentStatusHistory[]>;
+    createPaymentStatusHistory(data: Omit<PaymentStatusHistory, 'id'>): Promise<PaymentStatusHistory>;
+
+    // ============================================
     // UTILS / TOKENS
     // ============================================
-    createOneTimeToken(type: string, payload: any, expiresInMinutes?: number): Promise<string | null>;
-    consumeOneTimeToken(tokenId: string): Promise<any | null>;
+    createOneTimeToken(type: string, payload: unknown, expiresInMinutes?: number): Promise<string | null>;
+    consumeOneTimeToken(tokenId: string): Promise<unknown | null>;
 }
 
 /**
@@ -319,7 +340,7 @@ export class DataProviderFactory {
 export function getCurrentProvider(): IDataProvider {
     // Get mode from context/config
     const mode = (typeof window !== 'undefined'
-        ? localStorage.getItem('data-mode')
+        ? localStorage.getItem('saloon-data-mode')
         : 'demo-supabase') as DataMode || 'demo-supabase';
 
     return DataProviderFactory.create(mode);

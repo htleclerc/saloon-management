@@ -6,6 +6,7 @@
 
 import { BaseService } from './BaseService';
 import { Client, Salon, ClientStats, ClientAnalytics } from '@/types';
+import { ClientCreateSchema } from '@/lib/validators';
 
 export class ClientService extends BaseService {
     /**
@@ -36,16 +37,8 @@ export class ClientService extends BaseService {
      * Create a new client
      */
     async create(data: Omit<Client, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>): Promise<Client> {
-        // Business validation
-        this.validateRequired(data, ['salonId', 'name']); // Email and phone are optional
-
-        if (data.email && !this.validateEmail(data.email)) {
-            throw new Error('Valid email is required');
-        }
-
-        if (data.phone && !this.validatePhone(data.phone)) {
-            throw new Error('Valid phone number is required');
-        }
+        // Zod validation
+        ClientCreateSchema.parse(data);
 
         if (data.email) {
             const existingClient = await this.provider.getClientByEmail(data.salonId, data.email);
@@ -60,7 +53,7 @@ export class ClientService extends BaseService {
                     ...data,
                     createdBy: this.getCurrentUser(),
                     updatedBy: this.getCurrentUser()
-                } as any);
+                } as Omit<Client, 'id' | 'createdAt' | 'updatedAt'>);
             },
             'Failed to create client'
         );
@@ -70,11 +63,6 @@ export class ClientService extends BaseService {
      * Update an existing client
      */
     async update(id: number, data: Partial<Client>): Promise<Client> {
-        // Business validation
-        if (data.email && !this.validateEmail(data.email)) {
-            throw new Error('Valid email is required');
-        }
-
         return this.handleError(
             async () => {
                 return await this.provider.updateClient(id, {
@@ -121,14 +109,6 @@ export class ClientService extends BaseService {
     }
 
     /**
-     * Validate email format
-     */
-    private isValidEmail(email: string): boolean {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    }
-
-    /**
      * Format phone number
      */
     formatPhoneNumber(phone: string): string {
@@ -148,15 +128,18 @@ export class ClientService extends BaseService {
      */
     async getFavorites(clientId: number): Promise<Salon[]> {
         // Try to get from localStorage (for demo modes)
-        const dataMode = (typeof window !== 'undefined'
+        const dataMode = ((typeof window !== 'undefined'
             ? localStorage.getItem('saloon-data-mode')
-            : 'demo-local') as 'demo-local' | 'demo-supabase' | 'normal' || 'demo-local';
+            : null) || 'demo-local') as 'demo-local' | 'demo-supabase' | 'normal';
 
         if (dataMode === 'demo-local') {
             // Get from localStorage
             const favoritesKey = `client-${clientId}-favorites`;
             const storedFavorites = typeof window !== 'undefined' ? localStorage.getItem(favoritesKey) : null;
-            const favoriteIds: number[] = storedFavorites ? JSON.parse(storedFavorites) : [1]; // Default to Demo Salon
+            let favoriteIds: number[] = [1]; // Default to Demo Salon
+            if (storedFavorites) {
+                try { favoriteIds = JSON.parse(storedFavorites); } catch { /* use default */ }
+            }
 
             // Get salons by IDs
             const allSalons = await this.provider.getSalons();
@@ -172,14 +155,17 @@ export class ClientService extends BaseService {
      * Add salon to favorites
      */
     async addFavorite(clientId: number, salonId: number): Promise<void> {
-        const dataMode = (typeof window !== 'undefined'
+        const dataMode = ((typeof window !== 'undefined'
             ? localStorage.getItem('saloon-data-mode')
-            : 'demo-local') as 'demo-local' | 'demo-supabase' | 'normal' || 'demo-local';
+            : null) || 'demo-local') as 'demo-local' | 'demo-supabase' | 'normal';
 
         if (dataMode === 'demo-local') {
             const favoritesKey = `client-${clientId}-favorites`;
             const storedFavorites = typeof window !== 'undefined' ? localStorage.getItem(favoritesKey) : null;
-            const favoriteIds: number[] = storedFavorites ? JSON.parse(storedFavorites) : [];
+            let favoriteIds: number[] = [];
+            if (storedFavorites) {
+                try { favoriteIds = JSON.parse(storedFavorites); } catch { /* use default */ }
+            }
 
             if (!favoriteIds.includes(salonId)) {
                 favoriteIds.push(salonId);
@@ -191,21 +177,23 @@ export class ClientService extends BaseService {
         }
 
         // For Supabase/production: use provider method
-        console.log(`Adding favorite salon ${salonId} for client ${clientId}`);
     }
 
     /**
      * Remove salon from favorites
      */
     async removeFavorite(clientId: number, salonId: number): Promise<void> {
-        const dataMode = (typeof window !== 'undefined'
+        const dataMode = ((typeof window !== 'undefined'
             ? localStorage.getItem('saloon-data-mode')
-            : 'demo-local') as 'demo-local' | 'demo-supabase' | 'normal' || 'demo-local';
+            : null) || 'demo-local') as 'demo-local' | 'demo-supabase' | 'normal';
 
         if (dataMode === 'demo-local') {
             const favoritesKey = `client-${clientId}-favorites`;
             const storedFavorites = typeof window !== 'undefined' ? localStorage.getItem(favoritesKey) : null;
-            const favoriteIds: number[] = storedFavorites ? JSON.parse(storedFavorites) : [];
+            let favoriteIds: number[] = [];
+            if (storedFavorites) {
+                try { favoriteIds = JSON.parse(storedFavorites); } catch { /* use default */ }
+            }
 
             const updatedFavorites = favoriteIds.filter(id => id !== salonId);
             if (typeof window !== 'undefined') {
@@ -215,7 +203,6 @@ export class ClientService extends BaseService {
         }
 
         // For Supabase/production: use provider method
-        console.log(`Removing favorite salon ${salonId} for client ${clientId}`);
     }
 
     /**

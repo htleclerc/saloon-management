@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
@@ -11,7 +11,8 @@ import { useToast } from "@/context/ToastProvider";
 import { useConfirm } from "@/context/ConfirmProvider";
 import { useTranslation } from "@/i18n";
 
-export default function EditExpensePage({ params }: { params: { id: string } }) {
+export default function EditExpensePage(props: { params: Promise<{ id: string }> }) {
+    const { id } = use(props.params);
     const router = useRouter();
     const { t } = useTranslation();
     const { handleReadOnlyClick } = useReadOnlyGuard();
@@ -32,7 +33,6 @@ export default function EditExpensePage({ params }: { params: { id: string } }) 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (handleReadOnlyClick()) return;
-        console.log("Updated expense data:", formData);
         showToast(t("common.success"), t("expenses.updateSuccess"), "success");
         router.push("/expenses");
     };
@@ -48,7 +48,6 @@ export default function EditExpensePage({ params }: { params: { id: string } }) 
         });
 
         if (confirmed) {
-            console.log("Deleting expense:", params.id);
             showToast(t("common.success"), t("expenses.deleteSuccess"), "success");
             router.push("/expenses");
         }
@@ -84,12 +83,12 @@ export default function EditExpensePage({ params }: { params: { id: string } }) 
                 {/* Form */}
                 <form onSubmit={handleSubmit}>
                     <Card>
-                        <h3 className="text-lg font-semibold mb-6">Expense Information</h3>
+                        <h3 className="text-lg font-semibold mb-6">{t("expenses.information")}</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* Date */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Date <span className="text-red-500">*</span>
+                                    {t("common.date")} <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="date"
@@ -97,38 +96,38 @@ export default function EditExpensePage({ params }: { params: { id: string } }) 
                                     value={formData.date}
                                     onChange={handleChange}
                                     required
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                                 />
                             </div>
 
                             {/* Category */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Category <span className="text-red-500">*</span>
+                                    {t("expenses.category")} <span className="text-red-500">*</span>
                                 </label>
                                 <select
                                     name="category"
                                     value={formData.category}
                                     onChange={handleChange}
                                     required
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                                 >
-                                    <option value="Office Rental">Office Rental</option>
-                                    <option value="Rental Relative Expenses">Rental Relative Expenses</option>
-                                    <option value="Electricity">Electricity</option>
-                                    <option value="IG & Facebook & Google">IG & Facebook & Google</option>
-                                    <option value="Office Cleaning">Office Cleaning</option>
-                                    <option value="Internet">Internet</option>
-                                    <option value="TV">TV</option>
-                                    <option value="Beauty Supply">Beauty Supply</option>
-                                    <option value="Other Expenses">Other Expenses</option>
+                                    <option value="rent">{t("expenses.categories.rent")}</option>
+                                    <option value="supplies">{t("expenses.categories.supplies")}</option>
+                                    <option value="utilities">{t("expenses.categories.utilities")}</option>
+                                    <option value="marketing">{t("expenses.categories.marketing")}</option>
+                                    <option value="insurance">{t("expenses.categories.insurance")}</option>
+                                    <option value="maintenance">{t("expenses.categories.maintenance")}</option>
+                                    <option value="software">{t("expenses.categories.software")}</option>
+                                    <option value="salary">{t("expenses.categories.salary")}</option>
+                                    <option value="other">{t("expenses.categories.other")}</option>
                                 </select>
                             </div>
 
                             {/* Description */}
                             <div className="md:col-span-2">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Description <span className="text-red-500">*</span>
+                                    {t("common.description")} <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="text"
@@ -136,14 +135,14 @@ export default function EditExpensePage({ params }: { params: { id: string } }) 
                                     value={formData.description}
                                     onChange={handleChange}
                                     required
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                                 />
                             </div>
 
                             {/* Amount */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Amount (€) <span className="text-red-500">*</span>
+                                    {t("common.amount")} (€) <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="number"
@@ -153,20 +152,20 @@ export default function EditExpensePage({ params }: { params: { id: string } }) 
                                     min="0"
                                     step="0.01"
                                     required
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                                 />
                             </div>
 
                             {/* Salon */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Salon/Location
+                                    {t("common.salon")}
                                 </label>
                                 <select
                                     name="salon"
                                     value={formData.salon}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                                 >
                                     <option>Salon 1</option>
                                     <option>Salon 2</option>
@@ -177,18 +176,18 @@ export default function EditExpensePage({ params }: { params: { id: string } }) 
                             {/* Payment Method */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Payment Method
+                                    {t("common.payment")}
                                 </label>
                                 <select
                                     name="paymentMethod"
                                     value={formData.paymentMethod}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                                 >
-                                    <option>Cash</option>
-                                    <option>Card</option>
-                                    <option>Bank Transfer</option>
-                                    <option>Check</option>
+                                    <option value="cash">{t("payment.methods.cash")}</option>
+                                    <option value="card">{t("payment.methods.card")}</option>
+                                    <option value="mobile">{t("payment.methods.mobile")}</option>
+                                    <option value="others">{t("payment.methods.others")}</option>
                                 </select>
                             </div>
 
@@ -200,18 +199,18 @@ export default function EditExpensePage({ params }: { params: { id: string } }) 
                                     value={formData.notes}
                                     onChange={handleChange}
                                     rows={4}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                                 />
                             </div>
 
                             {/* Status */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">{t("common.status")}</label>
                                 <select
                                     name="status"
                                     value={formData.status}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                                 >
                                     <option>Pending</option>
                                     <option>Approved</option>

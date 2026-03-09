@@ -68,7 +68,7 @@ export default function DiscoverSalonsPage() {
                         <input
                             type="text"
                             placeholder="Search by name or specialty..."
-                            className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-300 outline-none transition-all"
+                            className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
@@ -78,7 +78,7 @@ export default function DiscoverSalonsPage() {
                 {/* Loading State */}
                 {isLoading ? (
                     <div className="flex justify-center py-12">
-                        <div className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
+                        <div className="w-12 h-12 border-4 border-color-primary/30 border-t-[var(--color-primary)] rounded-full animate-spin"></div>
                     </div>
                 ) : (
                     /* Salons Grid */
@@ -98,7 +98,7 @@ export default function DiscoverSalonsPage() {
                                     >
                                         <Heart className={`w-5 h-5 ${favorites.includes(salon.id.toString()) ? "fill-current" : ""}`} />
                                     </button>
-                                    <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-xs font-bold text-purple-700">
+                                    <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-xs font-bold text-color-primary">
                                         {salon.specialty}
                                     </div>
                                 </div>
@@ -121,7 +121,7 @@ export default function DiscoverSalonsPage() {
                                     <div className="pt-4 flex gap-3">
                                         <Button variant="outline" className="flex-1 text-gray-600 border-gray-200">Details</Button>
                                         <Link href={`/appointments/book?salonId=${salon.id}`} className="flex-1">
-                                            <Button className="w-full bg-purple-600 hover:bg-purple-700 gap-2">
+                                            <Button className="w-full bg-primary hover:bg-primary gap-2">
                                                 <Scissors className="w-4 h-4" /> Book
                                             </Button>
                                         </Link>

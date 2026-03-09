@@ -195,7 +195,7 @@ export default function AppearanceSettingsPage() {
                             checked={useCustomOverride}
                             onChange={(e) => setUseCustomOverride(e.target.checked)}
                             disabled={!canModify}
-                            className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+                            className="w-4 h-4 text-color-primary rounded focus:ring-primary"
                         />
                         <div>
                             <p className="font-medium text-gray-900 text-sm">Override palette colors</p>
@@ -215,7 +215,7 @@ export default function AppearanceSettingsPage() {
                                     disabled={!canModify}
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                 />
-                                <div className="h-10 rounded-lg border-2 border-gray-200 flex items-center gap-2 px-3 cursor-pointer hover:border-purple-300 transition">
+                                <div className="h-10 rounded-lg border-2 border-gray-200 flex items-center gap-2 px-3 cursor-pointer hover:border-color-primary/30 transition">
                                     <div
                                         className="w-6 h-6 rounded border border-gray-300"
                                         style={{ backgroundColor: customPrimaryColor || selectedPalette.primary }}
@@ -229,7 +229,7 @@ export default function AppearanceSettingsPage() {
                                 <button
                                     onClick={() => setCustomPrimaryColor("")}
                                     disabled={!canModify}
-                                    className="text-xs text-purple-600 hover:text-purple-700 disabled:opacity-50"
+                                    className="text-xs text-color-primary hover:text-color-primary disabled:opacity-50"
                                 >
                                     Reset to default
                                 </button>
@@ -247,7 +247,7 @@ export default function AppearanceSettingsPage() {
                                     disabled={!canModify}
                                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                                 />
-                                <div className="h-10 rounded-lg border-2 border-gray-200 flex items-center gap-2 px-3 cursor-pointer hover:border-purple-300 transition">
+                                <div className="h-10 rounded-lg border-2 border-gray-200 flex items-center gap-2 px-3 cursor-pointer hover:border-color-primary/30 transition">
                                     <div
                                         className="w-6 h-6 rounded border border-gray-300"
                                         style={{ backgroundColor: customSecondaryColor || selectedPalette.secondary }}
@@ -399,7 +399,7 @@ export default function AppearanceSettingsPage() {
             {/* Design Type */}
             <Card>
                 <div className="flex items-center gap-3 mb-4 pb-3 border-b border-gray-100">
-                    <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-pink-600 rounded-lg flex items-center justify-center">
+                    <div className="w-10 h-10 bg-gradient-to-br from-[var(--color-secondary)] to-secondary rounded-lg flex items-center justify-center">
                         <Sparkles className="w-5 h-5 text-white" />
                     </div>
                     <div>
@@ -606,7 +606,7 @@ export default function AppearanceSettingsPage() {
                             value={localTheme.transparency || 0.95}
                             onChange={(e) => setLocalTheme({ ...localTheme, transparency: parseFloat(e.target.value) })}
                             disabled={!canModify}
-                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600 disabled:opacity-50"
+                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[var(--color-primary)] disabled:opacity-50"
                         />
                         <p className="text-xs text-gray-500 mt-1">Adjust the transparency level of cards (glass effect)</p>
                     </div>
@@ -622,7 +622,7 @@ export default function AppearanceSettingsPage() {
                                 checked={localTheme.compactMode}
                                 onChange={(e) => setLocalTheme({ ...localTheme, compactMode: e.target.checked })}
                                 disabled={!canModify}
-                                className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
+                                className="w-5 h-5 text-color-primary rounded focus:ring-primary"
                             />
                         </label>
                         <label className="flex items-center justify-between p-3 bg-gray-50 rounded-xl cursor-pointer">

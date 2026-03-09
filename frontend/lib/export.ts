@@ -40,18 +40,35 @@ export function exportToCSV<T extends Record<string, any>>(
 
     // Add BOM for Excel compatibility with UTF-8
     const BOM = '\uFEFF';
-    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
 
-    // Create download link
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${filename}_${formatDateForFilename()}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    // Submit the CSV data to the API route via a hidden form
+    // This forces an attachment download with the correct filename in all PWAs and strict browsers
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/api/download';
+    form.style.display = 'none';
+
+    const filenameInput = document.createElement('input');
+    filenameInput.type = 'hidden';
+    filenameInput.name = 'filename';
+    filenameInput.value = `${filename}_${formatDateForFilename()}.csv`;
+
+    const contentInput = document.createElement('input');
+    contentInput.type = 'hidden';
+    contentInput.name = 'content';
+    // We send BOM inside the payload
+    contentInput.value = BOM + csvContent;
+
+    form.appendChild(filenameInput);
+    form.appendChild(contentInput);
+    document.body.appendChild(form);
+
+    form.submit();
+
+    // Clean up
+    setTimeout(() => {
+        document.body.removeChild(form);
+    }, 100);
 }
 
 /**

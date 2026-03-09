@@ -46,6 +46,7 @@ function BookAppointmentContent() {
     const [selectedWorkers, setSelectedWorkers] = useState<any[]>([]);
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [selectedTime, setSelectedTime] = useState("");
+    const [anyProfessional, setAnyProfessional] = useState(true); // Default: any professional is selected
     const [initialBooking, setInitialBooking] = useState<any>(null);
     const [serviceDetails, setServiceDetails] = useState("");
     const [bookingComment, setBookingComment] = useState("");
@@ -58,7 +59,8 @@ function BookAppointmentContent() {
         phone: "",
         email: user?.email || "",
         isAnonymous: false,
-        isAddingNewClient: false
+        isAddingNewClient: false,
+        selectedClientId: user?.id ? Number(user.id) : null as number | null
     });
 
     // Service & Admin State
@@ -317,7 +319,8 @@ function BookAppointmentContent() {
                     email: client?.email || "",
                     phone: client?.phone || "",
                     isAnonymous: bookingToEdit.clientId === 0,
-                    isAddingNewClient: false
+                    isAddingNewClient: false,
+                    selectedClientId: bookingToEdit.clientId || null
                 });
 
                 const salon = salons.find(s => s.id === Number(bookingToEdit.salonId));
@@ -365,6 +368,7 @@ function BookAppointmentContent() {
     };
 
     const toggleWorker = (worker: any) => {
+        setAnyProfessional(false); // Selecting a specific worker deselects "Any Professional"
         setSelectedWorkers(prev =>
             prev.find(w => w.id === worker.id)
                 ? prev.filter(w => w.id !== worker.id)
@@ -377,7 +381,7 @@ function BookAppointmentContent() {
             case 0: return clientInfo.isAnonymous || clientInfo.name; // For Admin
             case 1: return selectedSalon !== null;
             case 2: return selectedServices.length > 0 && (selectedServices.find(s => s.id === 7) ? serviceDetails.trim() !== "" : true);
-            case 3: return selectedWorkers.length > 0;
+            case 3: return anyProfessional || selectedWorkers.length > 0; // "Any Professional" is a valid choice
             case 4: return selectedDate !== "" && selectedTime !== "";
             case 5: return true;
             default: return false;
@@ -388,10 +392,13 @@ function BookAppointmentContent() {
         if (handleReadOnlyClick()) return;
         const totalDuration = selectedServices.reduce((sum, s) => {
             let mins = 60;
-            if (s.duration && s.duration.toLowerCase().includes('hour')) {
-                mins = (parseInt(s.duration) || 1) * 60;
-            } else if (s.duration) {
-                mins = parseInt(s.duration) || 60;
+            if (s.duration) {
+                const durationStr = String(s.duration).toLowerCase();
+                if (durationStr.includes('hour')) {
+                    mins = (parseInt(durationStr) || 1) * 60;
+                } else {
+                    mins = parseInt(durationStr) || 60;
+                }
             }
             return sum + mins;
         }, 0);
@@ -401,6 +408,7 @@ function BookAppointmentContent() {
             if (editId) {
                 updateBooking(parseInt(editId), {
                     salonId: Number(selectedSalon?.id || urlSalonId || 1),
+                    clientId: clientInfo.selectedClientId !== null ? clientInfo.selectedClientId : undefined,
                     clientName: clientInfo.name,
                     serviceIds: selectedServices.map(s => s.id),
                     workerIds: selectedWorkers.map(w => w.id),
@@ -412,7 +420,9 @@ function BookAppointmentContent() {
             }
         } else {
             const processBooking = async () => {
-                let clientId = clientInfo.isAnonymous ? 0 : (user?.id ? Number(user.id) : 0);
+                let clientId = clientInfo.selectedClientId !== null
+                    ? clientInfo.selectedClientId
+                    : (clientInfo.isAnonymous ? 0 : (user?.id ? Number(user.id) : 0));
                 let clientName = clientInfo.name;
 
                 // Create a new client if requested
@@ -434,28 +444,31 @@ function BookAppointmentContent() {
                     }
                 }
 
-                addBooking({
-                    salonId: Number(selectedSalon?.id || urlSalonId || 1),
-                    clientId: clientId,
-                    clientName: clientName,
-                    serviceIds: selectedServices.map(s => s.id),
-                    workerIds: selectedWorkers.map(w => w.id),
-                    date: selectedDate,
-                    time: selectedTime,
-                    duration: totalDuration,
-                    status: (isClient ? 'Pending' : 'Confirmed') as BookingStatus,
-                    notes: bookingComment || undefined
-                });
-                showToast(t("common.success"), t("booking.createSuccess"), "success");
-                console.log("Booking created/updated");
-                router.push("/appointments");
+                try {
+                    await addBooking({
+                        salonId: Number(selectedSalon?.id || urlSalonId || 1),
+                        clientId: clientId,
+                        clientName: clientName,
+                        serviceIds: selectedServices.map(s => s.id),
+                        workerIds: selectedWorkers.map(w => w.id),
+                        date: selectedDate,
+                        time: selectedTime,
+                        duration: totalDuration,
+                        status: (isClient ? 'Pending' : 'Confirmed') as BookingStatus,
+                        notes: bookingComment || undefined
+                    });
+                    showToast(t("common.success"), t("booking.createSuccess"), "success");
+                    router.push("/appointments");
+                } catch (err: any) {
+                    console.error("Failed to create booking:", err);
+                    showToast(t("common.error"), err.message || t("booking.clientCreateFailed"), "error");
+                }
             };
 
             processBooking();
             return; // Exit as processBooking handles router.push
         }
 
-        console.log("Booking created/updated");
         router.push("/appointments");
     };
 
@@ -466,16 +479,20 @@ function BookAppointmentContent() {
 
         const totalDuration = selectedServices.reduce((sum, s) => {
             let mins = 60;
-            if (s.duration && s.duration.toLowerCase().includes('hour')) {
-                mins = (parseInt(s.duration) || 1) * 60;
-            } else if (s.duration) {
-                mins = parseInt(s.duration) || 60;
+            if (s.duration) {
+                const durationStr = String(s.duration).toLowerCase();
+                if (durationStr.includes('hour')) {
+                    mins = (parseInt(durationStr) || 1) * 60;
+                } else {
+                    mins = parseInt(durationStr) || 60;
+                }
             }
             return sum + mins;
         }, 0);
 
         updateBooking(parseInt(editId), {
             salonId: selectedSalon?.id || urlSalonId || "tenant_1",
+            clientId: clientInfo.selectedClientId !== null ? clientInfo.selectedClientId : undefined,
             clientName: clientInfo.name,
             // Client email/phone are not stored on booking directly in this schema, assumed handled by backend or separate update
             serviceIds: selectedServices.map(s => s.id),
@@ -567,7 +584,7 @@ function BookAppointmentContent() {
                             <div className="flex flex-col gap-4">
                                 <div className="grid grid-cols-2 gap-4">
                                     <button
-                                        onClick={() => setClientInfo({ ...clientInfo, isAnonymous: true, isAddingNewClient: false, name: "Anonymous Client" })}
+                                        onClick={() => setClientInfo({ ...clientInfo, isAnonymous: true, isAddingNewClient: false, name: "Anonymous Client", selectedClientId: 0 })}
                                         className={`p-4 rounded-xl border-2 transition-all flex items-center justify-center gap-3 ${clientInfo.isAnonymous ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)]' : 'border-gray-100 hover:border-[var(--color-primary-light)]'}`}
                                     >
                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${clientInfo.isAnonymous ? 'bg-[var(--color-primary)] text-white' : 'bg-gray-100 text-gray-400 group-hover:bg-[var(--color-primary-light)] group-hover:text-[var(--color-primary)]'}`}>
@@ -580,7 +597,7 @@ function BookAppointmentContent() {
                                     </button>
 
                                     <button
-                                        onClick={() => setClientInfo({ ...clientInfo, isAnonymous: false, isAddingNewClient: true, name: "" })}
+                                        onClick={() => setClientInfo({ ...clientInfo, isAnonymous: false, isAddingNewClient: true, name: "", selectedClientId: null })}
                                         className={`p-4 rounded-xl border-2 transition-all flex items-center justify-center gap-3 ${clientInfo.isAddingNewClient ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)]' : 'border-gray-100 hover:border-[var(--color-primary-light)]'}`}
                                     >
                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${clientInfo.isAddingNewClient ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-primary-light)] text-[var(--color-primary)]'}`}>
@@ -687,13 +704,20 @@ function BookAppointmentContent() {
                                                 <button
                                                     key={c.id}
                                                     onClick={() => {
-                                                        setClientInfo({ name: c.name, email: c.email || "", phone: c.phone || "", isAnonymous: false, isAddingNewClient: false });
+                                                        setClientInfo({
+                                                            name: c.name,
+                                                            email: c.email || "",
+                                                            phone: c.phone || "",
+                                                            isAnonymous: false,
+                                                            isAddingNewClient: false,
+                                                            selectedClientId: c.id
+                                                        });
                                                         setStep(1);
                                                     }}
                                                     className="w-full flex items-center justify-between p-3 hover:bg-[var(--color-primary-light)] rounded-xl border border-gray-100 transition-all group text-left"
                                                 >
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 rounded-full bg-purple-100 text-[var(--color-primary)] flex items-center justify-center font-bold text-sm">
+                                                        <div className="w-10 h-10 rounded-full bg-primary-light text-[var(--color-primary)] flex items-center justify-center font-bold text-sm">
                                                             {c.name.charAt(0)}
                                                         </div>
                                                         <div>
@@ -773,7 +797,7 @@ function BookAppointmentContent() {
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <h3 className="font-bold text-gray-900">{salon.name}</h3>
-                                                {isFavorite && <span className="text-[10px] bg-pink-100 text-pink-600 px-1.5 py-0.5 rounded-full font-bold uppercase tracking-tighter">Fav</span>}
+                                                {isFavorite && <span className="text-[10px] bg-secondary-light text-color-secondary px-1.5 py-0.5 rounded-full font-bold uppercase tracking-tighter">Fav</span>}
                                             </div>
                                             <p className="text-xs text-gray-500 mt-1">{isFavorite ? t('booking.salonSelection.yourFavorite') : t('booking.salonSelection.clickToSelect')}</p>
                                         </div>
@@ -820,7 +844,7 @@ function BookAppointmentContent() {
                                         <div className="text-3xl mb-4">{service.image || "✂️"}</div>
                                         <div className="flex items-center gap-2 mb-2">
                                             <h3 className="text-lg font-bold text-gray-900 line-clamp-1">{service.name}</h3>
-                                            {isFavorite && <span className="text-[10px] bg-pink-100 text-pink-600 px-1.5 py-0.5 rounded-full font-bold uppercase">Fav</span>}
+                                            {isFavorite && <span className="text-[10px] bg-secondary-light text-color-secondary px-1.5 py-0.5 rounded-full font-bold uppercase">Fav</span>}
                                         </div>
                                         <p className="text-sm text-gray-600 mb-3 line-clamp-2">{service.category || "General"}</p>
                                         <div className="flex items-center justify-between text-sm">
@@ -837,10 +861,10 @@ function BookAppointmentContent() {
                             {showModalTrigger && (
                                 <button
                                     onClick={() => setIsServiceModalOpen(true)}
-                                    className="p-6 rounded-xl border-2 border-dashed border-purple-300 bg-purple-50/50 text-purple-700 flex flex-col items-center justify-center gap-2 hover:bg-purple-100 transition-all font-bold group"
+                                    className="p-6 rounded-xl border-2 border-dashed border-color-primary/30 bg-primary-light/50 text-color-primary flex flex-col items-center justify-center gap-2 hover:bg-primary-light transition-all font-bold group"
                                 >
                                     <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                                        <Search className="w-6 h-6 text-purple-600" />
+                                        <Search className="w-6 h-6 text-color-primary" />
                                     </div>
                                     <span>{t('booking.serviceSelection.viewAll', { count: services.length })}</span>
                                 </button>
@@ -881,13 +905,16 @@ function BookAppointmentContent() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                             {/* Any Professional Option */}
                             <div
-                                onClick={() => setSelectedWorkers([])}
-                                className={`p-6 rounded-xl border-2 cursor-pointer transition-all relative ${selectedWorkers.length === 0
+                                onClick={() => {
+                                    setAnyProfessional(true);
+                                    setSelectedWorkers([]);
+                                }}
+                                className={`p-6 rounded-xl border-2 cursor-pointer transition-all relative ${anyProfessional
                                     ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)] shadow-lg'
                                     : 'border-gray-100 hover:border-[var(--color-primary-light)] hover:shadow-md'
                                     }`}
                             >
-                                {selectedWorkers.length === 0 && (
+                                {anyProfessional && (
                                     <div className="absolute top-4 right-4 bg-[var(--color-primary)] text-white rounded-full p-1 animate-in zoom-in">
                                         <Check className="w-4 h-4" />
                                     </div>
@@ -1065,10 +1092,13 @@ function BookAppointmentContent() {
                                     <p className="text-2xl font-bold text-[var(--color-primary)]">
                                         {selectedServices.reduce((acc, s) => {
                                             let mins = 60;
-                                            if (s.duration && s.duration.toLowerCase().includes('hour')) {
-                                                mins = (parseInt(s.duration) || 1) * 60;
-                                            } else if (s.duration) {
-                                                mins = parseInt(s.duration) || 60;
+                                            if (s.duration) {
+                                                const durationStr = String(s.duration).toLowerCase();
+                                                if (durationStr.includes('hour')) {
+                                                    mins = (parseInt(durationStr) || 1) * 60;
+                                                } else {
+                                                    mins = parseInt(durationStr) || 60;
+                                                }
                                             }
                                             return acc + mins;
                                         }, 0)} min
@@ -1117,7 +1147,7 @@ function BookAppointmentContent() {
                     </Button>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }
 

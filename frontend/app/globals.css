@@ -186,26 +186,8 @@
 }
 
 /* Gradient buttons */
-[data-theme="gradient"] .btn-primary,
-[data-theme="gradient"] button[class*="bg-purple"],
-[data-theme="gradient"] button[class*="bg-pink"] {
+[data-theme="gradient"] .btn-primary {
   background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%) !important;
-}
-
-/* Gradient stat cards */
-[data-theme="gradient"] .from-purple-500,
-[data-theme="gradient"] .from-purple-600,
-[data-theme="gradient"] .from-purple-700 {
-  --tw-gradient-from: var(--color-primary) !important;
-}
-
-[data-theme="gradient"] .to-purple-500,
-[data-theme="gradient"] .to-purple-600,
-[data-theme="gradient"] .to-purple-700,
-[data-theme="gradient"] .to-pink-500,
-[data-theme="gradient"] .to-pink-600,
-[data-theme="gradient"] .to-pink-700 {
-  --tw-gradient-to: var(--color-secondary) !important;
 }
 
 /* Enhanced shadows for gradient theme */

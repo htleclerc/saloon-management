@@ -43,8 +43,8 @@ export default function AnalyticsSettingsPage() {
                                     key={period.id}
                                     onClick={() => setDefaultPeriod(period.id)}
                                     className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all ${defaultPeriod === period.id
-                                            ? "border-purple-500 bg-purple-50 text-purple-700"
-                                            : "border-gray-200 text-gray-600 hover:border-purple-300"
+                                            ? "border-color-primary bg-primary-light text-color-primary"
+                                            : "border-gray-200 text-gray-600 hover:border-color-primary/30"
                                         }`}
                                 >
                                     {period.name}
@@ -65,7 +65,7 @@ export default function AnalyticsSettingsPage() {
                                 onChange={(e) => setIncludeCharts(e.target.checked)}
                                 className="sr-only peer"
                             />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                         </label>
                     </div>
                 </div>
@@ -90,7 +90,7 @@ export default function AnalyticsSettingsPage() {
                             onChange={(e) => setAutoExport(e.target.checked)}
                             className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                     </label>
                 </div>
 
@@ -99,7 +99,7 @@ export default function AnalyticsSettingsPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Fréquence</label>
-                                <select className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm">
+                                <select className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm">
                                     <option>Hebdomadaire</option>
                                     <option>Mensuel</option>
                                     <option>Trimestriel</option>
@@ -110,7 +110,7 @@ export default function AnalyticsSettingsPage() {
                                 <select
                                     value={exportFormat}
                                     onChange={(e) => setExportFormat(e.target.value)}
-                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                                 >
                                     <option value="pdf">PDF</option>
                                     <option value="excel">Excel</option>
@@ -123,7 +123,7 @@ export default function AnalyticsSettingsPage() {
                             <input
                                 type="text"
                                 defaultValue="admin@workshopmanager.com"
-                                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                                 placeholder="email1@exemple.com, email2@exemple.com"
                             />
                         </div>
@@ -134,7 +134,7 @@ export default function AnalyticsSettingsPage() {
             {/* Dashboard Customization */}
             <Card>
                 <div className="flex items-center gap-3 mb-4">
-                    <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                    <div className="w-10 h-10 bg-gradient-to-br from-primary to-[var(--color-primary)] rounded-lg flex items-center justify-center">
                         <FileText className="w-5 h-5 text-white" />
                     </div>
                     <div>
@@ -153,13 +153,13 @@ export default function AnalyticsSettingsPage() {
                     ].map((widget, idx) => (
                         <label
                             key={idx}
-                            className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer ${widget.enabled ? "border-purple-200 bg-purple-50" : "border-gray-200"
+                            className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer ${widget.enabled ? "border-color-primary/30 bg-primary-light" : "border-gray-200"
                                 }`}
                         >
                             <input
                                 type="checkbox"
                                 defaultChecked={widget.enabled}
-                                className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+                                className="w-4 h-4 text-color-primary rounded focus:ring-primary"
                             />
                             <span className="text-sm font-medium text-gray-700">{widget.name}</span>
                         </label>

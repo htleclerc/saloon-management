@@ -133,7 +133,7 @@ export default function DateRangeFilter({
                             setWeek(null);
                             setDay(null);
                         }}
-                        className="px-2 py-1 text-xs font-medium rounded-md bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors"
+                        className="px-2 py-1 text-xs font-medium rounded-md bg-primary-light text-color-primary hover:bg-primary transition-colors"
                     >
                         Month
                     </button>
@@ -151,14 +151,15 @@ export default function DateRangeFilter({
                 </div>
             </div>
 
-            {/* Dropdowns - separate row on mobile, same row on desktop */}
-            <div className="grid grid-cols-2 md:flex md:items-center md:gap-2">
+            {/* Dropdowns - better mobile grid (1 col stacking, then 2 cols on small, row on md) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:items-center gap-2">
                 {/* Year */}
                 <div className="relative">
                     <select
                         value={year}
                         onChange={(e) => handleYearChange(parseInt(e.target.value))}
-                        className="w-full appearance-none px-2 py-1.5 pr-6 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-300 cursor-pointer"
+                        aria-label="Select year"
+                        className="w-full appearance-none px-2 py-1.5 pr-6 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
                     >
                         {years.map((y) => (
                             <option key={y} value={y}>{y}</option>
@@ -172,7 +173,8 @@ export default function DateRangeFilter({
                     <select
                         value={month ?? ""}
                         onChange={(e) => handleMonthChange(e.target.value ? parseInt(e.target.value) : null)}
-                        className="w-full appearance-none px-2 py-1.5 pr-6 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-300 cursor-pointer"
+                        aria-label="Select month"
+                        className="w-full appearance-none px-2 py-1.5 pr-6 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
                     >
                         <option value="">All Months</option>
                         {months.map((m) => (
@@ -184,11 +186,12 @@ export default function DateRangeFilter({
 
                 {/* Day */}
                 {showDayFilter && month && (
-                    <div className="relative col-span-2 md:col-span-1">
+                    <div className="relative">
                         <select
                             value={day ?? ""}
                             onChange={(e) => setDay(e.target.value ? parseInt(e.target.value) : null)}
-                            className="w-full appearance-none px-2 py-1.5 pr-6 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-300 cursor-pointer"
+                            aria-label="Select day"
+                            className="w-full appearance-none px-2 py-1.5 pr-6 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
                         >
                             <option value="">Full Month</option>
                             {daysList.map((d) => (
@@ -205,7 +208,8 @@ export default function DateRangeFilter({
                         <select
                             value={week ?? ""}
                             onChange={(e) => setWeek(e.target.value ? parseInt(e.target.value) : null)}
-                            className="w-full appearance-none px-2 py-1.5 pr-6 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-300 cursor-pointer"
+                            aria-label="Select week"
+                            className="w-full appearance-none px-2 py-1.5 pr-6 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
                         >
                             <option value="">All Weeks</option>
                             {weeks.map((w) => (

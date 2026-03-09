@@ -1,7 +1,17 @@
 
 import { supabase } from "@/lib/supabase/client";
 import { BaseService } from "./BaseService";
-import { Notification } from "@/types";
+import { Notification, NotificationType } from "@/types";
+
+interface NotificationDBRow {
+    id?: string | number;
+    user_code: string;
+    type: NotificationType;
+    title: string;
+    message: string;
+    is_read: boolean;
+    created_at: string;
+}
 
 export class NotificationService extends BaseService {
     private channel: BroadcastChannel | null = null;
@@ -24,23 +34,23 @@ export class NotificationService extends BaseService {
     // Create a notification for specific users
     async create(data: Partial<Notification> & { userCode: string }) {
         const timestamp = new Date().toISOString();
-        const newNotif: any = {
+        const newNotif: NotificationDBRow = {
             id: Date.now().toString(), // Temp ID for fallback
             user_code: data.userCode,
             type: data.type || 'info',
-            title: data.title,
-            message: data.message,
+            title: data.title || '',
+            message: data.message || '',
             is_read: false,
             created_at: timestamp
         };
 
         // 1. Try DB Insert
         try {
-            const dbData = {
+            const dbData: Omit<NotificationDBRow, 'id'> = {
                 user_code: data.userCode,
-                type: data.type,
-                title: data.title,
-                message: data.message,
+                type: data.type || 'info',
+                title: data.title || '',
+                message: data.message || '',
                 is_read: false,
                 created_at: timestamp
             };
@@ -53,18 +63,17 @@ export class NotificationService extends BaseService {
 
             if (!error && created) {
                 // DB Success
-                return this.mapFromDB(created);
+                return this.mapFromDB(created as NotificationDBRow);
             } else {
                 console.warn("DB Notification failed, falling back to BroadcastChannel. Error:", error);
             }
-        } catch (err) {
+        } catch (err: unknown) {
             console.warn("DB Notification Exception:", err);
         }
 
         // 2. Fallback: Broadcast to other tabs (Simulation)
         // This simulates the "Realtime" subscription effect
         if (this.channel) {
-            console.log("Broadcasting notification:", newNotif);
             this.channel.postMessage({ type: 'NEW_NOTIFICATION', payload: newNotif });
         }
 
@@ -83,8 +92,8 @@ export class NotificationService extends BaseService {
                 .limit(limit);
 
             if (error) throw error;
-            return (data || []).map(this.mapFromDB);
-        } catch (error) {
+            return (data || []).map((row: NotificationDBRow) => this.mapFromDB(row));
+        } catch (error: unknown) {
             // Log but don't crash - return empty array in fallback mode
             console.warn("Checking notifications from DB failed, checking local storage/memory is not implemented for persistence yet.", error);
             return [];
@@ -94,14 +103,11 @@ export class NotificationService extends BaseService {
     // Mark as read
     async markAsRead(id: number | string) {
         try {
-            // Try DB
-            const { error } = await supabase
+            await supabase
                 .from('notifications')
                 .update({ is_read: true })
                 .eq('id', id);
-
-            // Also broadcast read status? Maybe later
-        } catch (e) {
+        } catch (e: unknown) {
             console.warn("Failed to mark read in DB", e);
         }
     }
@@ -109,17 +115,17 @@ export class NotificationService extends BaseService {
     // Mark all as read for user
     async markAllAsRead(userCode: string) {
         try {
-            const { error } = await supabase
+            await supabase
                 .from('notifications')
                 .update({ is_read: true })
                 .eq('user_code', userCode)
                 .eq('is_read', false);
-        } catch (e) {
+        } catch (e: unknown) {
             console.warn("Failed to mark all read in DB", e);
         }
     }
 
-    protected mapFromDB(row: any): Notification {
+    protected mapFromDB(row: NotificationDBRow): Notification {
         return {
             id: row.id?.toString() || Date.now().toString(),
             type: row.type || 'info',

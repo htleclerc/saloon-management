@@ -26,11 +26,11 @@ export default function ProfileSettingsPage() {
             <Card>
                 <div className="flex items-center gap-6">
                     <div className="relative">
-                        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center text-white text-3xl font-bold">
+                        <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-[var(--color-primary)] flex items-center justify-center text-white text-3xl font-bold">
                             AU
                         </div>
                         <ReadOnlyGuard>
-                            <button className="absolute bottom-0 right-0 w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white shadow-lg hover:bg-purple-700 transition-colors">
+                            <button className="absolute bottom-0 right-0 w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white shadow-lg hover:bg-primary transition-colors">
                                 <Camera className="w-4 h-4" />
                             </button>
                         </ReadOnlyGuard>
@@ -63,7 +63,7 @@ export default function ProfileSettingsPage() {
                             value={firstName}
                             onChange={(e) => setFirstName(e.target.value)}
                             readOnly={!canModify}
-                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                         />
                     </div>
                     <div>
@@ -75,7 +75,7 @@ export default function ProfileSettingsPage() {
                             value={lastName}
                             onChange={(e) => setLastName(e.target.value)}
                             readOnly={!canModify}
-                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                         />
                     </div>
                     <div>
@@ -87,7 +87,7 @@ export default function ProfileSettingsPage() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             readOnly={!canModify}
-                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                         />
                     </div>
                     <div>
@@ -97,7 +97,7 @@ export default function ProfileSettingsPage() {
                             value={phone}
                             onChange={(e) => setPhone(e.target.value)}
                             readOnly={!canModify}
-                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                         />
                     </div>
                 </div>
@@ -121,7 +121,7 @@ export default function ProfileSettingsPage() {
                             value={language}
                             onChange={(e) => setLanguage(e.target.value)}
                             disabled={!canModify}
-                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                         >
                             <option value="fr">Français</option>
                             <option value="en">English</option>
@@ -135,7 +135,7 @@ export default function ProfileSettingsPage() {
                             value={timezone}
                             onChange={(e) => setTimezone(e.target.value)}
                             disabled={!canModify}
-                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                         >
                             <option value="Europe/Paris">Europe/Paris (GMT+1)</option>
                             <option value="Europe/London">Europe/London (GMT)</option>

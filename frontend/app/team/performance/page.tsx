@@ -8,7 +8,7 @@ import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
 import { useCurrency } from "@/hooks/useCurrency";
 import { useTranslation } from "@/i18n";
 
-import { statsService } from "@/lib/services/StatsService";
+import { performanceStatsService } from "@/lib/services";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthProvider";
 import { WorkerStats } from "@/types";
@@ -29,7 +29,7 @@ export default function TeamPerformancePage() {
         const loadStats = async () => {
             try {
                 const salonId = parseInt(activeSalonId || "1");
-                const stats = await statsService.getAllWorkersStats(salonId);
+                const stats = await performanceStatsService.getAllWorkersStats(salonId);
                 // Mock growth calculation for now since we don't have historical data granular enough in WorkerStats
                 const enhancedStats = stats.map(s => ({
                     ...s,

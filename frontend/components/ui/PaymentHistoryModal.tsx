@@ -103,7 +103,7 @@ export default function PaymentHistoryModal({
                                                     </div>
                                                 </div>
 
-                                                {entry.metadata?.amount && (
+                                                {entry.metadata && typeof entry.metadata.amount === 'number' && (
                                                     <p className="text-xs font-semibold text-gray-700">
                                                         {t("common.amount")}: <span className="text-[var(--color-primary)]">${entry.metadata.amount}</span>
                                                     </p>

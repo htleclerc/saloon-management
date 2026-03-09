@@ -59,7 +59,7 @@ export default function WorkshopSettingsPage() {
                             value={businessName}
                             onChange={(e) => setBusinessName(e.target.value)}
                             readOnly={!canModify}
-                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                         />
                     </div>
                     <div className="md:col-span-2">
@@ -69,7 +69,7 @@ export default function WorkshopSettingsPage() {
                             value={businessAddress}
                             onChange={(e) => setBusinessAddress(e.target.value)}
                             readOnly={!canModify}
-                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                         />
                     </div>
                     <div>
@@ -79,7 +79,7 @@ export default function WorkshopSettingsPage() {
                             value={businessPhone}
                             onChange={(e) => setBusinessPhone(e.target.value)}
                             readOnly={!canModify}
-                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                         />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
@@ -89,7 +89,7 @@ export default function WorkshopSettingsPage() {
                                 value={currency}
                                 onChange={(e) => setCurrency(e.target.value)}
                                 disabled={!canModify}
-                                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                             >
                                 <option value="EUR">EUR (€)</option>
                                 <option value="USD">USD ($)</option>
@@ -104,7 +104,7 @@ export default function WorkshopSettingsPage() {
                                 value={taxRate}
                                 onChange={(e) => setTaxRate(e.target.value)}
                                 readOnly={!canModify}
-                                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                             />
                         </div>
                     </div>
@@ -173,7 +173,7 @@ export default function WorkshopSettingsPage() {
                                 <p className="text-xs text-gray-500">{service.duration}</p>
                             </div>
                             <div className="flex items-center gap-3">
-                                <span className="font-bold text-purple-600 text-sm">€{service.price}</span>
+                                <span className="font-bold text-color-primary text-sm">€{service.price}</span>
                                 <ReadOnlyGuard>
                                     <button className="text-gray-400 hover:text-red-500">
                                         <Trash2 className="w-4 h-4" />
@@ -228,22 +228,22 @@ export default function WorkshopSettingsPage() {
             </div>
 
             {/* Shop Configuration - Moved to bottom */}
-            <Card className="border-t-4 border-t-purple-500 shadow-xl shadow-purple-500/5">
+            <Card className="border-t-4 border-t-[var(--color-primary)] shadow-xl shadow-[color:var(--color-primary)]/20">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                     <div className="flex items-center gap-4">
-                        <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/20 flex-shrink-0">
+                        <div className="w-14 h-14 bg-gradient-primary rounded-2xl flex items-center justify-center shadow-lg shadow-[color:var(--color-primary)]/20 flex-shrink-0">
                             <Store className="w-7 h-7 text-white" />
                         </div>
                         <div>
                             <h3 className="font-bold text-gray-900 text-xl flex items-center gap-2">
                                 Shop Configuration
-                                <Sparkles className="w-5 h-5 text-purple-600 animate-pulse" />
+                                <Sparkles className="w-5 h-5 text-color-primary animate-pulse" />
                             </h3>
                             <p className="text-sm text-gray-600 mt-1 max-w-md">
                                 Configure or re-configure your salon settings, including services, products, and team members.
                             </p>
                             <div className="flex items-center gap-3 mt-3">
-                                <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-purple-600 bg-purple-50 px-2.5 py-1 rounded-full border border-purple-100">
+                                <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-color-primary bg-primary-light px-2.5 py-1 rounded-full border border-color-primary/30">
                                     <ArrowRight className="w-3 h-3" /> 7 Steps
                                 </span>
                                 <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
@@ -258,7 +258,7 @@ export default function WorkshopSettingsPage() {
 
                     <button
                         onClick={handleStartOnboarding}
-                        className="group flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl font-black text-lg hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-purple-500/30 w-full md:w-auto overflow-hidden relative"
+                        className="group flex items-center justify-center gap-3 px-8 py-4 bg-gradient-primary text-white rounded-2xl font-black text-lg hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-[color:var(--color-primary)]/20 w-full md:w-auto overflow-hidden relative"
                     >
                         <div className="absolute inset-0 bg-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
                         <span>{isConfigured ? 'Restart Configuration' : 'Start Configuration'}</span>

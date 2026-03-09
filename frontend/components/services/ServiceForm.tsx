@@ -47,7 +47,7 @@ export default function ServiceForm({ initialData, mode, onSubmit, onCancel }: S
                     {/* Mode Header */}
                     <div className="flex items-center justify-between border-b border-gray-100 pb-6">
                         <div className="flex items-center gap-3">
-                            <div className={`p-3 rounded-2xl ${isAdvanced ? 'bg-purple-100 text-purple-600' : 'bg-blue-100 text-blue-600'}`}>
+                            <div className={`p-3 rounded-2xl ${isAdvanced ? 'bg-primary-light text-color-primary' : 'bg-blue-100 text-blue-600'}`}>
                                 {isAdvanced ? <Sparkles className="w-6 h-6" /> : <Layout className="w-6 h-6" />}
                             </div>
                             <div>
@@ -81,7 +81,7 @@ export default function ServiceForm({ initialData, mode, onSubmit, onCancel }: S
                             <input
                                 type="text"
                                 placeholder="e.g., Box Braids"
-                                className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-purple-500 font-bold text-gray-900 transition-all"
+                                className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-primary font-bold text-gray-900 transition-all"
                                 value={formData.name}
                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                 required
@@ -96,7 +96,7 @@ export default function ServiceForm({ initialData, mode, onSubmit, onCancel }: S
                             <input
                                 type="number"
                                 placeholder="0.00"
-                                className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-purple-500 font-bold text-gray-900 transition-all"
+                                className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-primary font-bold text-gray-900 transition-all"
                                 value={formData.price}
                                 onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                                 required
@@ -111,7 +111,7 @@ export default function ServiceForm({ initialData, mode, onSubmit, onCancel }: S
                             <input
                                 type="text"
                                 placeholder="e.g., 2-3 hours"
-                                className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-purple-500 font-bold text-gray-900 transition-all"
+                                className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-primary font-bold text-gray-900 transition-all"
                                 value={formData.duration}
                                 onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
                                 required
@@ -124,7 +124,7 @@ export default function ServiceForm({ initialData, mode, onSubmit, onCancel }: S
                                 <div className="md:col-span-2 space-y-2">
                                     <label className="text-sm font-black text-gray-400 uppercase tracking-widest ml-1">Category</label>
                                     <select
-                                        className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-purple-500 font-bold text-gray-900 transition-all appearance-none"
+                                        className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-primary font-bold text-gray-900 transition-all appearance-none"
                                         value={formData.category}
                                         onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                                     >
@@ -141,7 +141,7 @@ export default function ServiceForm({ initialData, mode, onSubmit, onCancel }: S
                                     <textarea
                                         rows={4}
                                         placeholder="Describe the service details, maintenance tips, etc."
-                                        className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-purple-500 font-medium text-gray-700 transition-all"
+                                        className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-primary font-medium text-gray-700 transition-all"
                                         value={formData.description}
                                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                     />
@@ -149,7 +149,7 @@ export default function ServiceForm({ initialData, mode, onSubmit, onCancel }: S
 
                                 {/* Media Section */}
                                 <div className="md:col-span-2 space-y-6 pt-4">
-                                    <h4 className="text-sm font-black text-gray-900 border-l-4 border-purple-500 pl-3">Media & Gallery</h4>
+                                    <h4 className="text-sm font-black text-gray-900 border-l-4 border-color-primary pl-3">Media & Gallery</h4>
 
                                     <div className="space-y-2">
                                         <label className="text-xs font-bold text-gray-400 uppercase tracking-widest ml-1">Cover Image URL</label>
@@ -157,7 +157,7 @@ export default function ServiceForm({ initialData, mode, onSubmit, onCancel }: S
                                             <input
                                                 type="text"
                                                 placeholder="https://images.unsplash.com/..."
-                                                className="flex-1 px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-purple-500 font-medium text-gray-600 transition-all"
+                                                className="flex-1 px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-primary font-medium text-gray-600 transition-all"
                                                 value={formData.image}
                                                 onChange={(e) => setFormData({ ...formData, image: e.target.value })}
                                             />
@@ -215,7 +215,7 @@ export default function ServiceForm({ initialData, mode, onSubmit, onCancel }: S
                 <Button
                     type="submit"
                     variant="primary"
-                    className="px-10 py-6 rounded-2xl font-black text-lg shadow-xl shadow-purple-500/20"
+                    className="px-10 py-6 rounded-2xl font-black text-lg shadow-xl shadow-[color:var(--color-primary)]/20"
                 >
                     {initialData ? "Save Changes" : "Publish Service"}
                     <CheckCircle className="ml-2 w-5 h-5" />

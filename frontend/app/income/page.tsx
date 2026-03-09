@@ -9,7 +9,7 @@ import { Plus, Filter, Download, Calendar, BarChart2, MessageSquare, History, Ch
 import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
 import { useAuth } from "@/context/AuthProvider";
 import { useBooking } from "@/context/BookingProvider";
-import { incomeService, serviceService, workerService, statsService } from "@/lib/services";
+import { incomeService, serviceService, workerService, revenueStatsService } from "@/lib/services";
 import { useConfirm } from "@/context/ConfirmProvider";
 import { useToast } from "@/context/ToastProvider";
 import React, { useState, useMemo, useEffect } from "react";
@@ -23,6 +23,12 @@ import { SERVICES } from "@/lib/data";
 import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 import { useTranslation } from "@/i18n";
 import { useNotifications } from "@/context/NotificationProvider";
+import { Income, IncomeStatus, Service, SalonWorker, BookingComment } from "@/types";
+
+type NormalizedIncome = Income & {
+    serviceDisplay: string;
+    workerDisplay: string;
+};
 
 export default function IncomePage() {
     const { getCardStyle } = useKpiCardStyle();
@@ -33,10 +39,10 @@ export default function IncomePage() {
     const { showToast } = useToast();
     const router = useRouter();
     // Real Data State
-    const [incomes, setIncomes] = useState<any[]>([]);
+    const [incomes, setIncomes] = useState<Income[]>([]);
     const { bookings } = useBooking();
-    const [services, setServices] = useState<any[]>([]);
-    const [workers, setWorkers] = useState<any[]>([]);
+    const [services, setServices] = useState<Service[]>([]);
+    const [workers, setWorkers] = useState<SalonWorker[]>([]);
     const { confirm } = useConfirm();
     const [expandedRows, setExpandedRows] = useState<number[]>([]);
     const [commentText, setCommentText] = useState<Record<number, string>>({});
@@ -64,7 +70,7 @@ export default function IncomePage() {
                 incomeService.getAll(salonId),
                 serviceService.getAll(salonId),
                 workerService.getAll(salonId),
-                statsService.getRevenueTrend(salonId)
+                revenueStatsService.getRevenueTrend(salonId)
             ]);
             setServices(servicesData);
             setWorkers(workersData);
@@ -107,7 +113,6 @@ export default function IncomePage() {
     // Normalize incomes with service and worker names
     const normalizedIncomes = useMemo(() => {
         if (!incomes) return [];
-        console.log("Normalizing incomes, count:", incomes.length);
 
         return incomes.map(income => {
             // Get service names
@@ -144,7 +149,7 @@ export default function IncomePage() {
 
             // Search Filter
             if (searchQuery &&
-                !income.clientName.toLowerCase().includes(searchQuery.toLowerCase()) &&
+                !(income.clientName ?? '').toLowerCase().includes(searchQuery.toLowerCase()) &&
                 !income.id.toString().includes(searchQuery)) {
                 return false;
             }
@@ -314,7 +319,7 @@ export default function IncomePage() {
             try {
                 if (isArchive) {
                     // For Validated: set status to 'Archived' (soft delete)
-                    await incomeService.update(id, { status: 'Archived' as any });
+                    await incomeService.update(id, { status: 'Archived' as IncomeStatus });
                     await notifyAdmins(
                         t("notifications.incomeArchivedTitle") || "Income Archived",
                         t("notifications.incomeArchivedMsg", { id }) || `Income #${id} has been archived.`,
@@ -322,7 +327,7 @@ export default function IncomePage() {
                     );
                 } else {
                     // For Draft/Pending: set status to 'Cancelled'
-                    await incomeService.update(id, { status: 'Cancelled' as any });
+                    await incomeService.update(id, { status: 'Cancelled' as IncomeStatus });
                     await notifyAdmins(
                         t("notifications.incomeCancelledTitle") || "Income Cancelled",
                         t("notifications.incomeCancelledMsg", { id }) || `Income #${id} has been cancelled.`,
@@ -363,7 +368,7 @@ export default function IncomePage() {
         }
     };
 
-    const handlePrint = (income: any) => {
+    const handlePrint = (income: NormalizedIncome) => {
         const printWindow = window.open('', '_blank');
         if (!printWindow) return;
 
@@ -401,7 +406,7 @@ export default function IncomePage() {
         printWindow.document.close();
     };
 
-    const handleDownloadInvoice = (income: any) => {
+    const handleDownloadInvoice = (income: NormalizedIncome) => {
         const doc = new jsPDF();
         doc.setFontSize(22);
         doc.text(t("income.invoice").toUpperCase(), 105, 20, { align: "center" });
@@ -409,7 +414,7 @@ export default function IncomePage() {
         doc.text(`${t("income.invoice")} #: INV-${income.id}`, 20, 40);
         doc.text(`${t("common.date")}: ${income.date}`, 20, 47);
         doc.text(t("income.billedTo").toUpperCase(), 20, 65);
-        doc.text(income.clientName, 20, 72);
+        doc.text(income.clientName ?? '-', 20, 72);
         doc.line(20, 85, 190, 85);
         doc.text(t("common.description").toUpperCase(), 20, 95);
         doc.text("TOTAL", 170, 95);
@@ -421,7 +426,7 @@ export default function IncomePage() {
         doc.save(`${t("income.invoice")}_${income.id}.pdf`);
     };
 
-    const handleViewHistory = async (income: any) => {
+    const handleViewHistory = async (income: NormalizedIncome) => {
         try {
             const history = await incomeService.getHistory(income.id);
             const events = history.map(h => ({
@@ -449,7 +454,7 @@ export default function IncomePage() {
 
         try {
             const userName = user?.name || "User";
-            const userCode = (user as any)?.userCode || "ADM-000"; // Fallback to avoid error if missing
+            const userCode = user?.userCode || "ADM-000"; // Fallback to avoid error if missing
 
             // Call service to add comment
             await incomeService.addComment(id, text, userCode);
@@ -460,9 +465,10 @@ export default function IncomePage() {
                     return {
                         ...inc,
                         comments: [...(inc.comments || []), {
+                            id: Date.now(),
                             user: userName, // Keep displaying name locally
                             text: text,
-                            date: format(new Date(), "yyyy-MM-dd HH:mm")
+                            timestamp: new Date()
                         }]
                     };
                 }
@@ -534,10 +540,10 @@ export default function IncomePage() {
                                 <td>#${income.id}</td>
                                 <td>${format(new Date(income.date), 'PP')}</td>
                                 <td>${income.clientName || '-'}</td>
-                                <td>${income.serviceName || '-'}</td>
+                                <td>${income.serviceDisplay || '-'}</td>
                                 <td>€${income.amount}</td>
                                 <td>${income.status}</td>
-                                <td>${income.workerName || '-'}</td>
+                                <td>${income.workerDisplay || '-'}</td>
                             </tr>
                         `).join('')}
                     </tbody>
@@ -571,11 +577,11 @@ export default function IncomePage() {
             income.id,
             format(new Date(income.date), 'yyyy-MM-dd'),
             income.clientName || '',
-            income.serviceName || '',
+            income.serviceDisplay || '',
             income.amount,
             income.paymentMethod || '',
             income.status,
-            income.workerName || ''
+            income.workerDisplay || ''
         ]);
 
         const csvContent = [
@@ -585,17 +591,32 @@ export default function IncomePage() {
             ).join(','))
         ].join('\n');
 
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
+        const BOM = '\uFEFF';
 
-        link.setAttribute('href', url);
-        link.setAttribute('download', `incomes_${format(new Date(), 'yyyy-MM-dd_HHmmss')}.csv`);
-        link.style.visibility = 'hidden';
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/api/download';
+        form.style.display = 'none';
 
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        const filenameInput = document.createElement('input');
+        filenameInput.type = 'hidden';
+        filenameInput.name = 'filename';
+        filenameInput.value = `incomes_${format(new Date(), 'yyyy-MM-dd_HHmmss')}.csv`;
+
+        const contentInput = document.createElement('input');
+        contentInput.type = 'hidden';
+        contentInput.name = 'content';
+        contentInput.value = BOM + csvContent;
+
+        form.appendChild(filenameInput);
+        form.appendChild(contentInput);
+        document.body.appendChild(form);
+
+        form.submit();
+
+        setTimeout(() => {
+            document.body.removeChild(form);
+        }, 100);
 
         showToast(t('common.success'), t('income.exportSuccess') || 'Exported successfully', 'success');
     };
@@ -641,7 +662,7 @@ export default function IncomePage() {
                             {/* Add Button */}
                             <ReadOnlyGuard>
                                 <Link href="/income/add">
-                                    <Button variant="primary" size="md" className="rounded-xl h-12 flex items-center gap-2 font-black shadow-lg shadow-purple-500/20 active:scale-95 transition-all">
+                                    <Button variant="primary" size="md" className="rounded-xl h-12 flex items-center gap-2 font-black shadow-lg shadow-[color:var(--color-primary)]/20 active:scale-95 transition-all">
                                         <Plus className="w-5 h-5" />
                                         <span>{t("income.addIncome")}</span>
                                     </Button>
@@ -716,7 +737,7 @@ export default function IncomePage() {
                         <Button
                             variant="outline"
                             size="sm"
-                            className={`rounded-lg h-9 flex items-center justify-center gap-2 font-bold transition-all border-gray-200 ${showFilters ? 'bg-purple-100 text-purple-700 border-purple-200' : 'text-gray-600'}`}
+                            className={`rounded-lg h-9 flex items-center justify-center gap-2 font-bold transition-all border-gray-200 ${showFilters ? 'bg-primary-light text-color-primary border-color-primary/30' : 'text-gray-600'}`}
                             onClick={() => setShowFilters(!showFilters)}
                         >
                             <Filter className="w-4 h-4" />
@@ -745,7 +766,7 @@ export default function IncomePage() {
 
                 {/* Advanced Filter Panel - Moved below KPIs */}
                 {showFilters && (
-                    <div className="bg-white p-5 rounded-2xl shadow-lg border border-purple-100 animate-in fade-in slide-in-from-top-2 duration-200 mb-6">
+                    <div className="bg-white p-5 rounded-2xl shadow-lg border border-color-primary/30 animate-in fade-in slide-in-from-top-2 duration-200 mb-6">
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div className="space-y-1">
                                 <label className="text-xs font-bold text-gray-500 uppercase ml-1">{t("common.client")} / {t("common.id")}</label>
@@ -756,7 +777,7 @@ export default function IncomePage() {
                                         placeholder={t("income.searchPlaceholder")}
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all"
+                                        className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
                                     />
                                 </div>
                             </div>
@@ -767,13 +788,13 @@ export default function IncomePage() {
                                         type="date"
                                         value={dateFrom}
                                         onChange={(e) => setDateFrom(e.target.value)}
-                                        className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                                        className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary outline-none"
                                     />
                                     <input
                                         type="date"
                                         value={dateTo}
                                         onChange={(e) => setDateTo(e.target.value)}
-                                        className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-500 outline-none"
+                                        className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary outline-none"
                                     />
                                 </div>
                             </div>
@@ -782,7 +803,7 @@ export default function IncomePage() {
                                 <select
                                     value={statusFilter}
                                     onChange={(e) => setStatusFilter(e.target.value)}
-                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-500 outline-none appearance-none"
+                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary outline-none appearance-none"
                                 >
                                     <option value="all">{t("common.allStatuses")}</option>
                                     <option value="Validated">Validated</option>
@@ -798,10 +819,10 @@ export default function IncomePage() {
                                 <select
                                     value={workerFilter}
                                     onChange={(e) => setWorkerFilter(e.target.value)}
-                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-500 outline-none appearance-none"
+                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary outline-none appearance-none"
                                 >
                                     <option value="all">{t("common.allWorkers")}</option>
-                                    {workers.map((w: any) => (
+                                    {workers.map((w: SalonWorker) => (
                                         <option key={w.id} value={w.id}>{w.name}</option>
                                     ))}
                                 </select>
@@ -828,7 +849,7 @@ export default function IncomePage() {
                                 {paginatedIncomes.map((income) => (
                                     <React.Fragment key={income.id}>
                                         <tr
-                                            className={`hover:bg-gray-50 cursor-pointer transition-all duration-200 border-l-4 ${expandedRows.includes(income.id) ? 'bg-purple-50 border-purple-500 shadow-md transform scale-[1.005]' : 'border-transparent'}`}
+                                            className={`hover:bg-gray-50 cursor-pointer transition-all duration-200 border-l-4 ${expandedRows.includes(income.id) ? 'bg-primary-light border-color-primary shadow-md transform scale-[1.005]' : 'border-transparent'}`}
                                             onClick={() => router.push(`/income/${income.id}`)}
                                         >
                                             <td className="hidden md:table-cell px-4 py-4 text-sm text-gray-500">#{income.id}</td>
@@ -852,7 +873,7 @@ export default function IncomePage() {
                                                     {/* Desktop Actions - 6 Actions */}
                                                     <button
                                                         onClick={() => toggleRow(income.id)}
-                                                        className="p-2 hover:bg-white rounded-lg hover:text-purple-600 transition-all shadow-sm border border-transparent hover:border-gray-100"
+                                                        className="p-2 hover:bg-white rounded-lg hover:text-color-primary transition-all shadow-sm border border-transparent hover:border-gray-100"
                                                         title={t("common.comments")}
                                                     >
                                                         <MessageSquare size={16} />
@@ -861,7 +882,7 @@ export default function IncomePage() {
                                                     {permissions.income(income, "edit") && (
                                                         <Link href={`/income/add?edit=${income.id}`}>
                                                             <ReadOnlyGuard>
-                                                                <button className="p-2 hover:bg-white rounded-lg hover:text-purple-600 transition-all shadow-sm border border-transparent hover:border-gray-100" title={t("common.edit")}><Pencil size={16} /></button>
+                                                                <button className="p-2 hover:bg-white rounded-lg hover:text-color-primary transition-all shadow-sm border border-transparent hover:border-gray-100" title={t("common.edit")}><Pencil size={16} /></button>
                                                             </ReadOnlyGuard>
                                                         </Link>
                                                     )}
@@ -880,7 +901,7 @@ export default function IncomePage() {
                                                     )}
 
                                                     {permissions.income(income, "contest",
-                                                        income.createdBy === user?.name || (income.workerIds || []).some((id: any) => String(id) === String(auth.getWorkerId()))
+                                                        income.createdBy === user?.name || (income.workerIds || []).some((id: number) => String(id) === String(auth.getWorkerId()))
                                                     ) && (
                                                             <ReadOnlyGuard>
                                                                 <button onClick={() => handleContest(income.id)} className="p-2 hover:bg-white rounded-lg text-orange-600 hover:text-orange-800 transition-all shadow-sm border border-transparent hover:border-gray-100" title={t("income.contest")}><X size={16} /></button>
@@ -897,7 +918,7 @@ export default function IncomePage() {
                                                         </button>
                                                     )}
 
-                                                    <button onClick={() => handleViewHistory(income)} className="p-2 hover:bg-white rounded-lg text-purple-600 hover:text-purple-800 transition-all shadow-sm border border-transparent hover:border-gray-100" title={t("common.history")}><History size={16} /></button>
+                                                    <button onClick={() => handleViewHistory(income)} className="p-2 hover:bg-white rounded-lg text-color-primary hover:text-color-primary transition-all shadow-sm border border-transparent hover:border-gray-100" title={t("common.history")}><History size={16} /></button>
 
                                                     {/* Status-based delete/archive */}
                                                     {(income.status === 'Draft' || income.status === 'Pending') && permissions.income(income, "delete") && (
@@ -954,7 +975,7 @@ export default function IncomePage() {
                                                                 </ReadOnlyGuard>
                                                             )}
                                                             {permissions.income(income, "contest",
-                                                                income.createdBy === user?.name || (income.workerIds || []).some((id: any) => String(id) === String(auth.getWorkerId()))
+                                                                income.createdBy === user?.name || (income.workerIds || []).some((id: number) => String(id) === String(auth.getWorkerId()))
                                                             ) && (
                                                                     <ReadOnlyGuard>
                                                                         <Button
@@ -980,7 +1001,7 @@ export default function IncomePage() {
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
-                                                                className="justify-center gap-2 h-11 rounded-xl bg-white shadow-sm text-purple-600 border-purple-100"
+                                                                className="justify-center gap-2 h-11 rounded-xl bg-white shadow-sm text-color-primary border-color-primary/30"
                                                                 onClick={() => handleViewHistory(income)}
                                                             >
                                                                 <History size={18} /> {t("common.history")}
@@ -1014,7 +1035,7 @@ export default function IncomePage() {
 
                                                         {/* Comments Section */}
                                                         <div className="bg-white rounded-3xl border border-gray-100 shadow-xl shadow-gray-200/50 overflow-hidden">
-                                                            <div className="bg-gradient-to-r from-purple-50 to-white px-6 py-4 flex items-center justify-between border-b border-gray-100">
+                                                            <div className="bg-gradient-to-r from-primary to-white px-6 py-4 flex items-center justify-between border-b border-gray-100">
                                                                 <h4 className="text-sm font-bold text-gray-900 flex items-center gap-2">
                                                                     <MessageSquare size={16} className="text-[var(--color-primary)]" /> {t("common.comments")}
                                                                 </h4>
@@ -1028,24 +1049,24 @@ export default function IncomePage() {
                                                                     {(income.notes || (income.comments && income.comments.length > 0)) ? (
                                                                         <div className="space-y-4">
                                                                             {income.notes && (
-                                                                                <div className="p-4 bg-purple-50 rounded-2xl border border-purple-100 text-purple-900 text-sm whitespace-pre-wrap font-medium">
-                                                                                    <div className="flex items-center gap-2 mb-2 text-purple-700 font-bold uppercase text-[10px] tracking-wider">
+                                                                                <div className="p-4 bg-primary-light rounded-2xl border border-color-primary/30 text-color-primary text-sm whitespace-pre-wrap font-medium">
+                                                                                    <div className="flex items-center gap-2 mb-2 text-color-primary font-bold uppercase text-[10px] tracking-wider">
                                                                                         <MessageSquare size={12} /> {t("common.notes")}
                                                                                     </div>
                                                                                     {income.notes}
                                                                                 </div>
                                                                             )}
 
-                                                                            {income.comments && income.comments.length > 0 && income.comments.map((c: any, i: number) => (
+                                                                            {income.comments && income.comments.length > 0 && income.comments.map((c: BookingComment, i: number) => (
                                                                                 <div key={i} className="flex gap-4">
-                                                                                    <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-[var(--color-primary-light)] to-purple-50 flex items-center justify-center text-[var(--color-primary)] font-bold text-sm shrink-0 shadow-sm border border-purple-100">
+                                                                                    <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-[var(--color-primary-light)] to-[var(--color-primary-light)] flex items-center justify-center text-[var(--color-primary)] font-bold text-sm shrink-0 shadow-sm border border-color-primary/30">
                                                                                         {c.user.charAt(0)}
                                                                                     </div>
                                                                                     <div className="flex-1 bg-gray-50 p-4 rounded-2xl text-sm border border-gray-100 hover:border-[var(--color-primary-light)] transition-colors group">
                                                                                         <div className="flex justify-between items-center mb-2">
                                                                                             <span className="font-bold text-gray-900">{c.user}</span>
                                                                                             <span className="text-[10px] font-medium text-gray-400 flex items-center gap-1">
-                                                                                                <Clock size={10} /> {c.date}
+                                                                                                <Clock size={10} /> {c.timestamp instanceof Date ? c.timestamp.toLocaleString() : String(c.timestamp)}
                                                                                             </span>
                                                                                         </div>
                                                                                         <p className="text-gray-600 italic leading-relaxed">"{c.text}"</p>
@@ -1071,7 +1092,7 @@ export default function IncomePage() {
                                                                     />
                                                                     <Button
                                                                         size="md"
-                                                                        className="h-12 px-8 rounded-xl font-bold bg-[var(--color-primary)] hover:opacity-90 transition-all shadow-lg shadow-purple-200 active:scale-95"
+                                                                        className="h-12 px-8 rounded-xl font-bold bg-[var(--color-primary)] hover:opacity-90 transition-all shadow-lg shadow-[color:var(--color-primary)]/20 active:scale-95"
                                                                         onClick={() => handleAddComment(income.id)}
                                                                     >
                                                                         {t("common.post")}

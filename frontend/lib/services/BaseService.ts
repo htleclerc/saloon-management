@@ -4,27 +4,18 @@
  * Provides common functionality for all business services
  */
 
-import { DataProviderFactory } from '../providers/types';
-import { useDataMode } from '@/context/DataModeProvider';
+import { DataProviderFactory, type IDataProvider, type DataMode } from '../providers/types';
 
 export abstract class BaseService {
-    protected getProvider() {
-        const mode = (typeof window !== 'undefined'
+    protected getProvider(): IDataProvider {
+        const mode = ((typeof window !== 'undefined'
             ? localStorage.getItem('saloon-data-mode')
-            : 'demo-supabase') as 'demo-local' | 'demo-supabase' | 'normal' || 'demo-supabase';
+            : null) || 'demo-supabase') as DataMode;
         return DataProviderFactory.create(mode);
     }
 
-    protected get provider(): any {
+    protected get provider(): IDataProvider {
         return this.getProvider();
-    }
-
-    protected validateRequired(data: any, fields: string[]) {
-        for (const field of fields) {
-            if (data[field] === undefined || data[field] === null || (typeof data[field] === 'string' && data[field].trim() === '')) {
-                throw new Error(`${field} is required`);
-            }
-        }
     }
 
     protected validateEmail(email: string): boolean {

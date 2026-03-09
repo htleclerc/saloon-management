@@ -339,13 +339,13 @@ function SetupPageContent() {
                                             key={type.id}
                                             onClick={() => handleSalonTypeSelect(type.id)}
                                             className={`relative p-6 rounded-2xl border-2 transition-all ${isSelected
-                                                ? "border-[#8B5CF6] bg-purple-50 shadow-lg scale-[1.02]"
+                                                ? "border-[var(--color-primary)] bg-primary-light shadow-lg scale-[1.02]"
                                                 : "border-gray-200 hover:border-gray-300 hover:shadow-md"
                                                 }`}
                                         >
                                             {isSelected && (
                                                 <div className="absolute top-2 right-2">
-                                                    <CheckCircle2 className="w-5 h-5 text-[#8B5CF6]" />
+                                                    <CheckCircle2 className="w-5 h-5 text-[var(--color-primary)]" />
                                                 </div>
                                             )}
                                             <div
@@ -386,7 +386,7 @@ function SetupPageContent() {
                                                 setSalonForm({ ...salonForm, name: e.target.value })
                                             }
                                             placeholder="Mon Salon de Coiffure"
-                                            className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]/20 focus:border-[#8B5CF6]"
+                                            className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)]"
                                         />
                                     </div>
                                 </div>
@@ -404,7 +404,7 @@ function SetupPageContent() {
                                                 setSalonForm({ ...salonForm, address: e.target.value })
                                             }
                                             placeholder="123 Rue de la Beauté, Paris 75001"
-                                            className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]/20 focus:border-[#8B5CF6]"
+                                            className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)]"
                                         />
                                     </div>
                                 </div>
@@ -423,7 +423,7 @@ function SetupPageContent() {
                                                     setSalonForm({ ...salonForm, phone: e.target.value })
                                                 }
                                                 placeholder="+33 1 23 45 67 89"
-                                                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]/20 focus:border-[#8B5CF6]"
+                                                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)]"
                                             />
                                         </div>
                                     </div>
@@ -441,7 +441,7 @@ function SetupPageContent() {
                                                     setSalonForm({ ...salonForm, email: e.target.value })
                                                 }
                                                 placeholder="contact@monsalon.fr"
-                                                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]/20 focus:border-[#8B5CF6]"
+                                                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)]"
                                             />
                                         </div>
                                     </div>
@@ -460,7 +460,7 @@ function SetupPageContent() {
                                                 setSalonForm({ ...salonForm, website: e.target.value })
                                             }
                                             placeholder="https://monsalon.fr"
-                                            className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]/20 focus:border-[#8B5CF6]"
+                                            className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)]"
                                         />
                                     </div>
                                 </div>
@@ -498,7 +498,7 @@ function SetupPageContent() {
                                     </button>
                                     <button
                                         onClick={() => setShowServiceImport(true)}
-                                        className="flex items-center gap-2 px-4 py-2 border border-purple-200 rounded-xl hover:bg-purple-50 transition-colors"
+                                        className="flex items-center gap-2 px-4 py-2 border border-color-primary/30 rounded-xl hover:bg-primary-light transition-colors"
                                     >
                                         <Upload className="w-4 h-4" />
                                         Importer CSV
@@ -513,7 +513,7 @@ function SetupPageContent() {
                                         {config.services.map(service => (
                                             <div
                                                 key={service.id}
-                                                className="flex items-start gap-3 p-4 border border-purple-200 bg-purple-50 rounded-xl"
+                                                className="flex items-start gap-3 p-4 border border-color-primary/30 bg-primary-light rounded-xl"
                                             >
                                                 <div className="flex-1 min-w-0">
                                                     <p className="font-bold text-gray-900 mb-1 flex items-center gap-2">
@@ -524,7 +524,7 @@ function SetupPageContent() {
                                                             </span>
                                                         )}
                                                     </p>
-                                                    <p className="text-sm text-purple-600">
+                                                    <p className="text-sm text-color-primary">
                                                         {service.price}€ • {service.duration} min
                                                     </p>
                                                 </div>
@@ -557,7 +557,7 @@ function SetupPageContent() {
                             )}
 
                             {/* Add Custom Service Form */}
-                            <div className="mt-6 p-4 border-2 border-dashed border-gray-300 rounded-xl hover:border-purple-400 transition-colors">
+                            <div className="mt-6 p-4 border-2 border-dashed border-gray-300 rounded-xl hover:border-color-primary transition-colors">
                                 <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
                                     <Sparkles className="w-4 h-4" />
                                     Ajouter un service personnalisé
@@ -568,21 +568,21 @@ function SetupPageContent() {
                                         placeholder="Nom du service"
                                         value={newServiceName}
                                         onChange={(e) => setNewServiceName(e.target.value)}
-                                        className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                        className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                                     />
                                     <input
                                         type="number"
                                         placeholder="Prix (€)"
                                         value={newServicePrice}
                                         onChange={(e) => setNewServicePrice(e.target.value)}
-                                        className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                        className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                                     />
                                     <input
                                         type="number"
                                         placeholder="Durée (min)"
                                         value={newServiceDuration}
                                         onChange={(e) => setNewServiceDuration(e.target.value)}
-                                        className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                        className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                                     />
                                     <button
                                         onClick={() => {
@@ -604,7 +604,7 @@ function SetupPageContent() {
                                         }}
                                         disabled={!newServiceName || !newServicePrice || !newServiceDuration}
                                         className={`px-4 py-2 rounded-lg font-medium transition-colors ${newServiceName && newServicePrice && newServiceDuration
-                                            ? 'bg-purple-600 text-white hover:bg-purple-700'
+                                            ? 'bg-primary text-white hover:bg-primary'
                                             : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                                             }`}
                                     >
@@ -645,7 +645,7 @@ function SetupPageContent() {
                                     </button>
                                     <button
                                         onClick={() => setShowProductImport(true)}
-                                        className="flex items-center gap-2 px-4 py-2 border border-purple-200 rounded-xl hover:bg-purple-50 transition-colors"
+                                        className="flex items-center gap-2 px-4 py-2 border border-color-primary/30 rounded-xl hover:bg-primary-light transition-colors"
                                     >
                                         <Upload className="w-4 h-4" />
                                         Importer CSV
@@ -660,7 +660,7 @@ function SetupPageContent() {
                                         {config.products.map(product => (
                                             <div
                                                 key={product.id}
-                                                className="flex items-start gap-3 p-4 border border-pink-200 bg-pink-50 rounded-xl"
+                                                className="flex items-start gap-3 p-4 border border-color-secondary bg-secondary-light rounded-xl"
                                             >
                                                 <div className="flex-1 min-w-0">
                                                     <p className="font-bold text-gray-900 mb-1 flex items-center gap-2">
@@ -671,7 +671,7 @@ function SetupPageContent() {
                                                             </span>
                                                         )}
                                                     </p>
-                                                    <p className="text-sm text-pink-600">
+                                                    <p className="text-sm text-color-secondary">
                                                         {product.price}€ • Stock: {product.stock}
                                                     </p>
                                                 </div>
@@ -704,7 +704,7 @@ function SetupPageContent() {
                             )}
 
                             {/* Add Custom Product Form */}
-                            <div className="mt-6 p-4 border-2 border-dashed border-gray-300 rounded-xl hover:border-pink-400 transition-colors">
+                            <div className="mt-6 p-4 border-2 border-dashed border-gray-300 rounded-xl hover:border-color-secondary transition-colors">
                                 <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
                                     <Sparkles className="w-4 h-4" />
                                     Ajouter un produit personnalisé
@@ -715,21 +715,21 @@ function SetupPageContent() {
                                         placeholder="Nom du produit"
                                         value={newProductName}
                                         onChange={(e) => setNewProductName(e.target.value)}
-                                        className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                        className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-secondary)]"
                                     />
                                     <input
                                         type="number"
                                         placeholder="Prix (€)"
                                         value={newProductPrice}
                                         onChange={(e) => setNewProductPrice(e.target.value)}
-                                        className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                        className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-secondary)]"
                                     />
                                     <input
                                         type="number"
                                         placeholder="Stock initial"
                                         value={newProductStock}
                                         onChange={(e) => setNewProductStock(e.target.value)}
-                                        className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500"
+                                        className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-secondary)]"
                                     />
                                     <button
                                         onClick={() => {
@@ -750,7 +750,7 @@ function SetupPageContent() {
                                         }}
                                         disabled={!newProductName || !newProductPrice || !newProductStock}
                                         className={`px-4 py-2 rounded-lg font-medium transition-colors ${newProductName && newProductPrice && newProductStock
-                                            ? 'bg-pink-600 text-white hover:bg-pink-700'
+                                            ? 'bg-secondary text-white hover:bg-secondary'
                                             : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                                             }`}
                                     >
@@ -791,7 +791,7 @@ function SetupPageContent() {
                                                 <label
                                                     key={category.id}
                                                     className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all ${isSelected
-                                                        ? 'border-purple-500 bg-purple-50'
+                                                        ? 'border-color-primary bg-primary-light'
                                                         : 'border-gray-200 hover:bg-gray-50'
                                                         }`}
                                                 >
@@ -805,7 +805,7 @@ function SetupPageContent() {
                                                                 removeExpenseCategory(category.id);
                                                             }
                                                         }}
-                                                        className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
+                                                        className="w-5 h-5 text-color-primary rounded focus:ring-primary"
                                                     />
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center gap-2">
@@ -841,7 +841,7 @@ function SetupPageContent() {
                             )}
 
                             {/* Add Custom Category Form */}
-                            <div className="mt-6 p-4 border-2 border-dashed border-gray-300 rounded-xl hover:border-purple-400 transition-colors">
+                            <div className="mt-6 p-4 border-2 border-dashed border-gray-300 rounded-xl hover:border-color-primary transition-colors">
                                 <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
                                     <Sparkles className="w-4 h-4" />
                                     Ajouter une catégorie personnalisée
@@ -852,7 +852,7 @@ function SetupPageContent() {
                                         placeholder="Nom de la catégorie"
                                         value={newCategoryName}
                                         onChange={(e) => setNewCategoryName(e.target.value)}
-                                        className="col-span-2 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                        className="col-span-2 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                                     />
                                     <div className="flex gap-2">
                                         <div className="relative flex-1">
@@ -877,7 +877,7 @@ function SetupPageContent() {
                                             }}
                                             disabled={!newCategoryName}
                                             className={`px-4 py-2 rounded-lg font-medium transition-colors whitespace-nowrap ${newCategoryName
-                                                ? 'bg-purple-600 text-white hover:bg-purple-700'
+                                                ? 'bg-primary text-white hover:bg-primary'
                                                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                                                 }`}
                                         >
@@ -889,10 +889,10 @@ function SetupPageContent() {
 
                             <button
                                 onClick={() => setShowExpenseCategoryImport(true)}
-                                className="w-full mt-6 p-6 border-2 border-dashed border-gray-300 rounded-xl hover:border-purple-400 hover:bg-purple-50/50 transition-all group"
+                                className="w-full mt-6 p-6 border-2 border-dashed border-gray-300 rounded-xl hover:border-color-primary hover:bg-primary-light/50 transition-all group"
                             >
-                                <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400 group-hover:text-purple-500 transition-colors" />
-                                <p className="text-sm font-medium text-gray-700 group-hover:text-purple-700 transition-colors">
+                                <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400 group-hover:text-color-primary transition-colors" />
+                                <p className="text-sm font-medium text-gray-700 group-hover:text-color-primary transition-colors">
                                     Importer depuis CSV
                                 </p>
                                 <p className="text-xs text-gray-500 mt-1">Importez vos catégories depuis un fichier CSV</p>
@@ -914,7 +914,7 @@ function SetupPageContent() {
                                 </div>
                                 <button
                                     onClick={() => setShowClientImport(true)}
-                                    className="flex items-center gap-2 px-4 py-2 border border-purple-200 rounded-xl hover:bg-purple-50 transition-colors"
+                                    className="flex items-center gap-2 px-4 py-2 border border-color-primary/30 rounded-xl hover:bg-primary-light transition-colors"
                                 >
                                     <Upload className="w-4 h-4" />
                                     <span className="font-medium">Importer CSV</span>
@@ -930,7 +930,7 @@ function SetupPageContent() {
                                             className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-xl"
                                         >
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">
+                                                <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-[var(--color-primary)] rounded-full flex items-center justify-center text-white font-bold">
                                                     {client.name.charAt(0).toUpperCase()}
                                                 </div>
                                                 <div>
@@ -1057,7 +1057,7 @@ function SetupPageContent() {
                                         value={newWorkerName}
                                         onChange={(e) => setNewWorkerName(e.target.value)}
                                         placeholder="Nom"
-                                        className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]/20 focus:border-[#8B5CF6]"
+                                        className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)]"
                                     />
                                 </div>
                                 <div className="flex-1 relative">
@@ -1067,13 +1067,13 @@ function SetupPageContent() {
                                         value={newWorkerEmail}
                                         onChange={(e) => setNewWorkerEmail(e.target.value)}
                                         placeholder="Email"
-                                        className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8B5CF6]/20 focus:border-[#8B5CF6]"
+                                        className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)]"
                                     />
                                 </div>
                                 <button
                                     onClick={handleAddWorker}
                                     disabled={!newWorkerName || !newWorkerEmail}
-                                    className="px-4 py-3 bg-[#8B5CF6] text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#7C3AED] transition-colors"
+                                    className="px-4 py-3 bg-[var(--color-primary)] text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[var(--color-primary-dark)] transition-colors"
                                 >
                                     <Plus className="w-5 h-5" />
                                 </button>
@@ -1087,7 +1087,7 @@ function SetupPageContent() {
                                             className="flex items-center justify-between p-4 bg-gray-50 rounded-xl"
                                         >
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#8B5CF6] to-[#EC4899] flex items-center justify-center text-white font-bold">
+                                                <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center text-white font-bold">
                                                     {worker.name.charAt(0).toUpperCase()}
                                                 </div>
                                                 <div>
@@ -1124,19 +1124,19 @@ function SetupPageContent() {
                             </div>
 
                             <div className="space-y-4 max-w-2xl mx-auto">
-                                <div className="p-4 bg-purple-50 rounded-xl border border-purple-100">
+                                <div className="p-4 bg-primary-light rounded-xl border border-color-primary/30">
                                     <div className="flex items-center gap-3 mb-2">
-                                        <Building2 className="w-5 h-5 text-[#8B5CF6]" />
+                                        <Building2 className="w-5 h-5 text-[var(--color-primary)]" />
                                         <span className="font-bold text-gray-900">Type de salon</span>
                                     </div>
-                                    <p className="text-[#8B5CF6] font-medium ml-8">
+                                    <p className="text-[var(--color-primary)] font-medium ml-8">
                                         {salonTypes.find((t) => t.id === config.salonType)?.label || "N/A"}
                                     </p>
                                 </div>
 
-                                <div className="p-4 bg-pink-50 rounded-xl border border-pink-100">
+                                <div className="p-4 bg-secondary-light rounded-xl border border-color-secondary">
                                     <div className="flex items-center gap-3 mb-2">
-                                        <Sparkles className="w-5 h-5 text-pink-500" />
+                                        <Sparkles className="w-5 h-5 text-color-secondary" />
                                         <span className="font-bold text-gray-900">
                                             Services ({config.services.length})
                                         </span>
@@ -1203,10 +1203,10 @@ function SetupPageContent() {
                             }
                             className={`ml-auto flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${currentStep === 2
                                 ? (salonForm.name && salonForm.address && salonForm.phone && salonForm.email)
-                                    ? "bg-gradient-to-r from-[#8B5CF6] to-[#D946EF] text-white hover:scale-[1.02] shadow-lg"
+                                    ? "bg-gradient-primary text-white hover:scale-[1.02] shadow-lg"
                                     : "bg-gray-200 text-gray-400 cursor-not-allowed"
                                 : canProceedToNext()
-                                    ? "bg-gradient-to-r from-[#8B5CF6] to-[#D946EF] text-white hover:scale-[1.02] shadow-lg"
+                                    ? "bg-gradient-primary text-white hover:scale-[1.02] shadow-lg"
                                     : "bg-gray-200 text-gray-400 cursor-not-allowed"
                                 }`}
                         >
@@ -1266,7 +1266,7 @@ export default function EnhancedSetupPage() {
     return (
         <Suspense fallback={
             <div className="flex items-center justify-center min-h-screen bg-gray-50">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#8B5CF6]"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-primary)]"></div>
             </div>
         }>
             <SetupPageContent />

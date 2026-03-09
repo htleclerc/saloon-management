@@ -160,7 +160,7 @@ export default function ApprovalsPage() {
         return (
             <MainLayout>
                 <div className="flex items-center justify-center h-full min-h-[400px]">
-                    <RefreshCw className="w-8 h-8 animate-spin text-purple-600" />
+                    <RefreshCw className="w-8 h-8 animate-spin text-color-primary" />
                 </div>
             </MainLayout>
         );
@@ -224,7 +224,7 @@ export default function ApprovalsPage() {
                     <button
                         onClick={() => { setSelectedTab("incomes"); setSelectedItems([]); }}
                         className={`px-4 py-2 font-medium transition-colors ${selectedTab === "incomes"
-                            ? "border-b-2 border-purple-600 text-purple-600"
+                            ? "border-b-2 border-color-primary text-color-primary"
                             : "text-gray-500 hover:text-gray-700"
                             }`}
                     >
@@ -233,7 +233,7 @@ export default function ApprovalsPage() {
                     <button
                         onClick={() => { setSelectedTab("expenses"); setSelectedItems([]); }}
                         className={`px-4 py-2 font-medium transition-colors ${selectedTab === "expenses"
-                            ? "border-b-2 border-purple-600 text-purple-600"
+                            ? "border-b-2 border-color-primary text-color-primary"
                             : "text-gray-500 hover:text-gray-700"
                             }`}
                     >
@@ -242,7 +242,7 @@ export default function ApprovalsPage() {
                     <button
                         onClick={() => { setSelectedTab("history"); setSelectedItems([]); }}
                         className={`px-4 py-2 font-medium transition-colors ${selectedTab === "history"
-                            ? "border-b-2 border-purple-600 text-purple-600"
+                            ? "border-b-2 border-color-primary text-color-primary"
                             : "text-gray-500 hover:text-gray-700"
                             }`}
                     >
@@ -252,7 +252,7 @@ export default function ApprovalsPage() {
 
                 {/* Bulk Actions */}
                 {selectedItems.length > 0 && selectedTab !== "history" && (
-                    <Card gradient="bg-gradient-to-r from-purple-50 to-pink-50">
+                    <Card gradient="bg-gradient-primary">
                         <div className="flex items-center justify-between">
                             <p className="font-medium text-gray-900">
                                 {t('approvals.selected', { count: selectedItems.length })}
@@ -314,14 +314,14 @@ export default function ApprovalsPage() {
                                             </td>
                                             <td className="px-4 py-4 text-sm text-gray-900">{formatDate(income.date)}</td>
                                             <td className="px-4 py-4">
-                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-light text-color-primary">
                                                     {/* In a real app, resolve worker name via ID */}
                                                     {income.updatedBy || 'Worker'}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-4 text-sm text-gray-900">{income.clientName || 'Unknown'}</td>
                                             <td className="px-4 py-4 text-sm text-gray-900">Service</td>
-                                            <td className="px-4 py-4 text-right font-semibold text-purple-600">€{income.finalAmount}</td>
+                                            <td className="px-4 py-4 text-right font-semibold text-color-primary">€{income.finalAmount}</td>
                                             <td className="px-4 py-4 text-sm text-gray-900">{income.createdBy}</td>
                                             <td className="px-4 py-4">
                                                 <div className="flex items-center justify-center gap-2">
@@ -393,12 +393,12 @@ export default function ApprovalsPage() {
                                             </td>
                                             <td className="px-4 py-4 text-sm text-gray-900">{formatDate(expense.date)}</td>
                                             <td className="px-4 py-4">
-                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-pink-100 text-pink-800">
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary-light text-color-secondary">
                                                     {expense.categoryId} {/* TODO: Map to category name */}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-4 text-sm text-gray-900">{expense.description}</td>
-                                            <td className="px-4 py-4 text-right font-semibold text-pink-600">€{expense.amount}</td>
+                                            <td className="px-4 py-4 text-right font-semibold text-color-secondary">€{expense.amount}</td>
                                             <td className="px-4 py-4">
                                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                                     Salon {expense.salonId}
@@ -456,7 +456,7 @@ export default function ApprovalsPage() {
                                     {historyItems.map((item) => (
                                         <tr key={`${item.type}-${item.id}`} className="hover:bg-gray-50 transition">
                                             <td className="px-4 py-4">
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.type === "income" ? "bg-purple-100 text-purple-800" : "bg-pink-100 text-pink-800"
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.type === "income" ? "bg-primary-light text-color-primary" : "bg-secondary-light text-color-secondary"
                                                     }`}>
                                                     {item.type}
                                                 </span>

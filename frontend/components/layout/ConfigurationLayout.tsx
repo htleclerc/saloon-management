@@ -21,7 +21,7 @@ import {
 export const configurationMenuItems = [
     { id: "workshop", name: "Workshop", description: "Business settings", icon: Building2, path: "/configuration/workshop", color: "from-blue-500 to-blue-700", roles: ['manager', 'super_admin'] },
     { id: "inventory", name: "Inventory", description: "Products & Stock", icon: FlaskConical, path: "/configuration/inventory", color: "from-teal-500 to-teal-700", roles: ['manager', 'super_admin'] },
-    { id: "promos", name: "Promos", description: "Discount codes", icon: Tags, path: "/configuration/promos", color: "from-purple-500 to-purple-700", roles: ['manager', 'super_admin'] },
+    { id: "promos", name: "Promos", description: "Discount codes", icon: Tags, path: "/configuration/promos", color: "from-primary to-[var(--color-primary)]", roles: ['manager', 'super_admin'] },
     { id: "tips", name: "Tips Management", description: "Distribution rules", icon: Coins, path: "/configuration/tips", color: "from-yellow-500 to-orange-500", roles: ['super_admin'] },
 ];
 
@@ -82,7 +82,7 @@ export default function ConfigurationLayout({ children, title, description }: Co
                                             key={item.id}
                                             href={item.path}
                                             onClick={() => setMobileDropdownOpen(false)}
-                                            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${active ? "bg-purple-50 text-purple-700" : "hover:bg-gray-50"
+                                            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${active ? "bg-primary-light text-color-primary" : "hover:bg-gray-50"
                                                 }`}
                                         >
                                             <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center`}>

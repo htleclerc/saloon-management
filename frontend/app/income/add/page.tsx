@@ -684,10 +684,10 @@ function AddIncomeContent() {
                 </div>
 
                 {/* Main Form */}
-                <Card className="border-l-4 border-l-purple-500">
+                <Card className="border-l-4 border-l-[var(--color-primary)]">
                     <div className="flex items-center gap-2 mb-6">
-                        <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                            <Scissors className="w-4 h-4 text-purple-600" />
+                        <div className="w-8 h-8 bg-primary-light rounded-full flex items-center justify-center">
+                            <Scissors className="w-4 h-4 text-color-primary" />
                         </div>
                         <h2 className="text-xl font-bold text-gray-900">Service Details</h2>
                         <span className="text-sm text-gray-500 ml-auto">Step 1/4</span>
@@ -697,8 +697,8 @@ function AddIncomeContent() {
                         {/* Left Column */}
                         <div className="space-y-6">
                             {/* Booking Selection */}
-                            <div className="p-4 bg-purple-50 border border-purple-100 rounded-xl space-y-3">
-                                <label className="flex items-center gap-2 text-sm font-medium text-purple-900">
+                            <div className="p-4 bg-primary-light border border-color-primary/30 rounded-xl space-y-3">
+                                <label className="flex items-center gap-2 text-sm font-medium text-color-primary">
                                     <Bookmark className="w-4 h-4" />
                                     Link to a Booking
                                 </label>
@@ -706,7 +706,7 @@ function AddIncomeContent() {
                                     value={selectedBookingId || ""}
                                     onChange={(e) => handleBookingChange(e.target.value ? Number(e.target.value) : null)}
                                     disabled={!canModify}
-                                    className="w-full px-4 py-3 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white text-sm appearance-none cursor-pointer disabled:opacity-50"
+                                    className="w-full px-4 py-3 border border-color-primary/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary bg-white text-sm appearance-none cursor-pointer disabled:opacity-50"
                                     style={{
                                         backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3csvg%3e")`,
                                         backgroundPosition: 'right 1rem center',
@@ -722,16 +722,16 @@ function AddIncomeContent() {
                                     ))}
                                 </select>
                                 <div className="flex items-center justify-between">
-                                    <p className="text-[10px] text-purple-600 italic">Valid bookings (last 7 days)</p>
+                                    <p className="text-[10px] text-color-primary italic">Valid bookings (last 7 days)</p>
                                     <label className="flex items-center gap-1.5 cursor-pointer">
                                         <input
                                             type="checkbox"
                                             checked={ignoreClientFilter}
                                             onChange={(e) => setIgnoreClientFilter(e.target.checked)}
                                             disabled={!canModify}
-                                            className="w-3.5 h-3.5 text-purple-600 rounded"
+                                            className="w-3.5 h-3.5 text-color-primary rounded"
                                         />
-                                        <span className="text-[10px] font-medium text-purple-700">Show all</span>
+                                        <span className="text-[10px] font-medium text-color-primary">Show all</span>
                                     </label>
                                 </div>
                             </div>
@@ -749,10 +749,10 @@ function AddIncomeContent() {
                                             key={service.id}
                                             onClick={() => { if (!canModify) handleReadOnlyClick(); else toggleService(service.id); }}
                                             disabled={!canModify}
-                                            className={`p-3 rounded-xl border-2 text-left transition-all ${selectedServices.includes(service.id) ? "border-purple-500 bg-purple-50" : "border-gray-200"} disabled:opacity-50`}
+                                            className={`p-3 rounded-xl border-2 text-left transition-all ${selectedServices.includes(service.id) ? "border-color-primary bg-primary-light" : "border-gray-200"} disabled:opacity-50`}
                                         >
                                             <p className="font-semibold text-sm truncate">{service.name}</p>
-                                            <p className="text-xs text-purple-600 font-bold">€{service.price}</p>
+                                            <p className="text-xs text-color-primary font-bold">€{service.price}</p>
                                         </button>
                                     ))}
 
@@ -761,7 +761,7 @@ function AddIncomeContent() {
                                         <button
                                             onClick={() => setIsServiceModalOpen(true)}
                                             disabled={!canModify}
-                                            className="p-3 rounded-xl border-2 border-dashed border-purple-300 bg-purple-50/50 text-purple-700 flex flex-col items-center justify-center gap-1 hover:bg-purple-100 transition-all col-span-2 md:col-span-1 disabled:opacity-50"
+                                            className="p-3 rounded-xl border-2 border-dashed border-color-primary/30 bg-primary-light/50 text-color-primary flex flex-col items-center justify-center gap-1 hover:bg-primary-light transition-all col-span-2 md:col-span-1 disabled:opacity-50"
                                         >
                                             <Search className="w-5 h-5" />
                                             <span className="text-xs font-bold">View all {services.length} services</span>
@@ -842,7 +842,7 @@ function AddIncomeContent() {
                                                     <input
                                                         autoFocus
                                                         placeholder="Search services..."
-                                                        className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-purple-500"
+                                                        className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary"
                                                         value={serviceSearch}
                                                         onChange={e => setServiceSearch(e.target.value)}
                                                     />
@@ -853,15 +853,15 @@ function AddIncomeContent() {
                                                     <div
                                                         key={service.id}
                                                         onClick={() => toggleService(service.id)}
-                                                        className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${selectedServices.includes(service.id) ? 'border-purple-500 bg-purple-50' : 'border-gray-100 hover:border-purple-200 hover:bg-purple-50/50'}`}
+                                                        className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${selectedServices.includes(service.id) ? 'border-color-primary bg-primary-light' : 'border-gray-100 hover:border-color-primary/30 hover:bg-primary-light/50'}`}
                                                     >
                                                         <div>
                                                             <p className="font-bold text-gray-900">{service.name}</p>
                                                             <p className="text-xs text-gray-500">{service.duration}</p>
                                                         </div>
                                                         <div className="flex items-center gap-3">
-                                                            <span className="font-bold text-purple-600">€{service.price}</span>
-                                                            {selectedServices.includes(service.id) && <CheckCircle2 className="w-5 h-5 text-purple-600 fill-purple-100" />}
+                                                            <span className="font-bold text-color-primary">€{service.price}</span>
+                                                            {selectedServices.includes(service.id) && <CheckCircle2 className="w-5 h-5 text-color-primary fill-[var(--color-primary-light)]" />}
                                                         </div>
                                                     </div>
                                                 ))}
@@ -887,7 +887,7 @@ function AddIncomeContent() {
                             <div className="p-4 bg-gray-50 rounded-xl space-y-4 border border-gray-100">
                                 <div className="flex items-center justify-between">
                                     <label className="flex items-center gap-2 text-sm font-bold text-gray-900">
-                                        <User className="w-4 h-4 text-purple-600" /> Client
+                                        <User className="w-4 h-4 text-color-primary" /> Client
                                     </label>
                                     <label className="flex items-center gap-2 text-xs cursor-pointer select-none">
                                         <input
@@ -895,7 +895,7 @@ function AddIncomeContent() {
                                             checked={isNewClient}
                                             onChange={(e) => setIsNewClient(e.target.checked)}
                                             disabled={!canModify}
-                                            className="rounded text-purple-600 focus:ring-purple-500 w-4 h-4 disabled:opacity-50"
+                                            className="rounded text-color-primary focus:ring-primary w-4 h-4 disabled:opacity-50"
                                         />
                                         <span className="text-gray-600 font-medium">New / Unknown Client?</span>
                                     </label>
@@ -904,7 +904,7 @@ function AddIncomeContent() {
                                 {!isNewClient ? (
                                     <div className="animate-in fade-in slide-in-from-top-2 duration-200">
                                         <select
-                                            className="w-full px-3 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none bg-white disabled:opacity-50"
+                                            className="w-full px-3 py-3 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none bg-white disabled:opacity-50"
                                             value={selectedClient || ""}
                                             onChange={(e) => setSelectedClient(Number(e.target.value))}
                                             disabled={!canModify}
@@ -923,7 +923,7 @@ function AddIncomeContent() {
                                                 onChange={(e) => setNewClientName(e.target.value)}
                                                 disabled={!canModify}
                                                 placeholder="Client Name *"
-                                                className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none disabled:opacity-50"
+                                                className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none disabled:opacity-50"
                                             />
                                         </div>
                                         <div className="grid grid-cols-2 gap-2">
@@ -964,29 +964,29 @@ function AddIncomeContent() {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="p-4 bg-purple-50 rounded-xl border border-purple-100">
+                                <div className="p-4 bg-primary-light rounded-xl border border-color-primary/30">
                                     <div className="flex justify-between items-center mb-4">
-                                        <span className="text-sm font-bold text-purple-900">Amount</span>
-                                        <span className="text-2xl font-black text-purple-600">€{totalAmount.toFixed(2)}</span>
+                                        <span className="text-sm font-bold text-color-primary">Amount</span>
+                                        <span className="text-2xl font-black text-color-primary">€{totalAmount.toFixed(2)}</span>
                                     </div>
                                     <div className="grid grid-cols-3 gap-2">
                                         <div>
-                                            <label className="text-[10px] text-purple-700 mb-1 block">Base</label>
-                                            <input type="number" value={baseAmount} onChange={(e) => setBaseAmount(Number(e.target.value))} disabled={!canModify} className="w-full p-2 border border-purple-200 rounded-lg text-sm font-bold disabled:opacity-50" />
+                                            <label className="text-[10px] text-color-primary mb-1 block">Base</label>
+                                            <input type="number" value={baseAmount} onChange={(e) => setBaseAmount(Number(e.target.value))} disabled={!canModify} className="w-full p-2 border border-color-primary/30 rounded-lg text-sm font-bold disabled:opacity-50" />
                                         </div>
                                         <div>
-                                            <label className="text-[10px] text-purple-700 mb-1 block">Disc.</label>
-                                            <input type="number" value={discount} onChange={(e) => setDiscount(Number(e.target.value))} disabled={!canModify} className="w-full p-2 border border-purple-200 rounded-lg text-sm disabled:opacity-50" />
+                                            <label className="text-[10px] text-color-primary mb-1 block">Disc.</label>
+                                            <input type="number" value={discount} onChange={(e) => setDiscount(Number(e.target.value))} disabled={!canModify} className="w-full p-2 border border-color-primary/30 rounded-lg text-sm disabled:opacity-50" />
                                         </div>
                                         <div>
-                                            <label className="text-[10px] text-purple-700 mb-1 block">Tips</label>
-                                            <input type="number" value={tips} onChange={(e) => setTips(Number(e.target.value))} disabled={!canModify} className="w-full p-2 border border-purple-200 rounded-lg text-sm disabled:opacity-50" />
+                                            <label className="text-[10px] text-color-primary mb-1 block">Tips</label>
+                                            <input type="number" value={tips} onChange={(e) => setTips(Number(e.target.value))} disabled={!canModify} className="w-full p-2 border border-color-primary/30 rounded-lg text-sm disabled:opacity-50" />
                                         </div>
                                     </div>
 
                                     {/* Promo Code Input */}
-                                    <div className="mt-4 pt-4 border-t border-purple-100">
-                                        <label className="text-[10px] font-bold text-purple-700 mb-2 block uppercase tracking-wide">{t("income.promoCode")}</label>
+                                    <div className="mt-4 pt-4 border-t border-color-primary/30">
+                                        <label className="text-[10px] font-bold text-color-primary mb-2 block uppercase tracking-wide">{t("income.promoCode")}</label>
                                         <div className="flex gap-2">
                                             <input
                                                 type="text"
@@ -994,9 +994,9 @@ function AddIncomeContent() {
                                                 onChange={(e) => setPromoCodeInput(e.target.value.toUpperCase())}
                                                 disabled={!canModify}
                                                 placeholder="CODE"
-                                                className="flex-1 p-2 border border-dashed border-purple-200 rounded-lg text-sm font-bold uppercase tracking-wider focus:border-purple-500 focus:ring-1 focus:ring-purple-500 bg-white disabled:opacity-50"
+                                                className="flex-1 p-2 border border-dashed border-color-primary/30 rounded-lg text-sm font-bold uppercase tracking-wider focus:border-color-primary focus:ring-1 focus:ring-primary bg-white disabled:opacity-50"
                                             />
-                                            <Button size="sm" variant="outline" onClick={handleApplyPromo} disabled={!canModify} className="text-xs bg-white border-purple-200 text-purple-700 hover:bg-purple-100 disabled:opacity-50">Apply</Button>
+                                            <Button size="sm" variant="outline" onClick={handleApplyPromo} disabled={!canModify} className="text-xs bg-white border-color-primary/30 text-color-primary hover:bg-primary-light disabled:opacity-50">Apply</Button>
                                         </div>
                                         {appliedPromo && (
                                             <p className="text-[10px] text-green-600 font-bold mt-2 flex items-center gap-1">
@@ -1011,11 +1011,11 @@ function AddIncomeContent() {
                 </Card>
 
                 {/* Worker Split */}
-                <Card className="border-l-4 border-l-pink-500">
+                <Card className="border-l-4 border-l-[var(--color-secondary)]">
                     <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-pink-100 rounded-full flex items-center justify-center">
-                                <Users className="w-4 h-4 text-pink-600" />
+                            <div className="w-8 h-8 bg-secondary-light rounded-full flex items-center justify-center">
+                                <Users className="w-4 h-4 text-color-secondary" />
                             </div>
                             <h2 className="text-xl font-bold text-gray-900">{t("income.teamPerformance")}</h2>
                         </div>
@@ -1181,7 +1181,7 @@ function AddIncomeContent() {
                             <div className="flex justify-between mb-2">
                                 <label className="text-sm font-bold text-gray-700">{t("dashboard.expenseCategories.products")}</label>
                                 <div className="flex gap-2">
-                                    <button onClick={() => { if (!canModify) handleReadOnlyClick(); else addProduct(); }} disabled={!canModify} className="text-xs text-purple-600 font-bold disabled:opacity-50">{t("income.catalog")}</button>
+                                    <button onClick={() => { if (!canModify) handleReadOnlyClick(); else addProduct(); }} disabled={!canModify} className="text-xs text-color-primary font-bold disabled:opacity-50">{t("income.catalog")}</button>
                                     <button
                                         onClick={() => {
                                             if (!canModify) { handleReadOnlyClick(); return; }
@@ -1223,14 +1223,14 @@ function AddIncomeContent() {
                         <label className="text-sm font-bold text-gray-700 block mb-3">{t("common.payment")}</label>
                         <div className="flex gap-2">
                             {['card', 'cash', 'mobile', 'others'].map(m => (
-                                <button key={m} onClick={() => { if (!canModify) handleReadOnlyClick(); else setPaymentMethod(m); }} disabled={!canModify} className={`px-4 py-2 rounded-lg border-2 text-sm font-bold capitalize transition-all ${paymentMethod === m ? 'border-purple-600 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-500'} disabled:opacity-50`}>{t(`payment.methods.${m}`)}</button>
+                                <button key={m} onClick={() => { if (!canModify) handleReadOnlyClick(); else setPaymentMethod(m); }} disabled={!canModify} className={`px-4 py-2 rounded-lg border-2 text-sm font-bold capitalize transition-all ${paymentMethod === m ? 'border-color-primary bg-primary-light text-color-primary' : 'border-gray-200 text-gray-500'} disabled:opacity-50`}>{t(`payment.methods.${m}`)}</button>
                             ))}
                         </div>
                     </div>
                 </Card>
 
                 {/* Final Recap */}
-                <Card className="bg-gradient-to-br from-purple-800 to-purple-950 text-white border-0 shadow-2xl">
+                <Card className="bg-gradient-to-br from-primary to-[var(--color-primary)] text-white border-0 shadow-2xl">
                     <div className="flex flex-col md:flex-row justify-between items-center gap-6">
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 w-full">
                             <div>
@@ -1258,9 +1258,9 @@ function AddIncomeContent() {
                             <button
                                 onClick={() => handleSave('Draft')}
                                 disabled={!canModify}
-                                className="flex-1 py-4 px-6 rounded-2xl border border-purple-300/30 bg-purple-500/20 hover:bg-purple-500/30 text-purple-100 text-sm font-bold tracking-widest transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 group backdrop-blur-sm disabled:opacity-50"
+                                className="flex-1 py-4 px-6 rounded-2xl border border-color-primary/30/30 bg-primary-light0/20 hover:bg-primary-light0/30 text-color-primary text-sm font-bold tracking-widest transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2 group backdrop-blur-sm disabled:opacity-50"
                             >
-                                <div className="p-1 rounded-full bg-purple-500/20 group-hover:bg-purple-500/40 transition-colors">
+                                <div className="p-1 rounded-full bg-primary-light0/20 group-hover:bg-primary-light0/40 transition-colors">
                                     <Save className="w-4 h-4 opacity-70 group-hover:opacity-100" />
                                 </div>
                                 <span className="opacity-80 group-hover:opacity-100 transition-opacity">{t("income.saveDraft")}</span>
@@ -1280,7 +1280,7 @@ function AddIncomeContent() {
                                 <button
                                     onClick={() => handleSave('Validated')}
                                     disabled={!canModify}
-                                    className="flex-[2] py-4 px-8 rounded-2xl bg-gradient-to-r from-pink-500 to-fuchsia-600 text-white font-black tracking-wider shadow-xl shadow-pink-900/40 border-t border-white/20 hover:shadow-pink-500/50 hover:-translate-y-1 transition-all active:scale-95 flex items-center justify-center gap-3 group relative overflow-hidden disabled:opacity-50"
+                                    className="flex-[2] py-4 px-8 rounded-2xl bg-gradient-to-r from-[var(--color-secondary)] to-fuchsia-600 text-white font-black tracking-wider shadow-xl shadow-[color:var(--color-secondary)]/20 border-t border-white/20 hover:shadow-[color:var(--color-secondary)]/30 hover:-translate-y-1 transition-all active:scale-95 flex items-center justify-center gap-3 group relative overflow-hidden disabled:opacity-50"
                                 >
                                     <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 rounded-2xl" />
                                     <CheckCircle2 className="w-6 h-6 relative z-10 drop-shadow-md" />
@@ -1297,7 +1297,7 @@ function AddIncomeContent() {
 
 export default function AddIncomePage() {
     return (
-        <Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-700"></div></div>}>
+        <Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-color-primary"></div></div>}>
             <AddIncomeContent />
         </Suspense>
     );

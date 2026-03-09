@@ -154,7 +154,7 @@ export default function HistoryModal({
                     <div className="mt-8">
                         <Button
                             variant="primary"
-                            className="w-full py-6 rounded-2xl shadow-lg shadow-purple-500/20 font-bold"
+                            className="w-full py-6 rounded-2xl shadow-lg shadow-[color:var(--color-primary)]/20 font-bold"
                             onClick={onClose}
                         >
                             {t('history.close')}

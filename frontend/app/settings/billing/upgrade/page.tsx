@@ -46,7 +46,7 @@ export default function UpgradePage() {
             case 'starter':
                 return 'from-gray-500 to-gray-600';
             case 'pro':
-                return 'from-purple-600 to-pink-500';
+                return 'from-primary to-secondary';
             case 'enterprise':
                 return 'from-amber-500 to-orange-600';
             default:
@@ -86,14 +86,14 @@ export default function UpgradePage() {
                         <Card
                             key={plan.id}
                             className={`relative overflow-hidden transition-all duration-300 ${isCurrent
-                                ? 'ring-2 ring-purple-500 shadow-lg shadow-purple-500/20'
+                                ? 'ring-2 ring-primary shadow-lg shadow-[color:var(--color-primary)]/20'
                                 : 'hover:shadow-xl hover:scale-[1.02]'
                                 }`}
                         >
                             {/* Badge for current plan */}
                             {isCurrent && (
                                 <div className="absolute top-4 right-4">
-                                    <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded-full">
+                                    <span className="px-3 py-1 bg-primary-light text-color-primary text-xs font-bold rounded-full">
                                         {t("settings.billing.currentPlan")}
                                     </span>
                                 </div>
@@ -139,7 +139,7 @@ export default function UpgradePage() {
                             ) : (
                                 <Button
                                     variant="primary"
-                                    className="w-full mb-6 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600"
+                                    className="w-full mb-6 bg-gradient-primary hover:from-primary hover:to-secondary"
                                     onClick={() => handleUpgrade(plan.id)}
                                 >
                                     <span>{t("settings.billing.upgrade")}</span>
@@ -231,9 +231,9 @@ export default function UpgradePage() {
             </Card>
 
             {/* Help Card */}
-            <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
+            <Card className="bg-gradient-primary border-color-primary/30">
                 <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-600 to-pink-500 flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center flex-shrink-0">
                         <Sparkles className="w-5 h-5 text-white" />
                     </div>
                     <div>

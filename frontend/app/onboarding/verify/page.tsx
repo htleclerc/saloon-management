@@ -105,7 +105,7 @@ export default function VerifyPage() {
 
                 <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100">
                     {/* Icon */}
-                    <div className="w-16 h-16 bg-gradient-to-br from-[#8B5CF6] to-[#EC4899] rounded-2xl flex items-center justify-center mx-auto mb-6">
+                    <div className="w-16 h-16 bg-gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-6">
                         {isVerified ? (
                             <CheckCircle2 className="w-8 h-8 text-white" />
                         ) : (
@@ -134,9 +134,9 @@ export default function VerifyPage() {
                                 onChange={(e) => handleCodeChange(index, e.target.value)}
                                 onKeyDown={(e) => handleKeyDown(index, e)}
                                 className={`w-12 h-14 text-center text-xl font-bold border-2 rounded-xl transition-all focus:outline-none ${digit
-                                        ? "border-[#8B5CF6] bg-purple-50"
+                                        ? "border-[var(--color-primary)] bg-primary-light"
                                         : "border-gray-200 bg-white"
-                                    } focus:border-[#8B5CF6] focus:ring-4 focus:ring-[#8B5CF6]/10`}
+                                    } focus:border-[var(--color-primary)] focus:ring-4 focus:ring-[var(--color-primary)]/10`}
                             />
                         ))}
                     </div>
@@ -146,7 +146,7 @@ export default function VerifyPage() {
                         onClick={handleVerify}
                         disabled={!isCodeComplete || isVerifying || isVerified}
                         className={`w-full py-4 rounded-xl font-extrabold text-base transition-all ${isCodeComplete && !isVerifying && !isVerified
-                                ? "bg-gradient-to-r from-[#8B5CF6] to-[#D946EF] text-white hover:scale-[1.02] shadow-[0_10px_20px_-5px_rgba(139,92,246,0.3)] active:scale-[0.98]"
+                                ? "bg-gradient-primary text-white hover:scale-[1.02] shadow-[0_10px_20px_-5px_rgba(139,92,246,0.3)] active:scale-[0.98]"
                                 : isVerified
                                     ? "bg-green-500 text-white"
                                     : "bg-gray-200 text-gray-400 cursor-not-allowed"
@@ -173,7 +173,7 @@ export default function VerifyPage() {
                         {canResend ? (
                             <button
                                 onClick={handleResend}
-                                className="text-[#8B5CF6] font-bold hover:underline flex items-center justify-center gap-2 mx-auto"
+                                className="text-[var(--color-primary)] font-bold hover:underline flex items-center justify-center gap-2 mx-auto"
                             >
                                 <RefreshCw className="w-4 h-4" />
                                 {t("onboarding.verify.resend")}

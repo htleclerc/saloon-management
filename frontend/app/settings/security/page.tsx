@@ -48,7 +48,7 @@ export default function SecuritySettingsPage() {
                                 value={currentPassword}
                                 onChange={(e) => setCurrentPassword(e.target.value)}
                                 readOnly={!canModify}
-                                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm pr-10"
+                                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm pr-10"
                             />
                             <button
                                 type="button"
@@ -67,7 +67,7 @@ export default function SecuritySettingsPage() {
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
                                 readOnly={!canModify}
-                                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm pr-10"
+                                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm pr-10"
                             />
                             <button
                                 type="button"
@@ -86,7 +86,7 @@ export default function SecuritySettingsPage() {
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             readOnly={!canModify}
-                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                         />
                     </div>
                     <ReadOnlyGuard>
@@ -118,7 +118,7 @@ export default function SecuritySettingsPage() {
                             disabled={!canModify}
                             className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                     </label>
                 </div>
                 {twoFactorEnabled && (
@@ -161,7 +161,7 @@ export default function SecuritySettingsPage() {
                     {activeSessions.map((session) => (
                         <div
                             key={session.id}
-                            className={`flex items-center justify-between p-3 rounded-xl ${session.current ? "bg-purple-50 border border-purple-200" : "bg-gray-50"
+                            className={`flex items-center justify-between p-3 rounded-xl ${session.current ? "bg-primary-light border border-color-primary/30" : "bg-gray-50"
                                 }`}
                         >
                             <div className="flex items-center gap-3">
@@ -179,7 +179,7 @@ export default function SecuritySettingsPage() {
                                     <div className="flex items-center gap-2">
                                         <p className="font-medium text-gray-900 text-sm">{session.device}</p>
                                         {session.current && (
-                                            <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full font-medium">
+                                            <span className="px-2 py-0.5 bg-primary-light text-color-primary text-xs rounded-full font-medium">
                                                 Session actuelle
                                             </span>
                                         )}
