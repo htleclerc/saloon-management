@@ -7,6 +7,7 @@ import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 import { Download, TrendingUp, TrendingDown, Calendar, Edit, ChevronDown, Lightbulb, Loader2 } from "lucide-react";
 import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
 import { useAuth } from "@/context/AuthProvider";
+import { useToast } from "@/context/ToastProvider";
 import {
     LineChart,
     Line,
@@ -26,12 +27,19 @@ import { useState, useEffect } from "react";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { revenueStatsService } from "@/lib/services";
 import { useTranslation } from "@/i18n";
+import { format, startOfYear, endOfYear, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from "date-fns";
+import { exportToCSV, exportToPDF } from "@/lib/export";
 
 export default function ReportsPage() {
     const { t } = useTranslation();
     const { getCardStyle } = useKpiCardStyle();
     const { user, activeSalonId } = useAuth();
+    const { showToast } = useToast();
     const [isLoading, setIsLoading] = useState(true);
+
+    // Period filtering state
+    const [selectedDate, setSelectedDate] = useState(new Date());
+    const [periodFilter, setPeriodFilter] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('yearly');
 
     // State for reports
     const [financialReport, setFinancialReport] = useState({
@@ -62,6 +70,55 @@ export default function ReportsPage() {
         difference: 0,
     });
     const [recommendations, setRecommendations] = useState<any[]>([]);
+
+    // Helper function to get date range based on filter
+    const getDateRange = () => {
+        switch (periodFilter) {
+            case 'daily':
+                return { start: selectedDate, end: selectedDate };
+            case 'weekly':
+                return { start: startOfWeek(selectedDate), end: endOfWeek(selectedDate) };
+            case 'monthly':
+                return { start: startOfMonth(selectedDate), end: endOfMonth(selectedDate) };
+            case 'yearly':
+                return { start: startOfYear(selectedDate), end: endOfYear(selectedDate) };
+        }
+    };
+
+    const dateRange = getDateRange();
+
+    // Helper function to filter data by period
+    const filterDataByPeriod = (data: any[], dateField: string) => {
+        const { start, end } = dateRange;
+        return data.filter(item => {
+            const itemDate = new Date(item[dateField]);
+            return itemDate >= start && itemDate <= end;
+        });
+    };
+
+    // Export handler
+    const handleExport = async (exportFormat: 'csv' | 'pdf') => {
+        try {
+            const columns = [
+                { key: 'date', header: t('reports.monthlyBreakdown.date') },
+                { key: 'worker', header: t('reports.monthlyBreakdown.worker') },
+                { key: 'revenue', header: t('reports.monthlyBreakdown.revenue'), formatter: (v: any) => `€${v.toLocaleString()}` },
+                { key: 'expense', header: t('reports.monthlyBreakdown.expense'), formatter: (v: any) => `€${v.toLocaleString()}` },
+                { key: 'profit', header: t('reports.monthlyBreakdown.profit'), formatter: (v: any) => `€${v.toLocaleString()}` },
+            ];
+
+            const dataToExport = filterDataByPeriod(monthlyFinancials, 'date');
+
+            if (exportFormat === 'csv') {
+                exportToCSV(dataToExport, columns, 'financial-report');
+            } else {
+                exportToPDF(dataToExport, columns, t('reports.title'), 'financial-report');
+            }
+            showToast(t("common.success"), t("common.exportSuccess"), "success");
+        } catch (error: any) {
+            showToast(t("common.error"), error.message || "Export failed", "error");
+        }
+    };
 
     useEffect(() => {
         if (activeSalonId) {
@@ -123,21 +180,63 @@ export default function ReportsPage() {
                         <div className="flex flex-wrap items-center gap-3">
                             {/* Period Filters */}
                             <div className="flex bg-gray-100 rounded-lg p-1">
-                                <button className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-white hover:shadow-sm rounded-md transition">{t('reports.periodFilters.daily')}</button>
-                                <button className="px-3 py-1.5 text-sm font-medium bg-white shadow-sm text-[var(--color-primary)] rounded-md">{t('reports.periodFilters.weekly')}</button>
-                                <button className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-white hover:shadow-sm rounded-md transition">{t('reports.periodFilters.monthly')}</button>
-                                <button className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-white hover:shadow-sm rounded-md transition">{t('reports.periodFilters.yearly')}</button>
+                                <button
+                                    onClick={() => setPeriodFilter('daily')}
+                                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${
+                                        periodFilter === 'daily'
+                                            ? 'bg-white shadow-sm text-[var(--color-primary)]'
+                                            : 'text-gray-600 hover:bg-white hover:shadow-sm'
+                                    }`}
+                                >
+                                    {t('reports.periodFilters.daily')}
+                                </button>
+                                <button
+                                    onClick={() => setPeriodFilter('weekly')}
+                                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${
+                                        periodFilter === 'weekly'
+                                            ? 'bg-white shadow-sm text-[var(--color-primary)]'
+                                            : 'text-gray-600 hover:bg-white hover:shadow-sm'
+                                    }`}
+                                >
+                                    {t('reports.periodFilters.weekly')}
+                                </button>
+                                <button
+                                    onClick={() => setPeriodFilter('monthly')}
+                                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${
+                                        periodFilter === 'monthly'
+                                            ? 'bg-white shadow-sm text-[var(--color-primary)]'
+                                            : 'text-gray-600 hover:bg-white hover:shadow-sm'
+                                    }`}
+                                >
+                                    {t('reports.periodFilters.monthly')}
+                                </button>
+                                <button
+                                    onClick={() => setPeriodFilter('yearly')}
+                                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${
+                                        periodFilter === 'yearly'
+                                            ? 'bg-white shadow-sm text-[var(--color-primary)]'
+                                            : 'text-gray-600 hover:bg-white hover:shadow-sm'
+                                    }`}
+                                >
+                                    {t('reports.periodFilters.yearly')}
+                                </button>
                             </div>
                             <Button variant="outline" size="sm" className="gap-2">
                                 <Calendar className="w-4 h-4" />
-                                Dec 1 - Dec 31, 2025
+                                {format(dateRange.start, 'MMM d')} - {format(dateRange.end, 'MMM d, yyyy')}
                                 <ChevronDown className="w-4 h-4" />
                             </Button>
                             <ReadOnlyGuard>
-                                <Button variant="primary" size="md">
-                                    <Download className="w-5 h-5" />
-                                    {t('reports.export')}
-                                </Button>
+                                <div className="flex gap-2">
+                                    <Button variant="primary" size="md" onClick={() => handleExport('csv')} className="gap-2">
+                                        <Download className="w-5 h-5" />
+                                        CSV
+                                    </Button>
+                                    <Button variant="primary" size="md" onClick={() => handleExport('pdf')} className="gap-2">
+                                        <Download className="w-5 h-5" />
+                                        PDF
+                                    </Button>
+                                </div>
                             </ReadOnlyGuard>
                         </div>
                     </div>
@@ -222,7 +321,7 @@ export default function ReportsPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {monthlyFinancials.map((row) => (
+                                    {filterDataByPeriod(monthlyFinancials, 'date').map((row) => (
                                         <tr key={row.id} className="hover:bg-gray-50 transition">
                                             <td className="px-4 py-4 text-sm text-gray-900">{row.date}</td>
                                             <td className="px-4 py-4">
@@ -256,7 +355,7 @@ export default function ReportsPage() {
                         <Card>
                             <h3 className="text-lg font-semibold mb-4">{t('reports.quarterlyChart')}</h3>
                             <ResponsiveContainer width="100%" height={280}>
-                                <BarChart data={quarterlyFinancials}>
+                                <BarChart data={periodFilter === 'yearly' ? quarterlyFinancials : filterDataByPeriod(quarterlyFinancials, 'date')}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                                     <XAxis dataKey="quarter" />
                                     <YAxis />
@@ -272,7 +371,7 @@ export default function ReportsPage() {
                         <Card>
                             <h3 className="text-lg font-semibold mb-4">{t('reports.monthlyChart')}</h3>
                             <ResponsiveContainer width="100%" height={280}>
-                                <LineChart data={monthlyFinancials}>
+                                <LineChart data={filterDataByPeriod(monthlyFinancials, 'date')}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                                     <XAxis dataKey="month" />
                                     <YAxis />
@@ -290,7 +389,7 @@ export default function ReportsPage() {
                             <ResponsiveContainer width="100%" height={300}>
                                 <PieChart>
                                     <Pie
-                                        data={expenseDistribution}
+                                        data={filterDataByPeriod(expenseDistribution, 'month').length > 0 ? filterDataByPeriod(expenseDistribution, 'month') : expenseDistribution}
                                         cx="50%"
                                         cy="50%"
                                         labelLine={false}
@@ -298,7 +397,7 @@ export default function ReportsPage() {
                                         fill="#8884d8"
                                         dataKey="value"
                                     >
-                                        {expenseDistribution.map((entry: any, index: number) => (
+                                        {(filterDataByPeriod(expenseDistribution, 'month').length > 0 ? filterDataByPeriod(expenseDistribution, 'month') : expenseDistribution).map((entry: any, index: number) => (
                                             <Cell key={`cell-${index}`} fill={entry.color} />
                                         ))}
                                     </Pie>
@@ -306,7 +405,7 @@ export default function ReportsPage() {
                                 </PieChart>
                             </ResponsiveContainer>
                             <div className="space-y-3">
-                                {expenseDistribution.map((cat: any, idx: number) => (
+                                {(filterDataByPeriod(expenseDistribution, 'month').length > 0 ? filterDataByPeriod(expenseDistribution, 'month') : expenseDistribution).map((cat: any, idx: number) => (
                                     <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                         <div className="flex items-center gap-3">
                                             <div className="w-4 h-4 rounded-full" style={{ backgroundColor: cat.color }}></div>
@@ -327,7 +426,7 @@ export default function ReportsPage() {
                         <h3 className="text-lg font-semibold mb-4">{t('reports.quarterlyComparison.title')}</h3>
                         <p className="text-sm text-gray-500 mb-4">{t('reports.quarterlyComparison.subtitle')}</p>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                            {quarterlyFinancials.map((q, idx) => (
+                            {(periodFilter === 'yearly' ? quarterlyFinancials : filterDataByPeriod(quarterlyFinancials, 'date')).map((q, idx) => (
                                 <div key={idx} className="p-4 rounded-xl" style={{ backgroundColor: `${q.color}15` }}>
                                     <p className="text-sm font-medium text-gray-600">{q.quarter}</p>
                                     <h4 className="text-2xl font-bold mt-1" style={{ color: q.color }}>€{q.value.toLocaleString()}</h4>
@@ -338,13 +437,13 @@ export default function ReportsPage() {
                             ))}
                         </div>
                         <ResponsiveContainer width="100%" height={250}>
-                            <BarChart data={quarterlyFinancials}>
+                            <BarChart data={periodFilter === 'yearly' ? quarterlyFinancials : filterDataByPeriod(quarterlyFinancials, 'date')}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                                 <XAxis dataKey="quarter" />
                                 <YAxis />
                                 <Tooltip />
                                 <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                                    {quarterlyFinancials.map((entry, index) => (
+                                    {(periodFilter === 'yearly' ? quarterlyFinancials : filterDataByPeriod(quarterlyFinancials, 'date')).map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={entry.color} />
                                     ))}
                                 </Bar>
@@ -453,7 +552,7 @@ export default function ReportsPage() {
                         <Card>
                             <h3 className="text-lg font-semibold mb-4">{t('reports.purchaseTrends')}</h3>
                             <ResponsiveContainer width="100%" height={250}>
-                                <LineChart data={purchaseTrends}>
+                                <LineChart data={filterDataByPeriod(purchaseTrends, 'month')}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                                     <XAxis dataKey="month" />
                                     <YAxis />
