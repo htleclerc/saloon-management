@@ -3,17 +3,11 @@
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { useState } from "react";
-import { Save, Scissors, Shirt, Wrench, Check, Plus, Trash2, Store, ArrowRight, Sparkles, FileText, Clock } from "lucide-react";
+import { Save, Plus, Trash2, Store, ArrowRight, Sparkles, FileText, Clock } from "lucide-react";
 import { useAuth } from "@/context/AuthProvider";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
-
-const workshopTemplates = [
-    { id: "hair-salon", name: "Hair Salon / Braiding", icon: Scissors, color: "from-[var(--color-primary)] to-[var(--color-primary-dark)]" },
-    { id: "tailor-shop", name: "Tailor Shop / Sewing", icon: Shirt, color: "from-[var(--color-secondary)] to-[var(--color-secondary-dark)]" },
-    { id: "mechanic-shop", name: "Mechanic Shop / Garage", icon: Wrench, color: "from-[var(--color-warning)] to-[var(--color-warning-dark)]" },
-];
 
 const defaultServices = [
     { name: "Box Braids", duration: "3-4 hours", price: 120 },
@@ -32,7 +26,6 @@ export default function WorkshopSettingsPage() {
     const [businessName, setBusinessName] = useState("Premium Workshop");
     const [businessAddress, setBusinessAddress] = useState("123 Rue de Paris, 75001 Paris");
     const [businessPhone, setBusinessPhone] = useState("+33 1 23 45 67 89");
-    const [selectedTemplate, setSelectedTemplate] = useState("hair-salon");
     const [currency, setCurrency] = useState("EUR");
     const [taxRate, setTaxRate] = useState("20");
 
@@ -108,41 +101,6 @@ export default function WorkshopSettingsPage() {
                             />
                         </div>
                     </div>
-                </div>
-            </Card>
-
-            {/* Workshop Type */}
-            <Card>
-                <h3 className="font-semibold text-gray-900 text-lg mb-4">Business Type</h3>
-                <p className="text-sm text-gray-500 mb-4">
-                    Select the template that best matches your activity
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {workshopTemplates.map((template) => {
-                        const Icon = template.icon;
-                        const isSelected = selectedTemplate === template.id;
-                        return (
-                            <button
-                                key={template.id}
-                                onClick={() => canModify && setSelectedTemplate(template.id)}
-                                disabled={!canModify}
-                                className={`relative p-5 rounded-xl border-2 transition-all text-left ${isSelected
-                                    ? "border-[var(--color-primary)] bg-[var(--color-primary-light)] shadow-md"
-                                    : "border-gray-200 hover:border-[var(--color-primary-light)]"
-                                    } ${!canModify ? "cursor-not-allowed opacity-80" : ""}`}
-                            >
-                                {isSelected && (
-                                    <div className="absolute top-3 right-3 w-6 h-6 bg-[var(--color-primary)] rounded-full flex items-center justify-center">
-                                        <Check className="w-4 h-4 text-white" />
-                                    </div>
-                                )}
-                                <div className={`w-12 h-12 bg-gradient-to-br ${template.color} rounded-lg flex items-center justify-center mb-3`}>
-                                    <Icon className="w-6 h-6 text-white" />
-                                </div>
-                                <p className="font-semibold text-gray-900 text-sm">{template.name}</p>
-                            </button>
-                        );
-                    })}
                 </div>
             </Card>
 
