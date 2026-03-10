@@ -53,18 +53,20 @@ describe('ExpenseService', () => {
         expect(result.id).toBe(500);
     });
 
-    it('should approve an expense', async () => {
+    it('should approve an expense by archiving it', async () => {
         const expenseId = 500;
-        mockProvider.updateExpense.mockResolvedValue({ id: expenseId, status: 'Approved' });
+        mockProvider.updateExpense.mockResolvedValue({ id: expenseId, isActive: false });
 
-        await service.approve(expenseId);
+        const result = await service.approve(expenseId);
 
         expect(mockProvider.updateExpense).toHaveBeenCalledWith(expenseId, expect.objectContaining({
-            status: 'Approved'
+            isActive: false
         }));
         expect(mockProvider.createInteractionHistory).toHaveBeenCalledWith(expect.objectContaining({
             action: 'status_changed_to_Approved'
         }));
+        // Returns the expense with the intended status for UI consistency
+        expect(result.status).toBe('Approved');
     });
 
     it('should throw error if required fields are missing during creation', async () => {

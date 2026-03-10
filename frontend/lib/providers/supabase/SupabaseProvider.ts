@@ -2233,11 +2233,18 @@ export class SupabaseProvider implements IDataProvider {
         let query = supabase
             .from('expenses')
             .select('*', { count: 'exact' })
-            .eq('salon_id', salonId)
-            .eq('is_active', true);
+            .eq('salon_id', salonId);
+
+        // isActive filter: default to true (only active), pass false for archived
+        if (filters?.isActive === false) {
+            query = query.eq('is_active', false);
+        } else {
+            query = query.eq('is_active', true);
+        }
 
         // Apply filters
         if (filters?.categoryId) query = query.eq('category_id', filters.categoryId);
+        // Note: status column may not exist in all DB setups — filter client-side via ExpenseService
         if (filters?.startDate) query = query.gte('date', filters.startDate);
         if (filters?.endDate) query = query.lte('date', filters.endDate);
 
@@ -2315,6 +2322,7 @@ export class SupabaseProvider implements IDataProvider {
         if (data.description !== undefined) dbExpense.description = data.description;
         if (data.receiptUrl !== undefined) dbExpense.receipt_url = data.receiptUrl;
         if (data.isActive !== undefined) dbExpense.is_active = data.isActive;
+        if (data.updatedBy !== undefined) dbExpense.updated_by = data.updatedBy;
 
         const { data: updated, error } = await supabase
             .from('expenses')

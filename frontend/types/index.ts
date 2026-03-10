@@ -640,6 +640,7 @@ export interface ExpenseFilters {
     startDate?: string;
     endDate?: string;
     status?: ExpenseStatus;
+    isActive?: boolean;
     limit?: number;
 }
 

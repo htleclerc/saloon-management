@@ -5,15 +5,16 @@ import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
-import { Check, X, Clock, DollarSign, Receipt, RefreshCw } from "lucide-react";
+import { Check, X, Clock, DollarSign, Receipt, RefreshCw, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/context/AuthProvider";
+import { useToast } from "@/context/ToastProvider";
+import { useConfirm } from "@/context/ConfirmProvider";
 import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
-import { incomeService } from "@/lib/services/IncomeService";
-import { expenseService } from "@/lib/services/ExpenseService";
-import { Income, Expense } from "@/types";
+import { incomeService, expenseService, workerService, serviceService } from "@/lib/services";
+import { Income, Expense, SalonWorker, Service, ExpenseCategory } from "@/types";
 import { useTranslation } from "@/i18n";
 import { format } from "date-fns";
-import { fr, enUS } from "date-fns/locale";
+import { fr, enUS, es } from "date-fns/locale";
 
 interface ApprovalItem {
     id: number;
@@ -29,7 +30,11 @@ interface ApprovalItem {
 export default function ApprovalsPage() {
     const { t, language } = useTranslation();
     const { getCardStyle } = useKpiCardStyle();
-    const { canModify, user } = useAuth();
+    const auth = useAuth();
+    const { activeSalonId, user } = auth;
+    const { showToast } = useToast();
+    const { confirm } = useConfirm();
+
     const [selectedTab, setSelectedTab] = useState<"incomes" | "expenses" | "history">("incomes");
     const [selectedItems, setSelectedItems] = useState<number[]>([]);
 
@@ -38,47 +43,70 @@ export default function ApprovalsPage() {
     const [historyItems, setHistoryItems] = useState<ApprovalItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
-    const salonId = 1; // context?
+    // Reference data for name resolution
+    const [workers, setWorkers] = useState<SalonWorker[]>([]);
+    const [services, setServices] = useState<Service[]>([]);
+    const [categories, setCategories] = useState<ExpenseCategory[]>([]);
+
+    const salonId = Number(activeSalonId);
 
     const loadData = useCallback(async () => {
+        if (!activeSalonId || isNaN(salonId)) {
+            console.warn("ApprovalsPage: invalid activeSalonId:", activeSalonId);
+            setIsLoading(false);
+            return;
+        }
+
         setIsLoading(true);
         try {
-            // Fetch Pending Incomes
-            const incomes = await incomeService.getAll(salonId, { status: 'Pending' });
-            setPendingIncomes(incomes);
+            // Fetch all data in parallel (with individual error handling)
+            const [
+                incomesData,
+                expensesData,
+                workersData,
+                servicesData,
+                categoriesData,
+                allIncomes,
+                archivedExpenses
+            ] = await Promise.all([
+                incomeService.getAll(salonId, { status: 'Pending' }).catch(() => [] as Income[]),
+                expenseService.getAll(salonId, { status: 'Pending' }).catch(() => [] as Expense[]),
+                workerService.getAll(salonId).catch(() => [] as SalonWorker[]),
+                serviceService.getAll(salonId).catch(() => [] as Service[]),
+                expenseService.getCategories(salonId).catch(() => [] as ExpenseCategory[]),
+                incomeService.getAll(salonId).catch(() => [] as Income[]),
+                expenseService.getArchived(salonId).catch(() => [] as Expense[]),
+            ]);
 
-            // Fetch Pending Expenses
-            const expenses = await expenseService.getAll(salonId, { status: 'Pending' });
-            setPendingExpenses(expenses);
+            setPendingIncomes(incomesData);
+            setPendingExpenses(expensesData);
+            setWorkers(workersData);
+            setServices(servicesData);
+            setCategories(categoriesData);
 
-            // Fetch History (All non-pending)
-            // Ideally we should have better filtering/pagination for history
-            const allIncomes = await incomeService.getAll(salonId);
-            const allExpenses = await expenseService.getAll(salonId);
-
+            // Build history from processed incomes + archived expenses
             const processedHistory: ApprovalItem[] = [
                 ...allIncomes
-                    .filter(i => i.status !== 'Pending')
+                    .filter(i => i.status !== 'Pending' && i.status !== 'Draft')
                     .map(i => ({
                         id: i.id,
                         type: 'income' as const,
                         date: i.date,
-                        description: `${i.clientName || 'Client'} - ${t('approvals.table.income')}`,
+                        description: `${i.clientName || t('common.client')} — ${(i.serviceIds || []).map((sid: number) => servicesData.find(s => s.id === sid)?.name).filter(Boolean).join(', ') || t('common.service')}`,
                         amount: i.finalAmount,
                         submittedBy: i.createdBy,
                         status: i.status || 'Unknown',
                         data: i
                     })),
-                ...allExpenses
-                    .filter(e => e.status !== 'Pending')
+                ...archivedExpenses
                     .map(e => ({
                         id: e.id,
                         type: 'expense' as const,
                         date: e.date,
-                        description: e.description || `Category ${e.categoryId}`,
+                        description: `${categoriesData.find(c => c.id === e.categoryId)?.name || t('common.category')} — ${e.description || ''}`,
                         amount: e.amount,
-                        submittedBy: e.createdBy,
-                        status: e.status,
+                        submittedBy: e.updatedBy || e.createdBy,
+                        status: 'Approved' as const,
                         data: e
                     }))
             ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -86,60 +114,158 @@ export default function ApprovalsPage() {
             setHistoryItems(processedHistory);
         } catch (error) {
             console.error("Failed to load approval data", error);
+            showToast(t("common.error"), t("common.loadError") || "Failed to load data", "error");
         } finally {
             setIsLoading(false);
         }
-    }, [salonId, t]);
+    }, [salonId, activeSalonId, t, showToast]);
 
     useEffect(() => {
         loadData();
     }, [loadData]);
 
+    // ─── Action Handlers ────────────────────────────────────
+
     const handleApprove = async (id: number, type: "income" | "expense") => {
+        const isConfirmed = await confirm({
+            title: t('approvals.confirmApproveTitle') || "Approve?",
+            message: type === 'income'
+                ? (t('approvals.confirmApproveIncome') || "Are you sure you want to validate this income?")
+                : (t('approvals.confirmApproveExpense') || "Are you sure you want to approve this expense?"),
+            type: "success",
+            confirmText: t('approvals.approve') || "Approve",
+            cancelText: t('common.cancel') || "Cancel"
+        });
+
+        if (!isConfirmed) return;
+
         try {
             if (type === 'income') {
                 await incomeService.validate(id);
             } else {
                 await expenseService.approve(id);
             }
+            showToast(
+                t("common.success"),
+                type === 'income'
+                    ? (t('approvals.incomeApproved') || "Income validated successfully")
+                    : (t('approvals.expenseApproved') || "Expense approved successfully"),
+                "success"
+            );
             loadData();
         } catch (error) {
             console.error(`Failed to approve ${type} #${id}`, error);
+            showToast(t("common.error"), t("common.actionError") || "Action failed", "error");
         }
     };
 
     const handleReject = async (id: number, type: "income" | "expense") => {
-        // Simple reject without reason for now
+        const isConfirmed = await confirm({
+            title: t('approvals.confirmRejectTitle') || "Reject?",
+            message: type === 'income'
+                ? (t('approvals.confirmRejectIncome') || "Are you sure you want to refuse this income?")
+                : (t('approvals.confirmRejectExpense') || "Are you sure you want to reject this expense?"),
+            type: "error",
+            confirmText: t('approvals.reject') || "Reject",
+            cancelText: t('common.cancel') || "Cancel"
+        });
+
+        if (!isConfirmed) return;
+
         try {
             if (type === 'income') {
                 await incomeService.refuse(id, "Rejected by admin");
             } else {
                 await expenseService.reject(id);
             }
+            showToast(
+                t("common.success"),
+                type === 'income'
+                    ? (t('approvals.incomeRejected') || "Income refused successfully")
+                    : (t('approvals.expenseRejected') || "Expense rejected successfully"),
+                "success"
+            );
             loadData();
         } catch (error) {
             console.error(`Failed to reject ${type} #${id}`, error);
+            showToast(t("common.error"), t("common.actionError") || "Action failed", "error");
         }
     };
 
     const handleBulkApprove = async () => {
         if (selectedTab === 'history') return;
 
+        const isConfirmed = await confirm({
+            title: t('approvals.confirmBulkApproveTitle') || "Bulk Approve?",
+            message: t('approvals.confirmBulkApprove', { count: selectedItems.length }) || `Approve ${selectedItems.length} item(s)?`,
+            type: "success",
+            confirmText: t('approvals.approveSelected') || "Approve Selected",
+            cancelText: t('common.cancel') || "Cancel"
+        });
+
+        if (!isConfirmed) return;
+
         const type = selectedTab === 'incomes' ? 'income' : 'expense';
+        let successCount = 0;
+
         for (const id of selectedItems) {
-            await handleApprove(id, type);
+            try {
+                if (type === 'income') {
+                    await incomeService.validate(id);
+                } else {
+                    await expenseService.approve(id);
+                }
+                successCount++;
+            } catch (error) {
+                console.error(`Failed to approve ${type} #${id}`, error);
+            }
         }
+
+        showToast(
+            t("common.success"),
+            t('approvals.bulkApproveSuccess', { count: successCount }) || `${successCount} item(s) approved`,
+            "success"
+        );
         setSelectedItems([]);
+        loadData();
     };
 
     const handleBulkReject = async () => {
         if (selectedTab === 'history') return;
 
+        const isConfirmed = await confirm({
+            title: t('approvals.confirmBulkRejectTitle') || "Bulk Reject?",
+            message: t('approvals.confirmBulkReject', { count: selectedItems.length }) || `Reject ${selectedItems.length} item(s)?`,
+            type: "error",
+            confirmText: t('approvals.rejectSelected') || "Reject Selected",
+            cancelText: t('common.cancel') || "Cancel"
+        });
+
+        if (!isConfirmed) return;
+
         const type = selectedTab === 'incomes' ? 'income' : 'expense';
+        let successCount = 0;
+
         for (const id of selectedItems) {
-            await handleReject(id, type);
+            try {
+                if (type === 'income') {
+                    await incomeService.refuse(id, "Bulk rejected by admin");
+                } else {
+                    await expenseService.reject(id);
+                }
+                successCount++;
+            } catch (error) {
+                console.error(`Failed to reject ${type} #${id}`, error);
+            }
         }
+
+        showToast(
+            t("common.success"),
+            t('approvals.bulkRejectSuccess', { count: successCount }) || `${successCount} item(s) rejected`,
+            "success"
+        );
         setSelectedItems([]);
+        loadData();
     };
 
     const toggleItemSelection = (id: number) => {
@@ -148,13 +274,45 @@ export default function ApprovalsPage() {
         );
     };
 
+    // ─── Helpers ─────────────────────────────────────────────
+
+    const getDateLocale = () => {
+        if (language === 'fr') return fr;
+        if (language === 'es') return es;
+        return enUS;
+    };
+
     const formatDate = (dateStr: string) => {
         try {
-            return format(new Date(dateStr), 'dd MMM yyyy', { locale: language === 'fr' ? fr : enUS });
+            return format(new Date(dateStr), 'dd MMM yyyy', { locale: getDateLocale() });
         } catch {
             return dateStr;
         }
     };
+
+    const resolveWorkerNames = (income: Income): string => {
+        const names = (income.workerIds || [])
+            .map((id: number) => workers.find(w => w.id === id)?.name)
+            .filter(Boolean);
+        return names.length > 0 ? names.join(', ') : (income.updatedBy || t('common.unassigned') || 'Unassigned');
+    };
+
+    const resolveServiceNames = (income: Income): string => {
+        const names = (income.serviceIds || [])
+            .map((id: number) => services.find(s => s.id === id)?.name)
+            .filter(Boolean);
+        return names.length > 0 ? names.join(', ') : '-';
+    };
+
+    const resolveCategoryName = (categoryId: number): string => {
+        return categories.find(c => c.id === categoryId)?.name || `#${categoryId}`;
+    };
+
+    const currentSalonName = user?.tenants?.find(t => t.id === String(salonId))?.name
+        || user?.tenants?.[0]?.name
+        || 'Salon';
+
+    // ─── Loading State ──────────────────────────────────────
 
     if (isLoading) {
         return (
@@ -183,7 +341,7 @@ export default function ApprovalsPage() {
                                 <p className="text-sm opacity-90 mb-1">{t('approvals.pendingIncomes')}</p>
                                 <h3 className="text-4xl font-bold">{pendingIncomes.length}</h3>
                                 <p className="text-sm opacity-80 mt-1">
-                                    Total: €{pendingIncomes.reduce((sum, r) => sum + r.finalAmount, 0)}
+                                    Total: €{pendingIncomes.reduce((sum, r) => sum + (r.finalAmount || r.amount || 0), 0).toLocaleString()}
                                 </p>
                             </div>
                             <div className="w-16 h-16 bg-white/20 rounded-lg flex items-center justify-center">
@@ -197,7 +355,7 @@ export default function ApprovalsPage() {
                                 <p className="text-sm opacity-90 mb-1">{t('approvals.pendingExpenses')}</p>
                                 <h3 className="text-4xl font-bold">{pendingExpenses.length}</h3>
                                 <p className="text-sm opacity-80 mt-1">
-                                    Total: €{pendingExpenses.reduce((sum, e) => sum + e.amount, 0)}
+                                    Total: €{pendingExpenses.reduce((sum, e) => sum + (e.amount || 0), 0).toLocaleString()}
                                 </p>
                             </div>
                             <div className="w-16 h-16 bg-white/20 rounded-lg flex items-center justify-center">
@@ -275,7 +433,7 @@ export default function ApprovalsPage() {
                     </Card>
                 )}
 
-                {/* Pending Incomes Table */}
+                {/* ─── Pending Incomes Table ─── */}
                 {selectedTab === "incomes" && (
                     <Card>
                         <h3 className="text-lg font-semibold mb-4">{t('approvals.pendingIncomes')}</h3>
@@ -315,14 +473,13 @@ export default function ApprovalsPage() {
                                             <td className="px-4 py-4 text-sm text-gray-900">{formatDate(income.date)}</td>
                                             <td className="px-4 py-4">
                                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-light text-color-primary">
-                                                    {/* In a real app, resolve worker name via ID */}
-                                                    {income.updatedBy || 'Worker'}
+                                                    {resolveWorkerNames(income)}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-4 text-sm text-gray-900">{income.clientName || 'Unknown'}</td>
-                                            <td className="px-4 py-4 text-sm text-gray-900">Service</td>
-                                            <td className="px-4 py-4 text-right font-semibold text-color-primary">€{income.finalAmount}</td>
-                                            <td className="px-4 py-4 text-sm text-gray-900">{income.createdBy}</td>
+                                            <td className="px-4 py-4 text-sm text-gray-900">{income.clientName || t('common.unknown') || 'Unknown'}</td>
+                                            <td className="px-4 py-4 text-sm text-gray-900">{resolveServiceNames(income)}</td>
+                                            <td className="px-4 py-4 text-right font-semibold text-color-primary">€{(income.finalAmount || income.amount || 0).toLocaleString()}</td>
+                                            <td className="px-4 py-4 text-sm text-gray-900">{income.createdBy || '-'}</td>
                                             <td className="px-4 py-4">
                                                 <div className="flex items-center justify-center gap-2">
                                                     <ReadOnlyGuard>
@@ -343,8 +500,11 @@ export default function ApprovalsPage() {
                                     ))}
                                     {pendingIncomes.length === 0 && (
                                         <tr>
-                                            <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
-                                                {t('common.noData', { defaultValue: 'No pending incomes' })}
+                                            <td colSpan={8} className="px-4 py-12 text-center">
+                                                <div className="flex flex-col items-center gap-2 text-gray-400">
+                                                    <Check className="w-10 h-10" />
+                                                    <p className="text-sm font-medium">{t('approvals.noIncomes') || 'No pending incomes'}</p>
+                                                </div>
                                             </td>
                                         </tr>
                                     )}
@@ -354,7 +514,7 @@ export default function ApprovalsPage() {
                     </Card>
                 )}
 
-                {/* Pending Expenses Table */}
+                {/* ─── Pending Expenses Table ─── */}
                 {selectedTab === "expenses" && (
                     <Card>
                         <h3 className="text-lg font-semibold mb-4">{t('approvals.pendingExpenses')}</h3>
@@ -365,7 +525,7 @@ export default function ApprovalsPage() {
                                         <th className="px-4 py-3">
                                             <input type="checkbox" className="rounded"
                                                 onChange={(e) => {
-                                                    if (e.target.checked) setSelectedItems(pendingExpenses.map(e => e.id));
+                                                    if (e.target.checked) setSelectedItems(pendingExpenses.map(exp => exp.id));
                                                     else setSelectedItems([]);
                                                 }}
                                                 checked={selectedItems.length === pendingExpenses.length && pendingExpenses.length > 0}
@@ -394,17 +554,17 @@ export default function ApprovalsPage() {
                                             <td className="px-4 py-4 text-sm text-gray-900">{formatDate(expense.date)}</td>
                                             <td className="px-4 py-4">
                                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary-light text-color-secondary">
-                                                    {expense.categoryId} {/* TODO: Map to category name */}
+                                                    {resolveCategoryName(expense.categoryId)}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-4 text-sm text-gray-900">{expense.description}</td>
-                                            <td className="px-4 py-4 text-right font-semibold text-color-secondary">€{expense.amount}</td>
+                                            <td className="px-4 py-4 text-sm text-gray-900">{expense.description || '-'}</td>
+                                            <td className="px-4 py-4 text-right font-semibold text-color-secondary">€{(expense.amount || 0).toLocaleString()}</td>
                                             <td className="px-4 py-4">
                                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                    Salon {expense.salonId}
+                                                    {currentSalonName}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-4 text-sm text-gray-900">{expense.createdBy}</td>
+                                            <td className="px-4 py-4 text-sm text-gray-900">{expense.createdBy || '-'}</td>
                                             <td className="px-4 py-4">
                                                 <div className="flex items-center justify-center gap-2">
                                                     <ReadOnlyGuard>
@@ -425,8 +585,11 @@ export default function ApprovalsPage() {
                                     ))}
                                     {pendingExpenses.length === 0 && (
                                         <tr>
-                                            <td colSpan={8} className="px-4 py-8 text-center text-gray-500">
-                                                {t('common.noData', { defaultValue: 'No pending expenses' })}
+                                            <td colSpan={8} className="px-4 py-12 text-center">
+                                                <div className="flex flex-col items-center gap-2 text-gray-400">
+                                                    <Check className="w-10 h-10" />
+                                                    <p className="text-sm font-medium">{t('approvals.noExpenses') || 'No pending expenses'}</p>
+                                                </div>
                                             </td>
                                         </tr>
                                     )}
@@ -436,7 +599,7 @@ export default function ApprovalsPage() {
                     </Card>
                 )}
 
-                {/* History Table */}
+                {/* ─── History Table ─── */}
                 {selectedTab === "history" && (
                     <Card>
                         <h3 className="text-lg font-semibold mb-4">{t('approvals.history')}</h3>
@@ -458,17 +621,19 @@ export default function ApprovalsPage() {
                                             <td className="px-4 py-4">
                                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.type === "income" ? "bg-primary-light text-color-primary" : "bg-secondary-light text-color-secondary"
                                                     }`}>
-                                                    {item.type}
+                                                    {item.type === 'income' ? t('approvals.table.income') || 'Income' : t('approvals.table.expense') || 'Expense'}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-4 text-sm text-gray-900">{formatDate(item.date)}</td>
                                             <td className="px-4 py-4 text-sm text-gray-900">{item.description}</td>
-                                            <td className="px-4 py-4 text-right font-semibold text-gray-900">€{item.amount}</td>
+                                            <td className="px-4 py-4 text-right font-semibold text-gray-900">€{(item.amount || 0).toLocaleString()}</td>
                                             <td className="px-4 py-4 text-sm text-gray-900">{item.data.updatedBy || 'System'}</td>
                                             <td className="px-4 py-4 text-sm">
                                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.status === 'Validated' || item.status === 'Approved'
                                                     ? "bg-green-100 text-green-800"
-                                                    : "bg-red-100 text-red-800"
+                                                    : item.status === 'Refused' || item.status === 'Rejected'
+                                                        ? "bg-red-100 text-red-800"
+                                                        : "bg-gray-100 text-gray-800"
                                                     }`}>
                                                     {item.status}
                                                 </span>
@@ -477,8 +642,11 @@ export default function ApprovalsPage() {
                                     ))}
                                     {historyItems.length === 0 && (
                                         <tr>
-                                            <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                                                {t('common.noData', { defaultValue: 'No history' })}
+                                            <td colSpan={6} className="px-4 py-12 text-center">
+                                                <div className="flex flex-col items-center gap-2 text-gray-400">
+                                                    <Clock className="w-10 h-10" />
+                                                    <p className="text-sm font-medium">{t('approvals.noHistory') || 'No history yet'}</p>
+                                                </div>
                                             </td>
                                         </tr>
                                     )}

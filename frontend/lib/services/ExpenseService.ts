@@ -14,7 +14,14 @@ export class ExpenseService extends BaseService {
      */
     async getAll(salonId: number, filters?: ExpenseFilters): Promise<Expense[]> {
         const response = await this.provider.getExpenses(salonId, filters);
-        return response.data;
+        let data = response.data;
+
+        // Client-side status filter (status column may not exist in all DB setups)
+        if (filters?.status) {
+            data = data.filter(e => e.status === filters.status);
+        }
+
+        return data;
     }
 
     /**
@@ -90,30 +97,41 @@ export class ExpenseService extends BaseService {
 
     /**
      * Change expense status
+     * Note: The expenses table may not have a 'status' column.
+     * We archive the expense (isActive = false) and track the action via interaction history.
      */
     async updateStatus(id: number, status: Expense['status']): Promise<Expense> {
         const expense = await this.provider.updateExpense(id, {
-            status,
+            isActive: false,
             updatedBy: this.getCurrentUser()
         });
 
         await this.logInteraction('expense', id, `status_changed_to_${status}`);
 
-        return expense;
+        // Return with the intended status for UI consistency
+        return { ...expense, status };
     }
 
     /**
-     * Approve expense
+     * Approve expense (archives it and logs the approval)
      */
     async approve(id: number): Promise<Expense> {
         return this.updateStatus(id, 'Approved');
     }
 
     /**
-     * Reject expense
+     * Reject expense (archives it and logs the rejection)
      */
     async reject(id: number): Promise<Expense> {
         return this.updateStatus(id, 'Rejected');
+    }
+
+    /**
+     * Get archived (approved/rejected) expenses for history
+     */
+    async getArchived(salonId: number): Promise<Expense[]> {
+        const response = await this.provider.getExpenses(salonId, { isActive: false });
+        return response.data;
     }
 }
 
