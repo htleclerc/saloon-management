@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { Building2, Search, Eye, ChevronRight, Users, TrendingUp, Calendar, MapPin, Settings, Lock, AlertCircle, ChevronLeft } from 'lucide-react';
 import { useToast } from '@/context/ToastProvider';
 import { useTranslation } from '@/i18n';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface Salon {
     id: string;
@@ -23,6 +24,7 @@ export default function SuperAdminSalonsPage() {
     const { enterReadOnlyMode, enterManageMode } = useAuth();
     const router = useRouter();
     const { t } = useTranslation();
+    const { format } = useCurrency();
     const [salons, setSalons] = useState<Salon[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'archived'>('all');
@@ -180,7 +182,7 @@ export default function SuperAdminSalonsPage() {
                                     setCurrentPage(1);
                                 }}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${statusFilter === status
-                                    ? 'bg-white text-purple-600 shadow-sm'
+                                    ? 'bg-white text-color-primary shadow-sm'
                                     : 'text-gray-500 hover:text-gray-700 hover:bg-white/50'
                                     }`}
                             >
@@ -199,7 +201,7 @@ export default function SuperAdminSalonsPage() {
                                 setCurrentPage(1);
                             }}
                             placeholder={t("superadmin.searchPlaceholder")}
-                            className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                         />
                     </div>
                 </div>
@@ -219,14 +221,14 @@ export default function SuperAdminSalonsPage() {
                         <div
                             key={salon.id}
                             className={`bg-white rounded-xl p-6 shadow-lg border transition-all ${salon.status === 'archived' ? 'opacity-75 grayscale-[0.3]' : ''
-                                } hover:border-purple-400 border-gray-200`}
+                                } hover:border-color-primary border-gray-200`}
                         >
                             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                                 {/* Salon Info */}
                                 <div className="flex-1">
                                     <div className="flex items-center gap-3 mb-3">
-                                        <div className="p-3 bg-purple-100 rounded-xl">
-                                            <Building2 className="w-6 h-6 text-purple-600" />
+                                        <div className="p-3 bg-primary-light rounded-xl">
+                                            <Building2 className="w-6 h-6 text-color-primary" />
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-2">
@@ -274,7 +276,7 @@ export default function SuperAdminSalonsPage() {
                                     <div className="flex items-center gap-2">
                                         <TrendingUp className="w-4 h-4 text-green-600" />
                                         <span className="text-sm font-medium text-gray-900">
-                                            {salon.monthlyRevenue.toLocaleString('en-US')}€
+                                            {format(salon.monthlyRevenue)}
                                         </span>
                                         <span className="text-xs text-gray-500">
                                             / month
@@ -287,7 +289,7 @@ export default function SuperAdminSalonsPage() {
                                     <button
                                         onClick={() => handleAction(salon, 'view')}
                                         disabled={loading}
-                                        className="flex-1 flex items-center justify-between gap-2 px-4 py-2 bg-white border border-purple-200 text-purple-600 rounded-xl hover:bg-purple-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed group lg:min-w-[140px]"
+                                        className="flex-1 flex items-center justify-between gap-2 px-4 py-2 bg-white border border-color-primary/30 text-color-primary rounded-xl hover:bg-primary-light transition-all disabled:opacity-50 disabled:cursor-not-allowed group lg:min-w-[140px]"
                                     >
                                         <div className="flex items-center gap-2">
                                             <Eye className="w-4 h-4" />
@@ -299,7 +301,7 @@ export default function SuperAdminSalonsPage() {
                                         onClick={() => handleAction(salon, 'manage')}
                                         disabled={loading}
                                         className={`flex-1 flex items-center justify-between gap-2 px-4 py-2 rounded-xl transition-all group lg:min-w-[140px] ${salon.canManage
-                                            ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:shadow-lg'
+                                            ? 'bg-gradient-to-r from-primary to-indigo-600 text-white hover:shadow-lg'
                                             : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
                                             }`}
                                     >
@@ -332,7 +334,7 @@ export default function SuperAdminSalonsPage() {
                             key={i}
                             onClick={() => setCurrentPage(i + 1)}
                             className={`w-10 h-10 rounded-lg text-sm font-medium transition-all ${currentPage === i + 1
-                                ? 'bg-purple-600 text-white'
+                                ? 'bg-primary text-white'
                                 : 'text-gray-600 hover:bg-gray-100'
                                 }`}
                         >

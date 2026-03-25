@@ -23,6 +23,7 @@ import {
 import Link from "next/link";
 import { useAuth } from "@/context/AuthProvider";
 import { useTranslation } from "@/i18n";
+import { useCurrency } from "@/hooks/useCurrency";
 import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 import HistoryModal, { HistoryEvent } from "@/components/ui/HistoryModal";
 import { useState } from "react";
@@ -46,7 +47,7 @@ const services = [
         image: "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=800",
         rating: 4.9,
         popularity: 95,
-        color: "from-purple-500 to-purple-700",
+        color: "from-primary to-[var(--color-primary)]",
         stats: {
             thisMonth: 190,
             revenue: 22800,
@@ -88,6 +89,7 @@ export default function ServiceDetailPage() {
     // Use isManager for admin-like features as it includes owner/super_admin
     const isAdmin = isManager;
     const { t } = useTranslation();
+    const { format: formatCurrency } = useCurrency();
     const [historyModalOpen, setHistoryModalOpen] = useState(false);
 
     // Find service (in real app, fetch from API)
@@ -153,7 +155,7 @@ export default function ServiceDetailPage() {
                                 <div className="absolute bottom-8 left-8 right-8 flex justify-between items-end">
                                     <div className="text-white">
                                         <p className="text-white/80 font-medium mb-1 uppercase tracking-widest text-xs">Starting from</p>
-                                        <h2 className="text-5xl font-black italic">€{service.price}</h2>
+                                        <h2 className="text-5xl font-black italic">{formatCurrency(service.price)}</h2>
                                     </div>
                                     <div className="bg-white/20 backdrop-blur-xl p-4 rounded-3xl border border-white/30 text-white">
                                         <Award className="w-8 h-8" />
@@ -229,7 +231,7 @@ export default function ServiceDetailPage() {
                         {isAdmin ? (
                             <>
                                 {/* Admin Only: Financial Insights */}
-                                <Card className="p-6 border-none shadow-xl shadow-purple-500/10 bg-gradient-to-br from-purple-500 to-purple-700 text-white rounded-[2rem]">
+                                <Card className="p-6 border-none shadow-xl shadow-[color:var(--color-primary)]/20 bg-gradient-to-br from-primary to-[var(--color-primary)] text-white rounded-[2rem]">
                                     <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
                                         <DollarSign className="w-5 h-5 bg-white/20 p-1 rounded-full" />
                                         {t("services.financialInsights")}
@@ -238,7 +240,7 @@ export default function ServiceDetailPage() {
                                         <div>
                                             <p className="text-white/70 text-sm">{t("services.monthlyRevenue")}</p>
                                             <div className="flex items-end gap-2">
-                                                <h4 className="text-3xl font-black italic">€22,800</h4>
+                                                <h4 className="text-3xl font-black italic">{formatCurrency(22800)}</h4>
                                                 <span className="text-green-400 text-xs font-black pb-1">↑ 15%</span>
                                             </div>
                                         </div>
@@ -350,7 +352,7 @@ export default function ServiceDetailPage() {
                                         <span className="text-xs font-black text-gray-400">TOTAL</span>
                                     </div>
                                 </div>
-                                <Button className="w-full py-6 rounded-2xl font-black text-lg shadow-xl shadow-purple-500/20">
+                                <Button className="w-full py-6 rounded-2xl font-black text-lg shadow-xl shadow-[color:var(--color-primary)]/20">
                                     MY BOOKINGS
                                     <ChevronRight className="ml-2 w-5 h-5" />
                                 </Button>

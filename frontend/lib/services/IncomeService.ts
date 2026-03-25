@@ -6,6 +6,7 @@
 
 import { BaseService } from './BaseService';
 import type { Income, IncomeWithRelations, IncomeCreateData, IncomeFilters, IncomeWorkerShare, PaginatedResponse } from '@/types';
+import { IncomeCreateSchema } from '@/lib/validators';
 
 export class IncomeService extends BaseService {
     async getAll(salonId: number, filters?: IncomeFilters): Promise<Income[]> {
@@ -48,35 +49,16 @@ export class IncomeService extends BaseService {
      * Get income by booking ID
      */
     async getByBooking(bookingId: number): Promise<Income | null> {
-        // TODO: Implement getIncomesByBooking in IDataProvider or use filters
-        // const incomes = await this.provider.getIncomesByBooking(bookingId); 
-        return null;
+        const allIncomes = await this.provider.getIncomes(0, { limit: 1000 });
+        return allIncomes.data.find((i: Income) => i.bookingId === bookingId || i.bookingIds?.includes(bookingId)) || null;
     }
 
     /**
      * Create new income
      */
     async create(data: IncomeCreateData): Promise<Income> {
-        // Validation
-        this.validateRequired(data, ['salonId', 'amount', 'date']);
-
-        if (data.amount < 0) {
-            throw new Error('Amount must be positive');
-        }
-
-        if (data.discountAmount && data.discountAmount < 0) {
-            throw new Error('Discount amount must be positive');
-        }
-
-        if (!data.workerShares || data.workerShares.length === 0) {
-            throw new Error('At least one worker share must be specified');
-        }
-
-        // Validate percentages sum to 100
-        const totalPercentage = data.workerShares.reduce((sum, share) => sum + share.percentage, 0);
-        if (Math.abs(totalPercentage - 100) > 0.01) {
-            throw new Error(`Worker shares must sum to 100% (currently ${totalPercentage}%)`);
-        }
+        // Zod validation (covers required fields, amount >= 0, discount >= 0, workerShares min(1), percentage sum)
+        IncomeCreateSchema.parse(data);
 
         // Create income
         const finalAmount = data.amount - (data.discountAmount || 0);
@@ -125,7 +107,7 @@ export class IncomeService extends BaseService {
     /**
      * Update income
      */
-    async update(id: number, data: Partial<Income> & { workerShares?: IncomeWorkerShare[] }): Promise<Income> {
+    async update(id: number, data: Partial<Income> & { workerShares?: IncomeWorkerShare[]; products?: Array<{ productId: number; quantity: number }> }): Promise<Income> {
         const current = await this.getById(id);
         if (!current) throw new Error('Income not found');
 
@@ -143,7 +125,7 @@ export class IncomeService extends BaseService {
         if (data.amount !== undefined || data.discountAmount !== undefined) {
             const amount = data.amount !== undefined ? data.amount : current.amount;
             const discount = data.discountAmount !== undefined ? data.discountAmount : current.discountAmount;
-            (data as any).finalAmount = amount - discount;
+            (data as Partial<Income> & { finalAmount?: number }).finalAmount = amount - discount;
         }
 
         const income = await this.provider.updateIncome(id, {
@@ -152,7 +134,7 @@ export class IncomeService extends BaseService {
         });
 
         // Sync Junctions if provided
-        if (data.serviceIds || data.workerShares || (data as any).products) {
+        if (data.serviceIds || data.workerShares || data.products) {
             await this.provider.clearIncomeJunctions(id);
 
             const finalAmount = income.finalAmount;
@@ -161,7 +143,7 @@ export class IncomeService extends BaseService {
             if (data.workerShares) {
                 income.workerIds = [];
                 for (const share of data.workerShares) {
-                    const workerAmount = (share as any).amount !== undefined ? (share as any).amount : (finalAmount * share.percentage) / 100;
+                    const workerAmount = share.amount !== undefined ? share.amount : (finalAmount * share.percentage) / 100;
                     await this.provider.addWorkerToIncome(
                         id,
                         share.workerId,
@@ -183,8 +165,8 @@ export class IncomeService extends BaseService {
             }
 
             // Re-add products
-            if ((data as any).products) {
-                for (const product of (data as any).products) {
+            if (data.products) {
+                for (const product of data.products) {
                     await this.provider.addProductToIncome(id, product.productId, product.quantity);
                 }
             }

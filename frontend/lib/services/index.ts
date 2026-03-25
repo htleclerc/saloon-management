@@ -7,7 +7,7 @@
 // Base
 export { BaseService } from './BaseService';
 
-// Import services and instances
+// Import Service Classes and Instances
 import { WorkerService, workerService } from './WorkerService';
 import { NotificationService, notificationService } from './NotificationService';
 import { ClientService, clientService } from './ClientService';
@@ -16,28 +16,35 @@ import { IncomeService, incomeService } from './IncomeService';
 import { ExpenseService, expenseService } from './ExpenseService';
 import { SalonService, salonService } from './SalonService';
 import { StatsService, statsService } from './StatsService';
+import { RevenueStatsService, revenueStatsService } from './RevenueStatsService';
+import { PerformanceStatsService, performanceStatsService } from './PerformanceStatsService';
 import { ServiceService, serviceService } from './ServiceService';
 import { ProductService, productService } from './ProductService';
 import { TipsService, tipsService } from './TipsService';
 import { PromoCodeService, promoCodeService } from './PromoCodeService';
 import { invoiceService } from './InvoiceService';
-import { payrollService } from './PayrollService';
+import { PayrollService, payrollService, type PayrollSummary } from './PayrollService';
 
-// Export services and instances
-export { WorkerService, workerService };
-export { ClientService, clientService };
-export { BookingService, bookingService };
-export { IncomeService, incomeService };
-export { ExpenseService, expenseService };
-export { SalonService, salonService };
-export { StatsService, statsService };
-export { ServiceService, serviceService };
-export { ProductService, productService };
-export { TipsService, tipsService };
-export { PromoCodeService, promoCodeService };
-export { invoiceService };
-export { NotificationService, notificationService };
-export { payrollService };
+// Export everything
+export {
+    WorkerService, workerService,
+    NotificationService, notificationService,
+    ClientService, clientService,
+    BookingService, bookingService,
+    IncomeService, incomeService,
+    ExpenseService, expenseService,
+    SalonService, salonService,
+    StatsService, statsService,
+    RevenueStatsService, revenueStatsService,
+    PerformanceStatsService, performanceStatsService,
+    ServiceService, serviceService,
+    ProductService, productService,
+    TipsService, tipsService,
+    PromoCodeService, promoCodeService,
+    invoiceService,
+    PayrollService, payrollService,
+    PayrollSummary
+};
 
 // Export all service instances as a namespace for easy access
 export const Services = {
@@ -48,6 +55,8 @@ export const Services = {
     expense: expenseService,
     salon: salonService,
     stats: statsService,
+    revenue: revenueStatsService,
+    performance: performanceStatsService,
     service: serviceService,
     product: productService,
     tips: tipsService,
@@ -55,16 +64,3 @@ export const Services = {
     invoice: invoiceService,
     payroll: payrollService
 };
-
-/**
- * Usage examples:
- * 
- * import { workerService } from '@/lib/services';
- * import { Services } from '@/lib/services';
- * 
- * // Option 1: Direct import
- * const workers = await workerService.getAll(salonId);
- * 
- * // Option 2: Via namespace
- * const workers = await Services.worker.getAll(salonId);
- */

@@ -40,7 +40,6 @@ export default function EditServicePage() {
         if (handleReadOnlyClick()) return;
         try {
             // In a real app, send to API via serviceService.update(id, data)
-            console.log("Updating service:", data);
             showToast(t("common.success"), t("dialogs.success"), "success");
             router.push("/services");
         } catch (err) {
@@ -63,7 +62,6 @@ export default function EditServicePage() {
         if (isConfirmed) {
             try {
                 // In a real app, send to API (soft delete)
-                console.log("Archiving service:", id);
                 showToast(t("common.success"), t("services.archiveSuccess"), "success");
                 router.push("/services");
             } catch (err) {

@@ -7,6 +7,7 @@ import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 import { Download, TrendingUp, TrendingDown, Calendar, Edit, ChevronDown, Lightbulb, Loader2 } from "lucide-react";
 import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
 import { useAuth } from "@/context/AuthProvider";
+import { useToast } from "@/context/ToastProvider";
 import {
     LineChart,
     Line,
@@ -24,14 +25,23 @@ import {
 } from "recharts";
 import { useState, useEffect } from "react";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
-import { statsService } from "@/lib/services";
+import { revenueStatsService } from "@/lib/services";
 import { useTranslation } from "@/i18n";
+import { format, startOfYear, endOfYear, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from "date-fns";
+import { exportToCSV, exportToPDF } from "@/lib/export";
+import { useCurrency } from "@/hooks/useCurrency";
 
 export default function ReportsPage() {
     const { t } = useTranslation();
+    const { format: formatCurrency, symbol } = useCurrency();
     const { getCardStyle } = useKpiCardStyle();
     const { user, activeSalonId } = useAuth();
+    const { showToast } = useToast();
     const [isLoading, setIsLoading] = useState(true);
+
+    // Period filtering state
+    const [selectedDate, setSelectedDate] = useState(new Date());
+    const [periodFilter, setPeriodFilter] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('yearly');
 
     // State for reports
     const [financialReport, setFinancialReport] = useState({
@@ -63,21 +73,70 @@ export default function ReportsPage() {
     });
     const [recommendations, setRecommendations] = useState<any[]>([]);
 
+    // Helper function to get date range based on filter
+    const getDateRange = () => {
+        switch (periodFilter) {
+            case 'daily':
+                return { start: selectedDate, end: selectedDate };
+            case 'weekly':
+                return { start: startOfWeek(selectedDate), end: endOfWeek(selectedDate) };
+            case 'monthly':
+                return { start: startOfMonth(selectedDate), end: endOfMonth(selectedDate) };
+            case 'yearly':
+                return { start: startOfYear(selectedDate), end: endOfYear(selectedDate) };
+        }
+    };
+
+    const dateRange = getDateRange();
+
+    // Helper function to filter data by period
+    const filterDataByPeriod = (data: any[], dateField: string) => {
+        const { start, end } = dateRange;
+        return data.filter(item => {
+            const itemDate = new Date(item[dateField]);
+            return itemDate >= start && itemDate <= end;
+        });
+    };
+
+    // Export handler
+    const handleExport = async (exportFormat: 'csv' | 'pdf') => {
+        try {
+            const columns = [
+                { key: 'date', header: t('reports.monthlyBreakdown.date') },
+                { key: 'worker', header: t('reports.monthlyBreakdown.worker') },
+                { key: 'revenue', header: t('reports.monthlyBreakdown.revenue'), formatter: (v: unknown) => formatCurrency(Number(v)) },
+                { key: 'expense', header: t('reports.monthlyBreakdown.expense'), formatter: (v: unknown) => formatCurrency(Number(v)) },
+                { key: 'profit', header: t('reports.monthlyBreakdown.profit'), formatter: (v: unknown) => formatCurrency(Number(v)) },
+            ];
+
+            const dataToExport = filterDataByPeriod(monthlyFinancials, 'date');
+
+            if (exportFormat === 'csv') {
+                exportToCSV(dataToExport, columns, 'financial-report');
+            } else {
+                exportToPDF(dataToExport, columns, t('reports.title'), 'financial-report');
+            }
+            showToast(t("common.success"), t("common.exportSuccess"), "success");
+        } catch (error: any) {
+            showToast(t("common.error"), error.message || "Export failed", "error");
+        }
+    };
+
     useEffect(() => {
         if (activeSalonId) {
             setIsLoading(true);
             const year = new Date().getFullYear();
 
             Promise.all([
-                statsService.getFinancialReport(Number(activeSalonId), year),
-                statsService.getExpenseDistribution(Number(activeSalonId), year),
-                statsService.getMonthlyFinancials(Number(activeSalonId), year),
-                statsService.getQuarterlyFinancials(Number(activeSalonId), year),
-                statsService.getTaxSummary(Number(activeSalonId), year),
-                statsService.getPurchaseTrends(Number(activeSalonId), year),
-                statsService.getFeeBreakdown(Number(activeSalonId), year),
-                statsService.getMonthlyWeeklyAnalysis(Number(activeSalonId), year),
-                statsService.getRecommendations(Number(activeSalonId))
+                revenueStatsService.getFinancialReport(Number(activeSalonId), year),
+                revenueStatsService.getExpenseDistribution(Number(activeSalonId), year),
+                revenueStatsService.getMonthlyFinancials(Number(activeSalonId), year),
+                revenueStatsService.getQuarterlyFinancials(Number(activeSalonId), year),
+                revenueStatsService.getTaxSummary(Number(activeSalonId), year),
+                revenueStatsService.getPurchaseTrends(Number(activeSalonId), year),
+                revenueStatsService.getFeeBreakdown(Number(activeSalonId), year),
+                revenueStatsService.getMonthlyWeeklyAnalysis(Number(activeSalonId), year),
+                revenueStatsService.getRecommendations(Number(activeSalonId))
             ]).then(([report, distribution, monthly, quarterly, tax, purchases, fees, analysis, recs]) => {
                 setFinancialReport(report);
                 setExpenseDistribution(distribution);
@@ -103,7 +162,7 @@ export default function ReportsPage() {
             <ProtectedRoute requiredRole={['manager', 'super_admin']}>
                 <MainLayout>
                     <div className="flex items-center justify-center h-full min-h-[400px]">
-                        <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+                        <Loader2 className="w-8 h-8 animate-spin text-color-primary" />
                     </div>
                 </MainLayout>
             </ProtectedRoute>
@@ -123,21 +182,63 @@ export default function ReportsPage() {
                         <div className="flex flex-wrap items-center gap-3">
                             {/* Period Filters */}
                             <div className="flex bg-gray-100 rounded-lg p-1">
-                                <button className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-white hover:shadow-sm rounded-md transition">{t('reports.periodFilters.daily')}</button>
-                                <button className="px-3 py-1.5 text-sm font-medium bg-white shadow-sm text-[var(--color-primary)] rounded-md">{t('reports.periodFilters.weekly')}</button>
-                                <button className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-white hover:shadow-sm rounded-md transition">{t('reports.periodFilters.monthly')}</button>
-                                <button className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-white hover:shadow-sm rounded-md transition">{t('reports.periodFilters.yearly')}</button>
+                                <button
+                                    onClick={() => setPeriodFilter('daily')}
+                                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${
+                                        periodFilter === 'daily'
+                                            ? 'bg-white shadow-sm text-[var(--color-primary)]'
+                                            : 'text-gray-600 hover:bg-white hover:shadow-sm'
+                                    }`}
+                                >
+                                    {t('reports.periodFilters.daily')}
+                                </button>
+                                <button
+                                    onClick={() => setPeriodFilter('weekly')}
+                                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${
+                                        periodFilter === 'weekly'
+                                            ? 'bg-white shadow-sm text-[var(--color-primary)]'
+                                            : 'text-gray-600 hover:bg-white hover:shadow-sm'
+                                    }`}
+                                >
+                                    {t('reports.periodFilters.weekly')}
+                                </button>
+                                <button
+                                    onClick={() => setPeriodFilter('monthly')}
+                                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${
+                                        periodFilter === 'monthly'
+                                            ? 'bg-white shadow-sm text-[var(--color-primary)]'
+                                            : 'text-gray-600 hover:bg-white hover:shadow-sm'
+                                    }`}
+                                >
+                                    {t('reports.periodFilters.monthly')}
+                                </button>
+                                <button
+                                    onClick={() => setPeriodFilter('yearly')}
+                                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${
+                                        periodFilter === 'yearly'
+                                            ? 'bg-white shadow-sm text-[var(--color-primary)]'
+                                            : 'text-gray-600 hover:bg-white hover:shadow-sm'
+                                    }`}
+                                >
+                                    {t('reports.periodFilters.yearly')}
+                                </button>
                             </div>
                             <Button variant="outline" size="sm" className="gap-2">
                                 <Calendar className="w-4 h-4" />
-                                Dec 1 - Dec 31, 2025
+                                {format(dateRange.start, 'MMM d')} - {format(dateRange.end, 'MMM d, yyyy')}
                                 <ChevronDown className="w-4 h-4" />
                             </Button>
                             <ReadOnlyGuard>
-                                <Button variant="primary" size="md">
-                                    <Download className="w-5 h-5" />
-                                    {t('reports.export')}
-                                </Button>
+                                <div className="flex gap-2">
+                                    <Button variant="primary" size="md" onClick={() => handleExport('csv')} className="gap-2">
+                                        <Download className="w-5 h-5" />
+                                        CSV
+                                    </Button>
+                                    <Button variant="primary" size="md" onClick={() => handleExport('pdf')} className="gap-2">
+                                        <Download className="w-5 h-5" />
+                                        PDF
+                                    </Button>
+                                </div>
                             </ReadOnlyGuard>
                         </div>
                     </div>
@@ -151,7 +252,7 @@ export default function ReportsPage() {
                                     <span className="text-xl">💰</span>
                                     <p className="text-xs opacity-90">{t('reports.totalRevenue')}</p>
                                 </div>
-                                <h3 className="text-2xl font-bold">€{financialReport.totalRevenue.toLocaleString()}</h3>
+                                <h3 className="text-2xl font-bold">{formatCurrency(financialReport.totalRevenue)}</h3>
                                 <div className="flex items-center gap-1 mt-2">
                                     <TrendingUp className="w-3 h-3" />
                                     <span className="text-xs">+--% {t('reports.lastYear')}</span>
@@ -162,7 +263,7 @@ export default function ReportsPage() {
                                     <span className="text-xl">📊</span>
                                     <p className="text-xs opacity-90">{t('reports.totalExpenses')}</p>
                                 </div>
-                                <h3 className="text-2xl font-bold">€{financialReport.totalExpenses.toLocaleString()}</h3>
+                                <h3 className="text-2xl font-bold">{formatCurrency(financialReport.totalExpenses)}</h3>
                                 <div className="flex items-center gap-1 mt-2">
                                     <TrendingDown className="w-3 h-3" />
                                     <span className="text-xs">--% {t('reports.lastYear')}</span>
@@ -173,7 +274,7 @@ export default function ReportsPage() {
                                     <span className="text-xl">📈</span>
                                     <p className="text-xs opacity-90">{t('reports.netProfit')}</p>
                                 </div>
-                                <h3 className="text-2xl font-bold">€{financialReport.netProfit.toLocaleString()}</h3>
+                                <h3 className="text-2xl font-bold">{formatCurrency(financialReport.netProfit)}</h3>
                                 <div className="flex items-center gap-1 mt-2">
                                     <TrendingUp className="w-3 h-3" />
                                     <span className="text-xs">+--% {t('reports.lastYear')}</span>
@@ -184,7 +285,7 @@ export default function ReportsPage() {
                                     <span className="text-xl">🧾</span>
                                     <p className="text-xs opacity-90">{t('reports.taxPayments')}</p>
                                 </div>
-                                <h3 className="text-2xl font-bold">€{financialReport.taxPayments.toLocaleString()}</h3>
+                                <h3 className="text-2xl font-bold">{formatCurrency(financialReport.taxPayments)}</h3>
                                 <div className="flex items-center gap-1 mt-2">
                                     <TrendingUp className="w-3 h-3" />
                                     <span className="text-xs">{t('reports.est')} 20%</span>
@@ -195,7 +296,7 @@ export default function ReportsPage() {
                                     <span className="text-xl">💎</span>
                                     <p className="text-xs opacity-90">{t('reports.savings')}</p>
                                 </div>
-                                <h3 className="text-2xl font-bold">€{financialReport.savings.toLocaleString()}</h3>
+                                <h3 className="text-2xl font-bold">{formatCurrency(financialReport.savings)}</h3>
                                 <div className="flex items-center gap-1 mt-2">
                                     <TrendingUp className="w-3 h-3" />
                                     <span className="text-xs">{t('reports.est')} 15%</span>
@@ -222,7 +323,7 @@ export default function ReportsPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {monthlyFinancials.map((row) => (
+                                    {filterDataByPeriod(monthlyFinancials, 'date').map((row) => (
                                         <tr key={row.id} className="hover:bg-gray-50 transition">
                                             <td className="px-4 py-4 text-sm text-gray-900">{row.date}</td>
                                             <td className="px-4 py-4">
@@ -231,11 +332,11 @@ export default function ReportsPage() {
                                                     <span className="text-sm font-medium text-gray-900">{row.worker}</span>
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-4 text-right font-semibold text-[var(--color-success)]">€{row.revenue.toLocaleString()}</td>
-                                            <td className="px-4 py-4 text-right font-semibold text-[var(--color-error)]">€{row.expense.toLocaleString()}</td>
-                                            <td className="px-4 py-4 text-right font-semibold text-[var(--color-success)]">€{row.profit.toLocaleString()}</td>
-                                            <td className="px-4 py-4 text-right font-semibold text-[var(--color-warning)]">€{row.tax.toLocaleString()}</td>
-                                            <td className="px-4 py-4 text-right font-semibold text-[var(--color-primary)]">€{row.savings.toLocaleString()}</td>
+                                            <td className="px-4 py-4 text-right font-semibold text-[var(--color-success)]">{formatCurrency(row.revenue)}</td>
+                                            <td className="px-4 py-4 text-right font-semibold text-[var(--color-error)]">{formatCurrency(row.expense)}</td>
+                                            <td className="px-4 py-4 text-right font-semibold text-[var(--color-success)]">{formatCurrency(row.profit)}</td>
+                                            <td className="px-4 py-4 text-right font-semibold text-[var(--color-warning)]">{formatCurrency(row.tax)}</td>
+                                            <td className="px-4 py-4 text-right font-semibold text-[var(--color-primary)]">{formatCurrency(row.savings)}</td>
                                             <td className="px-4 py-4 text-center">
                                                 <ReadOnlyGuard>
                                                     <button className="text-[var(--color-primary)] hover:opacity-80 transition">
@@ -256,7 +357,7 @@ export default function ReportsPage() {
                         <Card>
                             <h3 className="text-lg font-semibold mb-4">{t('reports.quarterlyChart')}</h3>
                             <ResponsiveContainer width="100%" height={280}>
-                                <BarChart data={quarterlyFinancials}>
+                                <BarChart data={periodFilter === 'yearly' ? quarterlyFinancials : filterDataByPeriod(quarterlyFinancials, 'date')}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                                     <XAxis dataKey="quarter" />
                                     <YAxis />
@@ -272,7 +373,7 @@ export default function ReportsPage() {
                         <Card>
                             <h3 className="text-lg font-semibold mb-4">{t('reports.monthlyChart')}</h3>
                             <ResponsiveContainer width="100%" height={280}>
-                                <LineChart data={monthlyFinancials}>
+                                <LineChart data={filterDataByPeriod(monthlyFinancials, 'date')}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                                     <XAxis dataKey="month" />
                                     <YAxis />
@@ -290,7 +391,7 @@ export default function ReportsPage() {
                             <ResponsiveContainer width="100%" height={300}>
                                 <PieChart>
                                     <Pie
-                                        data={expenseDistribution}
+                                        data={filterDataByPeriod(expenseDistribution, 'month').length > 0 ? filterDataByPeriod(expenseDistribution, 'month') : expenseDistribution}
                                         cx="50%"
                                         cy="50%"
                                         labelLine={false}
@@ -298,7 +399,7 @@ export default function ReportsPage() {
                                         fill="#8884d8"
                                         dataKey="value"
                                     >
-                                        {expenseDistribution.map((entry: any, index: number) => (
+                                        {(filterDataByPeriod(expenseDistribution, 'month').length > 0 ? filterDataByPeriod(expenseDistribution, 'month') : expenseDistribution).map((entry: any, index: number) => (
                                             <Cell key={`cell-${index}`} fill={entry.color} />
                                         ))}
                                     </Pie>
@@ -306,14 +407,14 @@ export default function ReportsPage() {
                                 </PieChart>
                             </ResponsiveContainer>
                             <div className="space-y-3">
-                                {expenseDistribution.map((cat: any, idx: number) => (
+                                {(filterDataByPeriod(expenseDistribution, 'month').length > 0 ? filterDataByPeriod(expenseDistribution, 'month') : expenseDistribution).map((cat: any, idx: number) => (
                                     <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                         <div className="flex items-center gap-3">
                                             <div className="w-4 h-4 rounded-full" style={{ backgroundColor: cat.color }}></div>
                                             <span className="font-medium text-gray-700">{cat.name}</span>
                                         </div>
                                         <div className="text-right">
-                                            <span className="font-semibold text-gray-900">€{cat.amount.toLocaleString()}</span>
+                                            <span className="font-semibold text-gray-900">{formatCurrency(cat.amount)}</span>
                                             <span className="text-sm text-gray-500 ml-2">{cat.value}%</span>
                                         </div>
                                     </div>
@@ -327,10 +428,10 @@ export default function ReportsPage() {
                         <h3 className="text-lg font-semibold mb-4">{t('reports.quarterlyComparison.title')}</h3>
                         <p className="text-sm text-gray-500 mb-4">{t('reports.quarterlyComparison.subtitle')}</p>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                            {quarterlyFinancials.map((q, idx) => (
+                            {(periodFilter === 'yearly' ? quarterlyFinancials : filterDataByPeriod(quarterlyFinancials, 'date')).map((q, idx) => (
                                 <div key={idx} className="p-4 rounded-xl" style={{ backgroundColor: `${q.color}15` }}>
                                     <p className="text-sm font-medium text-gray-600">{q.quarter}</p>
-                                    <h4 className="text-2xl font-bold mt-1" style={{ color: q.color }}>€{q.value.toLocaleString()}</h4>
+                                    <h4 className="text-2xl font-bold mt-1" style={{ color: q.color }}>{formatCurrency(q.value)}</h4>
                                     <div className="mt-2 h-2 rounded-full" style={{ backgroundColor: `${q.color}30` }}>
                                         <div className="h-full rounded-full" style={{ width: `${(q.value / 6000) * 100}%`, backgroundColor: q.color }}></div>
                                     </div>
@@ -338,13 +439,13 @@ export default function ReportsPage() {
                             ))}
                         </div>
                         <ResponsiveContainer width="100%" height={250}>
-                            <BarChart data={quarterlyFinancials}>
+                            <BarChart data={periodFilter === 'yearly' ? quarterlyFinancials : filterDataByPeriod(quarterlyFinancials, 'date')}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                                 <XAxis dataKey="quarter" />
                                 <YAxis />
                                 <Tooltip />
                                 <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                                    {quarterlyFinancials.map((entry, index) => (
+                                    {(periodFilter === 'yearly' ? quarterlyFinancials : filterDataByPeriod(quarterlyFinancials, 'date')).map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={entry.color} />
                                     ))}
                                 </Bar>
@@ -366,21 +467,21 @@ export default function ReportsPage() {
                                     <span className="text-xl">📋</span>
                                     <p className="text-xs opacity-90">{t('reports.taxSummary.incomeTax')}</p>
                                 </div>
-                                <h3 className="text-2xl font-bold">€{taxSummary.incomeTax.toLocaleString()}</h3>
+                                <h3 className="text-2xl font-bold">{formatCurrency(taxSummary.incomeTax)}</h3>
                             </Card>
                             <Card gradient="" style={getCardStyle(1)} className="text-white">
                                 <div className="flex items-center gap-2 mb-2">
                                     <span className="text-xl">📊</span>
                                     <p className="text-xs opacity-90">{t('reports.taxSummary.estimatedTax')}</p>
                                 </div>
-                                <h3 className="text-2xl font-bold">€{taxSummary.estimatedTax.toLocaleString()}</h3>
+                                <h3 className="text-2xl font-bold">{formatCurrency(taxSummary.estimatedTax)}</h3>
                             </Card>
                             <Card gradient="" style={getCardStyle(2)} className="text-white">
                                 <div className="flex items-center gap-2 mb-2">
                                     <span className="text-xl">💵</span>
                                     <p className="text-xs opacity-90">{t('reports.taxSummary.taxThisMonth')}</p>
                                 </div>
-                                <h3 className="text-2xl font-bold">€{taxSummary.taxThisMonth.toLocaleString()}</h3>
+                                <h3 className="text-2xl font-bold">{formatCurrency(taxSummary.taxThisMonth)}</h3>
                             </Card>
                         </div>
 
@@ -403,7 +504,7 @@ export default function ReportsPage() {
                                                 <tr key={idx} className="hover:bg-gray-50">
                                                     <td className="px-4 py-3 text-sm text-gray-700">{tax.date}</td>
                                                     <td className="px-4 py-3 text-sm text-gray-900">{tax.description}</td>
-                                                    <td className="px-4 py-3 text-right font-semibold text-gray-900">€{tax.amount.toLocaleString()}</td>
+                                                    <td className="px-4 py-3 text-right font-semibold text-gray-900">{formatCurrency(tax.amount)}</td>
                                                     <td className="px-4 py-3 text-center">
                                                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${tax.status === 'Paid' ? 'bg-[var(--color-success-light)] text-[var(--color-success)]' : 'bg-[var(--color-warning-light)] text-[var(--color-warning)]'}`}>
                                                             {tax.status}
@@ -453,7 +554,7 @@ export default function ReportsPage() {
                         <Card>
                             <h3 className="text-lg font-semibold mb-4">{t('reports.purchaseTrends')}</h3>
                             <ResponsiveContainer width="100%" height={250}>
-                                <LineChart data={purchaseTrends}>
+                                <LineChart data={filterDataByPeriod(purchaseTrends, 'month')}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                                     <XAxis dataKey="month" />
                                     <YAxis />
@@ -480,7 +581,7 @@ export default function ReportsPage() {
                                             <tr key={idx} className="hover:bg-gray-50">
                                                 <td className="px-4 py-3 text-sm font-medium text-gray-900">{t(`reports.feeBreakdown.categories.${fee.category}`)}</td>
                                                 <td className="px-4 py-3 text-right text-sm text-gray-600">{fee.percentage}%</td>
-                                                <td className="px-4 py-3 text-right font-semibold text-[var(--color-error)]">-€{fee.amount.toLocaleString()}</td>
+                                                <td className="px-4 py-3 text-right font-semibold text-[var(--color-error)]">{formatCurrency(-fee.amount)}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -488,7 +589,7 @@ export default function ReportsPage() {
                                         <tr>
                                             <td className="px-4 py-2 text-sm">{t('reports.feeBreakdown.totalFees')}</td>
                                             <td className="px-4 py-2 text-right text-sm">{feeBreakdown.reduce((sum, f) => sum + f.percentage, 0).toFixed(1)}%</td>
-                                            <td className="px-4 py-2 text-right text-[var(--color-error)]">-€{feeBreakdown.reduce((sum, f) => sum + f.amount, 0).toLocaleString()}</td>
+                                            <td className="px-4 py-2 text-right text-[var(--color-error)]">{formatCurrency(-feeBreakdown.reduce((sum, f) => sum + f.amount, 0))}</td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -502,15 +603,15 @@ export default function ReportsPage() {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div className="p-4 bg-[var(--color-secondary-light)] rounded-xl border border-[var(--color-secondary-light)]">
                                 <p className="text-sm font-medium text-[var(--color-secondary)] mb-1">{t('reports.analysis.weeklyAverage')}</p>
-                                <h4 className="text-2xl font-bold text-gray-900">€{monthlyWeeklyAnalysis.weekly.toLocaleString()}</h4>
+                                <h4 className="text-2xl font-bold text-gray-900">{formatCurrency(monthlyWeeklyAnalysis.weekly)}</h4>
                             </div>
                             <div className="p-4 bg-[var(--color-primary-light)] rounded-xl border border-[var(--color-primary-light)]">
                                 <p className="text-sm font-medium text-[var(--color-primary)] mb-1">{t('reports.analysis.monthlyTotal')}</p>
-                                <h4 className="text-2xl font-bold text-gray-900">€{monthlyWeeklyAnalysis.monthly.toLocaleString()}</h4>
+                                <h4 className="text-2xl font-bold text-gray-900">{formatCurrency(monthlyWeeklyAnalysis.monthly)}</h4>
                             </div>
                             <div className="p-4 bg-[var(--color-success-light)] rounded-xl border border-[var(--color-success-light)]">
                                 <p className="text-sm font-medium text-[var(--color-success)] mb-1">{t('reports.analysis.monthVsPrevious')}</p>
-                                <h4 className="text-2xl font-bold text-[var(--color-success)]">+€{monthlyWeeklyAnalysis.difference.toLocaleString()}</h4>
+                                <h4 className="text-2xl font-bold text-[var(--color-success)]">{`+${formatCurrency(monthlyWeeklyAnalysis.difference)}`}</h4>
                             </div>
                         </div>
                     </Card>

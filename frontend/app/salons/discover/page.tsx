@@ -7,6 +7,7 @@ import Button from "@/components/ui/Button";
 import { Search, MapPin, Star, Heart, Scissors } from "lucide-react";
 import Link from "next/link";
 import { salonService } from "@/lib/services/SalonService";
+import { useTranslation } from "@/i18n";
 import { Salon } from "@/types";
 
 interface SalonWithUI extends Salon {
@@ -16,6 +17,7 @@ interface SalonWithUI extends Salon {
 }
 
 export default function DiscoverSalonsPage() {
+    const { t } = useTranslation();
     const [searchTerm, setSearchTerm] = useState("");
     const [favorites, setFavorites] = useState<string[]>([]);
     const [allSalons, setAllSalons] = useState<SalonWithUI[]>([]);
@@ -57,8 +59,8 @@ export default function DiscoverSalonsPage() {
         <MainLayout>
             <div className="space-y-8">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Discover Salons</h1>
-                    <p className="text-gray-500 mt-1">Find the best salons near you.</p>
+                    <h1 className="text-3xl font-bold text-gray-900">{t("salons.discover")}</h1>
+                    <p className="text-gray-500 mt-1">{t("salons.discoverSubtitle")}</p>
                 </div>
 
                 {/* Search Bar */}
@@ -67,8 +69,8 @@ export default function DiscoverSalonsPage() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                         <input
                             type="text"
-                            placeholder="Search by name or specialty..."
-                            className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-300 outline-none transition-all"
+                            placeholder={t("salons.searchPlaceholder")}
+                            className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none transition-all"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
@@ -78,7 +80,7 @@ export default function DiscoverSalonsPage() {
                 {/* Loading State */}
                 {isLoading ? (
                     <div className="flex justify-center py-12">
-                        <div className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
+                        <div className="w-12 h-12 border-4 border-color-primary/30 border-t-[var(--color-primary)] rounded-full animate-spin"></div>
                     </div>
                 ) : (
                     /* Salons Grid */
@@ -98,7 +100,7 @@ export default function DiscoverSalonsPage() {
                                     >
                                         <Heart className={`w-5 h-5 ${favorites.includes(salon.id.toString()) ? "fill-current" : ""}`} />
                                     </button>
-                                    <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-xs font-bold text-purple-700">
+                                    <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-xs font-bold text-color-primary">
                                         {salon.specialty}
                                     </div>
                                 </div>
@@ -119,10 +121,10 @@ export default function DiscoverSalonsPage() {
                                     </div>
 
                                     <div className="pt-4 flex gap-3">
-                                        <Button variant="outline" className="flex-1 text-gray-600 border-gray-200">Details</Button>
+                                        <Button variant="outline" className="flex-1 text-gray-600 border-gray-200">{t("salons.details")}</Button>
                                         <Link href={`/appointments/book?salonId=${salon.id}`} className="flex-1">
-                                            <Button className="w-full bg-purple-600 hover:bg-purple-700 gap-2">
-                                                <Scissors className="w-4 h-4" /> Book
+                                            <Button className="w-full bg-primary hover:bg-primary gap-2">
+                                                <Scissors className="w-4 h-4" /> {t("salons.book")}
                                             </Button>
                                         </Link>
                                     </div>
@@ -131,7 +133,7 @@ export default function DiscoverSalonsPage() {
                         ))}
                         {filteredSalons.length === 0 && (
                             <div className="col-span-full py-12 text-center text-gray-500 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200">
-                                No salons found matching your search.
+                                {t("salons.noSalonsFound")}
                             </div>
                         )}
                     </div>

@@ -37,7 +37,7 @@ describe('ClientService', () => {
             phone: '1234567890'
         };
 
-        await expect(service.create(data as any)).rejects.toThrow('Valid email is required');
+        await expect(service.create(data as any)).rejects.toThrow('Invalid email format');
     });
 
     it('should throw error if duplicate email exists in same salon', async () => {

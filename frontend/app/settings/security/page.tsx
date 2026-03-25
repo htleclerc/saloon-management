@@ -3,30 +3,105 @@
 import SettingsLayout from "@/components/layout/SettingsLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Save, Lock, Shield, Smartphone, Monitor, MapPin, Trash2, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "@/context/AuthProvider";
-import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
+import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
+import { useTranslation } from "@/i18n";
+import { useToast } from "@/context/ToastProvider";
+import { getLocalSettings, saveLocalSettings } from "@/lib/utils/localSettingsStorage";
 
-const activeSessions = [
-    { id: 1, device: "Chrome on Windows", location: "Paris, France", ip: "192.168.1.xxx", lastActive: "Active now", current: true },
-    { id: 2, device: "Safari on iPhone", location: "Paris, France", ip: "192.168.1.xxx", lastActive: "2 hours ago", current: false },
-    { id: 3, device: "Firefox on MacOS", location: "Lyon, France", ip: "176.xxx.xxx.xxx", lastActive: "3 days ago", current: false },
-];
+function detectBrowser(): string {
+    if (typeof navigator === 'undefined') return "Unknown Browser";
+    const ua = navigator.userAgent;
+    if (ua.includes("Chrome") && !ua.includes("Edg")) return "Chrome on " + detectOS(ua);
+    if (ua.includes("Edg")) return "Edge on " + detectOS(ua);
+    if (ua.includes("Firefox")) return "Firefox on " + detectOS(ua);
+    if (ua.includes("Safari") && !ua.includes("Chrome")) return "Safari on " + detectOS(ua);
+    return "Unknown Browser";
+}
+
+function detectOS(ua: string): string {
+    if (ua.includes("Windows")) return "Windows";
+    if (ua.includes("Mac")) return "MacOS";
+    if (ua.includes("Linux")) return "Linux";
+    if (ua.includes("iPhone")) return "iPhone";
+    if (ua.includes("Android")) return "Android";
+    return "Unknown";
+}
 
 export default function SecuritySettingsPage() {
-    const { canModify } = useAuth();
+    const { t } = useTranslation();
+    const { canModify, activeSalonId } = useAuth();
+    const { showToast } = useToast();
+    const { handleReadOnlyClick } = useReadOnlyGuard();
+
     const [currentPassword, setCurrentPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [currentBrowser, setCurrentBrowser] = useState("Chrome on Windows");
+
+    useEffect(() => {
+        setCurrentBrowser(detectBrowser());
+    }, []);
+
+    useEffect(() => {
+        if (activeSalonId) {
+            const saved = getLocalSettings(activeSalonId, 'security', { twoFactorEnabled: false });
+            setTwoFactorEnabled(saved.twoFactorEnabled);
+        }
+    }, [activeSalonId]);
+
+    const activeSessions = [
+        { id: 1, device: currentBrowser, location: t("settings.securityPage.currentDevice"), lastActive: t("settings.securityPage.activeNow"), current: true },
+    ];
+
+    const handlePasswordChange = () => {
+        if (handleReadOnlyClick()) return;
+        if (newPassword.length < 8) {
+            showToast(t("common.error"), t("settings.securityPage.passwordTooShort"), "error");
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            showToast(t("common.error"), t("settings.securityPage.passwordMismatch"), "error");
+            return;
+        }
+        showToast(t("common.success"), t("settings.securityPage.passwordChanged"), "success");
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+    };
+
+    const handleToggle2FA = (checked: boolean) => {
+        if (!canModify) return;
+        setTwoFactorEnabled(checked);
+        if (activeSalonId) {
+            saveLocalSettings(activeSalonId, 'security', { twoFactorEnabled: checked });
+        }
+        showToast(t("common.info"), checked ? t("settings.securityPage.twoFactorEnabled") : t("settings.securityPage.twoFactorDisabledMsg"), "info");
+    };
+
+    const handleSave = async () => {
+        if (handleReadOnlyClick()) return;
+        try {
+            setIsLoading(true);
+            if (activeSalonId) {
+                saveLocalSettings(activeSalonId, 'security', { twoFactorEnabled });
+            }
+            showToast(t("common.success"), t("settings.securityPage.settingsSaved"), "success");
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     return (
         <SettingsLayout
-            title="Security Settings"
-            description="Gérez la sécurité de votre compte et vos sessions actives"
+            title={t("settings.securityPage.title")}
+            description={t("settings.securityPage.description")}
         >
             {/* Change Password */}
             <Card>
@@ -35,20 +110,20 @@ export default function SecuritySettingsPage() {
                         <Lock className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                        <h3 className="font-semibold text-gray-900">Changer le mot de passe</h3>
-                        <p className="text-xs text-gray-500">Mettez à jour votre mot de passe régulièrement</p>
+                        <h3 className="font-semibold text-gray-900">{t("settings.securityPage.changePassword")}</h3>
+                        <p className="text-xs text-gray-500">{t("settings.securityPage.changePasswordDesc")}</p>
                     </div>
                 </div>
                 <div className="space-y-4 max-w-md">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Mot de passe actuel</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">{t("settings.securityPage.currentPassword")}</label>
                         <div className="relative">
                             <input
                                 type={showCurrentPassword ? "text" : "password"}
                                 value={currentPassword}
                                 onChange={(e) => setCurrentPassword(e.target.value)}
                                 readOnly={!canModify}
-                                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm pr-10"
+                                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm pr-10"
                             />
                             <button
                                 type="button"
@@ -60,14 +135,14 @@ export default function SecuritySettingsPage() {
                         </div>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Nouveau mot de passe</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">{t("settings.securityPage.newPassword")}</label>
                         <div className="relative">
                             <input
                                 type={showNewPassword ? "text" : "password"}
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
                                 readOnly={!canModify}
-                                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm pr-10"
+                                className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm pr-10"
                             />
                             <button
                                 type="button"
@@ -77,22 +152,22 @@ export default function SecuritySettingsPage() {
                                 {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                             </button>
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">Minimum 8 caractères, incluant un chiffre et un caractère spécial</p>
+                        <p className="text-xs text-gray-500 mt-1">{t("settings.securityPage.passwordHint")}</p>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Confirmer le nouveau mot de passe</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">{t("settings.securityPage.confirmPassword")}</label>
                         <input
                             type="password"
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             readOnly={!canModify}
-                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                         />
                     </div>
                     <ReadOnlyGuard>
-                        <Button variant="primary" size="md">
+                        <Button variant="primary" size="md" onClick={handlePasswordChange}>
                             <Lock className="w-4 h-4" />
-                            Mettre à jour le mot de passe
+                            {t("settings.securityPage.updatePassword")}
                         </Button>
                     </ReadOnlyGuard>
                 </div>
@@ -106,33 +181,33 @@ export default function SecuritySettingsPage() {
                             <Shield className="w-5 h-5 text-white" />
                         </div>
                         <div>
-                            <h3 className="font-semibold text-gray-900">Authentification à deux facteurs</h3>
-                            <p className="text-xs text-gray-500">Ajoutez une couche de sécurité supplémentaire</p>
+                            <h3 className="font-semibold text-gray-900">{t("settings.securityPage.twoFactor")}</h3>
+                            <p className="text-xs text-gray-500">{t("settings.securityPage.twoFactorDesc")}</p>
                         </div>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
                         <input
                             type="checkbox"
                             checked={twoFactorEnabled}
-                            onChange={(e) => setTwoFactorEnabled(e.target.checked)}
+                            onChange={(e) => handleToggle2FA(e.target.checked)}
                             disabled={!canModify}
                             className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                     </label>
                 </div>
                 {twoFactorEnabled && (
                     <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-xl">
                         <div className="flex items-center gap-2 text-green-800 mb-2">
                             <Shield className="w-5 h-5" />
-                            <span className="font-medium">2FA activée</span>
+                            <span className="font-medium">{t("settings.securityPage.twoFactorEnabled")}</span>
                         </div>
                         <p className="text-sm text-green-700">
-                            Votre compte est protégé par l'authentification à deux facteurs via Google Authenticator.
+                            {t("settings.securityPage.twoFactorProtected")}
                         </p>
                         <ReadOnlyGuard>
                             <Button variant="outline" size="sm" className="mt-3">
-                                Reconfigurer 2FA
+                                {t("settings.securityPage.reconfigure2FA")}
                             </Button>
                         </ReadOnlyGuard>
                     </div>
@@ -147,13 +222,13 @@ export default function SecuritySettingsPage() {
                             <Monitor className="w-5 h-5 text-white" />
                         </div>
                         <div>
-                            <h3 className="font-semibold text-gray-900">Sessions actives</h3>
-                            <p className="text-xs text-gray-500">Appareils connectés à votre compte</p>
+                            <h3 className="font-semibold text-gray-900">{t("settings.securityPage.activeSessions")}</h3>
+                            <p className="text-xs text-gray-500">{t("settings.securityPage.activeSessionsDesc")}</p>
                         </div>
                     </div>
                     <ReadOnlyGuard>
                         <Button variant="outline" size="sm" className="text-red-600 hover:bg-red-50">
-                            Déconnecter tout
+                            {t("settings.securityPage.disconnectAll")}
                         </Button>
                     </ReadOnlyGuard>
                 </div>
@@ -161,7 +236,7 @@ export default function SecuritySettingsPage() {
                     {activeSessions.map((session) => (
                         <div
                             key={session.id}
-                            className={`flex items-center justify-between p-3 rounded-xl ${session.current ? "bg-purple-50 border border-purple-200" : "bg-gray-50"
+                            className={`flex items-center justify-between p-3 rounded-xl ${session.current ? "bg-primary-light border border-color-primary/30" : "bg-gray-50"
                                 }`}
                         >
                             <div className="flex items-center gap-3">
@@ -179,8 +254,8 @@ export default function SecuritySettingsPage() {
                                     <div className="flex items-center gap-2">
                                         <p className="font-medium text-gray-900 text-sm">{session.device}</p>
                                         {session.current && (
-                                            <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full font-medium">
-                                                Session actuelle
+                                            <span className="px-2 py-0.5 bg-primary-light text-color-primary text-xs rounded-full font-medium">
+                                                {t("settings.securityPage.currentSession")}
                                             </span>
                                         )}
                                     </div>
@@ -206,11 +281,11 @@ export default function SecuritySettingsPage() {
 
             {/* Save Button */}
             <div className="flex justify-end gap-3">
-                <Button variant="outline" size="md">Annuler</Button>
+                <Button variant="outline" size="md">{t("common.cancel")}</Button>
                 <ReadOnlyGuard>
-                    <Button variant="primary" size="md">
+                    <Button variant="primary" size="md" onClick={handleSave} disabled={isLoading}>
                         <Save className="w-4 h-4" />
-                        Sauvegarder
+                        {isLoading ? t("common.saving") : t("common.save")}
                     </Button>
                 </ReadOnlyGuard>
             </div>

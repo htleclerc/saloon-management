@@ -38,10 +38,11 @@ describe('IncomeService', () => {
             salonId: 1,
             amount: -100,
             date: '2026-02-01',
+            serviceIds: [1],
             workerShares: [{ workerId: 1, percentage: 100 }]
         };
 
-        await expect(service.create(data as any)).rejects.toThrow('Amount must be positive');
+        await expect(service.create(data as any)).rejects.toThrow('Must be zero or positive');
     });
 
     it('should throw error if shares do not sum to 100%', async () => {
@@ -49,13 +50,14 @@ describe('IncomeService', () => {
             salonId: 1,
             amount: 100,
             date: '2026-02-01',
+            serviceIds: [1],
             workerShares: [
                 { workerId: 1, percentage: 50 },
                 { workerId: 2, percentage: 40 }
             ]
         };
 
-        await expect(service.create(data as any)).rejects.toThrow(/Worker shares must sum to 100%/);
+        await expect(service.create(data as any)).rejects.toThrow(/Worker share percentages must sum to 100%/);
     });
 
     it('should call provider methods in correct order during creation', async () => {
@@ -123,6 +125,7 @@ describe('IncomeService', () => {
             salonId: 1,
             amount: 145, // 100 service + 45 product
             date: '2026-02-01',
+            serviceIds: [1],
             workerShares: [{ workerId: 1, percentage: 100, amount: 50 }], // Explicitly 50€ commission on 100€ service
             products: [{ productId: 1, quantity: 1 }]
         };

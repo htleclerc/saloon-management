@@ -10,12 +10,14 @@ import { getPlans, savePlans } from '@/lib/data/defaultPlans';
 import { PlanConfig } from '@/types';
 import PlanConfigCard from '@/components/admin/PlanConfigCard';
 import PlanEditModal from '@/components/admin/PlanEditModal';
+import { useTranslation } from '@/i18n';
 
 export default function AdminPlansPage() {
     const { isSuperAdmin } = useAuth();
     const router = useRouter();
     const [plans, setPlans] = useState<PlanConfig[]>([]);
     const [editingPlan, setEditingPlan] = useState<PlanConfig | null>(null);
+    const { t } = useTranslation();
 
     useEffect(() => {
         // Redirect if not super admin
@@ -48,7 +50,7 @@ export default function AdminPlansPage() {
     };
 
     const handleReset = () => {
-        if (confirm('Êtes-vous sûr de vouloir réinitialiser tous les plans aux valeurs par défaut?')) {
+        if (confirm(t("superadmin.resetPlanConfirmFr"))) {
             localStorage.removeItem('plan_configs');
             setPlans(getPlans());
         }
@@ -68,8 +70,8 @@ export default function AdminPlansPage() {
                             <Shield className="w-6 h-6 text-white" />
                         </div>
                         <div>
-                            <h1 className="text-3xl font-bold text-gray-900">Plan Management</h1>
-                            <p className="text-gray-600">Configure subscription plans and limits</p>
+                            <h1 className="text-3xl font-bold text-gray-900">{t("superadmin.planManagement")}</h1>
+                            <p className="text-gray-600">{t("superadmin.configurePlans")}</p>
                         </div>
                     </div>
 
@@ -80,14 +82,14 @@ export default function AdminPlansPage() {
                             onClick={handleReset}
                         >
                             <Settings className="w-4 h-4 mr-2" />
-                            Reset to Defaults
+                            {t("superadmin.resetToDefaults")}
                         </Button>
                         <Button
                             variant="outline"
                             size="sm"
                             onClick={() => router.push('/settings/billing/upgrade')}
                         >
-                            Preview Pricing Page
+                            {t("superadmin.previewPricingPage")}
                         </Button>
                     </div>
                 </div>
@@ -101,7 +103,7 @@ export default function AdminPlansPage() {
                             </div>
                             <div>
                                 <p className="text-2xl font-bold text-blue-900">{plans.filter(p => p.isActive).length}</p>
-                                <p className="text-xs text-blue-700">Active Plans</p>
+                                <p className="text-xs text-blue-700">{t("superadmin.activePlans")}</p>
                             </div>
                         </div>
                     </Card>
@@ -115,21 +117,21 @@ export default function AdminPlansPage() {
                                 <p className="text-2xl font-bold text-green-900">
                                     {Math.max(...plans.map(p => p.limits.maxSalons).filter(x => x < 999))}
                                 </p>
-                                <p className="text-xs text-green-700">Max Salons (Non-unlimited)</p>
+                                <p className="text-xs text-green-700">{t("superadmin.maxSalonsNonUnlimited")}</p>
                             </div>
                         </div>
                     </Card>
 
-                    <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+                    <Card className="bg-gradient-to-br from-primary to-[var(--color-primary-light)] border-color-primary/30">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-purple-500 flex items-center justify-center">
+                            <div className="w-10 h-10 rounded-lg bg-primary-light0 flex items-center justify-center">
                                 <Calendar className="w-5 h-5 text-white" />
                             </div>
                             <div>
-                                <p className="text-2xl font-bold text-purple-900">
+                                <p className="text-2xl font-bold text-color-primary">
                                     {Math.max(...plans.map(p => p.limits.maxBookingsPerMonth).filter(x => x < 99999))}
                                 </p>
-                                <p className="text-xs text-purple-700">Max Bookings/Month</p>
+                                <p className="text-xs text-color-primary">{t("superadmin.maxBookingsMonth")}</p>
                             </div>
                         </div>
                     </Card>
@@ -143,7 +145,7 @@ export default function AdminPlansPage() {
                                 <p className="text-2xl font-bold text-orange-900">
                                     {plans.filter(p => p.limits.hasAPIAccess).length}
                                 </p>
-                                <p className="text-xs text-orange-700">Plans with API Access</p>
+                                <p className="text-xs text-orange-700">{t("superadmin.plansWithApiAccess")}</p>
                             </div>
                         </div>
                     </Card>

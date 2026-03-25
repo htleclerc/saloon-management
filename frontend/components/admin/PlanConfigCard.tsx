@@ -2,6 +2,7 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { Edit, Power, PowerOff, Star, Sparkles, Zap, Crown } from 'lucide-react';
 import { PlanConfig } from '@/types';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface PlanConfigCardProps {
     plan: PlanConfig;
@@ -29,7 +30,7 @@ function getPlanColor(planId: string) {
         case 'starter':
             return 'from-gray-500 to-gray-600';
         case 'pro':
-            return 'from-purple-600 to-pink-500';
+            return 'from-primary to-secondary';
         case 'enterprise':
             return 'from-amber-500 to-orange-600';
         default:
@@ -38,6 +39,8 @@ function getPlanColor(planId: string) {
 }
 
 export default function PlanConfigCard({ plan, onEdit, onToggleActive }: PlanConfigCardProps) {
+    const { format: formatCurrency } = useCurrency();
+
     return (
         <Card className={`relative ${!plan.isActive ? 'opacity-60' : ''}`}>
             {/* Default Badge */}
@@ -63,7 +66,7 @@ export default function PlanConfigCard({ plan, onEdit, onToggleActive }: PlanCon
                     <div className="text-2xl font-bold text-gray-900">Gratuit</div>
                 ) : (
                     <div className="flex items-baseline gap-1">
-                        <span className="text-2xl font-bold text-gray-900">{plan.price}€</span>
+                        <span className="text-2xl font-bold text-gray-900">{formatCurrency(plan.price)}</span>
                         <span className="text-gray-500 text-xs">/mois</span>
                     </div>
                 )}

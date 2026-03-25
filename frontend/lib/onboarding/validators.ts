@@ -1,4 +1,29 @@
+/**
+ * Onboarding Validators
+ *
+ * Wrappers around Zod schemas that return the legacy { isValid, errors } format
+ * for backward compatibility with onboarding UI components.
+ */
+
 import type { SalonDetails, Service, Product, Client } from '@/types';
+import { SalonDetailsSchema } from '@/lib/validators/salon.schemas';
+import { ServiceCreateSchema } from '@/lib/validators/service.schemas';
+import { ProductCreateSchema } from '@/lib/validators/service.schemas';
+import { ClientCreateSchema } from '@/lib/validators/client.schemas';
+import { WorkerCreateSchema } from '@/lib/validators/worker.schemas';
+import { z } from 'zod';
+
+/** Convert Zod errors to legacy Record<string, string> format */
+function zodToLegacyErrors(zodError: z.ZodError): Record<string, string> {
+    const errors: Record<string, string> = {};
+    for (const issue of zodError.issues) {
+        const key = issue.path.join('.');
+        if (key && !errors[key]) {
+            errors[key] = issue.message;
+        }
+    }
+    return errors;
+}
 
 /**
  * Validate salon details
@@ -7,46 +32,11 @@ export function validateSalonDetails(details: Partial<SalonDetails>): {
     isValid: boolean;
     errors: Record<string, string>;
 } {
-    const errors: Record<string, string> = {};
-
-    if (!details.name || details.name.trim().length === 0) {
-        errors.name = 'Salon name is required';
-    } else if (details.name.trim().length < 2) {
-        errors.name = 'Salon name must be at least 2 characters';
+    const result = SalonDetailsSchema.safeParse(details);
+    if (result.success) {
+        return { isValid: true, errors: {} };
     }
-
-    if (!details.address || details.address.trim().length === 0) {
-        errors.address = 'Address is required';
-    }
-
-    if (!details.phone || details.phone.trim().length === 0) {
-        errors.phone = 'Phone number is required';
-    } else if (!/^[\d\s+()-]+$/.test(details.phone)) {
-        errors.phone = 'Invalid phone number format';
-    }
-
-    if (!details.email || details.email.trim().length === 0) {
-        errors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(details.email)) {
-        errors.email = 'Invalid email format';
-    }
-
-    if (details.website && details.website.trim().length > 0) {
-        try {
-            new URL(details.website);
-        } catch {
-            errors.website = 'Invalid website URL';
-        }
-    }
-
-    if (!details.timezone || details.timezone.trim().length === 0) {
-        errors.timezone = 'Timezone is required';
-    }
-
-    return {
-        isValid: Object.keys(errors).length === 0,
-        errors,
-    };
+    return { isValid: false, errors: zodToLegacyErrors(result.error) };
 }
 
 /**
@@ -56,33 +46,19 @@ export function validateService(service: Partial<Service>): {
     isValid: boolean;
     errors: Record<string, string>;
 } {
-    const errors: Record<string, string> = {};
+    // Use a partial schema for onboarding (salonId not yet assigned)
+    const OnboardingServiceSchema = ServiceCreateSchema.omit({ salonId: true }).partial();
+    const RequiredFields = z.object({
+        name: z.string().min(2, 'Service name must be at least 2 characters'),
+        price: z.number().min(0, 'Price must be positive'),
+        duration: z.number().int().positive('Duration must be a positive number (in minutes)'),
+    });
 
-    if (!service.name || service.name.trim().length === 0) {
-        errors.name = 'Service name is required';
-    } else if (service.name.trim().length < 2) {
-        errors.name = 'Service name must be at least 2 characters';
+    const result = RequiredFields.safeParse(service);
+    if (result.success) {
+        return { isValid: true, errors: {} };
     }
-
-    if (service.price === undefined || service.price === null) {
-        errors.price = 'Price is required';
-    } else if (service.price < 0) {
-        errors.price = 'Price must be positive';
-    }
-
-    if (service.duration === undefined || service.duration === null) {
-        errors.duration = 'Duration is required';
-    } else {
-        const durationNum = typeof service.duration === 'string' ? parseInt(service.duration, 10) : service.duration;
-        if (isNaN(durationNum) || durationNum <= 0) {
-            errors.duration = 'Duration must be a positive number (in minutes)';
-        }
-    }
-
-    return {
-        isValid: Object.keys(errors).length === 0,
-        errors,
-    };
+    return { isValid: false, errors: zodToLegacyErrors(result.error) };
 }
 
 /**
@@ -92,30 +68,17 @@ export function validateProduct(product: Partial<Product>): {
     isValid: boolean;
     errors: Record<string, string>;
 } {
-    const errors: Record<string, string> = {};
+    const RequiredFields = z.object({
+        name: z.string().min(2, 'Product name must be at least 2 characters'),
+        price: z.number().min(0, 'Price must be positive'),
+        stock: z.number().int().min(0, 'Stock must be positive'),
+    });
 
-    if (!product.name || product.name.trim().length === 0) {
-        errors.name = 'Product name is required';
-    } else if (product.name.trim().length < 2) {
-        errors.name = 'Product name must be at least 2 characters';
+    const result = RequiredFields.safeParse(product);
+    if (result.success) {
+        return { isValid: true, errors: {} };
     }
-
-    if (product.price === undefined || product.price === null) {
-        errors.price = 'Price is required';
-    } else if (product.price < 0) {
-        errors.price = 'Price must be positive';
-    }
-
-    if (product.stock === undefined || product.stock === null) {
-        errors.stock = 'Stock quantity is required';
-    } else if (product.stock < 0) {
-        errors.stock = 'Stock must be positive';
-    }
-
-    return {
-        isValid: Object.keys(errors).length === 0,
-        errors,
-    };
+    return { isValid: false, errors: zodToLegacyErrors(result.error) };
 }
 
 /**
@@ -125,30 +88,17 @@ export function validateClient(client: Partial<Client>): {
     isValid: boolean;
     errors: Record<string, string>;
 } {
-    const errors: Record<string, string> = {};
+    const RequiredFields = z.object({
+        name: z.string().min(2, 'Client name must be at least 2 characters'),
+        email: z.string().email('Invalid email format'),
+        phone: z.string().regex(/^[\d\s+()-]+$/, 'Invalid phone number format'),
+    });
 
-    if (!client.name || client.name.trim().length === 0) {
-        errors.name = 'Client name is required';
-    } else if (client.name.trim().length < 2) {
-        errors.name = 'Client name must be at least 2 characters';
+    const result = RequiredFields.safeParse(client);
+    if (result.success) {
+        return { isValid: true, errors: {} };
     }
-
-    if (!client.email || client.email.trim().length === 0) {
-        errors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(client.email)) {
-        errors.email = 'Invalid email format';
-    }
-
-    if (!client.phone || client.phone.trim().length === 0) {
-        errors.phone = 'Phone number is required';
-    } else if (!/^[\d\s+()-]+$/.test(client.phone)) {
-        errors.phone = 'Invalid phone number format';
-    }
-
-    return {
-        isValid: Object.keys(errors).length === 0,
-        errors,
-    };
+    return { isValid: false, errors: zodToLegacyErrors(result.error) };
 }
 
 /**
@@ -158,28 +108,15 @@ export function validateWorker(worker: { name: string; email: string; sharingKey
     isValid: boolean;
     errors: Record<string, string>;
 } {
-    const errors: Record<string, string> = {};
+    const RequiredFields = z.object({
+        name: z.string().min(2, 'Worker name must be at least 2 characters'),
+        email: z.string().email('Invalid email format'),
+        sharingKey: z.number().min(0, 'Sharing key must be between 0 and 100').max(100, 'Sharing key must be between 0 and 100').optional(),
+    });
 
-    if (!worker.name || worker.name.trim().length === 0) {
-        errors.name = 'Worker name is required';
-    } else if (worker.name.trim().length < 2) {
-        errors.name = 'Worker name must be at least 2 characters';
+    const result = RequiredFields.safeParse(worker);
+    if (result.success) {
+        return { isValid: true, errors: {} };
     }
-
-    if (!worker.email || worker.email.trim().length === 0) {
-        errors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(worker.email)) {
-        errors.email = 'Invalid email format';
-    }
-
-    if (worker.sharingKey !== undefined) {
-        if (worker.sharingKey < 0 || worker.sharingKey > 100) {
-            errors.sharingKey = 'Sharing key must be between 0 and 100';
-        }
-    }
-
-    return {
-        isValid: Object.keys(errors).length === 0,
-        errors,
-    };
+    return { isValid: false, errors: zodToLegacyErrors(result.error) };
 }

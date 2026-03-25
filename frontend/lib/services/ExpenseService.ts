@@ -6,6 +6,7 @@
 
 import { BaseService } from './BaseService';
 import type { Expense, ExpenseCategory, ExpenseFilters, PaginatedResponse } from '@/types';
+import { ExpenseCreateSchema, ExpenseCategoryCreateSchema } from '@/lib/validators';
 
 export class ExpenseService extends BaseService {
     /**
@@ -13,7 +14,14 @@ export class ExpenseService extends BaseService {
      */
     async getAll(salonId: number, filters?: ExpenseFilters): Promise<Expense[]> {
         const response = await this.provider.getExpenses(salonId, filters);
-        return response.data;
+        let data = response.data;
+
+        // Client-side status filter (status column may not exist in all DB setups)
+        if (filters?.status) {
+            data = data.filter(e => e.status === filters.status);
+        }
+
+        return data;
     }
 
     /**
@@ -34,19 +42,23 @@ export class ExpenseService extends BaseService {
      * Create new expense category
      */
     async createCategory(data: Omit<ExpenseCategory, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>): Promise<ExpenseCategory> {
+        // Zod validation
+        ExpenseCategoryCreateSchema.parse(data);
+
         return this.provider.createExpenseCategory({
             ...data,
             isActive: true, // Ensure active by default
             createdBy: this.getCurrentUser(),
             updatedBy: this.getCurrentUser()
-        } as any); // Type assertion if needed pending provider update, or assume provider handles it
+        });
     }
 
     /**
      * Create new expense
      */
     async create(data: Omit<Expense, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>): Promise<Expense> {
-        this.validateRequired(data, ['salonId', 'categoryId', 'amount', 'date']);
+        // Zod validation (covers required fields, amount >= 0, date format)
+        ExpenseCreateSchema.parse(data);
 
         const expense = await this.provider.createExpense({
             ...data,
@@ -85,30 +97,41 @@ export class ExpenseService extends BaseService {
 
     /**
      * Change expense status
+     * Note: The expenses table may not have a 'status' column.
+     * We archive the expense (isActive = false) and track the action via interaction history.
      */
     async updateStatus(id: number, status: Expense['status']): Promise<Expense> {
         const expense = await this.provider.updateExpense(id, {
-            status,
+            isActive: false,
             updatedBy: this.getCurrentUser()
         });
 
         await this.logInteraction('expense', id, `status_changed_to_${status}`);
 
-        return expense;
+        // Return with the intended status for UI consistency
+        return { ...expense, status };
     }
 
     /**
-     * Approve expense
+     * Approve expense (archives it and logs the approval)
      */
     async approve(id: number): Promise<Expense> {
         return this.updateStatus(id, 'Approved');
     }
 
     /**
-     * Reject expense
+     * Reject expense (archives it and logs the rejection)
      */
     async reject(id: number): Promise<Expense> {
         return this.updateStatus(id, 'Rejected');
+    }
+
+    /**
+     * Get archived (approved/rejected) expenses for history
+     */
+    async getArchived(salonId: number): Promise<Expense[]> {
+        const response = await this.provider.getExpenses(salonId, { isActive: false });
+        return response.data;
     }
 }
 

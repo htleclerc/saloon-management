@@ -6,12 +6,12 @@
 
 import { BaseService } from './BaseService';
 import { StorageProviderFactory } from '../providers/StorageProviderFactory';
-import { IStorageProvider } from '../providers/storage-types';
+import { IStorageProvider, StorageMode } from '../providers/storage-types';
 
 export class StorageService extends BaseService {
     private getStorageProvider(): IStorageProvider {
-        const mode = (typeof window !== 'undefined' ? localStorage.getItem('saloon-data-mode') : 'demo-local') as any;
-        return StorageProviderFactory.create(mode || 'demo-local');
+        const mode = ((typeof window !== 'undefined' ? localStorage.getItem('saloon-data-mode') : null) || 'demo-local') as StorageMode;
+        return StorageProviderFactory.create(mode);
     }
 
     async uploadImage(file: File, bucket: string = 'images', folder: string = 'uploads'): Promise<string> {

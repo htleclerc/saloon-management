@@ -75,7 +75,7 @@ export default function AdminSalonsPage() {
     const getPlanBadge = (plan: string) => {
         const styles = {
             free: 'bg-gray-100 text-gray-700',
-            pro: 'bg-purple-100 text-purple-700',
+            pro: 'bg-primary-light text-color-primary',
             enterprise: 'bg-amber-100 text-amber-700',
         };
         return styles[plan as keyof typeof styles] || styles.free;
@@ -134,7 +134,7 @@ export default function AdminSalonsPage() {
                     </div>
                     <Button
                         variant="primary"
-                        className="bg-gradient-to-r from-purple-600 to-pink-500"
+                        className="bg-gradient-primary"
                         onClick={() => router.push('/admin')}
                     >
                         ← {t("superadmin.backToDashboard")}
@@ -153,7 +153,7 @@ export default function AdminSalonsPage() {
                                     placeholder={t("superadmin.searchSalons")}
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                                 />
                             </div>
                         </div>
@@ -163,7 +163,7 @@ export default function AdminSalonsPage() {
                             <select
                                 value={filterPlan}
                                 onChange={(e) => setFilterPlan(e.target.value)}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                             >
                                 <option value="all">{t("superadmin.allPlans")}</option>
                                 <option value="free">Free</option>
@@ -177,7 +177,7 @@ export default function AdminSalonsPage() {
                             <select
                                 value={filterStatus}
                                 onChange={(e) => setFilterStatus(e.target.value)}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                             >
                                 <option value="all">{t("superadmin.allStatus")}</option>
                                 <option value="active">{t("common.active")}</option>
@@ -210,8 +210,8 @@ export default function AdminSalonsPage() {
                                     <tr key={salon.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                                         <td className="py-3 px-4">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                                                    <Building className="w-5 h-5 text-purple-600" />
+                                                <div className="w-10 h-10 rounded-lg bg-primary-light flex items-center justify-center">
+                                                    <Building className="w-5 h-5 text-color-primary" />
                                                 </div>
                                                 <div>
                                                     <p className="font-semibold text-gray-900">{salon.name}</p>

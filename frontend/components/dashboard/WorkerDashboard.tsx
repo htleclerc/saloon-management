@@ -38,6 +38,7 @@ import {
     ResponsiveContainer
 } from "recharts";
 import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface WorkerDashboardProps {
     workerName: string;
@@ -67,6 +68,7 @@ export default function WorkerDashboard({
     userRole = "worker"
 }: WorkerDashboardProps) {
     const { getCardStyle } = useKpiCardStyle();
+    const { format: formatCurrency, symbol } = useCurrency();
     const feedbackRef = useRef<HTMLDivElement>(null);
     const [historyModalOpen, setHistoryModalOpen] = useState(false);
     const [viewMode, setViewMode] = useState<"simple" | "advanced">("simple");
@@ -102,7 +104,7 @@ export default function WorkerDashboard({
                     <button
                         onClick={() => setViewMode("simple")}
                         className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${viewMode === "simple"
-                            ? "bg-[var(--color-primary)] text-white shadow-lg shadow-purple-200"
+                            ? "bg-[var(--color-primary)] text-white shadow-lg shadow-[color:var(--color-primary)]/20"
                             : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
                             }`}
                     >
@@ -112,7 +114,7 @@ export default function WorkerDashboard({
                     <button
                         onClick={() => setViewMode("advanced")}
                         className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${viewMode === "advanced"
-                            ? "bg-[var(--color-primary)] text-white shadow-lg shadow-purple-200"
+                            ? "bg-[var(--color-primary)] text-white shadow-lg shadow-[color:var(--color-primary)]/20"
                             : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
                             }`}
                     >
@@ -134,7 +136,7 @@ export default function WorkerDashboard({
                                     <span className="text-[10px] font-black bg-white/20 backdrop-blur-md px-2 py-1 rounded-full uppercase tracking-tighter">+12.5%</span>
                                 </div>
                                 <p className="text-white/80 text-xs font-black uppercase tracking-widest">Mon Chiffre</p>
-                                <h3 className="text-3xl font-black mt-1">€18,356</h3>
+                                <h3 className="text-3xl font-black mt-1">{formatCurrency(18356)}</h3>
                             </div>
                         </div>
 
@@ -225,7 +227,7 @@ export default function WorkerDashboard({
                             </div>
                             <div className="p-8 space-y-6 flex-1">
                                 <div className="space-y-4">
-                                    <div className="flex justify-between items-center bg-gray-50 p-5 rounded-2xl hover:bg-purple-50 transition-all group/item cursor-pointer" onClick={scrollToFeedback}>
+                                    <div className="flex justify-between items-center bg-gray-50 p-5 rounded-2xl hover:bg-primary-light transition-all group/item cursor-pointer" onClick={scrollToFeedback}>
                                         <div className="flex items-center gap-4">
                                             <div className="p-3 bg-white text-[var(--color-primary)] rounded-xl shadow-sm group-hover/item:scale-110 transition-transform">
                                                 <Star className="w-5 h-5 fill-current" />
@@ -238,7 +240,7 @@ export default function WorkerDashboard({
                                         <ChevronRight className="w-5 h-5 text-gray-300 group-hover/item:text-[var(--color-primary)] group-hover/item:translate-x-1 transition-all" />
                                     </div>
 
-                                    <div className="flex justify-between items-center bg-gray-50 p-5 rounded-2xl hover:bg-pink-50 transition-all group/item cursor-pointer">
+                                    <div className="flex justify-between items-center bg-gray-50 p-5 rounded-2xl hover:bg-secondary-light transition-all group/item cursor-pointer">
                                         <div className="flex items-center gap-4">
                                             <div className="p-3 bg-white text-[var(--color-secondary)] rounded-xl shadow-sm group-hover/item:scale-110 transition-transform">
                                                 <Award className="w-5 h-5" />
@@ -279,7 +281,7 @@ export default function WorkerDashboard({
 
                         <div className="space-y-5">
                             {sessions.length > 0 ? sessions.map((session, index) => (
-                                <div key={index} className="p-6 rounded-2xl bg-gray-50 border border-gray-50 hover:border-purple-200 hover:bg-white hover:shadow-xl transition-all duration-300 group">
+                                <div key={index} className="p-6 rounded-2xl bg-gray-50 border border-gray-50 hover:border-color-primary/30 hover:bg-white hover:shadow-xl transition-all duration-300 group">
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                                         <div className="flex items-center gap-5">
                                             <div className="w-16 h-16 rounded-2xl bg-white border border-gray-100 flex flex-col items-center justify-center text-[var(--color-primary)] font-black shadow-inner group-hover:scale-105 transition-transform">
@@ -296,7 +298,7 @@ export default function WorkerDashboard({
                                         </div>
                                         <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto mt-4 sm:mt-0 pt-4 sm:pt-0 border-t sm:border-t-0 border-gray-100">
                                             <div className="text-right">
-                                                <p className="font-black text-lg text-gray-900 tabular-nums">{session.price === "€--" ? "€ --" : session.price}</p>
+                                                <p className="font-black text-lg text-gray-900 tabular-nums">{String(session.price).includes("--") ? `${symbol()} --` : session.price}</p>
                                                 <span className={`text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest border ${session.status === 'Finished' ? 'bg-green-50 text-green-700 border-green-100' :
                                                     session.status === 'Started' ? 'bg-blue-50 text-blue-700 border-blue-100' :
                                                         'bg-yellow-50 text-yellow-700 border-yellow-100'
@@ -305,11 +307,11 @@ export default function WorkerDashboard({
                                                 </span>
                                             </div>
                                             <div className="flex gap-2">
-                                                <button onClick={() => handleViewHistory(session)} className="p-3 bg-white text-gray-400 rounded-xl hover:text-purple-600 border border-gray-100 hover:border-purple-200 shadow-sm transition-all active:scale-90">
+                                                <button onClick={() => handleViewHistory(session)} className="p-3 bg-white text-gray-400 rounded-xl hover:text-color-primary border border-gray-100 hover:border-color-primary/30 shadow-sm transition-all active:scale-90">
                                                     <History className="w-5 h-5" />
                                                 </button>
                                                 {canPerformBookingAction({ status: session.status as BookingStatus }, "start", userRole as UserRole) && onStartBooking && (
-                                                    <button onClick={() => session.id && onStartBooking(session.id)} className="px-6 py-3 bg-[var(--color-primary)] text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-[var(--color-primary-dark)] transition-all shadow-lg shadow-purple-500/20 active:scale-95">
+                                                    <button onClick={() => session.id && onStartBooking(session.id)} className="px-6 py-3 bg-[var(--color-primary)] text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-[var(--color-primary-dark)] transition-all shadow-lg shadow-[color:var(--color-primary)]/20 active:scale-95">
                                                         Démarrer
                                                     </button>
                                                 )}
@@ -325,14 +327,14 @@ export default function WorkerDashboard({
 
                     {/* Quick Stats & Notifications */}
                     <div className="space-y-8">
-                        <Card className="p-8 bg-gradient-to-br from-purple-700 to-indigo-800 text-white border-none shadow-xl shadow-purple-200/50 rounded-3xl relative overflow-hidden group">
+                        <Card className="p-8 bg-gradient-to-br from-primary to-indigo-800 text-white border-none shadow-xl shadow-[color:var(--color-primary)]/20 rounded-3xl relative overflow-hidden group">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl group-hover:scale-125 transition-transform duration-500"></div>
                             <h4 className="font-black mb-6 opacity-60 tracking-widest uppercase text-[10px]">Objectif Journée</h4>
                             <div className="space-y-6">
                                 <div className="flex justify-between items-end">
                                     <div>
                                         <p className="text-white/60 text-[10px] uppercase font-black tracking-widest">CA Aujourd'hui</p>
-                                        <p className="text-4xl font-black tabular-nums">€342</p>
+                                        <p className="text-4xl font-black tabular-nums">{formatCurrency(342)}</p>
                                     </div>
                                     <div className="flex items-center gap-1.5 text-green-300 text-xs font-black bg-green-400/20 px-3 py-1.5 rounded-full border border-green-400/30">
                                         <TrendingUp className="w-4 h-4" />
@@ -344,7 +346,7 @@ export default function WorkerDashboard({
                                 </div>
                                 <div className="flex justify-between items-center text-[10px] text-white/50 font-black uppercase tracking-widest">
                                     <span>Progression</span>
-                                    <span>Objectif: €450</span>
+                                    <span>{`Objectif: ${formatCurrency(450)}`}</span>
                                 </div>
                             </div>
                         </Card>
@@ -355,12 +357,12 @@ export default function WorkerDashboard({
                                     Notifications
                                     <span className="bg-red-500 text-white text-[10px] w-6 h-6 rounded-xl flex items-center justify-center font-black animate-pulse shadow-lg shadow-red-200">2</span>
                                 </h4>
-                                <Bell className="w-5 h-5 text-gray-300 group-hover:text-purple-600 transition-colors" />
+                                <Bell className="w-5 h-5 text-gray-300 group-hover:text-color-primary transition-colors" />
                             </div>
                             <div className="space-y-6 flex-1">
                                 {notifications.slice(0, 3).map((notif, idx) => (
                                     <div key={idx} className="flex gap-5 group/notif">
-                                        <div className="w-2 h-2 rounded-full bg-purple-500 mt-2.5 flex-shrink-0 group-hover/notif:scale-150 transition-transform shadow-md shadow-purple-200"></div>
+                                        <div className="w-2 h-2 rounded-full bg-primary-light0 mt-2.5 flex-shrink-0 group-hover/notif:scale-150 transition-transform shadow-md shadow-[color:var(--color-primary)]/20"></div>
                                         <div className="flex-1">
                                             <p className="text-sm font-bold text-gray-700 leading-tight group-hover/notif:text-gray-900 transition-colors">{notif.message}</p>
                                             <p className="text-[10px] text-gray-400 mt-2 flex items-center gap-2 font-bold uppercase tracking-tight">
@@ -371,7 +373,7 @@ export default function WorkerDashboard({
                                     </div>
                                 ))}
                             </div>
-                            <button className="w-full mt-10 py-4 text-xs font-black text-purple-600 hover:bg-purple-50 rounded-2xl transition-all border border-purple-100 uppercase tracking-widest active:scale-[0.98]">
+                            <button className="w-full mt-10 py-4 text-xs font-black text-color-primary hover:bg-primary-light rounded-2xl transition-all border border-color-primary/30 uppercase tracking-widest active:scale-[0.98]">
                                 Tout Historique
                             </button>
                         </Card>
@@ -390,7 +392,7 @@ export default function WorkerDashboard({
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {comments.map((comment) => (
-                            <div key={comment.id} className="p-6 bg-gray-50 rounded-2xl border border-gray-50 hover:border-purple-100 hover:bg-white hover:shadow-lg transition-all group">
+                            <div key={comment.id} className="p-6 bg-gray-50 rounded-2xl border border-gray-50 hover:border-color-primary/30 hover:bg-white hover:shadow-lg transition-all group">
                                 <div className="flex justify-between items-center mb-4">
                                     <div className="flex text-yellow-400 scale-90 -translate-x-1">
                                         {"★".repeat(comment.rating)}
@@ -399,7 +401,7 @@ export default function WorkerDashboard({
                                 </div>
                                 <p className="text-sm text-gray-700 italic font-medium leading-relaxed group-hover:text-gray-900 transition-colors">"{comment.comment}"</p>
                                 <div className="mt-4 pt-4 border-t border-gray-100 flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-xl bg-purple-50 text-[var(--color-primary)] flex items-center justify-center font-black text-[10px]">{comment.client.charAt(0)}</div>
+                                    <div className="w-8 h-8 rounded-xl bg-primary-light text-[var(--color-primary)] flex items-center justify-center font-black text-[10px]">{comment.client.charAt(0)}</div>
                                     <span className="text-xs font-black text-gray-900 tracking-tight">{comment.client}</span>
                                 </div>
                             </div>

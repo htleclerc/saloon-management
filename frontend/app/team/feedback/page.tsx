@@ -21,7 +21,7 @@ import { useAuth } from "@/context/AuthProvider";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { useTranslation } from "@/i18n";
 
-import { statsService } from "@/lib/services/StatsService";
+import { performanceStatsService } from "@/lib/services";
 
 interface Review {
     id: number;
@@ -50,7 +50,7 @@ function FeedbackContent() {
     useEffect(() => {
         const fetchReviews = async () => {
             try {
-                const data = await statsService.getAllReviews(1); // Mock salonId
+                const data = await performanceStatsService.getAllReviews(1); // Mock salonId
                 setReviews(data as unknown as Review[]);
             } catch (error) {
                 console.error("Failed to fetch reviews", error);

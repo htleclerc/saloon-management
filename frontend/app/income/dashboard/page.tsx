@@ -12,7 +12,7 @@ import { useAuth, RequirePermission } from "@/context/AuthProvider";
 import { useActionPermissions } from "@/lib/permissions";
 import { expenseService } from "@/lib/services/ExpenseService";
 import { incomeService } from "@/lib/services/IncomeService";
-import { statsService } from "@/lib/services/StatsService";
+import { revenueStatsService } from "@/lib/services/RevenueStatsService";
 import { useCurrency } from "@/hooks/useCurrency";
 import { workerService } from "@/lib/services/WorkerService";
 import { serviceService } from "@/lib/services/ServiceService";
@@ -238,11 +238,9 @@ export default function IncomeDashboardPage() {
                     }),
                     serviceService.getAll(salonId),
                     workerService.getAll(salonId),
-                    statsService.getRevenueTrend(salonId),
-                    statsService.getExpenseTrend(salonId)
+                    revenueStatsService.getRevenueTrend(salonId),
+                    revenueStatsService.getExpenseTrend(salonId)
                 ]);
-
-                console.log(`Loaded ${incomes.length} incomes, ${workers.length} workers for period ${selectedPeriod}`);
 
                 // Normalize incomes with names
                 const normalizedIncomes = incomes.map((inc: any) => {
@@ -301,8 +299,8 @@ export default function IncomeDashboardPage() {
                 const revGrowth = prevActualRevenue > 0 ? ((periodActualRevenue - prevActualRevenue) / prevActualRevenue) * 100 : 0;
 
                 // Financials and Expenses for the year
-                const financials = await statsService.getFinancialReport(salonId, selectedDate.getFullYear());
-                const distribution = await statsService.getExpenseDistribution(salonId, selectedDate.getFullYear());
+                const financials = await revenueStatsService.getFinancialReport(salonId, selectedDate.getFullYear());
+                const distribution = await revenueStatsService.getExpenseDistribution(salonId, selectedDate.getFullYear());
                 const salaryExpense = distribution.find(d => d.name === 'Salary' || d.name === 'Salaire')?.amount || 0;
 
                 const activeWorkers = workers.filter(w => w.isActive);
@@ -592,7 +590,7 @@ export default function IncomeDashboardPage() {
                                     </button>
                                 </div>
                                 <Link href="/income/add">
-                                    <Button variant="primary" size="md" className="rounded-xl h-12 flex items-center gap-2 font-black shadow-lg shadow-purple-500/20 active:scale-95 transition-all">
+                                    <Button variant="primary" size="md" className="rounded-xl h-12 flex items-center gap-2 font-black shadow-lg shadow-[color:var(--color-primary)]/20 active:scale-95 transition-all">
                                         <Plus className="w-5 h-5" />
                                         <span>{t("income.addIncome")}</span>
                                     </Button>
@@ -791,9 +789,9 @@ export default function IncomeDashboardPage() {
                                         <Bar dataKey="potentialIncome" name={t("common.potential")} stackId="income" fill="var(--color-primary-light)" radius={[6, 6, 0, 0]} barSize={20} />
                                         <Bar dataKey="salary" name={t("income.payroll")} stackId="costs" fill="var(--color-secondary)" radius={[0, 0, 0, 0]} barSize={10} />
                                         <Bar dataKey="profit" name={t("team.profit")} stackId="costs" radius={[6, 6, 0, 0]} barSize={10}>
-                                            {monthlySummary.map((entry: any, index: number) => (
+                                            {monthlySummary.map((entry: any) => (
                                                 <Cell
-                                                    key={`cell-${index}`}
+                                                    key={`cell-${entry.name}`}
                                                     fill={entry.actualProfit >= 0 ? 'var(--color-success)' : 'var(--color-error)'}
                                                 />
                                             ))}
@@ -836,8 +834,8 @@ export default function IncomeDashboardPage() {
                                                 paddingAngle={8}
                                                 dataKey="value"
                                             >
-                                                {incomeProjection.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                                                {incomeProjection.map((entry) => (
+                                                    <Cell key={`cell-${entry.name}`} fill={entry.color} stroke="none" />
                                                 ))}
                                             </Pie>
                                             <Tooltip
@@ -868,8 +866,8 @@ export default function IncomeDashboardPage() {
                                     </div>
                                 </div>
                                 <div className="flex-1 space-y-4">
-                                    {incomeProjection.map((item, idx) => (
-                                        <div key={idx} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-transparent hover:border-gray-100 transition-all">
+                                    {incomeProjection.map((item) => (
+                                        <div key={item.name} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-transparent hover:border-gray-100 transition-all">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-4 h-4 rounded-lg shadow-sm" style={{ backgroundColor: item.color }}></div>
                                                 <span className="text-xs font-black text-gray-500 uppercase tracking-widest">{item.name}</span>
@@ -904,12 +902,12 @@ export default function IncomeDashboardPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-50">
-                                    {dailyBreakdown.map((row, idx) => (
-                                        <tr key={idx} className="hover:bg-purple-50/30 transition-colors group/row">
+                                    {dailyBreakdown.map((row) => (
+                                        <tr key={row.id} className="hover:bg-primary-light/30 transition-colors group/row">
                                             <td className="px-4 py-8 text-sm font-black text-gray-900 tabular-nums italic">{formatDate(new Date(row.date), "dd/MM")}</td>
                                             <td className="px-4 py-8">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center text-[var(--color-primary)] font-black text-sm shadow-inner group-hover/row:scale-110 transition-transform">
+                                                    <div className="w-10 h-10 bg-primary-light rounded-xl flex items-center justify-center text-[var(--color-primary)] font-black text-sm shadow-inner group-hover/row:scale-110 transition-transform">
                                                         {row.workerName?.charAt(0) || "W"}
                                                     </div>
                                                     <span className="font-black text-gray-700 text-sm tracking-tight">{row.workerName}</span>
@@ -943,7 +941,7 @@ export default function IncomeDashboardPage() {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                             {workerPerformance.map((worker, idx) => (
-                                <Card key={idx}
+                                <Card key={worker.workerId}
                                     className="p-8 border-none shadow-md bg-white rounded-3xl group cursor-pointer hover:shadow-2xl hover:scale-[1.02] transition-all duration-300"
                                     onClick={() => router.push(`/team/detail/${worker.workerId}`)}>
                                     <div className="flex items-center gap-5 mb-8">

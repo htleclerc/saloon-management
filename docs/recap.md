@@ -11,8 +11,39 @@ The platform has reached significant maturity through several specific developme
 3.  **Financial & Payroll Integrity (Feb 2026)**: Launch of worker-specific payroll history, audit logs for payment edits, and persistent discussion notes to prevent data loss during disputes.
 4.  **Data Visualization & UX (Feb 2026)**: Implementation of advanced "Safe Horizon" scaling for charts (preventing misleading small-volume spikes) and daily granularity for performance tracking.
 5.  **Technical Debt & Stability (Feb 2026)**: Deployment of full Vitest/Playwright testing suite and migration to Supabase-driven dynamic configuration.
+6.  **Comprehensive System Audit (March 2026)**: Full code analysis focusing on DDD refactoring, i18n completion, PWA implementation, and theming standardization.
 
 ## Recent Conversations (Reverse Chronological)
+
+### Phase 2b: Test Coverage & Quality (2026-03-08)
+**Objective**: Achieve 100% test pass rate and expand test coverage.
+- [x] **Income Page Tests Fixed**: Updated 9 failing test selectors to match current UI (filter panel toggle, print/export buttons as text, comment section assertions). All 15 income tests now pass.
+- [x] **BookingService Tests**: Added 20 tests covering CRUD, duplicate detection, worker conflict detection, status updates, worker/service assignment.
+- [x] **SalonService Tests**: Added 10 tests covering multi-tenant salon management, user-salon associations, slug generation, settings management.
+- [x] **InvoiceService Tests**: Added 5 tests covering PDF generation, filename, amount fallback logic, missing data handling.
+- [x] **Build verified**: All 73 routes compile. 135/135 tests pass across 17 test files.
+
+### Phase 2: Technical Excellence Implementation (2026-03-08)
+**Objective**: Continue project improvements based on Phase 1 audit.
+- [x] **Test Fixes**: Fixed 15 test failures in `income/page.test.tsx` (missing NotificationProvider, permissions mock, revenueStatsService mock). Reduced to 9 pre-existing UI selector mismatches.
+- [x] **i18n Translation Sync**: Added 62 missing keys to `fr.json`, 24 missing keys to `es.json`. Removed 36 orphan keys from FR, 14 from ES. All 3 languages now perfectly synced at 1369 keys each.
+- [x] **Theming Migration**: Migrated 477+ hardcoded purple/pink Tailwind classes to semantic CSS variable tokens across 73+ files. Removed legacy `!important` gradient overrides from `globals.css`.
+- [x] **DDD Decomposition Complete**: Reduced `StatsService.ts` from 1428 lines to 56 lines (thin facade). Moved 26 methods to `RevenueStatsService` (13 methods, ~350 lines) and `PerformanceStatsService` (21 methods, ~650 lines). Updated all 13 caller files.
+- [x] **Build verified**: All 73 routes compile successfully. 86/95 tests pass.
+
+### Code Analysis & Improvement Plan (2026-03-06)
+**Objective**: Complete code audit and propose a roadmap for technical excellence.
+- [x] **Phase 1 Implementation Complete**: 
+  - Fixed Windows build script.
+  - Internationalized `DailyPage`.
+  - Implemented PWA `manifest.json`.
+  - Modularized `StatsService` into `RevenueStatsService` and `PerformanceStatsService`.
+  - Resolved all build-time export/import conflicts.
+- **DDD Refactoring**: Identified `StatsService.ts` (59KB) as a candidate for splitting into domain-specific services.
+- **i18n Audit**: Found missing translations in new views (e.g., `DailyPage`).
+- **Theming**: Proposed migration from hardcoded Tailwind colors to a semantic token-based system.
+- **PWA**: Planned implementation of offline support and `manifest.json`.
+- **Build Fix**: Resolved POSIX/Windows compatibility issues in `package.json`.
 
 ### Debugging Booking Form (2026-02-12)
 **Objective**: Resolve issues with the "New Client" form on the booking page.

@@ -69,7 +69,7 @@ export default function NotificationsPanel({
 
             {/* Notifications List */}
             <div className="relative">
-                <div className="max-h-[350px] sm:max-h-[450px] overflow-y-auto scrollbar-thin scrollbar-thumb-purple-200 hover:scrollbar-thumb-purple-300 scrollbar-track-transparent">
+                <div className="max-h-[350px] sm:max-h-[450px] overflow-y-auto scrollbar-thin scrollbar-thumb-[var(--color-primary-light)] hover:scrollbar-thumb-[var(--color-primary)] scrollbar-track-transparent">
                     {notifications.length === 0 ? (
                         <div className="p-8 text-center">
                             <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-3">

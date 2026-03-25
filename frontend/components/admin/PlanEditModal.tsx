@@ -96,7 +96,7 @@ export default function PlanEditModal({ isOpen, plan, onSave, onClose }: PlanEdi
                                 type="text"
                                 value={formData.name}
                                 onChange={(e) => updateField('name', e.target.value)}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                             />
                         </div>
                         <div>
@@ -107,7 +107,7 @@ export default function PlanEditModal({ isOpen, plan, onSave, onClose }: PlanEdi
                                 type="number"
                                 value={formData.price}
                                 onChange={(e) => updateField('price', parseFloat(e.target.value) || 0)}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                                 min="0"
                                 step="0.01"
                             />
@@ -129,7 +129,7 @@ export default function PlanEditModal({ isOpen, plan, onSave, onClose }: PlanEdi
                                     type="number"
                                     value={formData.limits.maxSalons}
                                     onChange={(e) => updateLimit('maxSalons', parseInt(e.target.value) || 1)}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                                     min="1"
                                 />
                                 <p className="text-xs text-gray-500 mt-1">{t("superadmin.unlimited999")}</p>
@@ -142,7 +142,7 @@ export default function PlanEditModal({ isOpen, plan, onSave, onClose }: PlanEdi
                                     type="number"
                                     value={formData.limits.maxWorkers}
                                     onChange={(e) => updateLimit('maxWorkers', parseInt(e.target.value) || 1)}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                                     min="1"
                                 />
                                 <p className="text-xs text-gray-500 mt-1">{t("superadmin.unlimited999")}</p>
@@ -155,7 +155,7 @@ export default function PlanEditModal({ isOpen, plan, onSave, onClose }: PlanEdi
                                     type="number"
                                     value={formData.limits.maxBookingsPerMonth}
                                     onChange={(e) => updateLimit('maxBookingsPerMonth', parseInt(e.target.value) || 1)}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                                     min="1"
                                 />
                                 <p className="text-xs text-gray-500 mt-1">{t("superadmin.unlimited99999")}</p>
@@ -175,7 +175,7 @@ export default function PlanEditModal({ isOpen, plan, onSave, onClose }: PlanEdi
                                     type="checkbox"
                                     checked={formData.limits.hasAdvancedReports}
                                     onChange={(e) => updateLimitBoolean('hasAdvancedReports', e.target.checked)}
-                                    className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
+                                    className="w-5 h-5 text-color-primary rounded focus:ring-primary"
                                 />
                                 <span className="text-sm font-medium text-gray-700">{t("settings.billing.advancedReports")}</span>
                             </label>
@@ -184,7 +184,7 @@ export default function PlanEditModal({ isOpen, plan, onSave, onClose }: PlanEdi
                                     type="checkbox"
                                     checked={formData.limits.hasAPIAccess}
                                     onChange={(e) => updateLimitBoolean('hasAPIAccess', e.target.checked)}
-                                    className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
+                                    className="w-5 h-5 text-color-primary rounded focus:ring-primary"
                                 />
                                 <span className="text-sm font-medium text-gray-700">{t("settings.billing.apiAccess")}</span>
                             </label>
@@ -201,7 +201,7 @@ export default function PlanEditModal({ isOpen, plan, onSave, onClose }: PlanEdi
                                         type="text"
                                         value={feature}
                                         onChange={(e) => updateFeature(index, e.target.value)}
-                                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                                         placeholder={t("superadmin.addFeature")}
                                     />
                                     <button
@@ -230,7 +230,7 @@ export default function PlanEditModal({ isOpen, plan, onSave, onClose }: PlanEdi
                                 type="checkbox"
                                 checked={formData.isActive}
                                 onChange={(e) => updateField('isActive', e.target.checked)}
-                                className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
+                                className="w-5 h-5 text-color-primary rounded focus:ring-primary"
                             />
                             <span className="text-sm font-medium text-gray-700">{t("superadmin.planActive")}</span>
                         </label>
@@ -239,7 +239,7 @@ export default function PlanEditModal({ isOpen, plan, onSave, onClose }: PlanEdi
                                 type="checkbox"
                                 checked={formData.isDefault}
                                 onChange={(e) => updateField('isDefault', e.target.checked)}
-                                className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
+                                className="w-5 h-5 text-color-primary rounded focus:ring-primary"
                             />
                             <span className="text-sm font-medium text-gray-700">{t("superadmin.defaultTier")}</span>
                         </label>
@@ -262,7 +262,7 @@ export default function PlanEditModal({ isOpen, plan, onSave, onClose }: PlanEdi
                     <Button
                         variant="primary"
                         onClick={handleSave}
-                        className="bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600"
+                        className="bg-gradient-primary hover:from-primary hover:to-secondary"
                     >
                         <Save className="w-4 h-4 mr-2" />
                         {t("common.save")}

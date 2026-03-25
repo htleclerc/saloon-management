@@ -1,8 +1,9 @@
 import { jsPDF } from "jspdf";
 import { format } from "date-fns";
+import type { Income } from "@/types";
 
 export const invoiceService = {
-    generatePdf: (income: any) => {
+    generatePdf: (income: Pick<Income, 'id' | 'date' | 'clientName' | 'finalAmount' | 'amount'>) => {
         const doc = new jsPDF();
 
         // Header

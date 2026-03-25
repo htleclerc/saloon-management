@@ -14,19 +14,36 @@ import {
     CheckCircle,
     TrendingDown,
     TrendingUp,
-    Filter,
-    ArrowUpDown
+    X,
 } from "lucide-react";
 import { useToast } from "@/context/ToastProvider";
 import { useConfirm } from "@/context/ConfirmProvider";
 import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
+import { useTranslation } from "@/i18n";
+import { useCurrency } from "@/hooks/useCurrency";
 
 import { productService } from "@/lib/services";
 import { useEffect } from "react";
 
 export default function InventoryPage() {
+    const { t } = useTranslation();
+    const { format: formatCurrency, symbol } = useCurrency();
     const [products, setProducts] = useState<any[]>([]);
     const { canModify, activeSalonId } = useAuth();
+    const { addToast } = useToast();
+    const { confirm } = useConfirm();
+    const { handleReadOnlyClick } = useReadOnlyGuard();
+    const [search, setSearch] = useState("");
+    const [categoryFilter, setCategoryFilter] = useState("All");
+
+    // Modal state
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingId, setEditingId] = useState<number | null>(null);
+    const [formName, setFormName] = useState("");
+    const [formDescription, setFormDescription] = useState("");
+    const [formCategory, setFormCategory] = useState("");
+    const [formPrice, setFormPrice] = useState(0);
+    const [formStock, setFormStock] = useState(0);
 
     // Load Products
     const loadProducts = () => {
@@ -39,39 +56,6 @@ export default function InventoryPage() {
         loadProducts();
     }, [activeSalonId]);
 
-    const addProduct = async (data: any) => {
-        try {
-            await productService.create({ ...data, salonId: Number(activeSalonId) });
-            loadProducts();
-            addToast("Product added successfully", "success");
-        } catch (e) {
-            addToast("Failed to add product", "error");
-        }
-    };
-
-    const updateProduct = async (id: number, data: any) => {
-        try {
-            await productService.update(id, data);
-            loadProducts();
-        } catch (e) {
-            addToast("Failed to update product", "error");
-        }
-    };
-
-    const deleteProduct = async (id: number) => {
-        try {
-            await productService.delete(id);
-            loadProducts();
-        } catch (e) {
-            addToast("Failed to delete product", "error");
-        }
-    };
-    const { addToast } = useToast();
-    const { confirm } = useConfirm();
-    const { handleReadOnlyClick } = useReadOnlyGuard();
-    const [search, setSearch] = useState("");
-    const [categoryFilter, setCategoryFilter] = useState("All");
-
     const categories = ["All", ...Array.from(new Set(products.map(p => p.category).filter(Boolean)))];
 
     const filteredProducts = products.filter(p => {
@@ -81,27 +65,87 @@ export default function InventoryPage() {
         return matchesSearch && matchesCategory;
     });
 
+    // Modal handlers
+    const handleOpenModal = (product?: any) => {
+        if (handleReadOnlyClick()) return;
+        if (product) {
+            setEditingId(product.id);
+            setFormName(product.name);
+            setFormDescription(product.description || "");
+            setFormCategory(product.category || "");
+            setFormPrice(product.price || 0);
+            setFormStock(product.stock || 0);
+        } else {
+            setEditingId(null);
+            setFormName("");
+            setFormDescription("");
+            setFormCategory("General");
+            setFormPrice(0);
+            setFormStock(0);
+        }
+        setIsModalOpen(true);
+    };
+
+    const handleSaveProduct = async () => {
+        if (handleReadOnlyClick()) return;
+        if (!formName.trim()) return;
+
+        const productData = {
+            name: formName.trim(),
+            description: formDescription.trim() || undefined,
+            category: formCategory.trim() || undefined,
+            price: formPrice,
+            stock: formStock,
+            isActive: true,
+            isLinkedToService: false,
+        };
+
+        try {
+            if (editingId) {
+                await productService.update(editingId, productData);
+                loadProducts();
+                addToast(t("configuration.inventory.productUpdated"), "success");
+            } else {
+                await productService.create({ ...productData, salonId: Number(activeSalonId) });
+                loadProducts();
+                addToast(t("configuration.inventory.productAdded"), "success");
+            }
+            setIsModalOpen(false);
+        } catch (e) {
+            addToast(editingId ? t("configuration.inventory.updateError") : t("configuration.inventory.addError"), "error");
+        }
+    };
+
     const handleDelete = async (id: number, name: string) => {
         if (handleReadOnlyClick()) return;
 
         const confirmed = await confirm({
-            title: "Delete Product",
-            message: `Are you sure you want to delete "${name}"? This action cannot be undone.`,
-            confirmText: "Delete",
+            title: t("configuration.inventory.deleteProduct"),
+            message: t("configuration.inventory.deleteConfirm", { name }),
+            confirmText: t("common.delete"),
             type: "error"
         });
 
         if (confirmed) {
-            deleteProduct(id);
-            addToast(`${name} has been removed from inventory.`, "success");
+            try {
+                await productService.delete(id);
+                loadProducts();
+                addToast(t("configuration.inventory.productRemoved", { name }), "success");
+            } catch (e) {
+                addToast(t("configuration.inventory.deleteError"), "error");
+            }
         }
     };
 
     const handleUpdateStock = (id: number, currentStock: number, delta: number) => {
         if (handleReadOnlyClick()) return;
 
-        updateProduct(id, { stock: Math.max(0, currentStock + delta) });
-        addToast("Stock level updated successfully.", "success");
+        productService.update(id, { stock: Math.max(0, currentStock + delta) })
+            .then(() => {
+                loadProducts();
+                addToast(t("configuration.inventory.stockUpdated"), "success");
+            })
+            .catch(() => addToast(t("configuration.inventory.updateError"), "error"));
     };
 
     return (
@@ -114,7 +158,7 @@ export default function InventoryPage() {
                             <Package className="w-5 h-5" />
                         </div>
                         <div>
-                            <p className="text-xs text-gray-500 uppercase tracking-wider font-bold">Total Products</p>
+                            <p className="text-xs text-gray-500 uppercase tracking-wider font-bold">{t("configuration.inventory.totalProducts")}</p>
                             <p className="text-2xl font-black text-[var(--color-primary)]">{products.length}</p>
                         </div>
                     </div>
@@ -125,7 +169,7 @@ export default function InventoryPage() {
                             <AlertTriangle className="w-5 h-5" />
                         </div>
                         <div>
-                            <p className="text-xs text-gray-500 uppercase tracking-wider font-bold">Low Stock</p>
+                            <p className="text-xs text-gray-500 uppercase tracking-wider font-bold">{t("configuration.inventory.lowStock")}</p>
                             <p className="text-2xl font-black text-[var(--color-warning)]">
                                 {products.filter(p => (p.stock || 0) < 5).length}
                             </p>
@@ -138,9 +182,9 @@ export default function InventoryPage() {
                             <TrendingUp className="w-5 h-5" />
                         </div>
                         <div>
-                            <p className="text-xs text-gray-500 uppercase tracking-wider font-bold">Total Value</p>
+                            <p className="text-xs text-gray-500 uppercase tracking-wider font-bold">{t("configuration.inventory.totalValue")}</p>
                             <p className="text-2xl font-black text-[var(--color-success)]">
-                                €{products.reduce((acc, p) => acc + (p.price * (p.stock || 0)), 0).toLocaleString()}
+                                {formatCurrency(products.reduce((acc, p) => acc + (p.price * (p.stock || 0)), 0))}
                             </p>
                         </div>
                     </div>
@@ -151,7 +195,7 @@ export default function InventoryPage() {
                             <CheckCircle className="w-5 h-5" />
                         </div>
                         <div>
-                            <p className="text-xs text-gray-500 uppercase tracking-wider font-bold">In Stock</p>
+                            <p className="text-xs text-gray-500 uppercase tracking-wider font-bold">{t("configuration.inventory.inStock")}</p>
                             <p className="text-2xl font-black text-[var(--color-secondary)]">
                                 {products.filter(p => (p.stock || 0) >= 5).length}
                             </p>
@@ -166,7 +210,7 @@ export default function InventoryPage() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input
                         type="text"
-                        placeholder="Search products by name or description..."
+                        placeholder={t("configuration.inventory.searchPlaceholder")}
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)] h-11"
@@ -184,9 +228,14 @@ export default function InventoryPage() {
                             </button>
                         ))}
                     </div>
-                    <Button variant="primary" disabled={!canModify} className="h-11 rounded-xl shadow-lg border-none bg-gradient-to-r from-[var(--color-primary)] to-gray-900 disabled:opacity-50" onClick={() => { if (!handleReadOnlyClick()) addProduct({ name: "New Product", price: 0, category: "General", stock: 0 }) }}>
+                    <Button
+                        variant="primary"
+                        disabled={!canModify}
+                        className="h-11 rounded-xl shadow-lg border-none bg-gradient-to-r from-[var(--color-primary)] to-gray-900 disabled:opacity-50"
+                        onClick={() => handleOpenModal()}
+                    >
                         <Plus className="w-5 h-5 mr-2" />
-                        Add Product
+                        {t("configuration.inventory.addProduct")}
                     </Button>
                 </div>
             </div>
@@ -197,11 +246,11 @@ export default function InventoryPage() {
                     <table className="w-full">
                         <thead>
                             <tr className="bg-gray-50 border-b border-gray-100">
-                                <th className="px-6 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider">Product</th>
-                                <th className="px-6 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider">Category</th>
-                                <th className="px-6 py-4 text-center text-xs font-black text-gray-500 uppercase tracking-wider">Stock</th>
-                                <th className="px-6 py-4 text-right text-xs font-black text-gray-500 uppercase tracking-wider">Price</th>
-                                <th className="px-6 py-4 text-right text-xs font-black text-gray-500 uppercase tracking-wider">Actions</th>
+                                <th className="px-6 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider">{t("configuration.inventory.product")}</th>
+                                <th className="px-6 py-4 text-left text-xs font-black text-gray-500 uppercase tracking-wider">{t("common.category")}</th>
+                                <th className="px-6 py-4 text-center text-xs font-black text-gray-500 uppercase tracking-wider">{t("common.stock")}</th>
+                                <th className="px-6 py-4 text-right text-xs font-black text-gray-500 uppercase tracking-wider">{t("common.price")}</th>
+                                <th className="px-6 py-4 text-right text-xs font-black text-gray-500 uppercase tracking-wider">{t("common.actions")}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 bg-white">
@@ -214,13 +263,13 @@ export default function InventoryPage() {
                                             </div>
                                             <div>
                                                 <p className="font-bold text-gray-900">{product.name}</p>
-                                                <p className="text-xs text-gray-500 line-clamp-1">{product.description || 'No description'}</p>
+                                                <p className="text-xs text-gray-500 line-clamp-1">{product.description || t("configuration.inventory.noDescription")}</p>
                                             </div>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-600 text-[10px] font-black uppercase tracking-wider">
-                                            {product.category || 'Uncategorized'}
+                                            {product.category || t("configuration.inventory.uncategorized")}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4">
@@ -247,18 +296,23 @@ export default function InventoryPage() {
                                             {(product.stock || 0) < 5 && (
                                                 <span className="text-[10px] text-[var(--color-error)] font-black animate-pulse flex items-center gap-1">
                                                     <AlertTriangle className="w-2.5 h-2.5" />
-                                                    LOW STOCK
+                                                    {t("configuration.inventory.lowStockAlert")}
                                                 </span>
                                             )}
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        <p className="font-black text-[var(--color-primary)] text-lg">€{product.price}</p>
+                                        <p className="font-black text-[var(--color-primary)] text-lg">{formatCurrency(product.price)}</p>
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex items-center justify-end gap-2">
                                             <ReadOnlyGuard>
-                                                <Button variant="outline" size="sm" className="h-8 w-8 p-0 rounded-lg hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] border-none">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => handleOpenModal(product)}
+                                                    className="h-8 w-8 p-0 rounded-lg hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)] border-none"
+                                                >
                                                     <Edit className="w-4 h-4" />
                                                 </Button>
                                             </ReadOnlyGuard>
@@ -283,9 +337,9 @@ export default function InventoryPage() {
                                             <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center text-gray-300">
                                                 <Package className="w-8 h-8" />
                                             </div>
-                                            <p className="text-gray-500 font-bold">No products found matching your search</p>
+                                            <p className="text-gray-500 font-bold">{t("configuration.inventory.noProductsFound")}</p>
                                             <Button variant="outline" size="sm" onClick={() => { setSearch(""); setCategoryFilter("All") }}>
-                                                Clear filters
+                                                {t("configuration.inventory.clearFilters")}
                                             </Button>
                                         </div>
                                     </td>
@@ -295,6 +349,108 @@ export default function InventoryPage() {
                     </table>
                 </div>
             </Card>
+
+            {/* Add/Edit Product Modal */}
+            {isModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <Card className="w-full max-w-md p-6 space-y-4 animate-in zoom-in-95 duration-200">
+                        <div className="flex justify-between items-center mb-2">
+                            <h2 className="text-xl font-bold">
+                                {editingId ? t("configuration.inventory.editProduct") : t("configuration.inventory.newProduct")}
+                            </h2>
+                            <button onClick={() => setIsModalOpen(false)}>
+                                <X className="w-5 h-5 text-gray-400" />
+                            </button>
+                        </div>
+
+                        {/* Product Name */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                {t("configuration.inventory.productName")} <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                value={formName}
+                                onChange={(e) => setFormName(e.target.value)}
+                                className="w-full p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary font-medium"
+                                placeholder={t("configuration.inventory.productNamePlaceholder")}
+                            />
+                        </div>
+
+                        {/* Description */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                {t("configuration.inventory.description")}
+                            </label>
+                            <textarea
+                                value={formDescription}
+                                onChange={(e) => setFormDescription(e.target.value)}
+                                rows={2}
+                                className="w-full p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary text-sm resize-none"
+                                placeholder={t("configuration.inventory.descriptionPlaceholder")}
+                            />
+                        </div>
+
+                        {/* Category & Price */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    {t("common.category")}
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formCategory}
+                                    onChange={(e) => setFormCategory(e.target.value)}
+                                    className="w-full p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary text-sm"
+                                    placeholder="General"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    {`${t("common.price")} (${symbol()})`}
+                                </label>
+                                <input
+                                    type="number"
+                                    value={formPrice}
+                                    onChange={(e) => setFormPrice(Number(e.target.value))}
+                                    min={0}
+                                    step={0.01}
+                                    className="w-full p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary font-bold"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Stock */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                {editingId ? t("common.stock") : t("configuration.inventory.initialStock")}
+                            </label>
+                            <input
+                                type="number"
+                                value={formStock}
+                                onChange={(e) => setFormStock(Number(e.target.value))}
+                                min={0}
+                                className="w-full p-3 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-primary font-bold"
+                            />
+                        </div>
+
+                        {/* Actions */}
+                        <div className="pt-4 flex gap-3">
+                            <Button variant="outline" className="flex-1" onClick={() => setIsModalOpen(false)}>
+                                {t("common.cancel")}
+                            </Button>
+                            <Button
+                                variant="primary"
+                                className="flex-1"
+                                onClick={handleSaveProduct}
+                                disabled={!formName.trim()}
+                            >
+                                {t("configuration.inventory.saveProduct")}
+                            </Button>
+                        </div>
+                    </Card>
+                </div>
+            )}
         </div>
     );
 }

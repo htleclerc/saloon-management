@@ -7,11 +7,13 @@ import Button from "@/components/ui/Button";
 import { MapPin, Star, Heart, Scissors, ChevronRight, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthProvider";
+import { useTranslation } from "@/i18n";
 import { clientService } from "@/lib/services/ClientService";
 import { Salon } from "@/types";
 
 export default function FavoriteSalonsPage() {
     const { user } = useAuth();
+    const { t } = useTranslation();
     const [favorites, setFavorites] = useState<Salon[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -52,8 +54,8 @@ export default function FavoriteSalonsPage() {
         <MainLayout>
             <div className="space-y-8">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">My Favorite Salons</h1>
-                    <p className="text-gray-500 mt-1">Quickly find your preferred salons.</p>
+                    <h1 className="text-3xl font-bold text-gray-900">{t("salons.favorites")}</h1>
+                    <p className="text-gray-500 mt-1">{t("salons.favoritesSubtitle")}</p>
                 </div>
 
                 {isLoading ? (
@@ -76,7 +78,7 @@ export default function FavoriteSalonsPage() {
                                         <Heart className="w-5 h-5 fill-current" />
                                     </button>
                                     <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm px-2 py-1 rounded text-xs font-bold text-primary">
-                                        Beauty & Wellness
+                                        {t("salons.beautyWellness")}
                                     </div>
                                 </div>
 
@@ -92,14 +94,14 @@ export default function FavoriteSalonsPage() {
 
                                     <div className="flex items-start gap-2 text-gray-500 text-sm">
                                         <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                                        <span>{salon.address || 'No address provided'}</span>
+                                        <span>{salon.address || t("salons.noAddress")}</span>
                                     </div>
 
                                     <div className="pt-4 flex gap-3">
-                                        <Button variant="outline" className="flex-1 text-gray-600 border-gray-200">Details</Button>
+                                        <Button variant="outline" className="flex-1 text-gray-600 border-gray-200">{t("salons.details")}</Button>
                                         <Link href={`/appointments/book?salonId=${salon.id}`} className="flex-1">
                                             <Button className="w-full bg-primary hover:bg-primary/90 gap-2">
-                                                <Scissors className="w-4 h-4" /> Book
+                                                <Scissors className="w-4 h-4" /> {t("salons.book")}
                                             </Button>
                                         </Link>
                                     </div>
@@ -112,10 +114,10 @@ export default function FavoriteSalonsPage() {
                         <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto text-gray-400">
                             <Heart className="w-10 h-10" />
                         </div>
-                        <h2 className="text-xl font-bold text-gray-900">No favorite salons</h2>
-                        <p className="text-gray-500">You don't have any salons in your favorites yet.</p>
+                        <h2 className="text-xl font-bold text-gray-900">{t("salons.noFavorites")}</h2>
+                        <p className="text-gray-500">{t("salons.noFavoritesDesc")}</p>
                         <Link href="/salons/discover">
-                            <Button className="bg-primary hover:bg-primary/90 mt-4">Discover Salons</Button>
+                            <Button className="bg-primary hover:bg-primary/90 mt-4">{t("salons.discoverSalons")}</Button>
                         </Link>
                     </div>
                 )}

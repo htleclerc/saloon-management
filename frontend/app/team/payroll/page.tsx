@@ -10,7 +10,7 @@ import { useCurrency } from "@/hooks/useCurrency";
 import { useTranslation } from "@/i18n";
 import { useAuth } from "@/context/AuthProvider";
 import { useToast } from "@/context/ToastProvider";
-import { statsService } from "@/lib/services/StatsService";
+import { revenueStatsService } from "@/lib/services/RevenueStatsService";
 import { payrollService } from "@/lib/services/PayrollService";
 import { workerService } from "@/lib/services/WorkerService";
 import { useNotifications } from "@/context/NotificationProvider";
@@ -96,7 +96,7 @@ export default function TeamPayrollPage() {
             const salonId = parseInt(activeSalonId);
 
             // Get base payroll data
-            const data = await statsService.getPayrollStats(salonId);
+            const data = await revenueStatsService.getPayrollStats(salonId);
 
             // Try to get payment data, fallback to empty if table doesn't exist
             let hist: any[] = [];

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme, useResponsive } from "@/context/ThemeProvider";
+import { useTranslation } from "@/i18n";
 import {
     LayoutDashboard,
     Users,
@@ -37,35 +38,35 @@ import {
 } from "lucide-react";
 
 const menuItems = [
-    { name: "Dashboard", icon: LayoutDashboard, path: "/" },
-    { name: "Daily", icon: TrendingUp, path: "/daily", roles: ['manager', 'super_admin', 'worker'] },
-    { name: "Income", icon: DollarSign, path: "/income", roles: ['manager', 'super_admin', 'worker'] },
-    { name: "Team", icon: Users, path: "/team", roles: ['manager', 'super_admin'] },
-    { name: "My Invoices", icon: FileText, path: "/client/invoices", roles: ['client'], strictRoles: true },
-    { name: "Appointments", icon: CalendarCheck, path: "/appointments" },
-    { name: "Calendar", icon: Calendar, path: "/calendar", roles: ['manager', 'super_admin'] },
-    { name: "Clients", icon: UserCheck, path: "/clients", roles: ['manager', 'super_admin'] },
-    { name: "Expenses", icon: Receipt, path: "/expenses", roles: ['manager', 'super_admin'] },
-    { name: "Approvals", icon: CheckSquare, path: "/approvals", roles: ['manager', 'super_admin'] },
-    { name: "Services", icon: Scissors, path: "/services", roles: ['manager', 'super_admin', 'worker'] },
-    { name: "My Payroll", icon: DollarSign, path: "/team/my-payroll", roles: ['worker'], strictRoles: true },
-    { name: "Reports", icon: FileText, path: "/reports", roles: ['manager', 'super_admin'] },
-    { name: "Configuration", icon: Sliders, path: "/configuration", roles: ['manager', 'super_admin'] },
-    { name: "Favorites", icon: Heart, path: "/salons/favorites", roles: ['client'], strictRoles: true },
-    { name: "Discover", icon: Compass, path: "/salons/discover", roles: ['client'], strictRoles: true },
-    { name: "Settings", icon: Settings, path: "/settings" },
+    { nameKey: "nav.dashboard", icon: LayoutDashboard, path: "/" },
+    { nameKey: "nav.daily", icon: TrendingUp, path: "/daily", roles: ['manager', 'super_admin', 'worker'] },
+    { nameKey: "nav.income", icon: DollarSign, path: "/income", roles: ['manager', 'super_admin', 'worker'] },
+    { nameKey: "nav.team", icon: Users, path: "/team", roles: ['manager', 'super_admin'] },
+    { nameKey: "nav.myInvoices", icon: FileText, path: "/client/invoices", roles: ['client'], strictRoles: true },
+    { nameKey: "nav.appointments", icon: CalendarCheck, path: "/appointments" },
+    { nameKey: "nav.calendar", icon: Calendar, path: "/calendar", roles: ['manager', 'super_admin'] },
+    { nameKey: "nav.clients", icon: UserCheck, path: "/clients", roles: ['manager', 'super_admin'] },
+    { nameKey: "nav.expenses", icon: Receipt, path: "/expenses", roles: ['manager', 'super_admin'] },
+    { nameKey: "nav.approvals", icon: CheckSquare, path: "/approvals", roles: ['manager', 'super_admin'] },
+    { nameKey: "nav.services", icon: Scissors, path: "/services", roles: ['manager', 'super_admin', 'worker'] },
+    { nameKey: "nav.myPayroll", icon: DollarSign, path: "/team/my-payroll", roles: ['worker'], strictRoles: true },
+    { nameKey: "nav.reports", icon: FileText, path: "/reports", roles: ['manager', 'super_admin'] },
+    { nameKey: "nav.configuration", icon: Sliders, path: "/configuration", roles: ['manager', 'super_admin'] },
+    { nameKey: "nav.favorites", icon: Heart, path: "/salons/favorites", roles: ['client'], strictRoles: true },
+    { nameKey: "nav.discover", icon: Compass, path: "/salons/discover", roles: ['client'], strictRoles: true },
+    { nameKey: "nav.settings", icon: Settings, path: "/settings" },
 ];
 
 // Super Admin Menu (SaaS CEO view)
 const superAdminMenuItems = [
-    { name: "Global Dashboard", icon: LayoutDashboard, path: "/superadmin", badge: 'SaaS' },
-    { name: "Salons", icon: Building, path: "/superadmin/salons" },
-    { name: "Plans", icon: CreditCard, path: "/superadmin/plans" },
-    { name: "Users", icon: Users, path: "/superadmin/users" },
-    { name: "Analytics", icon: BarChart3, path: "/superadmin/analytics" },
-    { name: "Revenue", icon: DollarSign, path: "/superadmin/billing" },
-    { name: "Support", icon: MessageCircle, path: "/superadmin/support" },
-    { name: "System", icon: Settings, path: "/superadmin/settings" },
+    { nameKey: "nav.globalDashboard", icon: LayoutDashboard, path: "/superadmin", badge: 'SaaS' },
+    { nameKey: "nav.salons", icon: Building, path: "/superadmin/salons" },
+    { nameKey: "nav.plans", icon: CreditCard, path: "/superadmin/plans" },
+    { nameKey: "nav.users", icon: Users, path: "/superadmin/users" },
+    { nameKey: "nav.analytics", icon: BarChart3, path: "/superadmin/analytics" },
+    { nameKey: "nav.revenue", icon: DollarSign, path: "/superadmin/billing" },
+    { nameKey: "nav.support", icon: MessageCircle, path: "/superadmin/support" },
+    { nameKey: "nav.system", icon: Settings, path: "/superadmin/settings" },
 ];
 
 import { useAuth } from "@/context/AuthProvider";
@@ -74,6 +75,7 @@ import { useAuth } from "@/context/AuthProvider";
 export default function Sidebar() {
     const pathname = usePathname();
     const router = useRouter();
+    const { t } = useTranslation();
     const { theme, toggleSidebar, toggleDarkMode, currentPalette, mobileMenuOpen, setMobileMenuOpen } = useTheme();
     const { isMobile, isTablet } = useResponsive();
     const {
@@ -120,8 +122,8 @@ export default function Sidebar() {
     const navContent = (
         <div className={`p-4 ${isCollapsed && !isMobile ? "px-2" : ""}`}>
             {/* Header / Brand */}
-            <div className={`flex items-center ${isCollapsed && !isMobile ? "justify-center" : "justify-between gap-3"} mb-6`}>
-                <div className="flex items-center gap-3 overflow-hidden">
+            <div className={`flex ${isCollapsed && !isMobile ? "flex-col items-center gap-2" : "items-center justify-between gap-3"} mb-6`}>
+                <div className={`flex items-center gap-3 overflow-hidden ${isCollapsed && !isMobile ? "justify-center" : ""}`}>
                     <div className="w-9 h-9 flex-shrink-0 bg-white/10 rounded-xl flex items-center justify-center overflow-hidden border border-white/10">
                         {currentTenant?.logo ? (
                             <img src={currentTenant.logo} alt={currentTenant.name} className="w-full h-full object-cover" />
@@ -132,10 +134,10 @@ export default function Sidebar() {
                     {(!isCollapsed || isMobile) && (
                         <div className="flex flex-col min-w-0">
                             <h1 className="text-sm font-bold text-white truncate leading-tight">
-                                {currentTenant?.name || "Workshop Manager"}
+                                {currentTenant?.name || t("sidebar.workshopManager")}
                             </h1>
                             <span className="text-[10px] text-white/50 uppercase tracking-wider font-bold">
-                                {isDemoMode ? "Demo Mode" : "Workspace"}
+                                {isDemoMode ? t("sidebar.demoMode") : t("sidebar.workspace")}
                             </span>
                         </div>
                     )}
@@ -151,11 +153,11 @@ export default function Sidebar() {
                 ) : (
                     <button
                         onClick={toggleSidebar}
-                        className="p-2 hover:bg-white/10 rounded-lg transition-colors flex-shrink-0 text-white/70 hover:text-white"
-                        title={isCollapsed ? "Expand" : "Collapse"}
+                        className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex-shrink-0 text-white/70 hover:text-white"
+                        title={isCollapsed ? t("sidebar.expand") : t("sidebar.collapse")}
                     >
                         {isCollapsed ? (
-                            <ChevronRight className="w-5 h-5" />
+                            <ChevronRight className="w-4 h-4" />
                         ) : (
                             <ChevronLeft className="w-5 h-5" />
                         )}
@@ -184,7 +186,7 @@ export default function Sidebar() {
                             }
 
                             // Additional logic for Income - although roles should cover it
-                            if (item.name === "Income" && !canAddIncome()) {
+                            if (item.nameKey === "nav.income" && !canAddIncome()) {
                                 // Only hide if worker doesn't have explicit permission and is not manager/admin
                                 if (!hasPermission(['manager', 'super_admin'])) return null;
                             }
@@ -199,11 +201,11 @@ export default function Sidebar() {
                                     href={item.path}
                                     className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${isActive ? "bg-white/20 shadow-lg" : "hover:bg-white/10"
                                         } ${(isCollapsed && !isMobile) ? "justify-center" : ""}`}
-                                    title={(isCollapsed && !isMobile) ? item.name : undefined}
+                                    title={(isCollapsed && !isMobile) ? t(item.nameKey) : undefined}
                                 >
                                     <Icon className="w-5 h-5 flex-shrink-0" />
                                     {(!isCollapsed || isMobile) && (
-                                        <span className="font-medium text-sm flex-1">{item.name}</span>
+                                        <span className="font-medium text-sm flex-1">{t(item.nameKey)}</span>
                                     )}
                                     {(!isCollapsed || isMobile) && (item as any).badge && (
                                         <span className="px-2 py-0.5 bg-amber-500 text-white text-xs font-bold rounded-full">
@@ -220,31 +222,31 @@ export default function Sidebar() {
             {/* Demo Role Switcher - only in demo mode and NOT on superadmin paths */}
             {isDemoMode && !isSuperAdminRoute && (
                 <div className={`mt-auto pt-4 border-t border-white/10 ${(isCollapsed && !isMobile) ? "hidden" : "block"}`}>
-                    <p className="text-xs text-white/50 mb-2 px-3 uppercase font-semibold tracking-wider">Demo Roles</p>
+                    <p className="text-xs text-white/50 mb-2 px-3 uppercase font-semibold tracking-wider">{t("sidebar.demoRoles")}</p>
                     <div className="grid grid-cols-2 gap-2 px-3">
                         <button
                             onClick={async () => await demoLogin('owner')}
                             className="text-xs bg-white/10 hover:bg-white/20 py-2 px-2 rounded-lg text-white transition-colors font-medium"
                         >
-                            Owner
+                            {t("sidebar.owner")}
                         </button>
                         <button
                             onClick={async () => await demoLogin('manager')}
                             className="text-xs bg-white/10 hover:bg-white/20 py-2 px-2 rounded-lg text-white transition-colors font-medium"
                         >
-                            Manager
+                            {t("sidebar.manager")}
                         </button>
                         <button
                             onClick={async () => await demoLogin('worker')}
                             className="text-xs bg-white/10 hover:bg-white/20 py-2 px-2 rounded-lg text-white transition-colors font-medium"
                         >
-                            Worker
+                            {t("sidebar.worker")}
                         </button>
                         <button
                             onClick={async () => await demoLogin('client')}
                             className="text-xs bg-white/10 hover:bg-white/20 py-2 px-2 rounded-lg text-white transition-colors font-medium"
                         >
-                            Client
+                            {t("sidebar.client")}
                         </button>
                     </div>
                 </div>
@@ -258,7 +260,7 @@ export default function Sidebar() {
                     {/* Tenant Selector */}
                     {user?.tenants && user.tenants.length > 1 && (
                         <div className="px-3">
-                            <p className="text-xs text-white/50 mb-2 uppercase font-semibold tracking-wider">Salon</p>
+                            <p className="text-xs text-white/50 mb-2 uppercase font-semibold tracking-wider">{t("sidebar.salon")}</p>
                             <div className="relative">
                                 <button
                                     onClick={() => setShowTenantDropdown(!showTenantDropdown)}
@@ -266,7 +268,7 @@ export default function Sidebar() {
                                 >
                                     <div className="flex items-center gap-2">
                                         <Building className="w-4 h-4" />
-                                        <span className="truncate">{currentTenant?.name || 'Select Salon'}</span>
+                                        <span className="truncate">{currentTenant?.name || t("sidebar.selectSalon")}</span>
                                     </div>
                                     <ChevronDown className={`w-4 h-4 transition-transform ${showTenantDropdown ? 'rotate-180' : ''}`} />
                                 </button>
@@ -296,7 +298,7 @@ export default function Sidebar() {
                         {/* Notifications */}
                         <button className="flex flex-col items-center gap-1 py-3 bg-white/10 hover:bg-white/20 rounded-lg transition-colors relative">
                             <Bell className="w-5 h-5" />
-                            <span className="text-xs">Alerts</span>
+                            <span className="text-xs">{t("sidebar.alerts")}</span>
                             <span className="absolute top-2 right-2 w-2 h-2 bg-[var(--color-error)] rounded-full"></span>
                         </button>
 
@@ -308,12 +310,12 @@ export default function Sidebar() {
                             {theme.darkMode ? (
                                 <>
                                     <Sun className="w-5 h-5" />
-                                    <span className="text-xs">Light</span>
+                                    <span className="text-xs">{t("sidebar.light")}</span>
                                 </>
                             ) : (
                                 <>
                                     <Moon className="w-5 h-5" />
-                                    <span className="text-xs">Dark</span>
+                                    <span className="text-xs">{t("sidebar.dark")}</span>
                                 </>
                             )}
                         </button>
@@ -326,11 +328,11 @@ export default function Sidebar() {
                 <button
                     onClick={logout}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 hover:bg-red-500/20 text-white/70 hover:text-red-300 ${(isCollapsed && !isMobile) ? "justify-center px-0" : ""}`}
-                    title={(isCollapsed && !isMobile) ? "Logout" : undefined}
+                    title={(isCollapsed && !isMobile) ? t("sidebar.logout") : undefined}
                 >
                     <Power className="w-5 h-5 flex-shrink-0" />
                     {(!isCollapsed || isMobile) && (
-                        <span className="font-medium text-sm">Logout</span>
+                        <span className="font-medium text-sm">{t("sidebar.logout")}</span>
                     )}
                 </button>
             </div>

@@ -27,3 +27,7 @@ CREATE POLICY "Allow all access to notifications"
 ON notifications FOR ALL
 USING (true)
 WITH CHECK (true);
+
+-- Grant table permissions to Supabase roles
+GRANT SELECT, INSERT, UPDATE, DELETE ON notifications TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON notifications TO anon;

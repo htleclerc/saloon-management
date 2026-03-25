@@ -121,14 +121,14 @@ export default function CSVImportModal<T>({
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-6 space-y-6">
                     {/* Download template */}
-                    <div className="flex items-center justify-between p-4 bg-purple-50 rounded-xl border border-purple-100">
+                    <div className="flex items-center justify-between p-4 bg-primary-light rounded-xl border border-color-primary/30">
                         <div>
                             <p className="font-bold text-gray-900">{t("common.import.template")}</p>
                             <p className="text-sm text-gray-600">{t("common.import.templateDesc")}</p>
                         </div>
                         <button
                             onClick={handleDownloadTemplate}
-                            className="flex items-center gap-2 px-4 py-2 bg-white border border-purple-200 rounded-xl hover:bg-purple-50 transition-colors"
+                            className="flex items-center gap-2 px-4 py-2 bg-white border border-color-primary/30 rounded-xl hover:bg-primary-light transition-colors"
                         >
                             <Download className="w-4 h-4" />
                             <span className="font-medium">{t("common.import.download")}</span>
@@ -141,7 +141,7 @@ export default function CSVImportModal<T>({
                         onDragLeave={handleDrag}
                         onDragOver={handleDrag}
                         onDrop={handleDrop}
-                        className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${dragActive ? 'border-purple-500 bg-purple-50' : 'border-gray-300'
+                        className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${dragActive ? 'border-color-primary bg-primary-light' : 'border-gray-300'
                             }`}
                     >
                         <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400" />
@@ -168,7 +168,7 @@ export default function CSVImportModal<T>({
                     {/* Processing */}
                     {isProcessing && (
                         <div className="text-center py-4">
-                            <div className="animate-spin rounded-full h-8 w-8 border-4 border-purple-500 border-t-transparent mx-auto mb-2"></div>
+                            <div className="animate-spin rounded-full h-8 w-8 border-4 border-color-primary border-t-transparent mx-auto mb-2"></div>
                             <p className="text-gray-600">{t("common.import.processing")}</p>
                         </div>
                     )}

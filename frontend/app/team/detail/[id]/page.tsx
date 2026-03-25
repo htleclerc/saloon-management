@@ -56,7 +56,7 @@ import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 import { useActionPermissions } from "@/lib/permissions";
 import { useCurrency } from "@/hooks/useCurrency";
 import { useTranslation } from "@/i18n";
-import { workerService, incomeService, statsService } from "@/lib/services";
+import { workerService, incomeService, performanceStatsService } from "@/lib/services";
 import { SalonWorker } from "@/types";
 
 const initialWorkerState = {
@@ -169,17 +169,17 @@ function TeamMemberDetailPageContent({ params }: { params: Promise<{ id: string 
                     workerService.getById(workerId),
                     incomeService.getWorkerPerformanceStats(workerId, parseInt(selectedYear)),
                     incomeService.getWorkerTransactions(workerId, 1, 100, { year: parseInt(selectedYear) }),
-                    statsService.getServicesByRevenue(salonId, workerId),
-                    statsService.getWorkerTopClients(salonId, workerId),
-                    statsService.getRecentWorkerActivity(salonId, workerId),
-                    statsService.getWorkerReviews(salonId, workerId),
-                    statsService.getWeeklyIncomeBreakdown(salonId, workerId),
-                    statsService.getClientVolumeTrend(salonId, workerId),
-                    statsService.getMonthlyEarningsByService(salonId, workerId),
-                    statsService.getWeeklyPerformanceDetails(salonId, workerId),
-                    statsService.getSalaryPerformanceByPeriod(salonId, workerId, performancePeriod),
-                    statsService.getServiceTimeDistribution(salonId, workerId),
-                    statsService.getOverallPerformance(salonId, workerId)
+                    performanceStatsService.getServicesByRevenue(salonId, workerId),
+                    performanceStatsService.getWorkerTopClients(salonId, workerId),
+                    performanceStatsService.getRecentWorkerActivity(salonId, workerId),
+                    performanceStatsService.getWorkerReviews(salonId, workerId),
+                    performanceStatsService.getWeeklyIncomeBreakdown(salonId, workerId),
+                    performanceStatsService.getClientVolumeTrend(salonId, workerId),
+                    performanceStatsService.getMonthlyEarningsByService(salonId, workerId),
+                    performanceStatsService.getWeeklyPerformanceDetails(salonId, workerId),
+                    performanceStatsService.getSalaryPerformanceByPeriod(salonId, workerId, performancePeriod),
+                    performanceStatsService.getServiceTimeDistribution(salonId, workerId),
+                    performanceStatsService.getOverallPerformance(salonId, workerId)
                 ]);
 
                 if (workerData) {

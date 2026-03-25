@@ -50,7 +50,7 @@ export default function SuperAdminLayout({
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
                 <div className="flex flex-col items-center gap-4">
-                    <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+                    <div className="w-12 h-12 border-4 border-color-primary border-t-transparent rounded-full animate-spin"></div>
                     <p className="text-gray-500 font-medium animate-pulse text-sm">Validating administrative credentials...</p>
                 </div>
             </div>
@@ -65,9 +65,9 @@ export default function SuperAdminLayout({
     if (isDemoMode && !isAuthorized) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-                <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-purple-100 p-8 text-center">
-                    <div className="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                        <Shield className="w-8 h-8 text-purple-600" />
+                <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-color-primary/30 p-8 text-center">
+                    <div className="w-16 h-16 bg-primary-light rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <Shield className="w-8 h-8 text-color-primary" />
                     </div>
                     <h1 className="text-2xl font-bold text-gray-900 mb-2">Restricted Access</h1>
                     <p className="text-gray-600 mb-8 text-sm">
@@ -82,7 +82,7 @@ export default function SuperAdminLayout({
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="Enter password..."
-                                className={`w-full pl-12 pr-4 py-3 bg-gray-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all ${error ? 'border-red-500 bg-red-50' : 'border-gray-200'
+                                className={`w-full pl-12 pr-4 py-3 bg-gray-50 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary transition-all ${error ? 'border-red-500 bg-red-50' : 'border-gray-200'
                                     }`}
                                 autoFocus
                             />
@@ -97,7 +97,7 @@ export default function SuperAdminLayout({
 
                         <button
                             type="submit"
-                            className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-purple-200 flex items-center justify-center gap-2 group"
+                            className="w-full bg-primary hover:bg-primary text-white font-bold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-[color:var(--color-primary)]/20 flex items-center justify-center gap-2 group"
                         >
                             Confirm Access
                             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />

@@ -13,6 +13,7 @@ export type UserRole = 'super_admin' | 'owner' | 'manager' | 'worker' | 'client'
 
 export interface User {
     id: number;
+    authId?: string;    // UUID from Supabase Auth (auth.users.id)
     userCode: string;  // 12-char code with check digit
     email: string;
     firstName: string;
@@ -76,7 +77,9 @@ export interface SalonSettings {
     sendSmsReminders: boolean;
     tipsEnabled: boolean;
     tipsDistributionRule: TipsDistributionRule;
+    tipsCustomPercentage?: number;  // For CUSTOM_PERCENTAGE distribution rule (0-100)
     defaultWorkerSharePct: number;
+    vatRate?: number;  // VAT/Tax percentage for invoicing (0-100)
     openingHours: OpeningHours[];
     createdAt: Date;
     updatedAt: Date;
@@ -93,6 +96,15 @@ export interface TipsConfiguration {
 // ============================================================
 // WORKFORCE - WORKERS
 // ============================================================
+
+/** Worker weekly schedule */
+export interface ScheduleDay {
+    active: boolean;
+    start: string;
+    end: string;
+}
+
+export type WeeklySchedule = Record<string, ScheduleDay>;
 
 export interface SalonWorker {
     id: number;
@@ -122,7 +134,7 @@ export interface SalonWorker {
     contractEndDate?: string;
     baseSalary?: number;
     experienceLevel?: string;
-    weeklySchedule?: any; // Stores the full schedule object
+    weeklySchedule?: WeeklySchedule; // Stores the full schedule object
 
     isActive: boolean;
     createdAt: Date;
@@ -314,6 +326,7 @@ export interface BookingCreateData {
     workerIds: number[];  // Will create junction records
     serviceIds: number[];  // Will create junction records
     clientName?: string;  // For new clients
+    isSensitive?: boolean;  // Flag for conflicting bookings
     clientPhone?: string; // For new clients
     clientEmail?: string; // For new clients
 }
@@ -511,6 +524,7 @@ export interface InteractionHistory {
 
 export interface SalonComment {
     id: number;
+    salonId?: number;
     entityType: string;
     entityId: number;
     userCode: string;
@@ -608,6 +622,7 @@ export interface BookingFilters {
     endDate?: string;
     isSensitive?: boolean;
     isActive?: boolean;
+    limit?: number;
 }
 
 export interface IncomeFilters {
@@ -619,6 +634,7 @@ export interface IncomeFilters {
     endDate?: string;
     hasInvoice?: boolean;
     isActive?: boolean;
+    limit?: number;
 }
 
 export interface ExpenseFilters {
@@ -627,6 +643,8 @@ export interface ExpenseFilters {
     startDate?: string;
     endDate?: string;
     status?: ExpenseStatus;
+    isActive?: boolean;
+    limit?: number;
 }
 
 export interface ReviewFilters {
@@ -638,6 +656,7 @@ export interface ReviewFilters {
     isPublic?: boolean;
     minRating?: number;
     maxRating?: number;
+    limit?: number;
 }
 
 // ============================================================
@@ -689,6 +708,7 @@ export interface SalonDetails {
     logo?: string;
     openingHours: OpeningHours[];
     timezone: string;
+    currency?: string;
 }
 
 export interface OpeningHours {
@@ -752,6 +772,98 @@ export interface Notification {
         onApprove?: () => void;
         onReject?: () => void;
     };
+}
+
+export type NotificationChannel = 'email' | 'push' | 'sms';
+export type NotificationCategory = 'revenue' | 'expense' | 'validation' | 'client' | 'worker' | 'report';
+export type DigestFrequency = 'off' | 'daily' | 'weekly' | 'monthly';
+
+export interface NotificationChannelPref {
+    id: NotificationCategory;
+    email: boolean;
+    push: boolean;
+    sms: boolean;
+}
+
+export interface NotificationPreferences {
+    id?: number;
+    salonId: number;
+    userCode: string;
+    channelPreferences: NotificationChannelPref[];
+    digestFrequency: DigestFrequency;
+    quietHoursEnabled: boolean;
+    quietHoursStart: string;
+    quietHoursEnd: string;
+    createdAt?: Date;
+    updatedAt?: Date;
+}
+
+// ============================================================
+// PAYROLL & SALARY
+// ============================================================
+
+export type PaymentStatus = 'pending' | 'approved' | 'rejected' | 'disputed' | 'auto_approved' | 'cancelled' | 'refunded';
+
+export interface SalaryPayment {
+    id?: number;
+    workerId: number;
+    salonId: number;
+    paymentMonth: string;
+    baseSalary: number;
+    commission: number;
+    tips: number;
+    totalAmount: number;
+    paidAmount: number;
+    paidDate: string;
+    paidBy?: number;
+    notes?: string;
+    status?: PaymentStatus;
+    workerApprovedAt?: string;
+    workerRejectedAt?: string;
+    rejectionReason?: string;
+    lastStatusChangeAt?: string;
+    lastStatusChangedBy?: number;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export interface PaymentStatusHistory {
+    id: number;
+    paymentId: number;
+    previousStatus?: PaymentStatus;
+    newStatus: PaymentStatus;
+    changedBy?: number;
+    changedByName?: string;
+    changedByRole?: string;
+    changedAt: string;
+    reason?: string;
+    metadata?: Record<string, unknown>;
+}
+
+export interface PaymentWithHistory extends SalaryPayment {
+    history: PaymentStatusHistory[];
+}
+
+export interface PayrollSummary {
+    workerId: number;
+    workerName: string;
+    baseSalary: number;
+    commission: number;
+    tips: number;
+    total: number;
+    paidAmount: number;
+    remainingAmount: number;
+    status: 'paid' | 'partial' | 'pending' | 'auto-paid';
+    lastPaymentDate?: string;
+}
+
+export interface PayrollFilters {
+    salonId?: number;
+    workerId?: number;
+    status?: PaymentStatus;
+    month?: string;
+    startDate?: string;
+    endDate?: string;
 }
 
 // ============================================================

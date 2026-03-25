@@ -7,7 +7,7 @@ import { Calendar, Clock, Plus, User } from "lucide-react";
 import { useTranslation } from "@/i18n";
 
 import { useWorkers } from "@/hooks/useServices";
-import { statsService } from "@/lib/services/StatsService";
+import { performanceStatsService } from "@/lib/services";
 import { useEffect, useState } from "react";
 
 const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -41,7 +41,7 @@ export default function TeamSchedulesPage() {
 
     useEffect(() => {
         const loadStats = async () => {
-            const data = await statsService.getTeamScheduleStats(1);
+            const data = await performanceStatsService.getTeamScheduleStats(1);
             setScheduleData(data);
         };
         loadStats();

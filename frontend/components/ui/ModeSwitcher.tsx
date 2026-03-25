@@ -68,7 +68,7 @@ export default function ModeSwitcher() {
                                     setIsOpen(false);
                                 }}
                                 className={`w-full text-left px-3 py-2.5 rounded-md transition-colors ${mode === m.value
-                                        ? "bg-purple-50 border-2 border-purple-500"
+                                        ? "bg-primary-light border-2 border-color-primary"
                                         : "hover:bg-gray-50 border-2 border-transparent"
                                     }`}
                             >
@@ -79,7 +79,7 @@ export default function ModeSwitcher() {
                                     </div>
                                     {mode === m.value && (
                                         <div className="flex-shrink-0 ml-2">
-                                            <div className="w-2 h-2 rounded-full bg-purple-600" />
+                                            <div className="w-2 h-2 rounded-full bg-primary" />
                                         </div>
                                     )}
                                 </div>

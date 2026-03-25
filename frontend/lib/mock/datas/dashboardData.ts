@@ -27,8 +27,8 @@ export const topPerformersData: TopPerformer[] = [
         clients: 15,
         rating: 4.9,
         avatar: "O",
-        bg: "bg-pink-100",
-        text: "text-pink-600"
+        bg: "bg-secondary-light",
+        text: "text-color-secondary"
     },
     {
         name: "Marie Smith",

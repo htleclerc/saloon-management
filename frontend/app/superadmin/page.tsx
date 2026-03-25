@@ -5,10 +5,14 @@ import { useState, useEffect } from 'react';
 import { Shield, Building2, Users, TrendingUp, Eye, ArrowRight, BarChart3, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { salonService } from '@/lib/services/SalonService';
+import { useCurrency } from '@/hooks/useCurrency';
+import { useTranslation } from '@/i18n';
 
 export default function SuperAdminDashboard() {
     const { user } = useAuth();
     const router = useRouter();
+    const { format } = useCurrency();
+    const { t } = useTranslation();
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({
         totalSalons: 0,
@@ -57,9 +61,9 @@ export default function SuperAdminDashboard() {
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px]">
-                <Loader2 className="w-10 h-10 text-purple-600 animate-spin mb-4" />
+                <Loader2 className="w-10 h-10 text-color-primary animate-spin mb-4" />
                 <p className="text-gray-500 font-medium italic animate-pulse">
-                    Chargement des données globales...
+                    {t("superadmin.loadingGlobalData")}
                 </p>
             </div>
         );
@@ -70,32 +74,32 @@ export default function SuperAdminDashboard() {
             {/* Header */}
             <div className="mb-8">
                 <div className="flex items-center gap-3 mb-2">
-                    <Shield className="w-8 h-8 text-purple-600" />
+                    <Shield className="w-8 h-8 text-color-primary" />
                     <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
-                        Tableau de Bord Super Admin
+                        {t("superadmin.dashboard")}
                     </h1>
                 </div>
                 <p className="text-gray-600">
-                    Bienvenue, <span className="font-semibold text-purple-700">{user?.name || 'Super Admin'}</span>. Voici l'état global du réseau.
+                    {t("superadmin.welcome", { name: user?.name || 'Super Admin' })}
                 </p>
             </div>
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 {/* Total Salons */}
-                <div className="bg-white rounded-2xl p-6 shadow-md border border-purple-100 hover:shadow-xl transition-all hover:-translate-y-1">
+                <div className="bg-white rounded-2xl p-6 shadow-md border border-color-primary/30 hover:shadow-xl transition-all hover:-translate-y-1">
                     <div className="flex items-center justify-between mb-4">
-                        <div className="p-3 bg-purple-100 rounded-xl">
-                            <Building2 className="w-6 h-6 text-purple-600" />
+                        <div className="p-3 bg-primary-light rounded-xl">
+                            <Building2 className="w-6 h-6 text-color-primary" />
                         </div>
-                        <span className="text-xs bg-purple-50 text-purple-700 px-2.5 py-1 rounded-full font-bold">
+                        <span className="text-xs bg-primary-light text-color-primary px-2.5 py-1 rounded-full font-bold">
                             Total
                         </span>
                     </div>
                     <h3 className="text-3xl font-bold text-gray-900 mb-1 tracking-tight">
                         {stats.totalSalons}
                     </h3>
-                    <p className="text-gray-500 text-sm font-medium">Salons enregistrés</p>
+                    <p className="text-gray-500 text-sm font-medium">{t("superadmin.registeredSalons")}</p>
                 </div>
 
                 {/* Active Salons */}
@@ -105,13 +109,13 @@ export default function SuperAdminDashboard() {
                             <TrendingUp className="w-6 h-6 text-green-600" />
                         </div>
                         <span className="text-xs bg-green-50 text-green-700 px-2.5 py-1 rounded-full font-bold">
-                            {stats.totalSalons > 0 ? Math.round((stats.activeSalons / stats.totalSalons) * 100) : 0}% Activité
+                            {stats.totalSalons > 0 ? Math.round((stats.activeSalons / stats.totalSalons) * 100) : 0}% {t("superadmin.activity")}
                         </span>
                     </div>
                     <h3 className="text-3xl font-bold text-gray-900 mb-1 tracking-tight">
                         {stats.activeSalons}
                     </h3>
-                    <p className="text-gray-500 text-sm font-medium">Salons actifs</p>
+                    <p className="text-gray-500 text-sm font-medium">{t("superadmin.activeSalons")}</p>
                 </div>
 
                 {/* Total Users */}
@@ -127,7 +131,7 @@ export default function SuperAdminDashboard() {
                     <h3 className="text-3xl font-bold text-gray-900 mb-1 tracking-tight">
                         {stats.totalUsers}
                     </h3>
-                    <p className="text-gray-500 text-sm font-medium">Utilisateurs totaux</p>
+                    <p className="text-gray-500 text-sm font-medium">{t("superadmin.totalUsers")}</p>
                 </div>
 
                 {/* Monthly Revenue */}
@@ -137,44 +141,44 @@ export default function SuperAdminDashboard() {
                             <BarChart3 className="w-6 h-6 text-orange-600" />
                         </div>
                         <span className="text-xs bg-orange-50 text-orange-700 px-2.5 py-1 rounded-full font-bold">
-                            +12.5% vs mois dernier
+                            {t("superadmin.vsLastMonth")}
                         </span>
                     </div>
                     <h3 className="text-3xl font-bold text-gray-900 mb-1 tracking-tight">
-                        {stats.monthlyRevenue.toLocaleString('fr-FR')}€
+                        {format(stats.monthlyRevenue)}
                     </h3>
-                    <p className="text-gray-500 text-sm font-medium">CA Mensuel Global</p>
+                    <p className="text-gray-500 text-sm font-medium">{t("superadmin.globalMonthlyRevenue")}</p>
                 </div>
             </div>
 
             {/* Quick Actions */}
             <div>
                 <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                    <div className="w-1.5 h-6 bg-purple-600 rounded-full"></div>
-                    Actions Rapides
+                    <div className="w-1.5 h-6 bg-primary rounded-full"></div>
+                    {t("superadmin.quickActions")}
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* View All Salons */}
                     <button
                         onClick={() => router.push('/superadmin/salons')}
-                        className="bg-white rounded-2xl p-6 shadow-md border border-gray-100 hover:border-purple-400 hover:shadow-xl transition-all group text-left relative overflow-hidden"
+                        className="bg-white rounded-2xl p-6 shadow-md border border-gray-100 hover:border-color-primary hover:shadow-xl transition-all group text-left relative overflow-hidden"
                     >
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-purple-50 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110 duration-500 -z-10"></div>
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-primary-light rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110 duration-500 -z-10"></div>
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                                <div className="p-4 bg-purple-100 rounded-2xl group-hover:bg-purple-200 transition-colors shadow-inner">
-                                    <Eye className="w-6 h-6 text-purple-600" />
+                                <div className="p-4 bg-primary-light rounded-2xl group-hover:bg-primary transition-colors shadow-inner">
+                                    <Eye className="w-6 h-6 text-color-primary" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-gray-900 text-lg mb-1 group-hover:text-purple-700 transition-colors">
-                                        Gérer les Salons
+                                    <h3 className="font-bold text-gray-900 text-lg mb-1 group-hover:text-color-primary transition-colors">
+                                        {t("superadmin.manageSalonsAction")}
                                     </h3>
                                     <p className="text-sm text-gray-500">
-                                        Voir, modérer et configurer tous les salons du réseau.
+                                        {t("superadmin.manageSalonsDesc")}
                                     </p>
                                 </div>
                             </div>
-                            <ArrowRight className="w-6 h-6 text-gray-400 group-hover:text-purple-600 group-hover:translate-x-2 transition-all" />
+                            <ArrowRight className="w-6 h-6 text-gray-400 group-hover:text-color-primary group-hover:translate-x-2 transition-all" />
                         </div>
                     </button>
 
@@ -182,15 +186,15 @@ export default function SuperAdminDashboard() {
                     <div className="bg-gray-50 rounded-2xl p-6 border border-dashed border-gray-300 text-left opacity-75 relative group grayscale hover:grayscale-0 transition-all">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                                <div className="p-4 bg-gray-200 rounded-2xl shadow-inner group-hover:bg-purple-50 group-hover:text-purple-600 transition-all">
-                                    <BarChart3 className="w-6 h-6 text-gray-400 group-hover:text-purple-600" />
+                                <div className="p-4 bg-gray-200 rounded-2xl shadow-inner group-hover:bg-primary-light group-hover:text-color-primary transition-all">
+                                    <BarChart3 className="w-6 h-6 text-gray-400 group-hover:text-color-primary" />
                                 </div>
                                 <div>
                                     <h3 className="font-bold text-gray-600 mb-1 group-hover:text-gray-900">
-                                        Analytique Globale
+                                        {t("superadmin.globalAnalytics")}
                                     </h3>
                                     <p className="text-sm text-gray-400 group-hover:text-gray-500">
-                                        Statistiques croisées et tendances du réseau. <span className="italic font-medium text-purple-500 ml-1">Bientôt disponible</span>
+                                        {t("superadmin.globalAnalyticsDesc")} <span className="italic font-medium text-color-primary ml-1">{t("superadmin.comingSoonLabel")}</span>
                                     </p>
                                 </div>
                             </div>

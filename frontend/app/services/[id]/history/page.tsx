@@ -89,7 +89,7 @@ export default function ServiceHistoryPage() {
         switch (type) {
             case 'income': return 'bg-green-500 text-white';
             case 'booking': return 'bg-blue-500 text-white';
-            case 'invoice': return 'bg-purple-500 text-white';
+            case 'invoice': return 'bg-primary-light0 text-white';
             default: return 'bg-gray-500 text-white';
         }
     };
@@ -143,7 +143,7 @@ export default function ServiceHistoryPage() {
                                     placeholder="Search in history..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-3 bg-gray-50 border-none rounded-2xl text-xs focus:ring-2 focus:ring-purple-500 outline-none"
+                                    className="w-full pl-10 pr-4 py-3 bg-gray-50 border-none rounded-2xl text-xs focus:ring-2 focus:ring-primary outline-none"
                                 />
                             </div>
                         </div>
@@ -152,7 +152,7 @@ export default function ServiceHistoryPage() {
                     <Card className="p-0 border-none shadow-2xl shadow-gray-200/50 bg-white rounded-[2rem] overflow-hidden">
                         <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                             <div className="flex items-center gap-3">
-                                <div className="p-3 bg-[var(--color-primary)] text-white rounded-2xl shadow-lg shadow-purple-500/20">
+                                <div className="p-3 bg-[var(--color-primary)] text-white rounded-2xl shadow-lg shadow-[color:var(--color-primary)]/20">
                                     <History className="w-6 h-6" />
                                 </div>
                                 <h3 className="text-xl font-bold text-gray-900">Historical Records</h3>

@@ -9,10 +9,12 @@ import { Save, X } from "lucide-react";
 import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 import { useToast } from "@/context/ToastProvider";
 import { useTranslation } from "@/i18n";
+import { useCurrency } from "@/hooks/useCurrency";
 
 export default function AddExpensePage() {
     const router = useRouter();
     const { t } = useTranslation();
+    const { symbol } = useCurrency();
     const { handleReadOnlyClick } = useReadOnlyGuard();
     const [formData, setFormData] = useState({
         date: new Date().toISOString().split('T')[0],
@@ -33,7 +35,6 @@ export default function AddExpensePage() {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (handleReadOnlyClick()) return;
-        console.log("Expense data:", formData);
 
         if (userRole === "worker") {
             showToast(t("common.info"), t("expenses.submittedInfo"), "info");
@@ -70,7 +71,7 @@ export default function AddExpensePage() {
                             {/* Date */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Date <span className="text-red-500">*</span>
+                                    {t("common.date")} <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="date"
@@ -85,7 +86,7 @@ export default function AddExpensePage() {
                             {/* Category */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Category <span className="text-red-500">*</span>
+                                    {t("expenses.category")} <span className="text-red-500">*</span>
                                 </label>
                                 <select
                                     name="category"
@@ -94,23 +95,23 @@ export default function AddExpensePage() {
                                     required
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                                 >
-                                    <option value="">Select a category</option>
-                                    <option value="Office Rental">Office Rental</option>
-                                    <option value="Rental Relative Expenses">Rental Relative Expenses</option>
-                                    <option value="Electricity">Electricity</option>
-                                    <option value="IG & Facebook & Google">IG & Facebook & Google</option>
-                                    <option value="Office Cleaning">Office Cleaning</option>
-                                    <option value="Internet">Internet</option>
-                                    <option value="TV">TV</option>
-                                    <option value="Beauty Supply">Beauty Supply</option>
-                                    <option value="Other Expenses">Other Expenses</option>
+                                    <option value="">{t("common.search")}...</option>
+                                    <option value="rent">{t("expenses.categories.rent")}</option>
+                                    <option value="supplies">{t("expenses.categories.supplies")}</option>
+                                    <option value="utilities">{t("expenses.categories.utilities")}</option>
+                                    <option value="marketing">{t("expenses.categories.marketing")}</option>
+                                    <option value="insurance">{t("expenses.categories.insurance")}</option>
+                                    <option value="maintenance">{t("expenses.categories.maintenance")}</option>
+                                    <option value="software">{t("expenses.categories.software")}</option>
+                                    <option value="salary">{t("expenses.categories.salary")}</option>
+                                    <option value="other">{t("expenses.categories.other")}</option>
                                 </select>
                             </div>
 
                             {/* Description */}
                             <div className="md:col-span-2">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Description <span className="text-red-500">*</span>
+                                    {t("common.description")} <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="text"
@@ -126,7 +127,7 @@ export default function AddExpensePage() {
                             {/* Amount */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Amount (€) <span className="text-red-500">*</span>
+                                    {t("common.amount")} ({symbol()}) <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="number"
@@ -144,7 +145,7 @@ export default function AddExpensePage() {
                             {/* Salon */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Salon/Location
+                                    {t("common.salon")}
                                 </label>
                                 <select
                                     name="salon"
@@ -161,7 +162,7 @@ export default function AddExpensePage() {
                             {/* Payment Method */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Payment Method
+                                    {t("common.payment")}
                                 </label>
                                 <select
                                     name="paymentMethod"
@@ -169,10 +170,10 @@ export default function AddExpensePage() {
                                     onChange={handleChange}
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                                 >
-                                    <option>Cash</option>
-                                    <option>Card</option>
-                                    <option>Bank Transfer</option>
-                                    <option>Check</option>
+                                    <option value="cash">{t("payment.methods.cash")}</option>
+                                    <option value="card">{t("payment.methods.card")}</option>
+                                    <option value="mobile">{t("payment.methods.mobile")}</option>
+                                    <option value="others">{t("payment.methods.others")}</option>
                                 </select>
                             </div>
 

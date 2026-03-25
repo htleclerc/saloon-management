@@ -5,6 +5,8 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { FileText, Download } from "lucide-react";
 import { useAuth } from "@/context/AuthProvider";
+import { useCurrency } from "@/hooks/useCurrency";
+import { useTranslation } from "@/i18n";
 import { jsPDF } from "jspdf";
 
 import React, { useState, useEffect } from "react";
@@ -13,6 +15,8 @@ import { incomeService } from "@/lib/services";
 export default function ClientInvoicesPage() {
     const [incomes, setIncomes] = useState<any[]>([]);
     const { user, activeSalonId } = useAuth();
+    const { format: formatCurrency, symbol } = useCurrency();
+    const { t } = useTranslation();
 
     useEffect(() => {
         if (activeSalonId) {
@@ -38,10 +42,10 @@ export default function ClientInvoicesPage() {
         doc.text("DESCRIPTION", 20, 95);
         doc.text("TOTAL", 170, 95);
         doc.text("Salon Services", 20, 105);
-        doc.text(`€${income.amount}`, 170, 105);
+        doc.text(`${symbol()}${income.amount}`, 170, 105);
         doc.line(20, 115, 190, 115);
         doc.setFontSize(14);
-        doc.text(`TOTAL DUE: €${income.amount}`, 170, 125, { align: "right" });
+        doc.text(`TOTAL DUE: ${symbol()}${income.amount}`, 170, 125, { align: "right" });
         doc.save(`Invoice_${income.id}.pdf`);
     };
 
@@ -49,27 +53,27 @@ export default function ClientInvoicesPage() {
         <MainLayout>
             <div className="space-y-6">
                 <div>
-                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900">My Invoices</h1>
-                    <p className="text-gray-500 mt-1">View and download your past service invoices</p>
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{t("clientInvoices.title")}</h1>
+                    <p className="text-gray-500 mt-1">{t("clientInvoices.subtitle")}</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {clientInvoices.length === 0 ? (
                         <div className="col-span-full">
                             <Card className="p-8 text-center text-gray-500 italic">
-                                You have no invoices available for download.
+                                {t("clientInvoices.noInvoices")}
                             </Card>
                         </div>
                     ) : (
                         clientInvoices.map((inc) => (
-                            <Card key={inc.id} className="p-6 flex flex-col gap-4 border-t-4 border-purple-500">
+                            <Card key={inc.id} className="p-6 flex flex-col gap-4 border-t-4 border-color-primary">
                                 <div className="flex justify-between items-start">
-                                    <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600">
+                                    <div className="w-12 h-12 bg-primary-light rounded-xl flex items-center justify-center text-color-primary">
                                         <FileText className="w-6 h-6" />
                                     </div>
                                     <div className="text-right">
                                         <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Amount</p>
-                                        <p className="text-xl font-bold text-gray-900">€{inc.amount}</p>
+                                        <p className="text-xl font-bold text-gray-900">{formatCurrency(inc.amount)}</p>
                                     </div>
                                 </div>
                                 <div>
@@ -81,7 +85,7 @@ export default function ClientInvoicesPage() {
                                     onClick={() => handleDownloadInvoice(inc)}
                                 >
                                     <Download className="w-4 h-4" />
-                                    Download PDF
+                                    {t("clientInvoices.downloadPdf")}
                                 </Button>
                             </Card>
                         ))

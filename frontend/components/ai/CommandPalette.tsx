@@ -113,7 +113,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
                     {/* Header */}
                     <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
                         <div className="flex items-center gap-2">
-                            <Sparkles className="w-5 h-5 text-purple-500" />
+                            <Sparkles className="w-5 h-5 text-color-primary" />
                             <h2 className="text-lg font-semibold text-gray-900">Assistant IA</h2>
                         </div>
                         <button
@@ -132,13 +132,13 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
                                 placeholder="Que voulez-vous faire ? (ex: Créer un rdv pour Sophie demain à 14h)"
-                                className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-gray-900"
+                                className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-gray-900"
                                 autoFocus
                                 disabled={loading}
                             />
                             {loading && (
                                 <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                    <Loader className="w-5 h-5 text-purple-500 animate-spin" />
+                                    <Loader className="w-5 h-5 text-color-primary animate-spin" />
                                 </div>
                             )}
                         </div>
@@ -160,19 +160,19 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
                     {/* Result */}
                     {result && !loading && (
                         <div className="px-6 pb-6">
-                            <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                            <div className="p-4 bg-primary-light border border-color-primary/30 rounded-lg">
                                 <div className="flex items-start gap-3">
-                                    <Sparkles className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                                    <Sparkles className="w-5 h-5 text-color-primary flex-shrink-0 mt-0.5" />
                                     <div className="flex-1">
-                                        <h3 className="font-semibold text-purple-900">Action suggérée</h3>
-                                        <p className="text-sm text-purple-700 mt-1">
+                                        <h3 className="font-semibold text-color-primary">Action suggérée</h3>
+                                        <p className="text-sm text-color-primary mt-1">
                                             {result.action === 'create_booking' && 'Créer une nouvelle réservation'}
                                             {result.action === 'show_analytics' && 'Afficher les analytics'}
                                             {result.action === 'show_form' && 'Ouvrir le formulaire manuel'}
                                         </p>
 
                                         {result.data && Object.keys(result.data).length > 0 && (
-                                            <div className="mt-3 p-3 bg-white rounded border border-purple-200">
+                                            <div className="mt-3 p-3 bg-white rounded border border-color-primary/30">
                                                 <pre className="text-xs text-gray-700 overflow-auto">
                                                     {JSON.stringify(result.data, null, 2)}
                                                 </pre>
@@ -182,7 +182,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
                                         <div className="mt-4 flex gap-2">
                                             <button
                                                 onClick={executeAction}
-                                                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm"
+                                                className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary transition-colors font-medium text-sm"
                                             >
                                                 Exécuter
                                             </button>

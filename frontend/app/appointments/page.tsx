@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
@@ -12,12 +12,14 @@ import { useAuth, RequirePermission } from "@/context/AuthProvider";
 import { bookingService } from "@/lib/services";
 import { Services } from "@/lib/services";
 import { BookingStatus, Booking } from "@/types";
+import { BOOKING_STATUS, BOOKING_STATUS_FILTER_OPTIONS, getBookingStatusColor, getBookingStatusLabel } from "@/lib/constants/bookingStatus";
 import { useRouter } from "next/navigation";
 import AppointmentDetailModal from "@/components/booking/AppointmentDetailModal";
 import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 import { useToast } from "@/context/ToastProvider";
 import { useConfirm } from "@/context/ConfirmProvider";
 import { useTranslation } from "@/i18n";
+import { useCurrency } from "@/hooks/useCurrency";
 
 // Helper type for UI
 type AppointmentUI = {
@@ -37,19 +39,8 @@ type AppointmentUI = {
     isAdminModified: boolean;
 };
 
-// Export columns configuration
-const exportColumns: ExportColumn[] = [
-    { key: "displayId", header: "ID" },
-    { key: "clientName", header: "Client" },
-    { key: "clientPhone", header: "Phone" },
-    { key: "serviceName", header: "Service" },
-    { key: "workerName", header: "Worker" },
-    { key: "date", header: "Date" },
-    { key: "time", header: "Time" },
-    { key: "duration", header: "Duration" },
-    { key: "totalPrice", header: "Price" },
-    { key: "status", header: "Status" },
-];
+// Default items per page
+const DEFAULT_ITEMS_PER_PAGE = 10;
 
 export default function AppointmentsPage() {
     const { getCardStyle } = useKpiCardStyle();
@@ -57,14 +48,29 @@ export default function AppointmentsPage() {
     const { handleReadOnlyClick } = useReadOnlyGuard();
     const router = useRouter();
     const { t } = useTranslation();
+    const { format: formatCurrency } = useCurrency();
     const [detailModal, setDetailModal] = useState<{ open: boolean; appointment: any | null }>({ open: false, appointment: null });
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("All");
     const [workerFilter, setWorkerFilter] = useState("All");
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [itemsPerPage, setItemsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE);
     const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
     const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
+
+    // Export columns — translated headers derived from t()
+    const exportColumns: ExportColumn[] = useMemo(() => [
+        { key: "displayId", header: t("common.id") },
+        { key: "clientName", header: t("common.client") },
+        { key: "clientPhone", header: t("common.phone") },
+        { key: "serviceName", header: t("common.service") },
+        { key: "workerName", header: t("common.worker") },
+        { key: "date", header: t("common.date") },
+        { key: "time", header: t("common.time") },
+        { key: "duration", header: t("appointments.duration") },
+        { key: "totalPrice", header: t("appointments.price") },
+        { key: "status", header: t("appointments.status") },
+    ], [t]);
 
     // Data state
     const [appointments, setAppointments] = useState<AppointmentUI[]>([]);
@@ -128,7 +134,7 @@ export default function AppointmentsPage() {
                     date: b.date,
                     time: b.time,
                     duration: b.duration,
-                    totalPrice: `€${totalPrice}`,
+                    totalPrice: formatCurrency(totalPrice),
                     status: b.status,
                     isAdminModified,
                     // keep raw for actions
@@ -137,7 +143,7 @@ export default function AppointmentsPage() {
             });
             setAppointments(processed);
 
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
         } finally {
             setLoading(false);
@@ -148,7 +154,7 @@ export default function AppointmentsPage() {
     const [refreshKey, setRefreshKey] = useState(0);
     const refresh = () => setRefreshKey(prev => prev + 1);
 
-    useMemo(() => {
+    useEffect(() => {
         fetchData();
     }, [refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -296,22 +302,13 @@ export default function AppointmentsPage() {
         }
     };
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case "Confirmed": return "bg-[var(--color-success-light)] text-[var(--color-success)]";
-            case "Pending": return "bg-[var(--color-warning-light)] text-[var(--color-warning)]";
-            case "PendingApproval": return "bg-[var(--color-secondary-light)] text-[var(--color-secondary)] font-bold animate-pulse";
-            case "Rescheduled": return "bg-[var(--color-primary-light)] text-[var(--color-primary)]";
-            case "Completed": return "bg-blue-100 text-blue-700";
-            case "Cancelled": return "bg-[var(--color-error-light)] text-[var(--color-error)]";
-            default: return "bg-gray-100 text-gray-700";
-        }
-    };
+    // Use constant-based helper instead of switch on literal strings
+    const getStatusColor = (status: string) => getBookingStatusColor(status);
 
     const stats = {
         total: filteredByRole.length,
-        confirmed: filteredByRole.filter((a: any) => a.status === "Confirmed").length,
-        pending: filteredByRole.filter((a: any) => a.status === "Pending").length,
+        confirmed: filteredByRole.filter((a: any) => a.status === BOOKING_STATUS.CONFIRMED).length,
+        pending: filteredByRole.filter((a: any) => a.status === BOOKING_STATUS.PENDING).length,
         today: filteredByRole.filter((a: any) => a.date === new Date().toISOString().split('T')[0]).length,
     };
 
@@ -389,18 +386,18 @@ export default function AppointmentsPage() {
     return (
         <MainLayout>
             <div className="space-y-6">
-                {/* Header */}
+                {/* Page Header */}
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                     <div className="w-full md:w-auto">
-                        <h1 className="text-3xl font-bold text-gray-900">Appointments</h1>
-                        <p className="text-gray-500 mt-1">Manage and track all appointments</p>
+                        <h1 className="text-3xl font-bold text-gray-900">{t("appointments.title")}</h1>
+                        <p className="text-gray-500 mt-1">{t("appointments.subtitle")}</p>
                     </div>
                     {(canAddServices() || isClient) && canModify && (
                         <div className="w-full md:w-auto flex justify-end">
                             <Link href="/appointments/book">
-                                <Button variant="primary" size="md" className="rounded-2xl h-14 w-14 md:h-12 md:w-auto md:px-6 flex items-center justify-center p-0 md:p-auto shadow-xl shadow-purple-500/30 active:scale-95 transition-all">
+                                <Button variant="primary" size="md" className="rounded-2xl h-14 w-14 md:h-12 md:w-auto md:px-6 flex items-center justify-center p-0 md:p-auto shadow-xl shadow-[color:var(--color-primary)]/20 active:scale-95 transition-all">
                                     <Plus className="w-8 h-8 md:w-6 md:h-6" />
-                                    <span className="hidden md:inline ml-2 font-bold">{isClient ? "Book Appointment" : "New Appointment"}</span>
+                                    <span className="hidden md:inline ml-2 font-bold">{isClient ? t("appointments.book") : t("appointments.newAppointment")}</span>
                                 </Button>
                             </Link>
                         </div>
@@ -416,7 +413,7 @@ export default function AppointmentsPage() {
                             </div>
                         </div>
                         <div className="mt-2 sm:mt-4">
-                            <p className="text-[10px] sm:text-sm opacity-90 mb-0.5 sm:mb-1 uppercase font-bold tracking-wider">Total</p>
+                            <p className="text-[10px] sm:text-sm opacity-90 mb-0.5 sm:mb-1 uppercase font-bold tracking-wider">{t("common.total")}</p>
                             <h3 className="text-xl sm:text-3xl font-bold">{stats.total}</h3>
                         </div>
                     </Card>
@@ -428,7 +425,7 @@ export default function AppointmentsPage() {
                             </div>
                         </div>
                         <div className="mt-2 sm:mt-4">
-                            <p className="text-[10px] sm:text-sm opacity-90 mb-0.5 sm:mb-1 uppercase font-bold tracking-wider">Confirmed</p>
+                            <p className="text-[10px] sm:text-sm opacity-90 mb-0.5 sm:mb-1 uppercase font-bold tracking-wider">{t("appointments.confirmed")}</p>
                             <h3 className="text-xl sm:text-3xl font-bold">{stats.confirmed}</h3>
                         </div>
                     </Card>
@@ -440,7 +437,7 @@ export default function AppointmentsPage() {
                             </div>
                         </div>
                         <div className="mt-2 sm:mt-4">
-                            <p className="text-[10px] sm:text-sm opacity-90 mb-0.5 sm:mb-1 uppercase font-bold tracking-wider">Pending</p>
+                            <p className="text-[10px] sm:text-sm opacity-90 mb-0.5 sm:mb-1 uppercase font-bold tracking-wider">{t("appointments.pending")}</p>
                             <h3 className="text-xl sm:text-3xl font-bold">{stats.pending}</h3>
                         </div>
                     </Card>
@@ -452,7 +449,7 @@ export default function AppointmentsPage() {
                             </div>
                         </div>
                         <div className="mt-2 sm:mt-4">
-                            <p className="text-[10px] sm:text-sm opacity-90 mb-0.5 sm:mb-1 uppercase font-bold tracking-wider">Today</p>
+                            <p className="text-[10px] sm:text-sm opacity-90 mb-0.5 sm:mb-1 uppercase font-bold tracking-wider">{t("dashboard.today")}</p>
                             <h3 className="text-xl sm:text-3xl font-bold">{stats.today}</h3>
                         </div>
                     </Card>
@@ -466,7 +463,7 @@ export default function AppointmentsPage() {
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                             <input
                                 type="text"
-                                placeholder="Search by client, service, worker, or ID..."
+                                placeholder={t("appointments.searchPlaceholder")}
                                 value={searchTerm}
                                 onChange={(e) => handleFilterChange(setSearchTerm)(e.target.value)}
                                 className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
@@ -480,11 +477,12 @@ export default function AppointmentsPage() {
                                 onChange={(e) => handleFilterChange(setStatusFilter)(e.target.value)}
                                 className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                             >
-                                <option value="All">All Status</option>
-                                <option value="Confirmed">Confirmed</option>
-                                <option value="Pending">Pending</option>
-                                <option value="Completed">Completed</option>
-                                <option value="Cancelled">Cancelled</option>
+                                <option value="All">{t("appointments.allStatus")}</option>
+                                {BOOKING_STATUS_FILTER_OPTIONS.map((cfg) => (
+                                    <option key={cfg.code} value={cfg.code}>
+                                        {t(cfg.labelKey)}
+                                    </option>
+                                ))}
                             </select>
                             {!isWorker && (
                                 <select
@@ -492,8 +490,7 @@ export default function AppointmentsPage() {
                                     onChange={(e) => handleFilterChange(setWorkerFilter)(e.target.value)}
                                     className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary-light)]"
                                 >
-                                    <option value="All">All Workers</option>
-                                    <option value="All">All Workers</option>
+                                    <option value="All">{t("common.allWorkers")}</option>
                                     {workers.map((worker: any) => (
                                         <option key={worker.id} value={worker.name}>{worker.name}</option>
                                     ))}
@@ -528,26 +525,26 @@ export default function AppointmentsPage() {
                     {selectedItems.size > 0 && hasPermission(['manager', 'super_admin']) && (
                         <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap items-center justify-end sm:justify-start gap-3">
                             <span className="text-sm font-medium text-[var(--color-primary)]">
-                                {selectedItems.size} selected
+                                {t("approvals.selected", { count: selectedItems.size })}
                             </span>
                             <div className="h-4 w-px bg-gray-300"></div>
                             <Button
                                 variant="outline"
                                 size="sm"
                                 className="text-green-600 border-green-200 hover:bg-green-50"
-                                onClick={() => handleBulkStatusChange("Confirmed")}
+                                onClick={() => handleBulkStatusChange(BOOKING_STATUS.CONFIRMED)}
                             >
                                 <CheckSquare className="w-4 h-4 sm:mr-1" />
-                                <span className="hidden sm:inline">Mark Confirmed</span>
+                                <span className="hidden sm:inline">{t("appointments.markConfirmed")}</span>
                             </Button>
                             <Button
                                 variant="outline"
                                 size="sm"
                                 className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                                onClick={() => handleBulkStatusChange("Completed")}
+                                onClick={() => handleBulkStatusChange(BOOKING_STATUS.COMPLETED)}
                             >
                                 <Check className="w-4 h-4 sm:mr-1" />
-                                <span className="hidden sm:inline">Mark Completed</span>
+                                <span className="hidden sm:inline">{t("appointments.markCompleted")}</span>
                             </Button>
                             <Button
                                 variant="outline"
@@ -556,13 +553,13 @@ export default function AppointmentsPage() {
                                 onClick={handleBulkDelete}
                             >
                                 <Trash2 className="w-4 h-4 sm:mr-1" />
-                                <span className="hidden sm:inline">Delete</span>
+                                <span className="hidden sm:inline">{t("common.delete")}</span>
                             </Button>
                             <button
                                 onClick={() => setSelectedItems(new Set())}
                                 className="text-sm text-gray-500 hover:text-gray-700 ml-auto"
                             >
-                                Clear selection
+                                {t("appointments.clearSelection")}
                             </button>
                         </div>
                     )}
@@ -572,13 +569,17 @@ export default function AppointmentsPage() {
                 <Card className="overflow-hidden">
                     <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div>
-                            <h3 className="text-lg font-semibold text-gray-900">Appointments List</h3>
+                            <h3 className="text-lg font-semibold text-gray-900">{t("appointments.list")}</h3>
                             <p className="text-sm text-gray-500">
-                                Showing {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, sortedAppointments.length)} of {sortedAppointments.length} appointments
+                                {t("common.pagination", {
+                                    start: ((currentPage - 1) * itemsPerPage) + 1,
+                                    end: Math.min(currentPage * itemsPerPage, sortedAppointments.length),
+                                    total: sortedAppointments.length
+                                })}
                             </p>
                         </div>
                         <div className="flex items-center gap-2 text-sm">
-                            <span className="text-gray-500">Show</span>
+                            <span className="text-gray-500">{t("clients.table.show")}</span>
                             <select
                                 value={itemsPerPage}
                                 onChange={(e) => {
@@ -592,13 +593,13 @@ export default function AppointmentsPage() {
                                 <option value={25}>25</option>
                                 <option value={50}>50</option>
                             </select>
-                            <span className="text-gray-500">per page</span>
+                            <span className="text-gray-500">{t("clients.table.perPage")}</span>
                         </div>
                     </div>
                     {/* Mobile Card View */}
                     <div className="md:hidden divide-y divide-gray-100">
                         {paginatedAppointments.map((apt) => (
-                            <div key={apt.id} className={`p-4 space-y-3 ${selectedItems.has(apt.id) ? 'bg-purple-50' : 'bg-white'}`}>
+                            <div key={apt.id} className={`p-4 space-y-3 ${selectedItems.has(apt.id) ? 'bg-primary-light' : 'bg-white'}`}>
                                 <div className="flex justify-between items-start">
                                     <div className="flex items-center gap-2">
                                         <button
@@ -614,7 +615,7 @@ export default function AppointmentsPage() {
                                         <span className="text-xs font-mono text-gray-500">{apt.displayId}</span>
                                     </div>
                                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusColor(apt.status)}`}>
-                                        {apt.status}
+                                        {getBookingStatusLabel(apt.status, t)}
                                     </span>
                                 </div>
 
@@ -636,30 +637,30 @@ export default function AppointmentsPage() {
                                                     size="sm"
                                                     onClick={() => confirmBooking(apt.id)}
                                                     className="w-10 h-10 p-0 flex items-center justify-center shadow-sm"
-                                                    disabled={apt.status !== 'Pending'}
-                                                    title="Valider"
+                                                    disabled={apt.status !== BOOKING_STATUS.PENDING}
+                                                    title={t("common.validate")}
                                                 >
                                                     <Check className="w-5 h-5" />
                                                 </Button>
                                             )}
-                                            {isClient && apt.status === 'PendingApproval' && (
+                                            {isClient && apt.status === BOOKING_STATUS.PENDING_APPROVAL && (
                                                 <Button
                                                     variant="success"
                                                     size="sm"
                                                     onClick={() => approveRescheduleAction(apt.id)}
                                                     className="w-10 h-10 p-0 flex items-center justify-center shadow-sm"
-                                                    title="Approve Reschedule"
+                                                    title={t("appointments.approveReschedule")}
                                                 >
                                                     <Check className="w-5 h-5" />
                                                 </Button>
                                             )}
-                                            {isClient && apt.status === 'PendingApproval' && (
+                                            {isClient && apt.status === BOOKING_STATUS.PENDING_APPROVAL && (
                                                 <Button
                                                     variant="danger"
                                                     size="sm"
                                                     onClick={() => rejectRescheduleAction(apt.id)}
                                                     className="w-10 h-10 p-0 flex items-center justify-center shadow-sm"
-                                                    title="Reject Reschedule"
+                                                    title={t("appointments.reject")}
                                                 >
                                                     <X className="w-5 h-5" />
                                                 </Button>
@@ -669,7 +670,7 @@ export default function AppointmentsPage() {
                                                 size="sm"
                                                 onClick={() => handleViewDetails(apt)}
                                                 className="w-10 h-10 p-0 flex items-center justify-center bg-[var(--color-primary-light)] border-transparent text-[var(--color-primary)] hover:opacity-80"
-                                                title="Voir"
+                                                title={t("common.view")}
                                             >
                                                 <Eye className="w-5 h-5" />
                                             </Button>
@@ -761,7 +762,7 @@ export default function AppointmentsPage() {
                                 {paginatedAppointments.map((apt) => (
                                     <tr
                                         key={apt.id}
-                                        className={`hover:bg-gray-50 transition cursor-pointer ${selectedItems.has(apt.id) ? 'bg-purple-50' : ''}`}
+                                        className={`hover:bg-gray-50 transition cursor-pointer ${selectedItems.has(apt.id) ? 'bg-primary-light' : ''}`}
                                         onClick={() => handleViewDetails(apt)}
                                     >
                                         <td className="px-4 py-4">
@@ -801,11 +802,11 @@ export default function AppointmentsPage() {
                                                 <p className="text-xs text-gray-500">{apt.time}</p>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-gray-700">{apt.duration} min</td>
+                                        <td className="px-6 py-4 text-sm text-gray-700">{apt.duration} {t("appointments.durationUnit")}</td>
                                         <td className="px-6 py-4 text-sm font-bold text-gray-900">{apt.totalPrice}</td>
                                         <td className="px-6 py-4">
                                             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(apt.status)}`}>
-                                                {apt.status}
+                                                {getBookingStatusLabel(apt.status, t)}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
@@ -816,30 +817,30 @@ export default function AppointmentsPage() {
                                                         size="sm"
                                                         onClick={() => { if (!handleReadOnlyClick()) confirmBooking(apt.id) }}
                                                         className="w-10 h-10 p-0 flex items-center justify-center shadow-sm"
-                                                        disabled={apt.status !== 'Pending'}
-                                                        title="Valider"
+                                                        disabled={apt.status !== BOOKING_STATUS.PENDING}
+                                                        title={t("common.validate")}
                                                     >
                                                         <Check className="w-5 h-5" />
                                                     </Button>
                                                 )}
-                                                {isClient && apt.status === 'PendingApproval' && (
+                                                {isClient && apt.status === BOOKING_STATUS.PENDING_APPROVAL && (
                                                     <Button
                                                         variant="success"
                                                         size="sm"
                                                         onClick={() => { if (!handleReadOnlyClick()) approveRescheduleAction(apt.id) }}
                                                         className="w-10 h-10 p-0 flex items-center justify-center shadow-sm"
-                                                        title="Approve Reschedule"
+                                                        title={t("appointments.approveReschedule")}
                                                     >
                                                         <Check className="w-5 h-5" />
                                                     </Button>
                                                 )}
-                                                {isClient && apt.status === 'PendingApproval' && (
+                                                {isClient && apt.status === BOOKING_STATUS.PENDING_APPROVAL && (
                                                     <Button
                                                         variant="danger"
                                                         size="sm"
                                                         onClick={() => { if (!handleReadOnlyClick()) rejectRescheduleAction(apt.id) }}
                                                         className="w-10 h-10 p-0 flex items-center justify-center shadow-sm"
-                                                        title="Reject Reschedule"
+                                                        title={t("appointments.reject")}
                                                     >
                                                         <X className="w-5 h-5" />
                                                     </Button>
@@ -849,7 +850,7 @@ export default function AppointmentsPage() {
                                                     size="sm"
                                                     onClick={() => handleViewDetails(apt)}
                                                     className="w-10 h-10 p-0 flex items-center justify-center bg-[var(--color-primary-light)] border-transparent text-[var(--color-primary)] hover:opacity-80"
-                                                    title="Voir"
+                                                    title={t("common.view")}
                                                 >
                                                     <Eye className="w-5 h-5" />
                                                 </Button>
@@ -865,7 +866,7 @@ export default function AppointmentsPage() {
                     {totalPages > 1 && (
                         <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100">
                             <p className="text-sm text-gray-500">
-                                Page {currentPage} of {totalPages}
+                                {t("common.pageOf", { current: currentPage, total: totalPages })}
                             </p>
                             <div className="flex items-center gap-2">
                                 <button

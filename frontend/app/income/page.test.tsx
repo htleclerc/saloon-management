@@ -38,7 +38,9 @@ vi.mock('@/context/AuthProvider', () => ({
     useAuth: vi.fn(() => ({
         user: { id: 1, name: 'Test User', role: 'admin' },
         isWorker: false,
-        activeSalonId: '1'
+        activeSalonId: '1',
+        canModify: true,
+        getWorkerId: vi.fn(() => null)
     })),
     UserRole: {
         ADMIN: 'admin',
@@ -62,6 +64,17 @@ vi.mock('@/context/ToastProvider', () => ({
     }))
 }));
 
+vi.mock('@/context/NotificationProvider', () => ({
+    useNotifications: vi.fn(() => ({
+        addNotification: vi.fn(),
+        notifications: [],
+        unreadCount: 0,
+        markAsRead: vi.fn(),
+        markAllAsRead: vi.fn(),
+        clearNotifications: vi.fn()
+    }))
+}));
+
 vi.mock('@/i18n', () => ({
     useTranslation: vi.fn(() => ({
         t: (key: string) => key
@@ -80,7 +93,10 @@ vi.mock('@/lib/permissions', () => ({
         canCreate: true,
         canEdit: true,
         canDelete: true,
-        canViewFinancialDashboard: true
+        canViewFinancialDashboard: true,
+        income: vi.fn(() => true),
+        booking: vi.fn(() => true),
+        service: vi.fn(() => true)
     }))
 }));
 
@@ -188,6 +204,12 @@ vi.mock('@/lib/services', () => ({
     statsService: {
         getMonthlyIncomeTrend: vi.fn(() => Promise.resolve([])),
         getIncomeByStatus: vi.fn(() => Promise.resolve([]))
+    },
+    revenueStatsService: {
+        getRevenueTrend: vi.fn(() => Promise.resolve([])),
+        getExpenseTrend: vi.fn(() => Promise.resolve([])),
+        getFinancialReport: vi.fn(() => Promise.resolve({})),
+        getExpenseDistribution: vi.fn(() => Promise.resolve([]))
     }
 }));
 
@@ -210,8 +232,20 @@ describe('IncomePage', () => {
         it('should filter by status: Draft', async () => {
             render(<IncomePage />);
 
+            // Wait for data to load, then open filter panel
             await waitFor(() => {
-                const statusSelect = screen.getByLabelText(/common.status/i);
+                expect(screen.getByText('Alice Dubois')).toBeInTheDocument();
+            });
+
+            // Click the Filters toggle button to reveal filter panel
+            const filtersButton = screen.getByText(/common.filters/i);
+            fireEvent.click(filtersButton);
+
+            // Find the status select by its sibling label text
+            await waitFor(() => {
+                const statusLabel = screen.getByText(/common.status/i, { selector: 'label' });
+                const statusSelect = statusLabel.parentElement?.querySelector('select') as HTMLSelectElement;
+                expect(statusSelect).toBeInTheDocument();
                 fireEvent.change(statusSelect, { target: { value: 'Draft' } });
             });
 
@@ -225,7 +259,16 @@ describe('IncomePage', () => {
             render(<IncomePage />);
 
             await waitFor(() => {
-                const statusSelect = screen.getByLabelText(/common.status/i);
+                expect(screen.getByText('Alice Dubois')).toBeInTheDocument();
+            });
+
+            const filtersButton = screen.getByText(/common.filters/i);
+            fireEvent.click(filtersButton);
+
+            await waitFor(() => {
+                const statusLabel = screen.getByText(/common.status/i, { selector: 'label' });
+                const statusSelect = statusLabel.parentElement?.querySelector('select') as HTMLSelectElement;
+                expect(statusSelect).toBeInTheDocument();
                 fireEvent.change(statusSelect, { target: { value: 'Validated' } });
             });
 
@@ -239,7 +282,16 @@ describe('IncomePage', () => {
             render(<IncomePage />);
 
             await waitFor(() => {
-                const workerSelect = screen.getByLabelText(/common.worker/i);
+                expect(screen.getByText('Alice Dubois')).toBeInTheDocument();
+            });
+
+            const filtersButton = screen.getByText(/common.filters/i);
+            fireEvent.click(filtersButton);
+
+            await waitFor(() => {
+                const workerLabel = screen.getByText(/common.worker/i, { selector: 'label' });
+                const workerSelect = workerLabel.parentElement?.querySelector('select') as HTMLSelectElement;
+                expect(workerSelect).toBeInTheDocument();
                 fireEvent.change(workerSelect, { target: { value: '1' } });
             });
 
@@ -255,7 +307,15 @@ describe('IncomePage', () => {
             render(<IncomePage />);
 
             await waitFor(() => {
-                const searchInput = screen.getByPlaceholderText(/search/i);
+                expect(screen.getByText('Alice Dubois')).toBeInTheDocument();
+            });
+
+            // Open filters panel to access search input
+            const filtersButton = screen.getByText(/common.filters/i);
+            fireEvent.click(filtersButton);
+
+            await waitFor(() => {
+                const searchInput = screen.getByPlaceholderText(/searchPlaceholder/i);
                 fireEvent.change(searchInput, { target: { value: 'Alice' } });
             });
 
@@ -318,8 +378,7 @@ describe('IncomePage', () => {
             render(<IncomePage />);
 
             await waitFor(() => {
-                const printButton = screen.getByTitle(/common.print/i);
-                expect(printButton).toBeInTheDocument();
+                expect(screen.getByText('common.print')).toBeInTheDocument();
             });
         });
 
@@ -327,8 +386,7 @@ describe('IncomePage', () => {
             render(<IncomePage />);
 
             await waitFor(() => {
-                const exportButton = screen.getByTitle(/common.export/i);
-                expect(exportButton).toBeInTheDocument();
+                expect(screen.getByText('common.export')).toBeInTheDocument();
             });
         });
 
@@ -338,14 +396,15 @@ describe('IncomePage', () => {
             render(<IncomePage />);
 
             await waitFor(() => {
-                const printButton = screen.getByTitle(/common.print/i);
-                fireEvent.click(printButton);
+                expect(screen.getByText('Alice Dubois')).toBeInTheDocument();
             });
+
+            const printButton = screen.getByText('common.print').closest('button')!;
+            fireEvent.click(printButton);
 
             expect(windowOpenSpy).toHaveBeenCalled();
             windowOpenSpy.mockRestore();
         });
-
 
         it('should generate CSV when Export button is clicked', async () => {
             const createElementSpy = vi.spyOn(document, 'createElement');
@@ -353,9 +412,11 @@ describe('IncomePage', () => {
             render(<IncomePage />);
 
             await waitFor(() => {
-                const exportButton = screen.getByTitle(/common.export/i);
-                fireEvent.click(exportButton);
+                expect(screen.getByText('Alice Dubois')).toBeInTheDocument();
             });
+
+            const exportButton = screen.getByText('common.export').closest('button')!;
+            fireEvent.click(exportButton);
 
             expect(createElementSpy).toHaveBeenCalledWith('a');
             createElementSpy.mockRestore();
@@ -376,13 +437,16 @@ describe('IncomePage', () => {
             render(<IncomePage />);
 
             await waitFor(() => {
-                const commentButton = screen.getAllByTitle(/comment/i)[0];
-                fireEvent.click(commentButton);
+                expect(screen.getByText('Alice Dubois')).toBeInTheDocument();
             });
 
-            // Comment section should appear
+            const commentButton = screen.getAllByTitle(/comment/i)[0];
+            fireEvent.click(commentButton);
+
+            // Comment section should appear with the "no comments" placeholder and "post" button
             await waitFor(() => {
-                expect(screen.getByText(/comment/i)).toBeInTheDocument();
+                expect(screen.getByText('common.noComments')).toBeInTheDocument();
+                expect(screen.getByText('common.post')).toBeInTheDocument();
             });
         });
     });

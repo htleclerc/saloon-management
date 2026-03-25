@@ -33,7 +33,7 @@ const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 export default function AddAdvancedTeamMemberPage() {
     const router = useRouter();
     const { t } = useTranslation();
-    const { canModify } = useAuth();
+    const { canModify, user: authUser } = useAuth();
     const { handleReadOnlyClick } = useReadOnlyGuard();
     const { format, symbol } = useCurrency();
     const { services: availableServices } = useServices();
@@ -183,10 +183,32 @@ export default function AddAdvancedTeamMemberPage() {
                 weeklySchedule: schedule,
                 isActive: true
             });
+
+            // Also invite the team member (creates users + user_salons + sends auth invite email)
+            if (email && authUser?.tenantId) {
+                try {
+                    await fetch('/api/team/invite', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            email,
+                            firstName,
+                            lastName,
+                            salonId: parseInt(authUser.tenantId),
+                            role: role === 'Manager' ? 'Manager' : 'Worker',
+                            phone: phone || undefined,
+                        }),
+                    });
+                } catch (inviteErr) {
+                    console.warn('Invite API call failed:', inviteErr);
+                }
+            }
+
+            showToast(t("common.success"), t("dialogs.success"), "success");
             router.push("/team");
         } catch (error) {
             console.error("Failed to create worker", error);
-            // Ideally show error toast
+            showToast(t("common.error"), t("errors.generic"), "error");
         }
     };
 
@@ -443,7 +465,7 @@ export default function AddAdvancedTeamMemberPage() {
                     value={baseSalary}
                     onChange={(e) => setBaseSalary(e.target.value)}
                     disabled={!canModify}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm disabled:opacity-50"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm disabled:opacity-50"
                     placeholder="0.00"
                 />
             </div>
@@ -561,7 +583,7 @@ export default function AddAdvancedTeamMemberPage() {
                                     value={schedule[day].start}
                                     onChange={(e) => updateScheduleTime(day, "start", e.target.value)}
                                     disabled={!canModify}
-                                    className="px-2 py-1.5 md:px-3 md:py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 w-24 md:w-auto disabled:opacity-50"
+                                    className="px-2 py-1.5 md:px-3 md:py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary w-24 md:w-auto disabled:opacity-50"
                                 />
                                 <span className="text-gray-400 text-xs md:text-sm">{t("common.to")}</span>
                                 <input
@@ -569,7 +591,7 @@ export default function AddAdvancedTeamMemberPage() {
                                     value={schedule[day].end}
                                     onChange={(e) => updateScheduleTime(day, "end", e.target.value)}
                                     disabled={!canModify}
-                                    className="px-2 py-1.5 md:px-3 md:py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 w-24 md:w-auto disabled:opacity-50"
+                                    className="px-2 py-1.5 md:px-3 md:py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary w-24 md:w-auto disabled:opacity-50"
                                 />
                             </div>
                         )}

@@ -3,12 +3,14 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthProvider';
+import { useTranslation } from '@/i18n';
 
 /**
  * Onboarding entry point
  * Redirects to the first step of the onboarding process
  */
 export default function OnboardingPage() {
+    const { t } = useTranslation();
     const router = useRouter();
     const { user } = useAuth();
 
@@ -24,8 +26,8 @@ export default function OnboardingPage() {
     return (
         <div className="min-h-screen bg-white flex items-center justify-center">
             <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
-                <p className="text-gray-600">Initialisation de l'onboarding...</p>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-color-primary mx-auto mb-4"></div>
+                <p className="text-gray-600">{t("onboarding.initializing")}</p>
             </div>
         </div>
     );

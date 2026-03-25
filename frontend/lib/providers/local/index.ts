@@ -8,7 +8,7 @@
  * mode for the application (demo-local).
  */
 
-import { IDataProvider, DataMode, PaginatedResponse, BookingFilters, IncomeFilters, ExpenseFilters, Review, ReviewFilters, PromoCode, InteractionHistory, SalonComment, BookingCreateData, IncomeCreateData, IncomeWorkerShare, WorkerStats, ClientStats, ClientAnalytics, DashboardAnalytics, Salon, User, UserSalon, SalonSettings, SalonStats, ServiceCategory, Product, PaginationParams, BookingWithRelations, IncomeWithRelations, SalonWorker } from '../types';
+import { IDataProvider, DataMode, PaginatedResponse, BookingFilters, IncomeFilters, ExpenseFilters, Review, ReviewFilters, PromoCode, InteractionHistory, SalonComment, BookingCreateData, IncomeCreateData, IncomeWorkerShare, WorkerStats, ClientStats, ClientAnalytics, DashboardAnalytics, Salon, User, UserSalon, SalonSettings, SalonStats, ServiceCategory, Product, PaginationParams, BookingWithRelations, IncomeWithRelations, SalonWorker, SalaryPayment, PaymentStatusHistory, PaymentStatus, PayrollFilters } from '../types';
 import { Client, Service, Booking, Income, Expense, ExpenseCategory } from '@/types';
 import { INITIAL_SALONS, INITIAL_WORKERS, INITIAL_CLIENTS, INITIAL_SERVICES, INITIAL_SERVICE_CATEGORIES, INITIAL_EXPENSE_CATEGORIES, INITIAL_SALON_SETTINGS } from '../../constants/initialData';
 
@@ -31,6 +31,8 @@ interface LocalStorageData {
     tokens: any[];
     interactionHistory: InteractionHistory[];
     comments: SalonComment[];
+    salaryPayments: SalaryPayment[];
+    paymentStatusHistory: PaymentStatusHistory[];
 }
 
 export class LocalStorageProvider implements IDataProvider {
@@ -86,7 +88,9 @@ export class LocalStorageProvider implements IDataProvider {
             salonSettings: INITIAL_SALON_SETTINGS,
             tokens: [],
             interactionHistory: [],
-            comments: []
+            comments: [],
+            salaryPayments: [],
+            paymentStatusHistory: []
         };
     }
 
@@ -755,12 +759,14 @@ export class LocalStorageProvider implements IDataProvider {
         return this.getData().products.find(p => p.salonId === salonId && p.sku === sku) || null;
     }
 
-    async createProduct(data: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>): Promise<Product> {
+    async createProduct(data: Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>): Promise<Product> {
         const allData = this.getData();
         const id = this.generateId(allData.products);
         const newProduct: Product = {
             ...data,
             id,
+            createdBy: 'local',
+            updatedBy: 'local',
             createdAt: new Date(),
             updatedAt: new Date()
         };
@@ -916,7 +922,7 @@ export class LocalStorageProvider implements IDataProvider {
         });
     }
 
-    async addWorkerToIncome(incomeId: number, workerId: number, amount: number, percentage: number): Promise<IncomeWorkerShare> {
+    async addWorkerToIncome(incomeId: number, workerId: number, amount: number, percentage: number, tips?: number): Promise<IncomeWorkerShare> {
         throw new Error('IncomeWorkerShare table not implemented in local data yet');
     }
 
@@ -1028,12 +1034,14 @@ export class LocalStorageProvider implements IDataProvider {
         return this.getData().promoCodes.find(p => p.salonId === salonId && p.code === code) || null;
     }
 
-    async createPromoCode(data: Omit<PromoCode, 'id' | 'createdAt' | 'updatedAt'>): Promise<PromoCode> {
+    async createPromoCode(data: Omit<PromoCode, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>): Promise<PromoCode> {
         const allData = this.getData();
         const id = this.generateId(allData.promoCodes);
         const newCode: PromoCode = {
             ...data,
             id,
+            createdBy: 'local',
+            updatedBy: 'local',
             createdAt: new Date(),
             updatedAt: new Date()
         };
@@ -1102,6 +1110,120 @@ export class LocalStorageProvider implements IDataProvider {
         const allData = this.getData();
         allData.comments = allData.comments.filter(c => c.id !== id);
         this.saveData(allData);
+    }
+
+    // ============================================
+    // PAYROLL / SALARY PAYMENTS
+    // ============================================
+
+    async getSalaryPayments(salonId: number, filters?: PayrollFilters): Promise<SalaryPayment[]> {
+        const data = this.getData();
+        let payments = (data.salaryPayments || []).filter(p => p.salonId === salonId);
+        if (filters?.workerId) payments = payments.filter(p => p.workerId === filters.workerId);
+        if (filters?.status) payments = payments.filter(p => p.status === filters.status);
+        if (filters?.month) payments = payments.filter(p => p.paymentMonth === filters.month);
+        return payments.sort((a, b) => (b.paidDate || '').localeCompare(a.paidDate || ''));
+    }
+
+    async getSalaryPayment(id: number): Promise<SalaryPayment | null> {
+        const data = this.getData();
+        return (data.salaryPayments || []).find(p => p.id === id) || null;
+    }
+
+    async getSalaryPaymentsByWorker(workerId: number, limit: number = 20): Promise<SalaryPayment[]> {
+        const data = this.getData();
+        return (data.salaryPayments || [])
+            .filter(p => p.workerId === workerId)
+            .sort((a, b) => (b.paidDate || '').localeCompare(a.paidDate || ''))
+            .slice(0, limit);
+    }
+
+    async getSalaryPaymentsByMonth(salonId: number, month: string): Promise<SalaryPayment[]> {
+        const data = this.getData();
+        return (data.salaryPayments || []).filter(p => p.salonId === salonId && p.paymentMonth === month);
+    }
+
+    async getSalaryPaymentsByStatus(salonId: number, status: string): Promise<SalaryPayment[]> {
+        const data = this.getData();
+        return (data.salaryPayments || []).filter(p => p.salonId === salonId && p.status === status);
+    }
+
+    async createSalaryPayment(paymentData: Omit<SalaryPayment, 'id' | 'createdAt' | 'updatedAt'>): Promise<SalaryPayment> {
+        const data = this.getData();
+        if (!data.salaryPayments) data.salaryPayments = [];
+        const newPayment: SalaryPayment = {
+            ...paymentData,
+            id: Date.now(),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        };
+        data.salaryPayments.push(newPayment);
+        this.saveData(data);
+        return newPayment;
+    }
+
+    async updateSalaryPayment(id: number, updates: Partial<SalaryPayment>): Promise<SalaryPayment> {
+        const data = this.getData();
+        const index = (data.salaryPayments || []).findIndex(p => p.id === id);
+        if (index === -1) throw new Error('Payment not found');
+        data.salaryPayments[index] = { ...data.salaryPayments[index], ...updates, updatedAt: new Date().toISOString() };
+        this.saveData(data);
+        return data.salaryPayments[index];
+    }
+
+    async updateSalaryPaymentStatus(id: number, status: string, userId: number, reason?: string): Promise<void> {
+        const data = this.getData();
+        const index = (data.salaryPayments || []).findIndex(p => p.id === id);
+        if (index === -1) throw new Error('Payment not found');
+        const prevStatus = data.salaryPayments[index].status;
+        data.salaryPayments[index].status = status as SalaryPayment['status'];
+        data.salaryPayments[index].lastStatusChangedBy = userId;
+        data.salaryPayments[index].lastStatusChangeAt = new Date().toISOString();
+        if (reason) data.salaryPayments[index].notes = reason;
+        // Add history entry
+        if (!data.paymentStatusHistory) data.paymentStatusHistory = [];
+        data.paymentStatusHistory.push({
+            id: Date.now(),
+            paymentId: id,
+            previousStatus: prevStatus,
+            newStatus: status,
+            changedBy: userId,
+            changedAt: new Date().toISOString(),
+            reason: reason,
+        } as PaymentStatusHistory);
+        this.saveData(data);
+    }
+
+    async deleteSalaryPayment(id: number): Promise<void> {
+        const data = this.getData();
+        data.salaryPayments = (data.salaryPayments || []).filter(p => p.id !== id);
+        this.saveData(data);
+    }
+
+    async getPaymentStatusHistory(paymentId: number): Promise<PaymentStatusHistory[]> {
+        const data = this.getData();
+        return (data.paymentStatusHistory || [])
+            .filter(h => h.paymentId === paymentId)
+            .sort((a, b) => (b.changedAt || '').localeCompare(a.changedAt || ''));
+    }
+
+    async getPaymentStatusHistoryBulk(paymentIds: number[]): Promise<PaymentStatusHistory[]> {
+        const data = this.getData();
+        return (data.paymentStatusHistory || [])
+            .filter(h => paymentIds.includes(h.paymentId))
+            .sort((a, b) => (b.changedAt || '').localeCompare(a.changedAt || ''));
+    }
+
+    async createPaymentStatusHistory(historyData: Omit<PaymentStatusHistory, 'id'>): Promise<PaymentStatusHistory> {
+        const data = this.getData();
+        if (!data.paymentStatusHistory) data.paymentStatusHistory = [];
+        const newHistory: PaymentStatusHistory = {
+            ...historyData,
+            id: Date.now(),
+        };
+        data.paymentStatusHistory.push(newHistory);
+        this.saveData(data);
+        return newHistory;
     }
 
     async initialize(): Promise<void> {

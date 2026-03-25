@@ -6,6 +6,7 @@
 
 import { BaseService } from './BaseService';
 import type { Booking, BookingWithRelations, BookingCreateData, BookingFilters, SalonWorker, Service, PaginatedResponse } from '@/types';
+import { BookingCreateSchema } from '@/lib/validators';
 
 export class BookingService extends BaseService {
     /**
@@ -54,18 +55,22 @@ export class BookingService extends BaseService {
      * Create a new booking
      */
     async create(data: BookingCreateData): Promise<Booking> {
-        // Validation
-        this.validateRequired(data, ['salonId', 'clientId', 'date', 'time', 'duration']);
+        // Zod validation (covers required fields + serviceIds min(1))
+        BookingCreateSchema.parse(data);
 
-        if (!data.workerIds || data.workerIds.length === 0) {
-            throw new Error('At least one worker must be assigned');
+        // Check for duplicates (same client, same time)
+        const dayBookings = await this.provider.getBookingsByDate(data.salonId, data.date);
+        const isDuplicate = dayBookings.some((b: Booking) =>
+            b.clientId === data.clientId &&
+            b.time?.slice(0, 5) === data.time.slice(0, 5) &&
+            b.status !== 'Cancelled'
+        );
+
+        if (isDuplicate) {
+            throw new Error('A booking for this client at this time already exists.');
         }
 
-        if (!data.serviceIds || data.serviceIds.length === 0) {
-            throw new Error('At least one service must be selected');
-        }
-
-        // Check for conflicts
+        // Check for conflicts (worker overlap)
         const hasConflict = await this.checkConflicts(
             data.salonId,
             data.workerIds,
@@ -83,9 +88,11 @@ export class BookingService extends BaseService {
 
         // Add workers
         booking.workerIds = [];
-        for (const workerId of data.workerIds) {
-            await this.provider.addWorkerToBooking(booking.id, workerId);
-            booking.workerIds.push(workerId);
+        if (data.workerIds && data.workerIds.length > 0) {
+            for (const workerId of data.workerIds) {
+                await this.provider.addWorkerToBooking(booking.id, workerId);
+                booking.workerIds.push(workerId);
+            }
         }
 
         // Add services

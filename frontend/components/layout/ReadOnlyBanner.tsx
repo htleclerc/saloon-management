@@ -39,14 +39,14 @@ export default function ReadOnlyBanner({ salonName, ownerName }: ReadOnlyBannerP
     };
 
     return (
-        <div className={`fixed top-0 ${getLeftPosition()} right-0 h-16 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 flex items-center justify-between z-50 shadow-lg transition-all duration-300 border-b border-white/10`}>
+        <div className={`fixed top-0 ${getLeftPosition()} right-0 h-16 bg-gradient-to-r from-primary to-indigo-600 text-white px-6 flex items-center justify-between z-50 shadow-lg transition-all duration-300 border-b border-white/10`}>
             <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2.5 bg-white/20 px-3 py-1.5 rounded-lg border border-white/20">
                     <Shield className="w-5 h-5 flex-shrink-0" />
                     <div className="flex items-center gap-2 border-l border-white/10 pl-2.5">
                         {isReadOnlyMode ? (
                             <div className="flex items-center gap-2">
-                                <Eye className="w-5 h-5 text-purple-200" />
+                                <Eye className="w-5 h-5 text-color-primary" />
                                 {readOnlySalonInfo && canManageSalon(readOnlySalonInfo.id) && (
                                     <button
                                         onClick={() => enterManageMode(readOnlySalonInfo.id, readOnlySalonInfo.name, readOnlySalonInfo.ownerName)}
@@ -60,7 +60,7 @@ export default function ReadOnlyBanner({ salonName, ownerName }: ReadOnlyBannerP
                             </div>
                         ) : (
                             <div className="flex items-center gap-2">
-                                <Settings className="w-5 h-5 text-purple-200 animate-[spin_4s_linear_infinite]" />
+                                <Settings className="w-5 h-5 text-color-primary animate-[spin_4s_linear_infinite]" />
                                 <button
                                     onClick={toggleReadOnlyMode}
                                     className="flex items-center gap-1.5 px-2 py-0.5 bg-white/10 hover:bg-white/30 rounded-md transition-all"
@@ -79,13 +79,13 @@ export default function ReadOnlyBanner({ salonName, ownerName }: ReadOnlyBannerP
                             {isReadOnlyMode ? t("common.readOnlyModeText") : t("common.manageModeText")}
                         </span>
                         <span className="hidden sm:inline opacity-40">|</span>
-                        <span className="hidden sm:inline font-bold text-purple-200">{t("common.superAdminText")}</span>
+                        <span className="hidden sm:inline font-bold text-color-primary">{t("common.superAdminText")}</span>
                         <span className="hidden sm:inline opacity-40">|</span>
                         <span className="hidden sm:inline">{t("common.salon")}: <strong>{salonName}</strong></span>
                         <span className="hidden md:inline opacity-40">|</span>
-                        <span className="hidden md:inline text-purple-100 uppercase text-xs">{t("common.owner")}: {ownerName}</span>
+                        <span className="hidden md:inline text-color-primary uppercase text-xs">{t("common.owner")}: {ownerName}</span>
                     </div>
-                    <p className="text-xs text-purple-100 mt-0.5 hidden sm:block">
+                    <p className="text-xs text-color-primary mt-0.5 hidden sm:block">
                         {isReadOnlyMode
                             ? t("common.readOnlyDesc")
                             : t("common.manageDesc")}

@@ -1,3 +1,4 @@
+import { createBrowserClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
 
 // Supabase configuration
@@ -9,26 +10,22 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 /**
- * Supabase Client
- * 
- * Configured for public demo mode with anon key
+ * Supabase Browser Client (with auth session via cookies)
+ *
+ * Uses @supabase/ssr for proper cookie-based session management.
+ * Used in client components for authenticated requests.
  */
 export const supabase = (supabaseUrl && supabaseAnonKey)
-    ? createClient(supabaseUrl, supabaseAnonKey, {
-        auth: {
-            persistSession: false, // Demo mode - no auth session needed
-            autoRefreshToken: false,
-        },
+    ? createBrowserClient(supabaseUrl, supabaseAnonKey, {
         db: {
             schema: 'public'
         }
     })
     : (() => {
         console.error('❌ Supabase credentials missing. Please check .env.local');
-        // Return a proxy that throws on any access to prevent silent failures later
         return new Proxy({}, {
             get: () => { throw new Error('Supabase client not initialized. Missing env vars.'); }
-        }) as any;
+        }) as ReturnType<typeof createClient>;
     })();
 
 /**

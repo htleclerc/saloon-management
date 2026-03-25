@@ -1,6 +1,7 @@
 import React from 'react';
 import { PlanConfig } from '@/types';
 import Button from '@/components/ui/Button';
+import { useCurrency } from '@/hooks/useCurrency';
 import {
     Check,
     Edit2,
@@ -22,11 +23,12 @@ interface PlanCardProps {
 }
 
 export default function PlanCard({ plan, onEdit, onToggleStatus, onDelete }: PlanCardProps) {
+    const { format: formatCurrency } = useCurrency();
     const isFree = plan.price === 0;
 
     return (
         <div className={`bg-white rounded-3xl border-2 transition-all duration-300 flex flex-col overflow-hidden ${plan.isActive
-                ? 'border-gray-100 shadow-sm hover:shadow-xl hover:border-purple-200'
+                ? 'border-gray-100 shadow-sm hover:shadow-xl hover:border-color-primary/30'
                 : 'border-dashed border-gray-200 opacity-75 grayscale-[0.5]'
             }`}>
             {/* Header */}
@@ -36,7 +38,7 @@ export default function PlanCard({ plan, onEdit, onToggleStatus, onDelete }: Pla
                         <div className="flex items-center gap-2">
                             <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
                             {plan.isDefault && (
-                                <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-[10px] font-bold uppercase rounded-full border border-purple-200">
+                                <span className="px-2 py-0.5 bg-primary-light text-color-primary text-[10px] font-bold uppercase rounded-full border border-color-primary/30">
                                     Default
                                 </span>
                             )}
@@ -47,14 +49,14 @@ export default function PlanCard({ plan, onEdit, onToggleStatus, onDelete }: Pla
                             )}
                         </div>
                         <div className="flex items-baseline gap-1 mt-1">
-                            <span className="text-3xl font-black text-gray-900">{plan.price}€</span>
+                            <span className="text-3xl font-black text-gray-900">{formatCurrency(plan.price)}</span>
                             <span className="text-gray-500 text-sm">/month</span>
                         </div>
                     </div>
                     <div className="flex gap-1">
                         <button
                             onClick={() => onEdit(plan)}
-                            className="p-2 hover:bg-white rounded-xl text-gray-500 hover:text-purple-600 transition-colors border border-transparent hover:border-purple-100 shadow-sm"
+                            className="p-2 hover:bg-white rounded-xl text-gray-500 hover:text-color-primary transition-colors border border-transparent hover:border-color-primary/30 shadow-sm"
                             title="Edit Plan"
                         >
                             <Edit2 className="w-4 h-4" />
@@ -96,7 +98,7 @@ export default function PlanCard({ plan, onEdit, onToggleStatus, onDelete }: Pla
                     </div>
                 </div>
                 <div className="flex items-center gap-2 group">
-                    <div className="p-2 bg-purple-50 rounded-lg text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                    <div className="p-2 bg-primary-light rounded-lg text-color-primary group-hover:bg-primary group-hover:text-white transition-colors">
                         <Users className="w-4 h-4" />
                     </div>
                     <div>

@@ -53,7 +53,7 @@ export default function OnboardingProgressBar({
                                     : isAccessible
                                         ? 'cursor-default'
                                         : 'cursor-not-allowed opacity-50'
-                                } ${isActive ? 'ring-2 ring-purple-400 ring-offset-2' : ''}`}
+                                } ${isActive ? 'ring-2 ring-primary ring-offset-2' : ''}`}
                             aria-label={`Step ${step}: ${stepLabels?.[step - 1] || `Step ${step}`}`}
                             title={
                                 isAccessible

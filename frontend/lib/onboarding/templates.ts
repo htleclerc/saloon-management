@@ -167,8 +167,8 @@ Carol Davis,carol@salon.com,worker,35,true,false`;
 import { Scissors, Sparkles, Heart } from 'lucide-react';
 
 export const salonTypes = [
-    { id: 'braids', label: 'Braids & Locs', icon: Sparkles, color: 'from-purple-500 to-pink-500' },
-    { id: 'hair', label: 'Salon de coiffure', icon: Scissors, color: 'from-pink-500 to-rose-500' },
+    { id: 'braids', label: 'Braids & Locs', icon: Sparkles, color: 'from-primary to-secondary' },
+    { id: 'hair', label: 'Salon de coiffure', icon: Scissors, color: 'from-[var(--color-secondary)] to-rose-500' },
     { id: 'nails', label: "Institut d'ongles", icon: Sparkles, color: 'from-rose-500 to-orange-500' },
     { id: 'barber', label: 'Barbier', icon: Scissors, color: 'from-blue-500 to-indigo-500' },
     { id: 'beauty', label: 'Institut de beauté', icon: Heart, color: 'from-teal-500 to-emerald-500' },
