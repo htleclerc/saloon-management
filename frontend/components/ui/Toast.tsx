@@ -43,7 +43,7 @@ const toastConfigs = {
 };
 
 export default function Toast({ message, type, onClose }: ToastProps) {
-    const config = toastConfigs[type];
+    const config = toastConfigs[type] || toastConfigs.info;
     const Icon = config.icon;
     const [isVisible, setIsVisible] = useState(false);
 

@@ -46,17 +46,13 @@ export class TipsService extends BaseService {
             case 'SALON_KEY': {
                 return workers.map(w => {
                     const baseShare = totalTips / workers.length;
-                    const workerPart = (baseShare * (w.sharingKey || 0)) / 100;
+                    const workerPart = Math.round((baseShare * (w.sharingKey || 0)) / 100);
                     const salonPart = baseShare - workerPart;
                     return { workerId: w.id, amount: workerPart, salonAmount: salonPart };
                 });
             }
             case 'CUSTOM_PERCENTAGE': {
-                // Settings usually don't store "salonPercentage" directly on root, possibly in JSON or extra field?
-                // Provider used local state `salonPercentage`. 
-                // We'll assume a default or need to extend Settings interface if we want full fidelity.
-                // For now, simple fallback.
-                const salonPct = 0; // TODO: Add to SalonSettings schema if needed
+                const salonPct = settings?.tipsCustomPercentage ?? 0;
                 const totalSalon = (totalTips * salonPct) / 100;
                 const totalWorkers = totalTips - totalSalon;
                 const workerShare = totalWorkers / workers.length;
@@ -80,7 +76,7 @@ export class TipsService extends BaseService {
         await this.provider.updateSalonSettings(salonId, {
             tipsEnabled: updates.isActive,
             tipsDistributionRule: updates.rule,
-            // salonPercentage not in standard schema yet, ignored for now
+            tipsCustomPercentage: updates.salonPercentage,
         });
     }
 
@@ -89,7 +85,7 @@ export class TipsService extends BaseService {
         return {
             isActive: settings?.tipsEnabled ?? true,
             rule: settings?.tipsDistributionRule || 'EQUAL_WORKERS',
-            salonPercentage: 0
+            salonPercentage: settings?.tipsCustomPercentage ?? 0
         };
     }
 }

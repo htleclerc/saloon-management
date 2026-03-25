@@ -122,8 +122,8 @@ export default function Sidebar() {
     const navContent = (
         <div className={`p-4 ${isCollapsed && !isMobile ? "px-2" : ""}`}>
             {/* Header / Brand */}
-            <div className={`flex items-center ${isCollapsed && !isMobile ? "justify-center" : "justify-between gap-3"} mb-6`}>
-                <div className="flex items-center gap-3 overflow-hidden">
+            <div className={`flex ${isCollapsed && !isMobile ? "flex-col items-center gap-2" : "items-center justify-between gap-3"} mb-6`}>
+                <div className={`flex items-center gap-3 overflow-hidden ${isCollapsed && !isMobile ? "justify-center" : ""}`}>
                     <div className="w-9 h-9 flex-shrink-0 bg-white/10 rounded-xl flex items-center justify-center overflow-hidden border border-white/10">
                         {currentTenant?.logo ? (
                             <img src={currentTenant.logo} alt={currentTenant.name} className="w-full h-full object-cover" />
@@ -153,11 +153,11 @@ export default function Sidebar() {
                 ) : (
                     <button
                         onClick={toggleSidebar}
-                        className="p-2 hover:bg-white/10 rounded-lg transition-colors flex-shrink-0 text-white/70 hover:text-white"
+                        className="p-1.5 hover:bg-white/10 rounded-lg transition-colors flex-shrink-0 text-white/70 hover:text-white"
                         title={isCollapsed ? t("sidebar.expand") : t("sidebar.collapse")}
                     >
                         {isCollapsed ? (
-                            <ChevronRight className="w-5 h-5" />
+                            <ChevronRight className="w-4 h-4" />
                         ) : (
                             <ChevronLeft className="w-5 h-5" />
                         )}

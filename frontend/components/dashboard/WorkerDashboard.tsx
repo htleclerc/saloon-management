@@ -38,6 +38,7 @@ import {
     ResponsiveContainer
 } from "recharts";
 import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface WorkerDashboardProps {
     workerName: string;
@@ -67,6 +68,7 @@ export default function WorkerDashboard({
     userRole = "worker"
 }: WorkerDashboardProps) {
     const { getCardStyle } = useKpiCardStyle();
+    const { format: formatCurrency, symbol } = useCurrency();
     const feedbackRef = useRef<HTMLDivElement>(null);
     const [historyModalOpen, setHistoryModalOpen] = useState(false);
     const [viewMode, setViewMode] = useState<"simple" | "advanced">("simple");
@@ -134,7 +136,7 @@ export default function WorkerDashboard({
                                     <span className="text-[10px] font-black bg-white/20 backdrop-blur-md px-2 py-1 rounded-full uppercase tracking-tighter">+12.5%</span>
                                 </div>
                                 <p className="text-white/80 text-xs font-black uppercase tracking-widest">Mon Chiffre</p>
-                                <h3 className="text-3xl font-black mt-1">€18,356</h3>
+                                <h3 className="text-3xl font-black mt-1">{formatCurrency(18356)}</h3>
                             </div>
                         </div>
 
@@ -296,7 +298,7 @@ export default function WorkerDashboard({
                                         </div>
                                         <div className="flex items-center justify-between sm:justify-end gap-6 w-full sm:w-auto mt-4 sm:mt-0 pt-4 sm:pt-0 border-t sm:border-t-0 border-gray-100">
                                             <div className="text-right">
-                                                <p className="font-black text-lg text-gray-900 tabular-nums">{session.price === "€--" ? "€ --" : session.price}</p>
+                                                <p className="font-black text-lg text-gray-900 tabular-nums">{String(session.price).includes("--") ? `${symbol()} --` : session.price}</p>
                                                 <span className={`text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest border ${session.status === 'Finished' ? 'bg-green-50 text-green-700 border-green-100' :
                                                     session.status === 'Started' ? 'bg-blue-50 text-blue-700 border-blue-100' :
                                                         'bg-yellow-50 text-yellow-700 border-yellow-100'
@@ -332,7 +334,7 @@ export default function WorkerDashboard({
                                 <div className="flex justify-between items-end">
                                     <div>
                                         <p className="text-white/60 text-[10px] uppercase font-black tracking-widest">CA Aujourd'hui</p>
-                                        <p className="text-4xl font-black tabular-nums">€342</p>
+                                        <p className="text-4xl font-black tabular-nums">{formatCurrency(342)}</p>
                                     </div>
                                     <div className="flex items-center gap-1.5 text-green-300 text-xs font-black bg-green-400/20 px-3 py-1.5 rounded-full border border-green-400/30">
                                         <TrendingUp className="w-4 h-4" />
@@ -344,7 +346,7 @@ export default function WorkerDashboard({
                                 </div>
                                 <div className="flex justify-between items-center text-[10px] text-white/50 font-black uppercase tracking-widest">
                                     <span>Progression</span>
-                                    <span>Objectif: €450</span>
+                                    <span>{`Objectif: ${formatCurrency(450)}`}</span>
                                 </div>
                             </div>
                         </Card>

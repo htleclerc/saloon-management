@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
     Mail,
     Lock,
@@ -16,16 +16,21 @@ import {
     Shield,
     CheckCircle2,
     ArrowRight,
-    User
+    User,
+    Loader2,
+    Store
 } from "lucide-react";
 import Button from "@/components/ui/Button";
+import GoogleIcon from "@/components/ui/GoogleIcon";
+import FacebookIcon from "@/components/ui/FacebookIcon";
 import { useTranslation } from "@/i18n";
 import { useAuth } from "@/context/AuthProvider";
 
 export default function LoginPage() {
     const { t } = useTranslation();
     const router = useRouter();
-    const { login, demoLogin } = useAuth();
+    const searchParams = useSearchParams();
+    const { login, demoLogin, loginWithEmail, signUp, loginWithOAuth, resetPassword } = useAuth();
     const [activeTab, setActiveTab] = useState<"login" | "signup">("login");
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -34,32 +39,115 @@ export default function LoginPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [fullName, setFullName] = useState("");
+    const [salonName, setSalonName] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+    const [acceptTerms, setAcceptTerms] = useState(false);
+
+    // Auth states
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(() => {
+        const errorCode = searchParams.get('error');
+        if (!errorCode) return null;
+        const errorMessages: Record<string, string> = {
+            auth_callback_failed: t("auth.oauthCallbackFailed"),
+            account_creation_failed: t("auth.accountCreationFailed"),
+            invalid_callback: t("auth.invalidCallback"),
+            missing_auth_code: t("auth.missingAuthCode"),
+        };
+        return errorMessages[errorCode] || t("auth.loginError");
+    });
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const [showForgotPassword, setShowForgotPassword] = useState(false);
+    const [forgotEmail, setForgotEmail] = useState("");
 
     const handleDemoMode = async (role: "super_admin" | "owner" | "manager" | "worker" | "client") => {
         await demoLogin(role);
         router.push("/");
     };
 
-    const handleLogin = (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        login({
-            id: "1",
-            name: "User",
-            email: email,
-            role: "manager",
-            tenantId: "tenant_1",
-            isDemo: false
-        });
-        router.push("/");
+        setError(null);
+        setIsLoading(true);
+
+        try {
+            await loginWithEmail(email, password);
+            const redirectTo = searchParams.get('redirectTo') || '/';
+            router.push(redirectTo);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err);
+            if (message.includes('Invalid login credentials')) {
+                setError(t("auth.invalidCredentials"));
+            } else if (message.includes('Email not confirmed')) {
+                setError(t("auth.emailNotConfirmed"));
+            } else {
+                setError(t("auth.loginError"));
+            }
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    const handleSignup = (e: React.FormEvent) => {
+    const handleSignup = async (e: React.FormEvent) => {
         e.preventDefault();
-        // Store signup data temporarily
-        localStorage.setItem("signup_email", email);
-        localStorage.setItem("signup_name", fullName);
-        router.push("/onboarding/verify");
+        setError(null);
+
+        if (!acceptTerms) {
+            setError(t("auth.mustAcceptTerms"));
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            setError(t("auth.passwordMismatch"));
+            return;
+        }
+
+        if (password.length < 8) {
+            setError(t("auth.passwordTooShort"));
+            return;
+        }
+
+        setIsLoading(true);
+
+        try {
+            await signUp(email, password, fullName, salonName);
+            setSuccessMessage(t("auth.checkEmailForConfirmation"));
+            setActiveTab("login");
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : String(err);
+            if (message.includes('already registered')) {
+                setError(t("auth.emailAlreadyRegistered"));
+            } else {
+                setError(t("auth.signupError"));
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleForgotPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError(null);
+        setIsLoading(true);
+
+        try {
+            await resetPassword(forgotEmail);
+            setSuccessMessage(t("auth.passwordResetSent"));
+            setShowForgotPassword(false);
+        } catch {
+            setError(t("auth.passwordResetError"));
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleOAuth = async (provider: 'google' | 'facebook') => {
+        setError(null);
+        try {
+            await loginWithOAuth(provider);
+        } catch {
+            setError(t("auth.oauthError"));
+        }
     };
 
     return (
@@ -183,13 +271,14 @@ export default function LoginPage() {
                     </div>
 
                     <div className="space-y-3 mb-5">
-                        <Button variant="outline" className="w-full py-3 border-gray-200 hover:bg-gray-50 text-gray-700 flex items-center justify-center gap-3 rounded-xl transition-all hover:border-color-primary/30">
-                            <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google" />
+                        <Button
+                            variant="outline"
+                            onClick={() => handleOAuth('google')}
+                            disabled={isLoading}
+                            className="w-full py-3 border-gray-200 hover:bg-gray-50 text-gray-700 flex items-center justify-center gap-3 rounded-xl transition-all hover:border-color-primary/30"
+                        >
+                            <GoogleIcon className="w-5 h-5" />
                             <span className="font-bold">{t("auth.googleLogin")}</span>
-                        </Button>
-                        <Button variant="outline" className="w-full py-3 border-gray-200 hover:bg-gray-50 text-gray-700 flex items-center justify-center gap-3 rounded-xl transition-all hover:border-color-primary/30">
-                            <img src="https://www.svgrepo.com/show/475647/facebook-color.svg" className="w-5 h-5" alt="Facebook" />
-                            <span className="font-bold">{t("auth.facebookLogin")}</span>
                         </Button>
                     </div>
 
@@ -201,6 +290,59 @@ export default function LoginPage() {
                             <span className="bg-gray-50 px-4 text-gray-400 font-extrabold tracking-widest">{t("auth.orWithEmail")}</span>
                         </div>
                     </div>
+
+                    {/* Error/Success Messages */}
+                    {error && (
+                        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium">
+                            {error}
+                        </div>
+                    )}
+                    {successMessage && (
+                        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm font-medium flex items-center gap-2">
+                            <CheckCircle2 className="w-4 h-4 shrink-0" />
+                            {successMessage}
+                        </div>
+                    )}
+
+                    {/* Forgot Password Modal */}
+                    {showForgotPassword && (
+                        <div className="mb-4 p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
+                            <h3 className="text-sm font-bold text-gray-700 mb-2">
+                                {t("auth.forgotPassword")}
+                            </h3>
+                            <form onSubmit={handleForgotPassword} className="space-y-3">
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                                        <Mail className="w-4 h-4" />
+                                    </div>
+                                    <input
+                                        type="email"
+                                        value={forgotEmail}
+                                        onChange={(e) => setForgotEmail(e.target.value)}
+                                        className="block w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)]"
+                                        placeholder={t("auth.emailPlaceholder")}
+                                        required
+                                    />
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        type="submit"
+                                        disabled={isLoading}
+                                        className="flex-1 py-2 rounded-lg bg-gradient-primary text-white text-sm font-bold disabled:opacity-50"
+                                    >
+                                        {isLoading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : t("auth.sendResetLink")}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowForgotPassword(false)}
+                                        className="px-4 py-2 rounded-lg border border-gray-200 text-gray-600 text-sm font-bold hover:bg-gray-50"
+                                    >
+                                        {t("common.cancel")}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    )}
 
                     {/* LOGIN FORM */}
                     {activeTab === "login" && (
@@ -261,17 +403,23 @@ export default function LoginPage() {
                                     </label>
                                 </div>
                                 <div className="text-sm">
-                                    <a href="#" className="font-bold text-[var(--color-primary)] hover:text-[var(--color-primary-dark)] transition-colors">
+                                    <button
+                                        type="button"
+                                        onClick={() => { setShowForgotPassword(true); setForgotEmail(email); }}
+                                        className="font-bold text-[var(--color-primary)] hover:text-[var(--color-primary-dark)] transition-colors"
+                                    >
                                         {t("auth.forgotPassword")}
-                                    </a>
+                                    </button>
                                 </div>
                             </div>
 
                             <button
                                 type="submit"
-                                className="w-full py-3.5 rounded-xl bg-gradient-primary text-white transform transition-all border-none hover:scale-[1.02] shadow-[0_10px_20px_-5px_rgba(139,92,246,0.3)] active:scale-[0.98] font-extrabold text-base"
+                                disabled={isLoading}
+                                className="w-full py-3.5 rounded-xl bg-gradient-primary text-white transform transition-all border-none hover:scale-[1.02] shadow-[0_10px_20px_-5px_rgba(139,92,246,0.3)] active:scale-[0.98] font-extrabold text-base disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2"
                             >
-                                {t("auth.login")}
+                                {isLoading && <Loader2 className="w-5 h-5 animate-spin" />}
+                                {isLoading ? t("auth.loggingIn") : t("auth.login")}
                             </button>
                         </form>
                     )}
@@ -298,6 +446,28 @@ export default function LoginPage() {
                                 </div>
                             </div>
 
+                            {/* Salon Name */}
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1.5 pl-1">
+                                    {t("auth.salonName")}
+                                </label>
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-[var(--color-primary)] transition-colors">
+                                        <Store className="w-5 h-5" />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        value={salonName}
+                                        onChange={(e) => setSalonName(e.target.value)}
+                                        className="block w-full pl-12 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] transition-all"
+                                        placeholder={t("auth.salonNamePlaceholder")}
+                                        required
+                                    />
+                                </div>
+                                <p className="text-xs text-gray-400 mt-1 pl-1">{t("auth.salonNameHint")}</p>
+                            </div>
+
+                            {/* Email */}
                             <div>
                                 <label className="block text-sm font-bold text-gray-700 mb-1.5 pl-1">
                                     {t("auth.emailOrPhone")}
@@ -317,6 +487,7 @@ export default function LoginPage() {
                                 </div>
                             </div>
 
+                            {/* Password */}
                             <div>
                                 <label className="block text-sm font-bold text-gray-700 mb-1.5 pl-1">
                                     {t("auth.password")}
@@ -343,6 +514,7 @@ export default function LoginPage() {
                                 </div>
                             </div>
 
+                            {/* Confirm Password */}
                             <div>
                                 <label className="block text-sm font-bold text-gray-700 mb-1.5 pl-1">
                                     {t("auth.confirmPassword")}
@@ -369,18 +541,30 @@ export default function LoginPage() {
                                 </div>
                             </div>
 
-                            <p className="text-xs text-gray-500 text-center px-2">
-                                {t("auth.termsAccept")}{" "}
-                                <a href="#" className="text-[var(--color-primary)] hover:underline">{t("auth.termsOfService")}</a>
-                                {" "}{t("auth.and")}{" "}
-                                <a href="#" className="text-[var(--color-primary)] hover:underline">{t("auth.privacyPolicy")}</a>
-                            </p>
+                            {/* Terms & Conditions checkbox */}
+                            <div className="flex items-start gap-3 px-1">
+                                <input
+                                    id="accept-terms"
+                                    type="checkbox"
+                                    checked={acceptTerms}
+                                    onChange={(e) => setAcceptTerms(e.target.checked)}
+                                    className="h-5 w-5 mt-0.5 text-[var(--color-primary)] focus:ring-[var(--color-primary)] border-gray-300 rounded-md cursor-pointer shrink-0"
+                                />
+                                <label htmlFor="accept-terms" className="text-xs text-gray-500 cursor-pointer leading-relaxed">
+                                    {t("auth.termsAccept")}{" "}
+                                    <a href="/terms" target="_blank" className="text-[var(--color-primary)] hover:underline font-semibold">{t("auth.termsOfService")}</a>
+                                    {" "}{t("auth.and")}{" "}
+                                    <a href="/privacy" target="_blank" className="text-[var(--color-primary)] hover:underline font-semibold">{t("auth.privacyPolicy")}</a>
+                                </label>
+                            </div>
 
                             <button
                                 type="submit"
-                                className="w-full py-3.5 rounded-xl bg-gradient-primary text-white transform transition-all border-none hover:scale-[1.02] shadow-[0_10px_20px_-5px_rgba(139,92,246,0.3)] active:scale-[0.98] font-extrabold text-base"
+                                disabled={isLoading}
+                                className="w-full py-3.5 rounded-xl bg-gradient-primary text-white transform transition-all border-none hover:scale-[1.02] shadow-[0_10px_20px_-5px_rgba(139,92,246,0.3)] active:scale-[0.98] font-extrabold text-base disabled:opacity-50 disabled:hover:scale-100 flex items-center justify-center gap-2"
                             >
-                                {t("auth.createAccount")}
+                                {isLoading && <Loader2 className="w-5 h-5 animate-spin" />}
+                                {isLoading ? t("auth.creatingAccount") : t("auth.createAccount")}
                             </button>
                         </form>
                     )}

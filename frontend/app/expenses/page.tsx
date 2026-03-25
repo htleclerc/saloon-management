@@ -17,18 +17,19 @@ import { expenseService } from "@/lib/services";
 import { useToast } from "@/context/ToastProvider";
 import { useConfirm } from "@/context/ConfirmProvider";
 import { useTranslation } from "@/i18n";
+import { useCurrency } from "@/hooks/useCurrency";
 import { Expense, ExpenseCategory } from "@/types";
 
 type ExpenseWithCategory = Expense & { categoryName?: string };
 
-// Export columns configuration
-const expenseExportColumns: ExportColumn[] = [
+// Export columns configuration (base - formatter added dynamically in component)
+const expenseExportColumnsBase: Omit<ExportColumn, 'formatter'>[] = [
     { key: "id", header: "ID" },
     { key: "date", header: "Date" },
     { key: "categoryName", header: "Category" },
     { key: "description", header: "Description" },
     { key: "salonId", header: "Salon" },
-    { key: "amount", header: "Amount", formatter: (v) => `€${v}` },
+    { key: "amount", header: "Amount" },
 ];
 
 export default function ExpensesPage() {
@@ -37,6 +38,7 @@ export default function ExpensesPage() {
     const { getCardStyle } = useKpiCardStyle();
     const { user, activeSalonId } = useAuth();
     const { t } = useTranslation();
+    const { format: formatCurrency, symbol } = useCurrency();
 
     const canAdd = canPerformExpenseAction("add", user?.role as UserRole);
     const canEdit = canPerformExpenseAction("edit", user?.role as UserRole);
@@ -114,6 +116,10 @@ export default function ExpensesPage() {
     const { showToast } = useToast();
     const { confirm } = useConfirm();
 
+    const expenseExportColumns: ExportColumn[] = expenseExportColumnsBase.map(col =>
+        col.key === "amount" ? { ...col, formatter: (v: unknown) => formatCurrency(Number(v)) } : col
+    );
+
     const handleExportCSV = () => {
         try {
             exportToCSV(recentExpenses, expenseExportColumns, "expenses");
@@ -190,7 +196,7 @@ export default function ExpensesPage() {
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                         <Card className="text-white" style={getCardStyle(0)}>
                             <p className="text-sm opacity-90 mb-1">{t("expenses.totalExpenses")}</p>
-                            <h3 className="text-3xl font-bold">€{totalExpenses.toLocaleString()}</h3>
+                            <h3 className="text-3xl font-bold">{formatCurrency(totalExpenses)}</h3>
                             <p className="text-sm opacity-80 mt-1">{t("expenses.thisMonth")}</p>
                         </Card>
                         <Card className="text-white" style={getCardStyle(1)}>
@@ -201,11 +207,11 @@ export default function ExpensesPage() {
                         <Card className="text-white" style={getCardStyle(2)}>
                             <p className="text-sm opacity-90 mb-1">{t("expenses.highestCategory")}</p>
                             <h3 className="text-2xl font-bold">{highestCategory.name}</h3>
-                            <p className="text-sm opacity-80 mt-1">€{highestCategory.amount.toLocaleString()}</p>
+                            <p className="text-sm opacity-80 mt-1">{formatCurrency(highestCategory.amount)}</p>
                         </Card>
                         <Card className="text-white" style={getCardStyle(3)}>
                             <p className="text-sm opacity-90 mb-1">{t("expenses.averageMonth")}</p>
-                            <h3 className="text-3xl font-bold">€{Math.round(totalExpenses / 6).toLocaleString()}</h3>
+                            <h3 className="text-3xl font-bold">{formatCurrency(Math.round(totalExpenses / 6))}</h3>
                             <p className="text-sm opacity-80 mt-1">{t("expenses.last6Months")}</p>
                         </Card>
                     </div>
@@ -227,7 +233,7 @@ export default function ExpensesPage() {
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-2xl font-bold text-gray-900">€{category.amount}</p>
+                                            <p className="text-2xl font-bold text-gray-900">{formatCurrency(category.amount)}</p>
                                         </div>
                                     </div>
                                 </Card>
@@ -284,7 +290,7 @@ export default function ExpensesPage() {
                                                     {expense.salonId || "N/A"}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-4 text-right font-semibold text-gray-900">€{expense.amount}</td>
+                                            <td className="px-4 py-4 text-right font-semibold text-gray-900">{formatCurrency(expense.amount)}</td>
                                             <td className="px-4 py-4 text-center">
                                                 <div className="flex items-center justify-center gap-2">
                                                     {canEdit && (

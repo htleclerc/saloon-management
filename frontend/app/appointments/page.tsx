@@ -19,6 +19,7 @@ import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGua
 import { useToast } from "@/context/ToastProvider";
 import { useConfirm } from "@/context/ConfirmProvider";
 import { useTranslation } from "@/i18n";
+import { useCurrency } from "@/hooks/useCurrency";
 
 // Helper type for UI
 type AppointmentUI = {
@@ -47,6 +48,7 @@ export default function AppointmentsPage() {
     const { handleReadOnlyClick } = useReadOnlyGuard();
     const router = useRouter();
     const { t } = useTranslation();
+    const { format: formatCurrency } = useCurrency();
     const [detailModal, setDetailModal] = useState<{ open: boolean; appointment: any | null }>({ open: false, appointment: null });
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("All");
@@ -132,7 +134,7 @@ export default function AppointmentsPage() {
                     date: b.date,
                     time: b.time,
                     duration: b.duration,
-                    totalPrice: `€${totalPrice}`,
+                    totalPrice: formatCurrency(totalPrice),
                     status: b.status,
                     isAdminModified,
                     // keep raw for actions

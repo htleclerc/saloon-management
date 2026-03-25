@@ -15,7 +15,7 @@ import { useToast } from "@/context/ToastProvider";
 export default function AddTeamMemberPage() {
     const router = useRouter();
     const { t } = useTranslation();
-    const { canModify } = useAuth();
+    const { canModify, user } = useAuth();
     const { handleReadOnlyClick } = useReadOnlyGuard();
     const { createWorker, loading, error } = useWorkers();
     const { showToast } = useToast();
@@ -60,8 +60,36 @@ export default function AddTeamMemberPage() {
                 isActive: true
             });
 
-            // Success - redirect to team page
-            showToast(t("common.success"), t("dialogs.success"), "success");
+            // Also invite the team member (creates users + user_salons + sends auth invite email)
+            if (formData.email && user?.tenantId) {
+                try {
+                    const inviteRes = await fetch('/api/team/invite', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            email: formData.email,
+                            firstName: formData.firstName,
+                            lastName: formData.lastName,
+                            salonId: parseInt(user.tenantId),
+                            role: formData.role === 'Manager' ? 'Manager' : 'Worker',
+                            phone: formData.phone || undefined,
+                        }),
+                    });
+                    const inviteData = await inviteRes.json();
+                    if (inviteData.inviteSent) {
+                        showToast(t("common.success"), t("team.invitationSent"), "success");
+                    } else {
+                        showToast(t("common.success"), t("dialogs.success"), "success");
+                    }
+                } catch (inviteErr) {
+                    // Worker was created but invite failed - still show success
+                    console.warn('Invite API call failed:', inviteErr);
+                    showToast(t("common.success"), t("dialogs.success"), "success");
+                }
+            } else {
+                showToast(t("common.success"), t("dialogs.success"), "success");
+            }
+
             router.push("/team");
         } catch (err) {
             // Error is already captured by the hook

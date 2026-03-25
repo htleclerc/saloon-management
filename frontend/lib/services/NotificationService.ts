@@ -1,7 +1,7 @@
 
 import { supabase } from "@/lib/supabase/client";
 import { BaseService } from "./BaseService";
-import { Notification, NotificationType } from "@/types";
+import { Notification, NotificationType, NotificationPreferences, NotificationChannelPref, DigestFrequency } from "@/types";
 
 interface NotificationDBRow {
     id?: string | number;
@@ -122,6 +122,156 @@ export class NotificationService extends BaseService {
                 .eq('is_read', false);
         } catch (e: unknown) {
             console.warn("Failed to mark all read in DB", e);
+        }
+    }
+
+    // =============================================
+    // NOTIFICATION PREFERENCES
+    // =============================================
+
+    private readonly DEFAULT_CHANNEL_PREFS: NotificationChannelPref[] = [
+        { id: "revenue", email: true, push: true, sms: false },
+        { id: "expense", email: true, push: false, sms: false },
+        { id: "validation", email: true, push: true, sms: true },
+        { id: "client", email: true, push: true, sms: false },
+        { id: "worker", email: false, push: true, sms: false },
+        { id: "report", email: true, push: false, sms: false },
+    ];
+
+    /**
+     * Get notification preferences for a user in a salon.
+     * Returns defaults if none saved yet.
+     */
+    async getPreferences(salonId: number, userCode: string): Promise<NotificationPreferences> {
+        try {
+            const { data, error } = await supabase
+                .from('notification_preferences')
+                .select('*')
+                .eq('salon_id', salonId)
+                .eq('user_code', userCode)
+                .single();
+
+            if (error || !data) {
+                // No saved preferences — return defaults
+                return this.getDefaultPreferences(salonId, userCode);
+            }
+            return this.mapPreferencesFromDB(data);
+        } catch (e: unknown) {
+            console.warn("Failed to load notification preferences:", e);
+            return this.getDefaultPreferences(salonId, userCode);
+        }
+    }
+
+    /**
+     * Save notification preferences (select → insert or update).
+     */
+    async savePreferences(prefs: NotificationPreferences): Promise<NotificationPreferences> {
+        const dbData = this.mapPreferencesToDB(prefs);
+
+        try {
+            // Check if a row already exists
+            const { data: existing } = await supabase
+                .from('notification_preferences')
+                .select('id')
+                .eq('salon_id', prefs.salonId)
+                .eq('user_code', prefs.userCode)
+                .maybeSingle();
+
+            let result;
+            if (existing?.id) {
+                // UPDATE existing row
+                result = await supabase
+                    .from('notification_preferences')
+                    .update(dbData)
+                    .eq('id', existing.id)
+                    .select()
+                    .single();
+            } else {
+                // INSERT new row
+                result = await supabase
+                    .from('notification_preferences')
+                    .insert(dbData)
+                    .select()
+                    .single();
+            }
+
+            if (result.error) {
+                console.error("Supabase notification_preferences error:", result.error.message, result.error.details, result.error.hint);
+                throw new Error(result.error.message || 'Database error');
+            }
+            return this.mapPreferencesFromDB(result.data);
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : JSON.stringify(e);
+            console.error("Failed to save notification preferences:", msg);
+            throw new Error(`Failed to save notification preferences: ${msg}`);
+        }
+    }
+
+    private getDefaultPreferences(salonId: number, userCode: string): NotificationPreferences {
+        return {
+            salonId,
+            userCode,
+            channelPreferences: [...this.DEFAULT_CHANNEL_PREFS],
+            digestFrequency: 'daily',
+            quietHoursEnabled: false,
+            quietHoursStart: '22:00',
+            quietHoursEnd: '08:00',
+        };
+    }
+
+    private mapPreferencesFromDB(row: Record<string, unknown>): NotificationPreferences {
+        return {
+            id: row.id as number,
+            salonId: row.salon_id as number,
+            userCode: row.user_code as string,
+            channelPreferences: (row.channel_preferences as NotificationChannelPref[]) || [...this.DEFAULT_CHANNEL_PREFS],
+            digestFrequency: (row.digest_frequency as DigestFrequency) || 'daily',
+            quietHoursEnabled: (row.quiet_hours_enabled as boolean) ?? false,
+            quietHoursStart: (row.quiet_hours_start as string) || '22:00',
+            quietHoursEnd: (row.quiet_hours_end as string) || '08:00',
+            createdAt: row.created_at ? new Date(row.created_at as string) : undefined,
+            updatedAt: row.updated_at ? new Date(row.updated_at as string) : undefined,
+        };
+    }
+
+    private mapPreferencesToDB(prefs: NotificationPreferences): Record<string, unknown> {
+        return {
+            salon_id: prefs.salonId,
+            user_code: prefs.userCode,
+            channel_preferences: prefs.channelPreferences,
+            digest_frequency: prefs.digestFrequency,
+            quiet_hours_enabled: prefs.quietHoursEnabled,
+            quiet_hours_start: prefs.quietHoursStart,
+            quiet_hours_end: prefs.quietHoursEnd,
+        };
+    }
+
+    /**
+     * Send an email notification via the Brevo email API route.
+     * Client-side method — calls /api/email/send.
+     */
+    async sendEmailNotification(
+        recipientEmail: string,
+        recipientName: string,
+        templateId: string,
+        params: Record<string, string>,
+        locale: string = "en",
+    ): Promise<boolean> {
+        try {
+            const response = await fetch("/api/email/send", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    to: [{ email: recipientEmail, name: recipientName }],
+                    templateId,
+                    locale,
+                    params,
+                }),
+            });
+            return response.ok;
+        } catch (error) {
+            console.warn("[NotificationService] Email notification failed:", error);
+            return false;
         }
     }
 

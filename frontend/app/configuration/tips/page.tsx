@@ -7,45 +7,22 @@ import { useAuth } from "@/context/AuthProvider";
 import { TipsDistributionRule } from "@/types";
 import { Check, Coins, Users, Building2, PieChart, Wallet } from "lucide-react";
 import { useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
-
-const options: { id: TipsDistributionRule; label: string; description: string; icon: any }[] = [
-    {
-        id: 'EQUAL_WORKERS',
-        label: 'Equal to Workers',
-        description: 'Tips are split strictly between active workers on the booking. Salon gets 0%.',
-        icon: Users
-    },
-    {
-        id: 'EQUAL_ALL',
-        label: 'Equal (incl. Salon)',
-        description: 'Salon counts as one worker. Split equally among N workers + 1 Salon share.',
-        icon: Building2
-    },
-    {
-        id: 'SALON_KEY',
-        label: 'Use Sharing Key',
-        description: "Apply each worker's sharing key (e.g. 50/50) to their portion of the tips.",
-        icon: PieChart
-    },
-    {
-        id: 'CUSTOM_PERCENTAGE',
-        label: 'Custom Salon %',
-        description: 'Salon takes a fixed percentage off the top, remainder split equally among workers.',
-        icon: Check // Placeholder
-    },
-    {
-        id: 'POOL',
-        label: 'Common Pool',
-        description: '100% of tips go to the Salon/Pool account for later manual distribution.',
-        icon: Wallet
-    }
-];
+import { useTranslation } from "@/i18n";
 
 import { tipsService } from "@/lib/services";
 import type { TipsConfiguration } from "@/types";
 import { useEffect } from "react";
 
+const optionsMeta: { id: TipsDistributionRule; labelKey: string; descKey: string; icon: typeof Users }[] = [
+    { id: 'EQUAL_WORKERS', labelKey: 'configuration.tips.rules.equalWorkers', descKey: 'configuration.tips.rules.equalWorkersDesc', icon: Users },
+    { id: 'EQUAL_ALL', labelKey: 'configuration.tips.rules.equalAll', descKey: 'configuration.tips.rules.equalAllDesc', icon: Building2 },
+    { id: 'SALON_KEY', labelKey: 'configuration.tips.rules.salonKey', descKey: 'configuration.tips.rules.salonKeyDesc', icon: PieChart },
+    { id: 'CUSTOM_PERCENTAGE', labelKey: 'configuration.tips.rules.customPercentage', descKey: 'configuration.tips.rules.customPercentageDesc', icon: Check },
+    { id: 'POOL', labelKey: 'configuration.tips.rules.pool', descKey: 'configuration.tips.rules.poolDesc', icon: Wallet },
+];
+
 export default function TipsConfigPage() {
+    const { t } = useTranslation();
     const [configuration, setConfiguration] = useState<TipsConfiguration>({
         rule: 'EQUAL_WORKERS',
         salonPercentage: 0,
@@ -79,15 +56,15 @@ export default function TipsConfigPage() {
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="text-2xl font-bold text-gray-900">Tips Configuration</h1>
-                <p className="text-gray-500 text-sm">Define how tips are distributed among the team</p>
+                <h1 className="text-2xl font-bold text-gray-900">{t("configuration.tips.title")}</h1>
+                <p className="text-gray-500 text-sm">{t("configuration.tips.subtitle")}</p>
             </div>
 
             <div className="flex items-center gap-4 p-4 bg-yellow-50 rounded-xl border border-yellow-100">
                 <Coins className="w-6 h-6 text-yellow-600" />
                 <div className="flex-1">
-                    <p className="font-bold text-gray-900">Enable Tips Collection</p>
-                    <p className="text-sm text-gray-600">Allow adding tips to income records</p>
+                    <p className="font-bold text-gray-900">{t("configuration.tips.enableTips")}</p>
+                    <p className="text-sm text-gray-600">{t("configuration.tips.enableTipsDesc")}</p>
                 </div>
                 <button
                     onClick={() => { if (!handleReadOnlyClick()) updateConfiguration({ isActive: !configuration.isActive }) }}
@@ -99,7 +76,7 @@ export default function TipsConfigPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {options.map((opt) => (
+                {optionsMeta.map((opt) => (
                     <div
                         key={opt.id}
                         onClick={() => { if (!handleReadOnlyClick()) updateConfiguration({ rule: opt.id }) }}
@@ -116,12 +93,12 @@ export default function TipsConfigPage() {
                         <div className={`w-12 h-12 rounded-xl mb-4 flex items-center justify-center ${configuration.rule === opt.id ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-500'}`}>
                             <opt.icon className="w-6 h-6" />
                         </div>
-                        <h3 className="font-bold text-lg text-gray-900 mb-1">{opt.label}</h3>
-                        <p className="text-sm text-gray-500">{opt.description}</p>
+                        <h3 className="font-bold text-lg text-gray-900 mb-1">{t(opt.labelKey)}</h3>
+                        <p className="text-sm text-gray-500">{t(opt.descKey)}</p>
 
                         {opt.id === 'CUSTOM_PERCENTAGE' && configuration.rule === 'CUSTOM_PERCENTAGE' && (
                             <div className="mt-4 pt-4 border-t border-yellow-200" onClick={e => e.stopPropagation()}>
-                                <label className="block text-xs font-bold text-yellow-800 uppercase tracking-widest mb-2">Salon Percentage</label>
+                                <label className="block text-xs font-bold text-yellow-800 uppercase tracking-widest mb-2">{t("configuration.tips.salonPercentage")}</label>
                                 <div className="flex gap-2">
                                     <input
                                         type="number"
@@ -132,7 +109,7 @@ export default function TipsConfigPage() {
                                         min={0}
                                         max={100}
                                     />
-                                    <Button size="sm" onClick={handleSave} disabled={!canModify} className="bg-yellow-500 hover:bg-yellow-600 text-white border-none disabled:opacity-50">Save</Button>
+                                    <Button size="sm" onClick={handleSave} disabled={!canModify} className="bg-yellow-500 hover:bg-yellow-600 text-white border-none disabled:opacity-50">{t("common.save")}</Button>
                                 </div>
                             </div>
                         )}
@@ -144,8 +121,8 @@ export default function TipsConfigPage() {
                 <div className="flex gap-4">
                     <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center shrink-0 text-blue-600 font-bold">i</div>
                     <div className="text-sm text-blue-800">
-                        <p className="font-bold mb-1">How it works</p>
-                        <p>Changes to these rules apply immediately for <strong>new</strong> income records. Existing records retain the distribution calculated at the time of creation.</p>
+                        <p className="font-bold mb-1">{t("configuration.tips.howItWorks")}</p>
+                        <p dangerouslySetInnerHTML={{ __html: t("configuration.tips.howItWorksDesc") }} />
                     </div>
                 </div>
             </Card>

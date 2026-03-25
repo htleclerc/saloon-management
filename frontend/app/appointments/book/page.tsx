@@ -26,6 +26,7 @@ import { useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 import { useToast } from "@/context/ToastProvider";
 import { useConfirm } from "@/context/ConfirmProvider";
 import { useTranslation } from "@/i18n";
+import { useCurrency } from "@/hooks/useCurrency";
 import { format } from "date-fns";
 import { fr, enUS, es } from "date-fns/locale";
 
@@ -35,6 +36,7 @@ function BookAppointmentContent() {
     const isAdmin = isSuperAdmin || isOwner || isManager;
     const { getAvailableSlots, addBooking, updateBooking, bookings } = useBooking();
     const { handleReadOnlyClick } = useReadOnlyGuard();
+    const { format: formatCurrency } = useCurrency();
     const router = useRouter();
     const searchParams = useSearchParams();
     const urlSalonId = searchParams.get("salonId");
@@ -851,7 +853,7 @@ function BookAppointmentContent() {
                                             <span className="text-[var(--color-primary)] font-semibold flex items-center gap-1">
                                                 <Clock className="w-4 h-4" /> {service.duration}
                                             </span>
-                                            <span className="text-gray-900 font-bold text-lg">€{service.price}</span>
+                                            <span className="text-gray-900 font-bold text-lg">{formatCurrency(Number(service.price))}</span>
                                         </div>
                                     </div>
                                 );
@@ -1107,7 +1109,7 @@ function BookAppointmentContent() {
                                 <div className="text-right">
                                     <p className="text-sm font-medium text-[var(--color-primary)]">{t('booking.summary.totalPrice')}</p>
                                     <p className="text-3xl font-bold text-[var(--color-primary)]">
-                                        €{selectedServices.reduce((acc, s) => acc + (Number(s.price) || 0), 0)}
+                                        {formatCurrency(selectedServices.reduce((acc, s) => acc + (Number(s.price) || 0), 0))}
                                     </p>
                                 </div>
                             </div>

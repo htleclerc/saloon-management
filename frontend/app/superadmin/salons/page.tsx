@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { Building2, Search, Eye, ChevronRight, Users, TrendingUp, Calendar, MapPin, Settings, Lock, AlertCircle, ChevronLeft } from 'lucide-react';
 import { useToast } from '@/context/ToastProvider';
 import { useTranslation } from '@/i18n';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface Salon {
     id: string;
@@ -23,6 +24,7 @@ export default function SuperAdminSalonsPage() {
     const { enterReadOnlyMode, enterManageMode } = useAuth();
     const router = useRouter();
     const { t } = useTranslation();
+    const { format } = useCurrency();
     const [salons, setSalons] = useState<Salon[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'archived'>('all');
@@ -274,7 +276,7 @@ export default function SuperAdminSalonsPage() {
                                     <div className="flex items-center gap-2">
                                         <TrendingUp className="w-4 h-4 text-green-600" />
                                         <span className="text-sm font-medium text-gray-900">
-                                            {salon.monthlyRevenue.toLocaleString('en-US')}€
+                                            {format(salon.monthlyRevenue)}
                                         </span>
                                         <span className="text-xs text-gray-500">
                                             / month

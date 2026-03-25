@@ -7,6 +7,7 @@ import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import StatCard from "@/components/ui/StatCard";
 import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
+import { useCurrency } from "@/hooks/useCurrency";
 import { useAuth } from "@/context/AuthProvider";
 import { useBooking } from "@/context/BookingProvider";
 import { useConfirm } from "@/context/ConfirmProvider";
@@ -31,6 +32,7 @@ export default function DailyPage() {
     const { t } = useTranslation();
     const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
     const { getCardStyle } = useKpiCardStyle();
+    const { format: formatCurrency } = useCurrency();
     const { user, hasPermission, getWorkerId, canModify, activeSalonId } = useAuth();
     const { bookings, startBooking } = useBooking();
     const { confirm } = useConfirm();
@@ -164,7 +166,7 @@ export default function DailyPage() {
                     />
                     <StatCard
                         title={t('common.dailyOverview.stats.incomeDraft')}
-                        value={`€${draftIncome.toLocaleString()}`}
+                        value={formatCurrency(draftIncome)}
                         subtitle={t('common.dailyOverview.stats.incomeDraftSubtitle')}
                         icon={DollarSign}
                         gradient=""

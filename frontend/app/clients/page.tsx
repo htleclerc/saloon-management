@@ -17,6 +17,7 @@ import { clientService } from "@/lib/services/ClientService";
 import { Client, ClientStats, ClientAnalytics } from "@/types";
 import { useAuth } from "@/context/AuthProvider";
 import { useTranslation } from "@/i18n";
+import { useCurrency } from "@/hooks/useCurrency";
 import { useToast } from "@/context/ToastProvider";
 import { useConfirm } from "@/context/ConfirmProvider";
 import { performanceStatsService } from "@/lib/services";
@@ -36,6 +37,7 @@ type ClientWithStats = Client & { stats?: ClientStats | null; type?: string };
 
 export default function ClientsPage() {
     const { t } = useTranslation();
+    const { format: formatCurrency } = useCurrency();
     const { activeSalonId } = useAuth();
     const [clients, setClients] = useState<ClientWithStats[]>([]);
     const [reviews, setReviews] = useState<DisplayReview[]>([]);
@@ -494,7 +496,7 @@ export default function ClientsPage() {
                                             </td>
                                             <td className="px-6 py-4 text-sm text-gray-700 hidden lg:table-cell">{client.address || "N/A"}</td>
                                             <td className="px-6 py-4 text-gray-900 font-semibold">{client.stats?.totalBookings || 0}</td>
-                                            <td className="px-6 py-4 text-gray-900 font-bold">{client.stats?.totalSpent || 0}€</td>
+                                            <td className="px-6 py-4 text-gray-900 font-bold">{formatCurrency(client.stats?.totalSpent || 0)}</td>
                                             <td className="px-6 py-4 hidden lg:table-cell">
                                                 <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${client.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
                                                     }`}>
@@ -815,7 +817,7 @@ export default function ClientsPage() {
                             <div className="grid grid-cols-2 gap-4 mb-6">
                                 <div className="p-4 rounded-xl bg-primary-light border border-color-primary/30 text-center">
                                     <p className="text-color-primary text-sm font-semibold mb-1">{t("clients.totalSpent")}</p>
-                                    <p className="text-2xl font-bold text-gray-900">{selectedClient.stats?.totalSpent || 0}€</p>
+                                    <p className="text-2xl font-bold text-gray-900">{formatCurrency(selectedClient.stats?.totalSpent || 0)}</p>
                                 </div>
                                 <div className="p-4 rounded-xl bg-blue-50 border border-blue-100 text-center">
                                     <p className="text-blue-600 text-sm font-semibold mb-1">{t("clients.visits")}</p>

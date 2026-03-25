@@ -33,7 +33,7 @@ const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 export default function AddAdvancedTeamMemberPage() {
     const router = useRouter();
     const { t } = useTranslation();
-    const { canModify } = useAuth();
+    const { canModify, user: authUser } = useAuth();
     const { handleReadOnlyClick } = useReadOnlyGuard();
     const { format, symbol } = useCurrency();
     const { services: availableServices } = useServices();
@@ -183,10 +183,32 @@ export default function AddAdvancedTeamMemberPage() {
                 weeklySchedule: schedule,
                 isActive: true
             });
+
+            // Also invite the team member (creates users + user_salons + sends auth invite email)
+            if (email && authUser?.tenantId) {
+                try {
+                    await fetch('/api/team/invite', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            email,
+                            firstName,
+                            lastName,
+                            salonId: parseInt(authUser.tenantId),
+                            role: role === 'Manager' ? 'Manager' : 'Worker',
+                            phone: phone || undefined,
+                        }),
+                    });
+                } catch (inviteErr) {
+                    console.warn('Invite API call failed:', inviteErr);
+                }
+            }
+
+            showToast(t("common.success"), t("dialogs.success"), "success");
             router.push("/team");
         } catch (error) {
             console.error("Failed to create worker", error);
-            // Ideally show error toast
+            showToast(t("common.error"), t("errors.generic"), "error");
         }
     };
 

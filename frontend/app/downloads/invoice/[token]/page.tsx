@@ -8,11 +8,13 @@ import { incomeService } from "@/lib/services";
 import MainLayout from "@/components/layout/MainLayout";
 import { FileText, CheckCircle, XCircle } from "lucide-react";
 import Card from "@/components/ui/Card";
+import { useTranslation } from "@/i18n";
 
 export default function InvoiceDownloadPage() {
+    const { t } = useTranslation();
     const { token } = useParams();
     const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'expired'>('loading');
-    const [message, setMessage] = useState("Verifying secure link...");
+    const [message, setMessage] = useState(t("downloads.verifyingSecureLink"));
     const processedRef = useRef(false);
 
     useEffect(() => {
@@ -26,30 +28,30 @@ export default function InvoiceDownloadPage() {
 
                 if (!payload || !payload.incomeId) {
                     setStatus('expired');
-                    setMessage("This download link has expired or has already been used.");
+                    setMessage(t("downloads.linkExpiredMsg"));
                     return;
                 }
 
                 setStatus('success');
-                setMessage("Link verified. Preparing download...");
+                setMessage(t("downloads.linkVerified"));
 
                 // 2. Fetch Income Data
                 const income = await incomeService.getWithRelations(payload.incomeId);
 
                 if (!income) {
                     setStatus('error');
-                    setMessage("Invoice data not found.");
+                    setMessage(t("downloads.downloadFailed"));
                     return;
                 }
 
                 // 3. Generate PDF
-                setMessage("Downloading Invoice...");
+                setMessage(t("downloads.downloadingInvoice"));
                 invoiceService.generatePdf(income);
-                setMessage("Download started successfully. This link is now invalid.");
+                setMessage(t("downloads.downloadStarted"));
             } catch (error: any) {
                 console.error("Download failed:", error);
 
-                let errorMessage = "An error occurred while processing your request.";
+                let errorMessage = t("downloads.errorProcessing");
                 if (error instanceof Error) {
                     errorMessage = `${error.message}`;
                 } else if (typeof error === 'string') {
@@ -57,7 +59,7 @@ export default function InvoiceDownloadPage() {
                 }
 
                 if (errorMessage.includes("permission denied")) {
-                    errorMessage = "Database Permission Error (401/42501). Contact Support.";
+                    errorMessage = t("downloads.dbPermissionError");
                 }
 
                 setStatus('error');
@@ -79,10 +81,10 @@ export default function InvoiceDownloadPage() {
                     </div>
 
                     <h1 className="text-2xl font-bold mb-2">
-                        {status === 'loading' && "Verifying Link"}
-                        {status === 'success' && "Download Successful"}
-                        {status === 'error' && "Download Failed"}
-                        {status === 'expired' && "Link Expired"}
+                        {status === 'loading' && t("downloads.verifyingLink")}
+                        {status === 'success' && t("downloads.downloadSuccessful")}
+                        {status === 'error' && t("downloads.downloadFailed")}
+                        {status === 'expired' && t("downloads.linkExpired")}
                     </h1>
 
                     <p className="text-gray-600 mb-6">
@@ -90,10 +92,10 @@ export default function InvoiceDownloadPage() {
                     </p>
 
                     <div className="text-xs text-gray-400 mt-8">
-                        Saloon Management Secure Downloads
+                        {t("downloads.secureDownloads")}
                         <br />
                         <span className="flex items-center justify-center gap-1 mt-1">
-                            <FileText className="w-3 h-3" /> Secure One-Time Link
+                            <FileText className="w-3 h-3" /> {t("downloads.secureOneTimeLink")}
                         </span>
                     </div>
                 </Card>

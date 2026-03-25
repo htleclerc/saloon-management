@@ -10,10 +10,12 @@ import {
 } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import { salonService } from '@/lib/services/SalonService';
+import { useCurrency } from '@/hooks/useCurrency';
 
 export default function AdminDashboardPage() {
     const { isSuperAdmin } = useAuth();
     const router = useRouter();
+    const { format } = useCurrency();
     const [loading, setLoading] = useState(true);
 
     const [metrics, setMetrics] = useState({
@@ -169,7 +171,7 @@ export default function AdminDashboardPage() {
                         <div className="flex items-start justify-between">
                             <div>
                                 <p className="text-sm font-medium text-green-700 mb-1">MRR</p>
-                                <p className="text-3xl font-bold text-green-900">{metrics.mrr.toLocaleString()}€</p>
+                                <p className="text-3xl font-bold text-green-900">{format(metrics.mrr)}</p>
                                 <div className="flex items-center gap-1 mt-2">
                                     <ArrowUpRight className="w-4 h-4 text-green-600" />
                                     <span className="text-sm font-semibold text-green-600">+{metrics.mrrGrowth}%</span>
@@ -187,7 +189,7 @@ export default function AdminDashboardPage() {
                         <div className="flex items-start justify-between">
                             <div>
                                 <p className="text-sm font-medium text-orange-700 mb-1">Revenu Total</p>
-                                <p className="text-3xl font-bold text-orange-900">{metrics.revenue.toLocaleString()}€</p>
+                                <p className="text-3xl font-bold text-orange-900">{format(metrics.revenue)}</p>
                                 <div className="flex items-center gap-1 mt-2">
                                     <ArrowUpRight className="w-4 h-4 text-green-600" />
                                     <span className="text-sm font-semibold text-green-600">+{metrics.revenueGrowth}%</span>
@@ -263,7 +265,7 @@ export default function AdminDashboardPage() {
                                         <p className="text-xs text-gray-500">{salon.users} utilisateurs</p>
                                     </div>
                                     <div className="text-right">
-                                        <p className="font-bold text-green-600">{salon.revenue}€</p>
+                                        <p className="font-bold text-green-600">{format(salon.revenue)}</p>
                                         <p className="text-xs text-gray-500">MRR</p>
                                     </div>
                                 </div>

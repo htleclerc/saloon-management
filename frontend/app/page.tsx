@@ -7,6 +7,7 @@ import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { useTranslation } from "@/i18n";
+import { useCurrency } from "@/hooks/useCurrency";
 import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
 import { useAuth } from "@/context/AuthProvider";
 import {
@@ -59,6 +60,7 @@ import type { AuthContextType } from "@/context/AuthProvider";
 
 export default function Dashboard() {
   const { t } = useTranslation();
+  const { format: formatCurrency, symbol } = useCurrency();
   const { getCardStyle } = useKpiCardStyle();
   const { user, isClient, isSuperAdmin, canModify, activeSalonId } = useAuth();
   const router = useRouter();
@@ -188,7 +190,7 @@ export default function Dashboard() {
               type: t("common.service"),
               status: b.status,
               statusColor: b.status === "Finished" ? "bg-green-100 text-green-700" : b.status === "Started" ? "bg-blue-100 text-blue-700" : "bg-yellow-100 text-yellow-700",
-              price: b.totalPrice ? `€${b.totalPrice}` : "€--",
+              price: b.totalPrice ? formatCurrency(b.totalPrice) : `${symbol()} --`,
               worker: workerName
             }))}
             activities={[]}
@@ -238,7 +240,7 @@ export default function Dashboard() {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-white/80 text-xs font-bold uppercase tracking-wider mb-1">{t("dashboard.totalRevenueDesc")}</p>
-                  <h3 className="text-2xl sm:text-3xl font-black">€{salonStats?.monthRevenue?.toLocaleString() || "0"}</h3>
+                  <h3 className="text-2xl sm:text-3xl font-black">{formatCurrency(salonStats?.monthRevenue || 0)}</h3>
                   <p className="text-xs text-white/90 mt-2 flex items-center gap-1 bg-white/20 w-fit px-2 py-0.5 rounded-full">
                     <TrendingUp className="w-3 h-3" /> {t("dashboard.revenueGrowth")}
                   </p>
@@ -252,7 +254,7 @@ export default function Dashboard() {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-white/80 text-xs font-bold uppercase tracking-wider mb-1">{t("dashboard.expenses")}</p>
-                  <h3 className="text-2xl sm:text-3xl font-black">€{salonStats?.totalExpenses?.toLocaleString() || "0"}</h3>
+                  <h3 className="text-2xl sm:text-3xl font-black">{formatCurrency(salonStats?.totalExpenses || 0)}</h3>
                   <p className="text-xs text-white/90 mt-2 flex items-center gap-1 bg-white/20 w-fit px-2 py-0.5 rounded-full">
                     <TrendingDown className="w-3 h-3" /> {t("dashboard.expenseStable")}
                   </p>
@@ -266,7 +268,7 @@ export default function Dashboard() {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-white/80 text-xs font-bold uppercase tracking-wider mb-1">{t("dashboard.netProfit")}</p>
-                  <h3 className="text-2xl sm:text-3xl font-black">€{((salonStats?.monthRevenue || 0) - (salonStats?.totalExpenses || 0)).toLocaleString()}</h3>
+                  <h3 className="text-2xl sm:text-3xl font-black">{formatCurrency((salonStats?.monthRevenue || 0) - (salonStats?.totalExpenses || 0))}</h3>
                   <p className="text-xs text-white/90 mt-2 flex items-center gap-1 bg-white/20 w-fit px-2 py-0.5 rounded-full">
                     <TrendingUp className="w-3 h-3" /> {t("dashboard.optimalPerformance")}
                   </p>
@@ -354,7 +356,7 @@ export default function Dashboard() {
                     contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', padding: '12px', backgroundColor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(8px)' }}
                     itemStyle={{ color: '#111827', fontWeight: 800, fontSize: '16px' }}
                     labelStyle={{ color: '#6B7280', fontWeight: 600, marginBottom: '4px' }}
-                    formatter={(value: number | undefined) => [`€${(value ?? 0).toLocaleString()}`, t("dashboard.revenue")]}
+                    formatter={(value: number | undefined) => [formatCurrency(value ?? 0), t("dashboard.revenue")]}
                   />
                   <Bar
                     dataKey="value"
@@ -405,13 +407,13 @@ export default function Dashboard() {
                       <Tooltip
                         contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', padding: '12px', backgroundColor: 'rgba(255, 255, 255, 0.95)' }}
                         itemStyle={{ fontWeight: 800 }}
-                        formatter={(value: number | undefined) => [`€${(value ?? 0).toLocaleString()}`, t("common.amount")]}
+                        formatter={(value: number | undefined) => [formatCurrency(value ?? 0), t("common.amount")]}
                       />
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div className="text-center">
-                      <p className="text-2xl font-black text-gray-900">€{salonStats?.totalExpenses?.toLocaleString() || "0"}</p>
+                      <p className="text-2xl font-black text-gray-900">{formatCurrency(salonStats?.totalExpenses || 0)}</p>
                       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">{t("dashboard.totalExpenses")}</p>
                     </div>
                   </div>
@@ -423,7 +425,7 @@ export default function Dashboard() {
                         <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: cat.color }}></div>
                         <span className="text-gray-600 font-medium group-hover/item:text-gray-900 transition-colors uppercase text-[11px] tracking-wide">{cat.name}</span>
                       </div>
-                      <span className="font-bold text-gray-900 tracking-tight">€{cat.value.toLocaleString()}</span>
+                      <span className="font-bold text-gray-900 tracking-tight">{formatCurrency(cat.value)}</span>
                     </div>
                   ))}
                 </div>
@@ -456,7 +458,7 @@ export default function Dashboard() {
                     <div className="grid grid-cols-3 gap-2 pt-4 border-t border-gray-50">
                       <div>
                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">{t("dashboard.revenueShort")}</p>
-                        <p className="font-black text-gray-900 text-sm">€{worker.revenue.toLocaleString()}</p>
+                        <p className="font-black text-gray-900 text-sm">{formatCurrency(worker.revenue)}</p>
                       </div>
                       <div>
                         <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">{t("common.clients")}</p>

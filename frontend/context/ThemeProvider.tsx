@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
 import { useAuth } from "./AuthProvider";
 
 export type SubmenuLayout = "vertical" | "horizontal";
@@ -74,28 +74,53 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     // Get current color palette
     const currentPalette = colorPalettes.find(p => p.id === theme.colorPaletteId) || colorPalettes[0];
 
-    // Load theme from localStorage on mount
+    // Dynamic Salon Color Override (if provided by Auth)
+    const { currentTenant, activeSalonId, user } = useAuth();
+
+    // Build scoped localStorage key per salon + user
+    const themeKey = activeSalonId && user?.id
+        ? `workshop-theme-${activeSalonId}-${user.id}`
+        : null;
+
+    // Skip saving when theme was just loaded from storage
+    const skipSaveRef = useRef(false);
+
+    // Load theme from localStorage on mount and when salon/user changes
     useEffect(() => {
         setMounted(true);
-        const savedTheme = localStorage.getItem("workshop-theme");
+        const key = themeKey || "workshop-theme";
+        const savedTheme = localStorage.getItem(key);
         if (savedTheme) {
             try {
-                const parsed = JSON.parse(savedTheme);
-                setTheme({ ...defaultTheme, ...parsed });
+                skipSaveRef.current = true;
+                setTheme({ ...defaultTheme, ...JSON.parse(savedTheme) });
             } catch {
                 console.error("Failed to parse saved theme");
             }
+        } else if (themeKey) {
+            // Scoped key has no data — migrate from global key
+            const globalTheme = localStorage.getItem("workshop-theme");
+            if (globalTheme) {
+                try {
+                    skipSaveRef.current = true;
+                    setTheme({ ...defaultTheme, ...JSON.parse(globalTheme) });
+                } catch { /* ignore */ }
+            }
         }
-    }, []);
-
-    // Dynamic Salon Color Override (if provided by Auth)
-    const { currentTenant } = useAuth();
+    }, [themeKey]);
 
     // Apply theme to document
     useEffect(() => {
         if (!mounted) return;
 
-        localStorage.setItem("workshop-theme", JSON.stringify(theme));
+        // Save to scoped key only (skip when auth not ready or when just loaded)
+        if (themeKey) {
+            if (skipSaveRef.current) {
+                skipSaveRef.current = false;
+            } else {
+                localStorage.setItem(themeKey, JSON.stringify(theme));
+            }
+        }
 
         // Apply theme to document
         document.documentElement.setAttribute("data-theme", theme.designType);
@@ -106,13 +131,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         const palette = colorPalettes.find(p => p.id === theme.colorPaletteId) || colorPalettes[0];
 
         // Priority logic based on useCustomColorOverride flag:
-        // - If useCustomColorOverride is true: ONLY custom colors (no palette fallback)
-        // - If useCustomColorOverride is false: Tenant logo colors > Palette colors (ignore custom)
+        // - If useCustomColorOverride is true: custom colors (fallback to palette)
+        // - If useCustomColorOverride is false: palette colors
         const useCustom = currentTenant?.useCustomColorOverride ?? false;
 
         const primaryColor = useCustom
             ? (currentTenant?.customPrimaryColor || palette.primary)
-            : (currentTenant?.primaryColor || palette.primary);
+            : palette.primary;
 
         const secondaryColor = useCustom
             ? (currentTenant?.customSecondaryColor || palette.secondary)
@@ -121,14 +146,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         document.documentElement.style.setProperty("--color-primary", primaryColor);
         document.documentElement.style.setProperty("--color-secondary", secondaryColor);
 
-        // For light colors: use custom if override is enabled and custom color exists, otherwise use palette light colors
+        // For light colors: use custom hex+opacity if override is enabled, otherwise palette light colors
         const hasCustomPrimary = useCustom && currentTenant?.customPrimaryColor;
         const hasCustomSecondary = useCustom && currentTenant?.customSecondaryColor;
-        const hasTenantPrimary = !useCustom && currentTenant?.primaryColor;
 
         document.documentElement.style.setProperty(
             "--color-primary-light",
-            (hasCustomPrimary || hasTenantPrimary) ? `${primaryColor}15` : palette.primaryLight
+            hasCustomPrimary ? `${primaryColor}15` : palette.primaryLight
         );
         document.documentElement.style.setProperty(
             "--color-secondary-light",
@@ -188,7 +212,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         } else {
             document.documentElement.classList.remove("no-animations");
         }
-    }, [theme, mounted, currentTenant]);
+    }, [theme, mounted, currentTenant, themeKey]);
 
     const updateTheme = (updates: Partial<ThemeSettings>) => {
         setTheme((prev) => ({ ...prev, ...updates }));

@@ -7,6 +7,7 @@ import Button from "@/components/ui/Button";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthProvider";
 import { useBooking } from "@/context/BookingProvider";
+import { useTranslation } from "@/i18n";
 import {
     Calendar as CalendarIcon,
     ChevronLeft,
@@ -38,6 +39,7 @@ export default function CalendarPage() {
         toggleSlotClosure,
         updateBookingStatus
     } = useBooking();
+    const { t } = useTranslation();
 
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [viewMode, setViewMode] = useState<'grid' | 'timeline'>('grid');
@@ -89,8 +91,8 @@ export default function CalendarPage() {
             <MainLayout>
                 <div className="flex flex-col items-center justify-center min-h-[60vh]">
                     <AlertTriangle className="w-16 h-16 text-yellow-500 mb-4" />
-                    <h1 className="text-2xl font-bold">Access Denied</h1>
-                    <p className="text-gray-500">You don't have permission to manage the calendar.</p>
+                    <h1 className="text-2xl font-bold">{t("calendar.accessDenied")}</h1>
+                    <p className="text-gray-500">{t("calendar.noPermission")}</p>
                 </div>
             </MainLayout>
         );
@@ -102,8 +104,8 @@ export default function CalendarPage() {
                 {/* Header Actions */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">Interactive Calendar</h1>
-                        <p className="text-gray-500 mt-1">Manage slots, capacity, and overbooking</p>
+                        <h1 className="text-3xl font-bold text-gray-900">{t("calendar.title")}</h1>
+                        <p className="text-gray-500 mt-1">{t("calendar.subtitle")}</p>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3">
@@ -128,7 +130,7 @@ export default function CalendarPage() {
                                     onClick={toggleDayStatus}
                                 >
                                     {capacity.isClosed ? <Lock className="w-4 h-4 sm:mr-2" /> : <Unlock className="w-4 h-4 sm:mr-2" />}
-                                    <span className="hidden sm:inline">{capacity.isClosed ? "Day Closed" : "Close Day"}</span>
+                                    <span className="hidden sm:inline">{capacity.isClosed ? t("calendar.dayClosed") : t("calendar.closeDay")}</span>
                                 </Button>
                             </ReadOnlyGuard>
 
@@ -136,7 +138,7 @@ export default function CalendarPage() {
                                 <Link href="/appointments/book">
                                     <Button className="bg-[var(--color-primary)] hover:opacity-90">
                                         <Plus className="w-4 h-4 sm:mr-2" />
-                                        <span className="hidden sm:inline">New Appointment</span>
+                                        <span className="hidden sm:inline">{t("calendar.newAppointment")}</span>
                                     </Button>
                                 </Link>
                             </ReadOnlyGuard>
@@ -149,7 +151,7 @@ export default function CalendarPage() {
                     <div className="flex flex-wrap items-center justify-between gap-6">
                         <div className="flex items-center gap-8">
                             <div className="space-y-1">
-                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Default Capacity</p>
+                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t("calendar.defaultCapacity")}</p>
                                 <div className="flex items-center gap-3">
                                     <button
                                         onClick={() => adjustMaxCapacity(-1)}
@@ -171,7 +173,7 @@ export default function CalendarPage() {
 
                             <div className="flex items-center gap-3">
                                 <div className="space-y-1">
-                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Overbooking</p>
+                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t("calendar.overbooking")}</p>
                                     <button
                                         onClick={toggleOverbooking}
                                         className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border-2 transition-all ${capacity.allowOverbooking
@@ -182,7 +184,7 @@ export default function CalendarPage() {
                                         <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${capacity.allowOverbooking ? 'border-[var(--color-primary)] bg-[var(--color-primary)]' : 'border-gray-300'}`}>
                                             {capacity.allowOverbooking && <Check className="w-2 h-2 text-white" />}
                                         </div>
-                                        {capacity.allowOverbooking ? 'Enabled' : 'Disabled'}
+                                        {capacity.allowOverbooking ? t("calendar.enabled") : t("calendar.disabled")}
                                     </button>
                                 </div>
                             </div>
@@ -190,7 +192,7 @@ export default function CalendarPage() {
 
                         <div className="flex items-center gap-4">
                             <div className="text-right">
-                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Total Bookings</p>
+                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t("calendar.totalBookings")}</p>
                                 <p className="text-xl font-black text-gray-900">{activeBookings.length}</p>
                             </div>
                         </div>
@@ -226,7 +228,7 @@ export default function CalendarPage() {
                                                 ? 'bg-red-100 text-red-600'
                                                 : 'bg-gray-100 text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500'
                                                 }`}
-                                            title={isClosed ? "Open Slot" : "Close Slot"}
+                                            title={isClosed ? t("calendar.openSlot") : t("calendar.closeSlot")}
                                         >
                                             {isClosed ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
                                         </button>
@@ -253,7 +255,7 @@ export default function CalendarPage() {
                                 {/* Floating Tooltip with appointments list on hover */}
                                 {bookingsInSlot.length > 0 && (
                                     <div className="absolute left-0 bottom-full mb-2 w-48 bg-gray-900 text-white p-2 rounded-lg text-[10px] invisible group-hover:visible z-50 shadow-xl border border-gray-800 animate-in fade-in slide-in-from-bottom-1">
-                                        <p className="font-bold border-b border-gray-700 pb-1 mb-1 text-color-primary">Bookings ({bookingsInSlot.length})</p>
+                                        <p className="font-bold border-b border-gray-700 pb-1 mb-1 text-color-primary">{t("calendar.bookings", { count: bookingsInSlot.length })}</p>
                                         <div className="space-y-1 max-h-32 overflow-y-auto">
                                             {bookingsInSlot.map((b, i) => (
                                                 <div key={i} className="flex items-center justify-between">

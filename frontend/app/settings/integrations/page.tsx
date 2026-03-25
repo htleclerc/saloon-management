@@ -4,53 +4,70 @@ import SettingsLayout from "@/components/layout/SettingsLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { Plug, Check, ExternalLink, Calendar, CreditCard, MessageSquare, Cloud } from "lucide-react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthProvider";
-import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
+import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
+import { useTranslation } from "@/i18n";
+import { useToast } from "@/context/ToastProvider";
+import { getLocalSettings, saveLocalSettings } from "@/lib/utils/localSettingsStorage";
 
-const integrations = [
-    {
-        id: "google-calendar",
-        name: "Google Calendar",
-        description: "Synchronisez vos rendez-vous avec Google Calendar",
-        icon: Calendar,
-        color: "from-red-500 to-red-600",
-        connected: true,
-        account: "admin@workshopmanager.com",
-    },
-    {
-        id: "stripe",
-        name: "Stripe",
-        description: "Acceptez les paiements en ligne",
-        icon: CreditCard,
-        color: "from-primary to-[var(--color-primary)]",
-        connected: true,
-        account: "Workshop Pro Account",
-    },
-    {
-        id: "whatsapp",
-        name: "WhatsApp Business",
-        description: "Envoyez des notifications par WhatsApp",
-        icon: MessageSquare,
-        color: "from-green-500 to-green-600",
-        connected: false,
-        account: null,
-    },
-    {
-        id: "google-drive",
-        name: "Google Drive",
-        description: "Sauvegardez vos données sur Google Drive",
-        icon: Cloud,
-        color: "from-blue-500 to-blue-600",
-        connected: false,
-        account: null,
-    },
-];
+interface IntegrationState {
+    connected: boolean;
+    account: string | null;
+}
 
 export default function IntegrationsSettingsPage() {
+    const { t } = useTranslation();
+    const { user, activeSalonId, currentTenant, canModify } = useAuth();
+    const { showToast } = useToast();
+    const { handleReadOnlyClick } = useReadOnlyGuard();
+
+    const integrationDefs = [
+        { id: "google-calendar", name: t("settings.integrationsPage.googleCalendar"), description: t("settings.integrationsPage.googleCalendarDesc"), icon: Calendar, color: "from-red-500 to-red-600" },
+        { id: "stripe", name: t("settings.integrationsPage.stripe"), description: t("settings.integrationsPage.stripeDesc"), icon: CreditCard, color: "from-primary to-[var(--color-primary)]" },
+        { id: "whatsapp", name: t("settings.integrationsPage.whatsapp"), description: t("settings.integrationsPage.whatsappDesc"), icon: MessageSquare, color: "from-green-500 to-green-600" },
+        { id: "google-drive", name: t("settings.integrationsPage.googleDrive"), description: t("settings.integrationsPage.googleDriveDesc"), icon: Cloud, color: "from-blue-500 to-blue-600" },
+    ];
+
+    const defaultStates: Record<string, IntegrationState> = {
+        "google-calendar": { connected: true, account: user?.email || "" },
+        "stripe": { connected: true, account: currentTenant?.name || "" },
+        "whatsapp": { connected: false, account: null },
+        "google-drive": { connected: false, account: null },
+    };
+
+    const [states, setStates] = useState<Record<string, IntegrationState>>(defaultStates);
+
+    useEffect(() => {
+        if (activeSalonId) {
+            const saved = getLocalSettings<Record<string, IntegrationState>>(activeSalonId, 'integrations', defaultStates);
+            setStates(saved);
+        }
+    }, [activeSalonId]);
+
+    const handleToggle = (id: string) => {
+        if (handleReadOnlyClick()) return;
+        const current = states[id];
+        const newStates = {
+            ...states,
+            [id]: {
+                connected: !current.connected,
+                account: !current.connected ? (user?.email || "Connected") : null,
+            },
+        };
+        setStates(newStates);
+        if (activeSalonId) saveLocalSettings(activeSalonId, 'integrations', newStates);
+        showToast(
+            t("common.success"),
+            current.connected ? t("settings.integrationsPage.disconnectedMsg") : t("settings.integrationsPage.connectedMsg"),
+            "success"
+        );
+    };
+
     return (
         <SettingsLayout
-            title="Integrations"
-            description="Connectez des services tiers pour étendre les fonctionnalités"
+            title={t("settings.integrationsPage.title")}
+            description={t("settings.integrationsPage.description")}
         >
             {/* Connected Integrations */}
             <Card>
@@ -59,21 +76,19 @@ export default function IntegrationsSettingsPage() {
                         <Plug className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                        <h3 className="font-semibold text-gray-900">Intégrations disponibles</h3>
-                        <p className="text-xs text-gray-500">Connectez vos outils préférés</p>
+                        <h3 className="font-semibold text-gray-900">{t("settings.integrationsPage.available")}</h3>
+                        <p className="text-xs text-gray-500">{t("settings.integrationsPage.availableDesc")}</p>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {integrations.map((integration) => {
+                    {integrationDefs.map((integration) => {
                         const Icon = integration.icon;
+                        const state = states[integration.id] || { connected: false, account: null };
                         return (
                             <div
                                 key={integration.id}
-                                className={`p-4 rounded-xl border-2 ${integration.connected
-                                    ? "border-green-200 bg-green-50"
-                                    : "border-gray-200 bg-white"
-                                    }`}
+                                className={`p-4 rounded-xl border-2 ${state.connected ? "border-green-200 bg-green-50" : "border-gray-200 bg-white"}`}
                             >
                                 <div className="flex items-start justify-between mb-3">
                                     <div className="flex items-center gap-3">
@@ -83,9 +98,9 @@ export default function IntegrationsSettingsPage() {
                                         <div>
                                             <div className="flex items-center gap-2">
                                                 <h4 className="font-semibold text-gray-900 text-sm">{integration.name}</h4>
-                                                {integration.connected && (
+                                                {state.connected && (
                                                     <span className="flex items-center gap-1 px-1.5 py-0.5 bg-green-100 text-green-700 text-xs rounded-full font-medium">
-                                                        <Check className="w-3 h-3" /> Connecté
+                                                        <Check className="w-3 h-3" /> {t("settings.integrationsPage.connected")}
                                                     </span>
                                                 )}
                                             </div>
@@ -93,23 +108,25 @@ export default function IntegrationsSettingsPage() {
                                         </div>
                                     </div>
                                 </div>
-                                {integration.connected ? (
+                                {state.connected ? (
                                     <div className="flex items-center justify-between">
-                                        <p className="text-xs text-gray-600">{integration.account}</p>
+                                        <p className="text-xs text-gray-600">{state.account}</p>
                                         <div className="flex gap-2">
                                             <ReadOnlyGuard>
-                                                <Button variant="outline" size="sm" className="text-xs">Configurer</Button>
+                                                <Button variant="outline" size="sm" className="text-xs">{t("settings.integrationsPage.configure")}</Button>
                                             </ReadOnlyGuard>
                                             <ReadOnlyGuard>
-                                                <Button variant="danger" size="sm" className="text-xs">Déconnecter</Button>
+                                                <Button variant="danger" size="sm" className="text-xs" onClick={() => handleToggle(integration.id)}>
+                                                    {t("settings.integrationsPage.disconnect")}
+                                                </Button>
                                             </ReadOnlyGuard>
                                         </div>
                                     </div>
                                 ) : (
                                     <ReadOnlyGuard>
-                                        <Button variant="success" size="sm" className="w-full">
+                                        <Button variant="success" size="sm" className="w-full" onClick={() => handleToggle(integration.id)}>
                                             <Plug className="w-4 h-4" />
-                                            Connecter
+                                            {t("settings.integrationsPage.connect")}
                                         </Button>
                                     </ReadOnlyGuard>
                                 )}
@@ -123,12 +140,12 @@ export default function IntegrationsSettingsPage() {
             <Card>
                 <div className="flex items-center justify-between mb-4">
                     <div>
-                        <h3 className="font-semibold text-gray-900 text-lg">Accès API</h3>
-                        <p className="text-xs text-gray-500">Gérez vos clés API pour les intégrations personnalisées</p>
+                        <h3 className="font-semibold text-gray-900 text-lg">{t("settings.integrationsPage.apiAccess")}</h3>
+                        <p className="text-xs text-gray-500">{t("settings.integrationsPage.apiAccessDesc")}</p>
                     </div>
                     <ReadOnlyGuard>
                         <Button variant="outline" size="sm">
-                            Générer une clé
+                            {t("settings.integrationsPage.generateKey")}
                         </Button>
                     </ReadOnlyGuard>
                 </div>
@@ -136,12 +153,12 @@ export default function IntegrationsSettingsPage() {
                     <div className="flex items-center justify-between mb-2">
                         <div>
                             <p className="font-medium text-gray-900 text-sm">Production Key</p>
-                            <p className="text-xs text-gray-500">Créée le 01/01/2026</p>
+                            <p className="text-xs text-gray-500">{t("settings.integrationsPage.createdOn", { date: new Date().toLocaleDateString() })}</p>
                         </div>
                         <div className="flex gap-2">
-                            <Button variant="outline" size="sm" className="text-xs">Copier</Button>
+                            <Button variant="outline" size="sm" className="text-xs">{t("settings.integrationsPage.copy")}</Button>
                             <ReadOnlyGuard>
-                                <Button variant="danger" size="sm" className="text-xs">Révoquer</Button>
+                                <Button variant="danger" size="sm" className="text-xs">{t("settings.integrationsPage.revoke")}</Button>
                             </ReadOnlyGuard>
                         </div>
                     </div>
@@ -151,9 +168,9 @@ export default function IntegrationsSettingsPage() {
                 </div>
                 <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-xl">
                     <p className="text-sm text-blue-800">
-                        <strong>Documentation API:</strong> Consultez notre
+                        <strong>{t("settings.integrationsPage.apiDocs")}</strong>
                         <a href="#" className="text-blue-600 hover:underline ml-1 inline-flex items-center gap-1">
-                            documentation complète <ExternalLink className="w-3 h-3" />
+                            {t("settings.integrationsPage.fullDocs")} <ExternalLink className="w-3 h-3" />
                         </a>
                     </p>
                 </div>

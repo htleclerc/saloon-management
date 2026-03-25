@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useRef, useEffect, Fragment } from "react";
-import { Bell, User, Search, Sun, Moon, Globe, ChevronDown, ChevronRight, Home, Menu, Building, FlaskConical, Settings, Power, X, Plus } from "lucide-react";
+import { Bell, User, Search, Sun, Moon, Globe, ChevronDown, ChevronRight, Home, Menu, Building, FlaskConical, Settings, Power, X, Plus, Zap } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTheme, useResponsive } from "@/context/ThemeProvider";
 import { useAuth } from "@/context/AuthProvider";
-import { useTranslation, availableLanguages, languageFlags, languageNames, Language } from "@/i18n";
+import { useTranslation, availableLanguages, languageNames, Language } from "@/i18n";
+import FlagIcon from "@/components/ui/FlagIcon";
 import { useNotifications } from "@/context/NotificationProvider";
 import NotificationsPanel from "./NotificationsPanel";
 import ModeSwitcher from "../ui/ModeSwitcher";
@@ -278,8 +279,8 @@ export default function Header() {
                         </div>
                     )}
 
-                    {/* Tenant Selector - for users with multiple tenants (hidden on mobile and superadmin) */}
-                    {user?.tenants && user.tenants.length > 1 && !isMobile && !pathname.startsWith('/superadmin') && (
+                    {/* Tenant Selector - for users with tenants (hidden on mobile, superadmin, and demo mode) */}
+                    {user?.tenants && user.tenants.length >= 1 && !isDemoMode && !isMobile && !pathname.startsWith('/superadmin') && (
                         <div className="relative" ref={tenantDropdownRef}>
                             <button
                                 onClick={() => setTenantDropdownOpen(!tenantDropdownOpen)}
@@ -331,47 +332,51 @@ export default function Header() {
                                     <div className="border-t border-gray-200 my-2"></div>
 
                                     {/* New Salon Option */}
-                                    <button
-                                        onClick={() => {
-                                            setTenantDropdownOpen(false);
-                                            if (!canCreateNewSalon()) {
-                                                // Redirect to upgrade page
-                                                router.push('/settings/billing/upgrade');
-                                            } else {
-                                                // Set flag to reset onboarding on next load
+                                    {canCreateNewSalon() ? (
+                                        <button
+                                            onClick={() => {
+                                                setTenantDropdownOpen(false);
                                                 localStorage.setItem('reset_onboarding', 'true');
-                                                // Navigate to beginning of onboarding flow with step=1 to force restart
                                                 router.push('/onboarding/setup?step=1');
-                                            }
-                                        }}
-                                        className={`w-full px-3 py-2.5 flex items-center gap-3 text-left transition-colors ${canCreateNewSalon()
-                                            ? 'hover:bg-primary-light text-color-primary'
-                                            : 'opacity-50 cursor-not-allowed text-gray-400'
-                                            }`}
-                                    >
-                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${canCreateNewSalon()
-                                            ? 'bg-gradient-primary'
-                                            : 'bg-gray-200'
-                                            }`}>
-                                            <Plus className="w-4 h-4 text-white" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <div className="font-medium text-sm">{t("header.newSalon")}</div>
-                                            <div className="text-xs text-gray-500">
-                                                {canCreateNewSalon()
-                                                    ? `${getCurrentSalonCount()} / ${getSalonLimit()} salons`
-                                                    : t("header.limitReached", { max: getSalonLimit() })
-                                                }
+                                            }}
+                                            className="w-full px-3 py-2.5 flex items-center gap-3 text-left transition-colors hover:bg-primary-light text-color-primary"
+                                        >
+                                            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-primary">
+                                                <Plus className="w-4 h-4 text-white" />
                                             </div>
-                                        </div>
-                                    </button>
+                                            <div className="flex-1">
+                                                <div className="font-medium text-sm">{t("header.newSalon")}</div>
+                                                <div className="text-xs text-gray-500">
+                                                    {`${getCurrentSalonCount()} / ${getSalonLimit()} salons`}
+                                                </div>
+                                            </div>
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={() => {
+                                                setTenantDropdownOpen(false);
+                                                router.push('/settings/billing/upgrade');
+                                            }}
+                                            className="w-full px-3 py-2.5 flex items-center gap-3 text-left transition-colors hover:bg-amber-50"
+                                        >
+                                            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br from-amber-400 to-orange-500">
+                                                <Zap className="w-4 h-4 text-white" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="font-medium text-sm text-amber-700">{t("header.upgradePlan")}</div>
+                                                <div className="text-xs text-gray-500">
+                                                    {t("header.upgradeToAddSalons")}
+                                                </div>
+                                            </div>
+                                        </button>
+                                    )}
                                 </div>
                             )}
                         </div>
                     )}
 
-                    {/* Mode Switcher - Data Mode Selection */}
-                    <ModeSwitcher />
+                    {/* Mode Switcher - Data Mode Selection (only visible in demo mode) */}
+                    {isDemoMode && <ModeSwitcher />}
 
                     {/* Language Selector */}
                     <div className="relative" ref={dropdownRef}>
@@ -380,8 +385,7 @@ export default function Header() {
                             className="flex items-center gap-1.5 px-2 py-1.5 hover:bg-gray-100 rounded-lg transition text-sm"
                             title={t("header.language")}
                         >
-                            <Globe className="w-4 h-4 text-gray-600" />
-                            <span className="text-lg">{languageFlags[language]}</span>
+                            <FlagIcon lang={language} />
                             {!isMobile && (
                                 <span className="text-gray-600 text-xs font-medium">{language.toUpperCase()}</span>
                             )}
@@ -400,7 +404,7 @@ export default function Header() {
                                         className={`w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-50 transition text-sm ${language === lang ? "bg-[var(--color-primary-light)] text-[var(--color-primary)]" : "text-gray-700"
                                             }`}
                                     >
-                                        <span className="text-lg">{languageFlags[lang as Language]}</span>
+                                        <FlagIcon lang={lang as Language} />
                                         <span>{languageNames[lang as Language]}</span>
                                     </button>
                                 ))}
@@ -462,8 +466,12 @@ export default function Header() {
                                     <p className="text-xs text-gray-500 capitalize">{user?.role || ""}</p>
                                 </div>
                             )}
-                            <div className="w-9 h-9 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary)] rounded-full flex items-center justify-center cursor-pointer hover:shadow-lg transition">
-                                <User className="w-5 h-5 text-white" />
+                            <div className="w-9 h-9 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary)] rounded-full flex items-center justify-center cursor-pointer hover:shadow-lg transition overflow-hidden">
+                                {user?.avatar && !user.avatar.includes('dicebear') && !user.avatar.includes('ui-avatars') ? (
+                                    <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                                ) : (
+                                    <User className="w-5 h-5 text-white" />
+                                )}
                             </div>
                         </button>
 

@@ -10,11 +10,13 @@ import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGua
 import { useToast } from "@/context/ToastProvider";
 import { useConfirm } from "@/context/ConfirmProvider";
 import { useTranslation } from "@/i18n";
+import { useCurrency } from "@/hooks/useCurrency";
 
 export default function EditExpensePage(props: { params: Promise<{ id: string }> }) {
     const { id } = use(props.params);
     const router = useRouter();
     const { t } = useTranslation();
+    const { symbol } = useCurrency();
     const { handleReadOnlyClick } = useReadOnlyGuard();
     const [formData, setFormData] = useState({
         date: "2026-01-10",
@@ -142,7 +144,7 @@ export default function EditExpensePage(props: { params: Promise<{ id: string }>
                             {/* Amount */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    {t("common.amount")} (€) <span className="text-red-500">*</span>
+                                    {t("common.amount")} ({symbol()}) <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="number"

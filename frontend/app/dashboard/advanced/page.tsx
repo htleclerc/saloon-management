@@ -56,9 +56,11 @@ import {
     Cell,
 } from "recharts";
 import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
+import { useCurrency } from "@/hooks/useCurrency";
 
 export default function AdvancedDashboardPage() {
     const { t } = useTranslation();
+    const { format: formatCurrency } = useCurrency();
     const { getCardStyle } = useKpiCardStyle();
     const { user, activeSalonId, canModify } = useAuth();
     const { startBooking } = useBooking();
@@ -207,7 +209,7 @@ export default function AdvancedDashboardPage() {
                                     <span className="text-[10px] font-black bg-white/20 backdrop-blur-md px-2 py-1 rounded-full uppercase tracking-tighter cursor-default">+12%</span>
                                 </div>
                                 <p className="text-white/80 text-xs font-black uppercase tracking-widest">Revenu Total</p>
-                                <h3 className="text-3xl font-black mt-1">€{stats?.totalRevenue?.toLocaleString()}</h3>
+                                <h3 className="text-3xl font-black mt-1">{formatCurrency(stats?.totalRevenue ?? 0)}</h3>
                             </div>
                         </div>
 
@@ -219,7 +221,7 @@ export default function AdvancedDashboardPage() {
                                     <span className="text-[10px] font-black bg-white/20 backdrop-blur-md px-2 py-1 rounded-full uppercase tracking-tighter cursor-default">+5%</span>
                                 </div>
                                 <p className="text-white/80 text-xs font-black uppercase tracking-widest">Dépenses</p>
-                                <h3 className="text-3xl font-black mt-1">€{stats?.totalExpenses?.toLocaleString()}</h3>
+                                <h3 className="text-3xl font-black mt-1">{formatCurrency(stats?.totalExpenses ?? 0)}</h3>
                             </div>
                         </div>
 
@@ -231,7 +233,7 @@ export default function AdvancedDashboardPage() {
                                     <span className="text-[10px] font-black bg-white/20 backdrop-blur-md px-2 py-1 rounded-full uppercase tracking-tighter cursor-default">Target Met</span>
                                 </div>
                                 <p className="text-white/80 text-xs font-black uppercase tracking-widest">Bénéfice Net</p>
-                                <h3 className="text-3xl font-black mt-1">€{(stats?.totalRevenue - stats?.totalExpenses)?.toLocaleString()}</h3>
+                                <h3 className="text-3xl font-black mt-1">{formatCurrency((stats?.totalRevenue ?? 0) - (stats?.totalExpenses ?? 0))}</h3>
                             </div>
                         </div>
 
@@ -384,7 +386,7 @@ export default function AdvancedDashboardPage() {
                                 </ResponsiveContainer>
                                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                     <div className="text-center">
-                                        <p className="text-3xl font-black text-gray-900 tabular-nums">€{(expenseCategories.reduce((acc, c) => acc + c.value, 0) / 1000).toFixed(1)}k</p>
+                                        <p className="text-3xl font-black text-gray-900 tabular-nums">{formatCurrency(expenseCategories.reduce((acc, c) => acc + c.value, 0))}</p>
                                         <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Total Frais</p>
                                     </div>
                                 </div>
@@ -396,7 +398,7 @@ export default function AdvancedDashboardPage() {
                                             <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: cat.color }}></div>
                                             <span className="text-sm font-bold text-gray-500">{cat.name}</span>
                                         </div>
-                                        <span className="font-black text-gray-900 tabular-nums text-sm">€{cat.value.toLocaleString()}</span>
+                                        <span className="font-black text-gray-900 tabular-nums text-sm">{formatCurrency(cat.value)}</span>
                                     </div>
                                 ))}
                             </div>
@@ -418,7 +420,7 @@ export default function AdvancedDashboardPage() {
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-xl font-black text-gray-900 tabular-nums">€{cat.value.toLocaleString()}</p>
+                                            <p className="text-xl font-black text-gray-900 tabular-nums">{formatCurrency(cat.value)}</p>
                                             <p className="text-[10px] text-emerald-500 font-black uppercase tracking-widest flex items-center gap-1 justify-end mt-1">
                                                 <ArrowUpRight className="w-3 h-3" />
                                                 Stable
@@ -460,7 +462,7 @@ export default function AdvancedDashboardPage() {
                                     <div className="pt-4 border-t border-gray-50 flex justify-between items-center">
                                         <div>
                                             <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Revenue</p>
-                                            <p className="text-lg font-black text-gray-900 tabular-nums">€{worker.monthRevenue.toLocaleString()}</p>
+                                            <p className="text-lg font-black text-gray-900 tabular-nums">{formatCurrency(worker.monthRevenue)}</p>
                                         </div>
                                         <div className="text-right">
                                             <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Avis</p>
@@ -516,7 +518,7 @@ export default function AdvancedDashboardPage() {
                                                     <span className="text-xs text-gray-400 font-medium">Salon Premium</span>
                                                 </div>
                                             </td>
-                                            <td className="py-6 pr-4 text-sm font-black text-gray-900 tabular-nums">€{(Math.random() * 100 + 50).toFixed(0)}</td>
+                                            <td className="py-6 pr-4 text-sm font-black text-gray-900 tabular-nums">{formatCurrency(Math.round(Math.random() * 100 + 50))}</td>
                                             <td className="py-6 pr-4 text-center">
                                                 <span className={`text-[10px] font-black px-4 py-2 rounded-xl uppercase tracking-widest border shadow-sm ${session.status === 'Finished' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
                                                     session.status === 'Started' ? 'bg-blue-50 text-blue-700 border-blue-100' :

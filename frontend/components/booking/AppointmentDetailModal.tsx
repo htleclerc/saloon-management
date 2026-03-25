@@ -26,6 +26,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { jsPDF } from "jspdf";
 import { UserRole } from "@/context/AuthProvider";
 import { canPerformBookingAction } from "@/lib/permissions";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface AppointmentDetailModalProps {
     isOpen: boolean;
@@ -59,6 +60,7 @@ export default function AppointmentDetailModal({
     const [showFullHistory, setShowFullHistory] = useState(false);
     const { isMobile } = useResponsive();
     const { t } = useTranslation();
+    const { format: formatCurrency } = useCurrency();
 
     // Body scroll lock
     useEffect(() => {
@@ -164,7 +166,7 @@ export default function AppointmentDetailModal({
                                     return (
                                         <div key={sid} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
                                             <span className="font-medium text-gray-700">{service?.name || t("common.service")}</span>
-                                            <span className="font-bold text-[var(--color-primary)]">€{service?.price || 0}</span>
+                                            <span className="font-bold text-[var(--color-primary)]">{formatCurrency(service?.price || 0)}</span>
                                         </div>
                                     );
                                 })}

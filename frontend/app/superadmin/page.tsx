@@ -5,10 +5,14 @@ import { useState, useEffect } from 'react';
 import { Shield, Building2, Users, TrendingUp, Eye, ArrowRight, BarChart3, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { salonService } from '@/lib/services/SalonService';
+import { useCurrency } from '@/hooks/useCurrency';
+import { useTranslation } from '@/i18n';
 
 export default function SuperAdminDashboard() {
     const { user } = useAuth();
     const router = useRouter();
+    const { format } = useCurrency();
+    const { t } = useTranslation();
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState({
         totalSalons: 0,
@@ -59,7 +63,7 @@ export default function SuperAdminDashboard() {
             <div className="flex flex-col items-center justify-center min-h-[400px]">
                 <Loader2 className="w-10 h-10 text-color-primary animate-spin mb-4" />
                 <p className="text-gray-500 font-medium italic animate-pulse">
-                    Chargement des données globales...
+                    {t("superadmin.loadingGlobalData")}
                 </p>
             </div>
         );
@@ -72,11 +76,11 @@ export default function SuperAdminDashboard() {
                 <div className="flex items-center gap-3 mb-2">
                     <Shield className="w-8 h-8 text-color-primary" />
                     <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
-                        Tableau de Bord Super Admin
+                        {t("superadmin.dashboard")}
                     </h1>
                 </div>
                 <p className="text-gray-600">
-                    Bienvenue, <span className="font-semibold text-color-primary">{user?.name || 'Super Admin'}</span>. Voici l'état global du réseau.
+                    {t("superadmin.welcome", { name: user?.name || 'Super Admin' })}
                 </p>
             </div>
 
@@ -95,7 +99,7 @@ export default function SuperAdminDashboard() {
                     <h3 className="text-3xl font-bold text-gray-900 mb-1 tracking-tight">
                         {stats.totalSalons}
                     </h3>
-                    <p className="text-gray-500 text-sm font-medium">Salons enregistrés</p>
+                    <p className="text-gray-500 text-sm font-medium">{t("superadmin.registeredSalons")}</p>
                 </div>
 
                 {/* Active Salons */}
@@ -105,13 +109,13 @@ export default function SuperAdminDashboard() {
                             <TrendingUp className="w-6 h-6 text-green-600" />
                         </div>
                         <span className="text-xs bg-green-50 text-green-700 px-2.5 py-1 rounded-full font-bold">
-                            {stats.totalSalons > 0 ? Math.round((stats.activeSalons / stats.totalSalons) * 100) : 0}% Activité
+                            {stats.totalSalons > 0 ? Math.round((stats.activeSalons / stats.totalSalons) * 100) : 0}% {t("superadmin.activity")}
                         </span>
                     </div>
                     <h3 className="text-3xl font-bold text-gray-900 mb-1 tracking-tight">
                         {stats.activeSalons}
                     </h3>
-                    <p className="text-gray-500 text-sm font-medium">Salons actifs</p>
+                    <p className="text-gray-500 text-sm font-medium">{t("superadmin.activeSalons")}</p>
                 </div>
 
                 {/* Total Users */}
@@ -127,7 +131,7 @@ export default function SuperAdminDashboard() {
                     <h3 className="text-3xl font-bold text-gray-900 mb-1 tracking-tight">
                         {stats.totalUsers}
                     </h3>
-                    <p className="text-gray-500 text-sm font-medium">Utilisateurs totaux</p>
+                    <p className="text-gray-500 text-sm font-medium">{t("superadmin.totalUsers")}</p>
                 </div>
 
                 {/* Monthly Revenue */}
@@ -137,13 +141,13 @@ export default function SuperAdminDashboard() {
                             <BarChart3 className="w-6 h-6 text-orange-600" />
                         </div>
                         <span className="text-xs bg-orange-50 text-orange-700 px-2.5 py-1 rounded-full font-bold">
-                            +12.5% vs mois dernier
+                            {t("superadmin.vsLastMonth")}
                         </span>
                     </div>
                     <h3 className="text-3xl font-bold text-gray-900 mb-1 tracking-tight">
-                        {stats.monthlyRevenue.toLocaleString('fr-FR')}€
+                        {format(stats.monthlyRevenue)}
                     </h3>
-                    <p className="text-gray-500 text-sm font-medium">CA Mensuel Global</p>
+                    <p className="text-gray-500 text-sm font-medium">{t("superadmin.globalMonthlyRevenue")}</p>
                 </div>
             </div>
 
@@ -151,7 +155,7 @@ export default function SuperAdminDashboard() {
             <div>
                 <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                     <div className="w-1.5 h-6 bg-primary rounded-full"></div>
-                    Actions Rapides
+                    {t("superadmin.quickActions")}
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* View All Salons */}
@@ -167,10 +171,10 @@ export default function SuperAdminDashboard() {
                                 </div>
                                 <div>
                                     <h3 className="font-bold text-gray-900 text-lg mb-1 group-hover:text-color-primary transition-colors">
-                                        Gérer les Salons
+                                        {t("superadmin.manageSalonsAction")}
                                     </h3>
                                     <p className="text-sm text-gray-500">
-                                        Voir, modérer et configurer tous les salons du réseau.
+                                        {t("superadmin.manageSalonsDesc")}
                                     </p>
                                 </div>
                             </div>
@@ -187,10 +191,10 @@ export default function SuperAdminDashboard() {
                                 </div>
                                 <div>
                                     <h3 className="font-bold text-gray-600 mb-1 group-hover:text-gray-900">
-                                        Analytique Globale
+                                        {t("superadmin.globalAnalytics")}
                                     </h3>
                                     <p className="text-sm text-gray-400 group-hover:text-gray-500">
-                                        Statistiques croisées et tendances du réseau. <span className="italic font-medium text-color-primary ml-1">Bientôt disponible</span>
+                                        {t("superadmin.globalAnalyticsDesc")} <span className="italic font-medium text-color-primary ml-1">{t("superadmin.comingSoonLabel")}</span>
                                     </p>
                                 </div>
                             </div>

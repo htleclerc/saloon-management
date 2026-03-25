@@ -13,6 +13,7 @@ export type UserRole = 'super_admin' | 'owner' | 'manager' | 'worker' | 'client'
 
 export interface User {
     id: number;
+    authId?: string;    // UUID from Supabase Auth (auth.users.id)
     userCode: string;  // 12-char code with check digit
     email: string;
     firstName: string;
@@ -76,7 +77,9 @@ export interface SalonSettings {
     sendSmsReminders: boolean;
     tipsEnabled: boolean;
     tipsDistributionRule: TipsDistributionRule;
+    tipsCustomPercentage?: number;  // For CUSTOM_PERCENTAGE distribution rule (0-100)
     defaultWorkerSharePct: number;
+    vatRate?: number;  // VAT/Tax percentage for invoicing (0-100)
     openingHours: OpeningHours[];
     createdAt: Date;
     updatedAt: Date;
@@ -705,6 +708,7 @@ export interface SalonDetails {
     logo?: string;
     openingHours: OpeningHours[];
     timezone: string;
+    currency?: string;
 }
 
 export interface OpeningHours {
@@ -768,6 +772,30 @@ export interface Notification {
         onApprove?: () => void;
         onReject?: () => void;
     };
+}
+
+export type NotificationChannel = 'email' | 'push' | 'sms';
+export type NotificationCategory = 'revenue' | 'expense' | 'validation' | 'client' | 'worker' | 'report';
+export type DigestFrequency = 'off' | 'daily' | 'weekly' | 'monthly';
+
+export interface NotificationChannelPref {
+    id: NotificationCategory;
+    email: boolean;
+    push: boolean;
+    sms: boolean;
+}
+
+export interface NotificationPreferences {
+    id?: number;
+    salonId: number;
+    userCode: string;
+    channelPreferences: NotificationChannelPref[];
+    digestFrequency: DigestFrequency;
+    quietHoursEnabled: boolean;
+    quietHoursStart: string;
+    quietHoursEnd: string;
+    createdAt?: Date;
+    updatedAt?: Date;
 }
 
 // ============================================================

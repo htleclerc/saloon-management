@@ -82,6 +82,17 @@ export class SupabaseProvider implements IDataProvider {
         return data ? this.mapUserFromDB(data) : null;
     }
 
+    async getUserByAuthId(authId: string): Promise<User | null> {
+        const { data, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('auth_id', authId)
+            .single();
+
+        if (error) return null;
+        return data ? this.mapUserFromDB(data) : null;
+    }
+
     async createUser(data: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User> {
         const { data: created, error } = await supabase
             .from('users')
@@ -793,6 +804,7 @@ export class SupabaseProvider implements IDataProvider {
     private mapUserFromDB(db: any): User {
         return {
             id: db.id,
+            authId: db.auth_id || undefined,
             userCode: db.user_code,
             email: db.email,
             firstName: db.first_name,
@@ -809,6 +821,7 @@ export class SupabaseProvider implements IDataProvider {
 
     private mapUserToDB(user: Partial<User>): any {
         const db: any = {};
+        if (user.authId !== undefined) db.auth_id = user.authId;
         if (user.userCode !== undefined) db.user_code = user.userCode;
         if (user.email !== undefined) db.email = user.email;
         if (user.firstName !== undefined) db.first_name = user.firstName;
@@ -893,7 +906,9 @@ export class SupabaseProvider implements IDataProvider {
             sendSmsReminders: db.send_sms_reminders,
             tipsEnabled: db.tips_enabled,
             tipsDistributionRule: db.tips_distribution_rule,
+            tipsCustomPercentage: db.tips_custom_percentage,
             defaultWorkerSharePct: db.default_worker_share_pct,
+            vatRate: db.vat_rate,
             openingHours: db.opening_hours || [],
             createdAt: new Date(db.created_at),
             updatedAt: new Date(db.updated_at)
@@ -910,7 +925,9 @@ export class SupabaseProvider implements IDataProvider {
         if (settings.sendSmsReminders !== undefined) db.send_sms_reminders = settings.sendSmsReminders;
         if (settings.tipsEnabled !== undefined) db.tips_enabled = settings.tipsEnabled;
         if (settings.tipsDistributionRule !== undefined) db.tips_distribution_rule = settings.tipsDistributionRule;
+        if (settings.tipsCustomPercentage !== undefined) db.tips_custom_percentage = settings.tipsCustomPercentage;
         if (settings.defaultWorkerSharePct !== undefined) db.default_worker_share_pct = settings.defaultWorkerSharePct;
+        if (settings.vatRate !== undefined) db.vat_rate = settings.vatRate;
         if (settings.openingHours !== undefined) db.opening_hours = settings.openingHours;
         return db;
     }
@@ -2768,6 +2785,7 @@ export class SupabaseProvider implements IDataProvider {
 
     private mapPromoCodeToDB(code: Partial<PromoCode>): any {
         const db: any = {};
+        if (code.salonId !== undefined) db.salon_id = code.salonId;
         if (code.code !== undefined) db.code = code.code;
         if (code.description !== undefined) db.description = code.description;
         if (code.type !== undefined) db.type = code.type;
@@ -2777,6 +2795,7 @@ export class SupabaseProvider implements IDataProvider {
         if (code.maxUsage !== undefined) db.max_usage = code.maxUsage;
         if (code.usageCount !== undefined) db.usage_count = code.usageCount;
         if (code.isActive !== undefined) db.is_active = code.isActive;
+        if (code.affectWorkerShare !== undefined) db.affect_worker_share = code.affectWorkerShare;
         if (code.createdBy !== undefined) db.created_by = code.createdBy;
         if (code.updatedBy !== undefined) db.updated_by = code.updatedBy;
         return db;

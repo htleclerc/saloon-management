@@ -1,6 +1,7 @@
 import React from 'react';
 import { PlanConfig } from '@/types';
 import Button from '@/components/ui/Button';
+import { useCurrency } from '@/hooks/useCurrency';
 import {
     Check,
     Edit2,
@@ -22,6 +23,7 @@ interface PlanCardProps {
 }
 
 export default function PlanCard({ plan, onEdit, onToggleStatus, onDelete }: PlanCardProps) {
+    const { format: formatCurrency } = useCurrency();
     const isFree = plan.price === 0;
 
     return (
@@ -47,7 +49,7 @@ export default function PlanCard({ plan, onEdit, onToggleStatus, onDelete }: Pla
                             )}
                         </div>
                         <div className="flex items-baseline gap-1 mt-1">
-                            <span className="text-3xl font-black text-gray-900">{plan.price}€</span>
+                            <span className="text-3xl font-black text-gray-900">{formatCurrency(plan.price)}</span>
                             <span className="text-gray-500 text-sm">/month</span>
                         </div>
                     </div>

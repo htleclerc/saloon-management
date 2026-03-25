@@ -13,6 +13,7 @@ import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 import { incomeService, expenseService, workerService, serviceService } from "@/lib/services";
 import { Income, Expense, SalonWorker, Service, ExpenseCategory } from "@/types";
 import { useTranslation } from "@/i18n";
+import { useCurrency } from "@/hooks/useCurrency";
 import { format } from "date-fns";
 import { fr, enUS, es } from "date-fns/locale";
 
@@ -29,6 +30,7 @@ interface ApprovalItem {
 
 export default function ApprovalsPage() {
     const { t, language } = useTranslation();
+    const { format: formatCurrency } = useCurrency();
     const { getCardStyle } = useKpiCardStyle();
     const auth = useAuth();
     const { activeSalonId, user } = auth;
@@ -341,7 +343,7 @@ export default function ApprovalsPage() {
                                 <p className="text-sm opacity-90 mb-1">{t('approvals.pendingIncomes')}</p>
                                 <h3 className="text-4xl font-bold">{pendingIncomes.length}</h3>
                                 <p className="text-sm opacity-80 mt-1">
-                                    Total: €{pendingIncomes.reduce((sum, r) => sum + (r.finalAmount || r.amount || 0), 0).toLocaleString()}
+                                    Total: {formatCurrency(pendingIncomes.reduce((sum, r) => sum + (r.finalAmount || r.amount || 0), 0))}
                                 </p>
                             </div>
                             <div className="w-16 h-16 bg-white/20 rounded-lg flex items-center justify-center">
@@ -355,7 +357,7 @@ export default function ApprovalsPage() {
                                 <p className="text-sm opacity-90 mb-1">{t('approvals.pendingExpenses')}</p>
                                 <h3 className="text-4xl font-bold">{pendingExpenses.length}</h3>
                                 <p className="text-sm opacity-80 mt-1">
-                                    Total: €{pendingExpenses.reduce((sum, e) => sum + (e.amount || 0), 0).toLocaleString()}
+                                    Total: {formatCurrency(pendingExpenses.reduce((sum, e) => sum + (e.amount || 0), 0))}
                                 </p>
                             </div>
                             <div className="w-16 h-16 bg-white/20 rounded-lg flex items-center justify-center">
@@ -478,7 +480,7 @@ export default function ApprovalsPage() {
                                             </td>
                                             <td className="px-4 py-4 text-sm text-gray-900">{income.clientName || t('common.unknown') || 'Unknown'}</td>
                                             <td className="px-4 py-4 text-sm text-gray-900">{resolveServiceNames(income)}</td>
-                                            <td className="px-4 py-4 text-right font-semibold text-color-primary">€{(income.finalAmount || income.amount || 0).toLocaleString()}</td>
+                                            <td className="px-4 py-4 text-right font-semibold text-color-primary">{formatCurrency(income.finalAmount || income.amount || 0)}</td>
                                             <td className="px-4 py-4 text-sm text-gray-900">{income.createdBy || '-'}</td>
                                             <td className="px-4 py-4">
                                                 <div className="flex items-center justify-center gap-2">
@@ -558,7 +560,7 @@ export default function ApprovalsPage() {
                                                 </span>
                                             </td>
                                             <td className="px-4 py-4 text-sm text-gray-900">{expense.description || '-'}</td>
-                                            <td className="px-4 py-4 text-right font-semibold text-color-secondary">€{(expense.amount || 0).toLocaleString()}</td>
+                                            <td className="px-4 py-4 text-right font-semibold text-color-secondary">{formatCurrency(expense.amount || 0)}</td>
                                             <td className="px-4 py-4">
                                                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                                     {currentSalonName}
@@ -626,7 +628,7 @@ export default function ApprovalsPage() {
                                             </td>
                                             <td className="px-4 py-4 text-sm text-gray-900">{formatDate(item.date)}</td>
                                             <td className="px-4 py-4 text-sm text-gray-900">{item.description}</td>
-                                            <td className="px-4 py-4 text-right font-semibold text-gray-900">€{(item.amount || 0).toLocaleString()}</td>
+                                            <td className="px-4 py-4 text-right font-semibold text-gray-900">{formatCurrency(item.amount || 0)}</td>
                                             <td className="px-4 py-4 text-sm text-gray-900">{item.data.updatedBy || 'System'}</td>
                                             <td className="px-4 py-4 text-sm">
                                                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.status === 'Validated' || item.status === 'Approved'

@@ -23,6 +23,7 @@ import {
 import Link from "next/link";
 import { useAuth } from "@/context/AuthProvider";
 import { useTranslation } from "@/i18n";
+import { useCurrency } from "@/hooks/useCurrency";
 import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 import HistoryModal, { HistoryEvent } from "@/components/ui/HistoryModal";
 import { useState } from "react";
@@ -88,6 +89,7 @@ export default function ServiceDetailPage() {
     // Use isManager for admin-like features as it includes owner/super_admin
     const isAdmin = isManager;
     const { t } = useTranslation();
+    const { format: formatCurrency } = useCurrency();
     const [historyModalOpen, setHistoryModalOpen] = useState(false);
 
     // Find service (in real app, fetch from API)
@@ -153,7 +155,7 @@ export default function ServiceDetailPage() {
                                 <div className="absolute bottom-8 left-8 right-8 flex justify-between items-end">
                                     <div className="text-white">
                                         <p className="text-white/80 font-medium mb-1 uppercase tracking-widest text-xs">Starting from</p>
-                                        <h2 className="text-5xl font-black italic">€{service.price}</h2>
+                                        <h2 className="text-5xl font-black italic">{formatCurrency(service.price)}</h2>
                                     </div>
                                     <div className="bg-white/20 backdrop-blur-xl p-4 rounded-3xl border border-white/30 text-white">
                                         <Award className="w-8 h-8" />
@@ -238,7 +240,7 @@ export default function ServiceDetailPage() {
                                         <div>
                                             <p className="text-white/70 text-sm">{t("services.monthlyRevenue")}</p>
                                             <div className="flex items-end gap-2">
-                                                <h4 className="text-3xl font-black italic">€22,800</h4>
+                                                <h4 className="text-3xl font-black italic">{formatCurrency(22800)}</h4>
                                                 <span className="text-green-400 text-xs font-black pb-1">↑ 15%</span>
                                             </div>
                                         </div>

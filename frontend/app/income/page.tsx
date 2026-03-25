@@ -22,6 +22,7 @@ import { format } from "date-fns";
 import { SERVICES } from "@/lib/data";
 import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 import { useTranslation } from "@/i18n";
+import { useCurrency } from "@/hooks/useCurrency";
 import { useNotifications } from "@/context/NotificationProvider";
 import { Income, IncomeStatus, Service, SalonWorker, BookingComment } from "@/types";
 
@@ -36,6 +37,7 @@ export default function IncomePage() {
     const { user, isWorker, isManager, activeSalonId } = auth;
     const { addNotification } = useNotifications();
     const { t } = useTranslation();
+    const { format: formatCurrency, symbol } = useCurrency();
     const { showToast } = useToast();
     const router = useRouter();
     // Real Data State
@@ -395,7 +397,7 @@ export default function IncomePage() {
                         <p><strong>${t("common.status")}:</strong> ${income.status}</p>
                         <table class="table">
                             <thead><tr><th>${t("common.service")}</th><th>${t("common.amount")}</th></tr></thead>
-                            <tbody><tr><td>${income.serviceDisplay}</td><td>€${income.amount}</td></tr></tbody>
+                            <tbody><tr><td>${income.serviceDisplay}</td><td>${symbol()}${income.amount}</td></tr></tbody>
                         </table>
                     </div>
                     <div class="footer">${t("income.thankYou")}</div>
@@ -419,10 +421,10 @@ export default function IncomePage() {
         doc.text(t("common.description").toUpperCase(), 20, 95);
         doc.text("TOTAL", 170, 95);
         doc.text(income.serviceDisplay || t("income.salonServices"), 20, 105);
-        doc.text(`€${income.amount}`, 170, 105);
+        doc.text(`${symbol()}${income.amount}`, 170, 105);
         doc.line(20, 115, 190, 115);
         doc.setFontSize(14);
-        doc.text(`${t("income.totalDue")}: €${income.amount}`, 170, 125, { align: "right" });
+        doc.text(`${t("income.totalDue")}: ${symbol()}${income.amount}`, 170, 125, { align: "right" });
         doc.save(`${t("income.invoice")}_${income.id}.pdf`);
     };
 
@@ -541,7 +543,7 @@ export default function IncomePage() {
                                 <td>${format(new Date(income.date), 'PP')}</td>
                                 <td>${income.clientName || '-'}</td>
                                 <td>${income.serviceDisplay || '-'}</td>
-                                <td>€${income.amount}</td>
+                                <td>${symbol()}${income.amount}</td>
                                 <td>${income.status}</td>
                                 <td>${income.workerDisplay || '-'}</td>
                             </tr>
@@ -691,7 +693,7 @@ export default function IncomePage() {
                                 </span>
                             </div>
                             <p className="text-white/80 text-sm font-medium">{t("income.totalIncome")}</p>
-                            <h3 className="text-3xl font-bold mt-1">€{totalIncome.toLocaleString()}</h3>
+                            <h3 className="text-3xl font-bold mt-1">{formatCurrency(totalIncome)}</h3>
                         </div>
                     </div>
 
@@ -708,7 +710,7 @@ export default function IncomePage() {
                                 <span className="text-xs font-bold bg-white/20 backdrop-blur-md px-2 py-1 rounded-full">{t("income.secure")}</span>
                             </div>
                             <p className="text-white/80 text-sm font-medium">{t("income.validated")}</p>
-                            <h3 className="text-3xl font-bold mt-1">€{validatedIncome.toLocaleString()}</h3>
+                            <h3 className="text-3xl font-bold mt-1">{formatCurrency(validatedIncome)}</h3>
                         </div>
                     </div>
 
@@ -725,7 +727,7 @@ export default function IncomePage() {
                                 <span className="text-xs font-bold bg-white/20 backdrop-blur-md px-2 py-1 rounded-full">{t("common.pending")}</span>
                             </div>
                             <p className="text-white/80 text-sm font-medium">{t("income.pendingDraft")}</p>
-                            <h3 className="text-3xl font-bold mt-1">€{pendingIncome.toLocaleString()}</h3>
+                            <h3 className="text-3xl font-bold mt-1">{formatCurrency(pendingIncome)}</h3>
                         </div>
                     </div>
                 </div>
@@ -856,7 +858,7 @@ export default function IncomePage() {
                                             <td className="px-4 py-4 text-sm text-gray-900">{income.date}</td>
                                             <td className="px-4 py-4 font-medium">{income.clientName}</td>
                                             <td className="hidden md:table-cell px-4 py-4 text-sm text-gray-600 truncate max-w-[150px]">{income.serviceDisplay}</td>
-                                            <td className="px-4 py-4 text-right font-bold text-gray-900">€{income.amount}</td>
+                                            <td className="px-4 py-4 text-right font-bold text-gray-900">{formatCurrency(income.amount)}</td>
                                             <td className="px-4 py-4 text-center">
                                                 <div className="flex flex-col items-center">
                                                     <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${income.status === 'Validated' ? 'bg-green-100 text-green-700' :

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
-import { Notification, NotificationType } from '@/types';
+import { Notification, NotificationType, NotificationPreferences } from '@/types';
 import { useToast } from './ToastProvider';
 import { notificationService } from '@/lib/services';
 import { useAuth } from './AuthProvider';
@@ -13,14 +13,18 @@ interface NotificationContextType {
     markAsRead: (id: string) => void;
     markAllAsRead: () => void;
     removeNotification: (id: string) => void;
+    preferences: NotificationPreferences | null;
+    loadPreferences: () => Promise<void>;
+    savePreferences: (prefs: NotificationPreferences) => Promise<void>;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
     const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
     const { addToast } = useToast();
-    const { user, isAuthenticated } = useAuth();
+    const { user, isAuthenticated, activeSalonId } = useAuth();
     const POLLING_INTERVAL = 10000; // 10 seconds
 
     // POLLING: Load notifications from DB
@@ -71,7 +75,11 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
                     // setUnreadCount is derived, no need to set it manually
 
                     // Show toast for immediate feedback
-                    addToast(notif.message, notif.type);
+                    // Map notification types to valid toast types
+                    const toastType = (['success', 'error', 'warning', 'info'] as const).includes(notif.type as any)
+                        ? notif.type as 'success' | 'error' | 'warning' | 'info'
+                        : 'info';
+                    addToast(notif.message, toastType);
                 }
             }
         };
@@ -82,6 +90,36 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
         };
     }, [loadNotifications, user]); // Dependencies
 
+
+    // Load notification preferences from DB
+    const loadPreferences = useCallback(async () => {
+        if (!activeSalonId || !user) return;
+        try {
+            const userCode = (user as any).userCode || "ADM-000";
+            const prefs = await notificationService.getPreferences(Number(activeSalonId), userCode);
+            setPreferences(prefs);
+        } catch (e) {
+            console.error("Failed to load notification preferences:", e);
+        }
+    }, [activeSalonId, user]);
+
+    // Save notification preferences to DB
+    const savePreferencesHandler = useCallback(async (prefs: NotificationPreferences) => {
+        try {
+            const saved = await notificationService.savePreferences(prefs);
+            setPreferences(saved);
+        } catch (e) {
+            console.error("Failed to save notification preferences:", e);
+            throw e;
+        }
+    }, []);
+
+    // Load preferences when salon/user changes
+    useEffect(() => {
+        if (isAuthenticated && activeSalonId) {
+            loadPreferences();
+        }
+    }, [isAuthenticated, activeSalonId, loadPreferences]);
 
     // Create Notification (Send to DB)
     const addNotification = useCallback(async (data: Omit<Notification, 'id' | 'timestamp' | 'isRead'> & { targetUserCode?: string }) => {
@@ -160,7 +198,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     const unreadCount = notifications.filter(n => !n.isRead).length;
 
     return (
-        <NotificationContext.Provider value={{ notifications, unreadCount, addNotification, markAsRead, markAllAsRead, removeNotification }}>
+        <NotificationContext.Provider value={{ notifications, unreadCount, addNotification, markAsRead, markAllAsRead, removeNotification, preferences, loadPreferences, savePreferences: savePreferencesHandler }}>
             {children}
         </NotificationContext.Provider>
     );

@@ -2,6 +2,7 @@
 
 import { useAI } from "@/context/AIProvider";
 import { Lightbulb, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface SmartSuggestionProps {
     type: 'info' | 'warning' | 'success';
@@ -68,6 +69,7 @@ export default function SmartSuggestion({ type, message, action }: SmartSuggesti
  */
 export function useSmartSuggestions() {
     const { config, isAvailable } = useAI();
+    const { format: formatCurrency } = useCurrency();
 
     const checkBookingConflict = async (date: string, time: string, workerIds: number[]): Promise<SmartSuggestionProps | null> => {
         if (!isAvailable || !config.features.suggestions) {
@@ -100,7 +102,7 @@ export function useSmartSuggestions() {
         // TODO: Call AI API for price suggestion
         return {
             type: 'info',
-            message: 'Prix recommandé basé sur l\'historique : 120€',
+            message: `Prix recommandé basé sur l'historique : ${formatCurrency(120)}`,
             action: {
                 label: 'Appliquer',
                 onClick: () => { /* TODO: Apply suggested price */ }

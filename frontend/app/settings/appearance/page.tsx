@@ -21,8 +21,12 @@ import {
     Check,
     Type,
     Layers,
+    Wand2,
+    Loader2,
 } from "lucide-react";
 import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
+import { extractDominantColorsFromUrl } from "@/lib/utils/colorExtraction";
+import { useToast } from "@/context/ToastProvider";
 
 const fonts = [
     { id: "Open Sans", name: "Open Sans", sample: "Aa" },
@@ -53,6 +57,7 @@ export default function AppearanceSettingsPage() {
     const { theme, updateTheme } = useTheme();
     const { t } = useTranslation();
     const { currentTenant, updateTenantColors, canModify } = useAuth();
+    const { showToast } = useToast();
     const [localTheme, setLocalTheme] = useState(theme);
     const [customPrimaryColor, setCustomPrimaryColor] = useState<string>("");
     const [customSecondaryColor, setCustomSecondaryColor] = useState<string>("");
@@ -61,6 +66,7 @@ export default function AppearanceSettingsPage() {
     const [customSuccessColor, setCustomSuccessColor] = useState<string>("");
     const [customWarningColor, setCustomWarningColor] = useState<string>("");
     const [customDangerColor, setCustomDangerColor] = useState<string>("");
+    const [isExtractingColors, setIsExtractingColors] = useState(false);
 
     useEffect(() => {
         setLocalTheme(theme);
@@ -120,6 +126,32 @@ export default function AppearanceSettingsPage() {
         updateTheme(defaultSettings);
     };
 
+    const handleExtractFromLogo = async () => {
+        if (!currentTenant?.logo) {
+            showToast(t("common.error"), t("settings.appearancePage.noLogoForExtraction"), "error");
+            return;
+        }
+
+        if (currentTenant.logo.endsWith('.svg')) {
+            showToast(t("common.error"), t("settings.appearancePage.svgNoExtraction"), "error");
+            return;
+        }
+
+        try {
+            setIsExtractingColors(true);
+            const colors = await extractDominantColorsFromUrl(currentTenant.logo);
+            setCustomPrimaryColor(colors.primary);
+            setCustomSecondaryColor(colors.secondary);
+            setUseCustomOverride(true);
+            showToast(t("common.success"), t("settings.appearancePage.colorsExtracted"), "success");
+        } catch (err) {
+            console.error("Color extraction failed:", err);
+            showToast(t("common.error"), String(err instanceof Error ? err.message : err), "error");
+        } finally {
+            setIsExtractingColors(false);
+        }
+    };
+
     const selectedPalette = colorPalettes.find(p => p.id === localTheme.colorPaletteId) || colorPalettes[0];
 
     return (
@@ -134,8 +166,8 @@ export default function AppearanceSettingsPage() {
                         <Palette className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                        <h3 className="font-semibold text-gray-900">Color Palette</h3>
-                        <p className="text-xs text-gray-500">Choose primary & secondary colors</p>
+                        <h3 className="font-semibold text-gray-900">{t("settings.appearancePage.colorPalette")}</h3>
+                        <p className="text-xs text-gray-500">{t("settings.appearancePage.colorPaletteDesc")}</p>
                     </div>
                 </div>
 
@@ -183,9 +215,30 @@ export default function AppearanceSettingsPage() {
                 <div className="mt-6 pt-6 border-t border-gray-200">
                     <div className="flex items-center justify-between mb-4">
                         <div>
-                            <h4 className="text-sm font-semibold text-gray-900">Custom Brand Colors</h4>
-                            <p className="text-xs text-gray-500 mt-0.5">Override default logo-based colors</p>
+                            <h4 className="text-sm font-semibold text-gray-900">{t("settings.appearancePage.customBrandColors")}</h4>
+                            <p className="text-xs text-gray-500 mt-0.5">{t("settings.appearancePage.customBrandColorsDesc")}</p>
                         </div>
+                        {currentTenant?.logo && (
+                            <ReadOnlyGuard>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleExtractFromLogo}
+                                    disabled={isExtractingColors}
+                                    className="flex items-center gap-2"
+                                >
+                                    {isExtractingColors ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        <Wand2 className="w-4 h-4" />
+                                    )}
+                                    {isExtractingColors
+                                        ? t("settings.appearancePage.extractingColors")
+                                        : t("settings.appearancePage.extractFromLogo")
+                                    }
+                                </Button>
+                            </ReadOnlyGuard>
+                        )}
                     </div>
 
                     {/* Override Checkbox */}
@@ -198,15 +251,15 @@ export default function AppearanceSettingsPage() {
                             className="w-4 h-4 text-color-primary rounded focus:ring-primary"
                         />
                         <div>
-                            <p className="font-medium text-gray-900 text-sm">Override palette colors</p>
-                            <p className="text-xs text-gray-500">Use custom colors instead of selected palette</p>
+                            <p className="font-medium text-gray-900 text-sm">{t("settings.appearancePage.overridePalette")}</p>
+                            <p className="text-xs text-gray-500">{t("settings.appearancePage.overridePaletteDesc")}</p>
                         </div>
                     </label>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                         {/* Primary Color Picker */}
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700">Primary Color</label>
+                            <label className="text-sm font-medium text-gray-700">{t("settings.appearancePage.primaryColor")}</label>
                             <div className="relative">
                                 <input
                                     type="color"
@@ -231,14 +284,14 @@ export default function AppearanceSettingsPage() {
                                     disabled={!canModify}
                                     className="text-xs text-color-primary hover:text-color-primary disabled:opacity-50"
                                 >
-                                    Reset to default
+                                    {t("settings.appearancePage.resetToDefault")}
                                 </button>
                             )}
                         </div>
 
                         {/* Secondary Color Picker */}
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-700">Secondary Color</label>
+                            <label className="text-sm font-medium text-gray-700">{t("settings.appearancePage.secondaryColor")}</label>
                             <div className="relative">
                                 <input
                                     type="color"
@@ -263,7 +316,7 @@ export default function AppearanceSettingsPage() {
                                     disabled={!canModify}
                                     className="text-xs text-primary hover:text-primary-dark disabled:opacity-50"
                                 >
-                                    Reset to default
+                                    {t("settings.appearancePage.resetToDefault")}
                                 </button>
                             )}
                         </div>
@@ -271,7 +324,7 @@ export default function AppearanceSettingsPage() {
 
                     {/* Preview */}
                     <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                        <p className="text-xs text-gray-500 mb-2">Live Preview</p>
+                        <p className="text-xs text-gray-500 mb-2">{t("settings.appearancePage.livePreview")}</p>
                         <div
                             className="h-12 rounded-lg shadow-sm"
                             style={{ background: `linear-gradient(90deg, ${customPrimaryColor || selectedPalette.primary} 0%, ${customSecondaryColor || selectedPalette.secondary} 100%)` }}
@@ -287,8 +340,8 @@ export default function AppearanceSettingsPage() {
                         <Check className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                        <h3 className="font-semibold text-gray-900">Action & Status Colors</h3>
-                        <p className="text-xs text-gray-500">Configure success, warning and danger colors</p>
+                        <h3 className="font-semibold text-gray-900">{t("settings.appearancePage.actionStatusColors")}</h3>
+                        <p className="text-xs text-gray-500">{t("settings.appearancePage.actionStatusColorsDesc")}</p>
                     </div>
                 </div>
 
@@ -296,9 +349,9 @@ export default function AppearanceSettingsPage() {
                     {/* Mode Selection */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                         {[
-                            { id: "default", name: "Default", description: "Green / Orange / Red" },
-                            { id: "theme", name: "Theme-Aligned", description: "Match salon palette" },
-                            { id: "custom", name: "Custom", description: "Choose precision colors" },
+                            { id: "default", name: t("settings.appearancePage.defaultMode"), description: "Green / Orange / Red" },
+                            { id: "theme", name: t("settings.appearancePage.themeAligned"), description: "Match salon palette" },
+                            { id: "custom", name: t("settings.appearancePage.custom"), description: "Choose precision colors" },
                         ].map((mode) => {
                             const isSelected = semanticMode === mode.id;
                             return (
@@ -325,7 +378,7 @@ export default function AppearanceSettingsPage() {
                     {semanticMode === "custom" && (
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-xl animate-in fade-in slide-in-from-top-2">
                             <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-700 uppercase">Success</label>
+                                <label className="text-xs font-bold text-gray-700 uppercase">{t("settings.appearancePage.success")}</label>
                                 <div className="relative">
                                     <input
                                         type="color"
@@ -341,7 +394,7 @@ export default function AppearanceSettingsPage() {
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-700 uppercase">Warning</label>
+                                <label className="text-xs font-bold text-gray-700 uppercase">{t("settings.appearancePage.warning")}</label>
                                 <div className="relative">
                                     <input
                                         type="color"
@@ -357,7 +410,7 @@ export default function AppearanceSettingsPage() {
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-xs font-bold text-gray-700 uppercase">Danger</label>
+                                <label className="text-xs font-bold text-gray-700 uppercase">{t("settings.appearancePage.danger")}</label>
                                 <div className="relative">
                                     <input
                                         type="color"
@@ -377,19 +430,19 @@ export default function AppearanceSettingsPage() {
 
                     {/* Preview Section */}
                     <div className="pt-2">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase mb-3 tracking-widest text-center">Live Component Preview</p>
+                        <p className="text-[10px] font-bold text-gray-400 uppercase mb-3 tracking-widest text-center">{t("settings.appearancePage.livePreview")}</p>
                         <div className="flex flex-wrap items-center justify-center gap-4">
                             <div className="flex flex-col items-center gap-2">
-                                <div className="px-4 py-2 rounded-lg text-white font-bold text-xs shadow-sm bg-success">Success Action</div>
-                                <span className="text-[8px] text-gray-400 uppercase">Button / Badge</span>
+                                <div className="px-4 py-2 rounded-lg text-white font-bold text-xs shadow-sm bg-success">{t("settings.appearancePage.successAction")}</div>
+                                <span className="text-[8px] text-gray-400 uppercase">{t("settings.appearancePage.successActionDesc")}</span>
                             </div>
                             <div className="flex flex-col items-center gap-2">
-                                <div className="px-4 py-2 rounded-lg text-white font-bold text-xs shadow-sm bg-warning">Warning Action</div>
-                                <span className="text-[8px] text-gray-400 uppercase">Attention / Pending</span>
+                                <div className="px-4 py-2 rounded-lg text-white font-bold text-xs shadow-sm bg-warning">{t("settings.appearancePage.warningAction")}</div>
+                                <span className="text-[8px] text-gray-400 uppercase">{t("settings.appearancePage.warningActionDesc")}</span>
                             </div>
                             <div className="flex flex-col items-center gap-2">
-                                <div className="px-4 py-2 rounded-lg text-white font-bold text-xs shadow-sm bg-error">Danger Action</div>
-                                <span className="text-[8px] text-gray-400 uppercase">Refuse / Cancel</span>
+                                <div className="px-4 py-2 rounded-lg text-white font-bold text-xs shadow-sm bg-error">{t("settings.appearancePage.dangerAction")}</div>
+                                <span className="text-[8px] text-gray-400 uppercase">{t("settings.appearancePage.dangerActionDesc")}</span>
                             </div>
                         </div>
                     </div>
@@ -404,7 +457,7 @@ export default function AppearanceSettingsPage() {
                     </div>
                     <div>
                         <h3 className="font-semibold text-gray-900">{t("settings.designType")}</h3>
-                        <p className="text-xs text-gray-500">Choose the visual style</p>
+                        <p className="text-xs text-gray-500">{t("settings.appearancePage.visualStyle")}</p>
                     </div>
                 </div>
 
@@ -442,7 +495,7 @@ export default function AppearanceSettingsPage() {
                     </div>
                     <div>
                         <h3 className="font-semibold text-gray-900">{t("settings.submenuLayout")}</h3>
-                        <p className="text-xs text-gray-500">Workers & Settings menu position</p>
+                        <p className="text-xs text-gray-500">{t("settings.appearancePage.menuPosition")}</p>
                     </div>
                 </div>
 
@@ -480,7 +533,7 @@ export default function AppearanceSettingsPage() {
                     </div>
                     <div>
                         <h3 className="font-semibold text-gray-900">{t("settings.themeMode")}</h3>
-                        <p className="text-xs text-gray-500">Light or dark appearance</p>
+                        <p className="text-xs text-gray-500">{t("settings.appearancePage.lightDarkAppearance")}</p>
                     </div>
                 </div>
 
@@ -517,7 +570,7 @@ export default function AppearanceSettingsPage() {
                     </div>
                     <div>
                         <h3 className="font-semibold text-gray-900">{t("settings.fontFamily")}</h3>
-                        <p className="text-xs text-gray-500">Choose your preferred font</p>
+                        <p className="text-xs text-gray-500">{t("settings.appearancePage.chooseFont")}</p>
                     </div>
                 </div>
 
@@ -555,7 +608,7 @@ export default function AppearanceSettingsPage() {
                     </div>
                     <div>
                         <h3 className="font-semibold text-gray-900">{t("settings.fontSize")}</h3>
-                        <p className="text-xs text-gray-500">Adjust text size</p>
+                        <p className="text-xs text-gray-500">{t("settings.appearancePage.adjustTextSize")}</p>
                     </div>
                 </div>
 
@@ -587,15 +640,15 @@ export default function AppearanceSettingsPage() {
                         <Layers className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                        <h3 className="font-semibold text-gray-900">Transparency & Effects</h3>
-                        <p className="text-xs text-gray-500">Adjust visual depth</p>
+                        <h3 className="font-semibold text-gray-900">{t("settings.appearancePage.transparencyEffects")}</h3>
+                        <p className="text-xs text-gray-500">{t("settings.appearancePage.transparencyEffectsDesc")}</p>
                     </div>
                 </div>
 
                 <div className="space-y-6">
                     <div>
                         <div className="flex justify-between mb-2">
-                            <label className="text-sm font-medium text-gray-900">Card Opacity</label>
+                            <label className="text-sm font-medium text-gray-900">{t("settings.appearancePage.cardOpacity")}</label>
                             <span className="text-sm text-gray-500">{Math.round(localTheme.transparency * 100)}%</span>
                         </div>
                         <input
@@ -608,14 +661,14 @@ export default function AppearanceSettingsPage() {
                             disabled={!canModify}
                             className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[var(--color-primary)] disabled:opacity-50"
                         />
-                        <p className="text-xs text-gray-500 mt-1">Adjust the transparency level of cards (glass effect)</p>
+                        <p className="text-xs text-gray-500 mt-1">{t("settings.appearancePage.cardOpacityDesc")}</p>
                     </div>
 
                     <div className="space-y-3">
                         <label className="flex items-center justify-between p-3 bg-gray-50 rounded-xl cursor-pointer">
                             <div>
-                                <p className="font-medium text-gray-900 text-sm">Compact Mode</p>
-                                <p className="text-xs text-gray-500">Reduce spacing</p>
+                                <p className="font-medium text-gray-900 text-sm">{t("settings.appearancePage.compactMode")}</p>
+                                <p className="text-xs text-gray-500">{t("settings.appearancePage.compactModeDesc")}</p>
                             </div>
                             <input
                                 type="checkbox"
@@ -627,8 +680,8 @@ export default function AppearanceSettingsPage() {
                         </label>
                         <label className="flex items-center justify-between p-3 bg-gray-50 rounded-xl cursor-pointer">
                             <div>
-                                <p className="font-medium text-gray-900 text-sm">Animations</p>
-                                <p className="text-xs text-gray-500">Enable transitions and animations</p>
+                                <p className="font-medium text-gray-900 text-sm">{t("settings.appearancePage.animations")}</p>
+                                <p className="text-xs text-gray-500">{t("settings.appearancePage.animationsDesc")}</p>
                             </div>
                             <input
                                 type="checkbox"
@@ -647,7 +700,7 @@ export default function AppearanceSettingsPage() {
                 <ReadOnlyGuard>
                     <Button variant="outline" size="md" onClick={handleReset}>
                         <RotateCcw className="w-4 h-4" />
-                        Reset
+                        {t("settings.appearancePage.resetAll")}
                     </Button>
                 </ReadOnlyGuard>
                 <ReadOnlyGuard>

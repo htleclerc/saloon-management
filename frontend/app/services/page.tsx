@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthProvider";
 import { useTranslation } from "@/i18n";
+import { useCurrency } from "@/hooks/useCurrency";
 import Link from "next/link";
 import { canPerformServiceAction } from "@/lib/permissions";
 import { UserRole } from "@/context/AuthProvider";
@@ -60,6 +61,7 @@ export default function ServicesPage() {
     const { getCardStyle } = useKpiCardStyle();
     const { user, activeSalonId } = useAuth();
     const { t } = useTranslation();
+    const { format: formatCurrency } = useCurrency();
 
     const [serviceStats, setServiceStats] = useState<ServiceRevenueStats[]>([]);
 
@@ -145,7 +147,7 @@ export default function ServicesPage() {
                     </Card>
                     <Card className="text-white" style={getCardStyle(1)}>
                         <p className="text-sm opacity-90 mb-1">{t("services.avgPrice")}</p>
-                        <h3 className="text-3xl font-bold">€{avgPrice}</h3>
+                        <h3 className="text-3xl font-bold">{formatCurrency(avgPrice)}</h3>
                         <p className="text-sm opacity-80 mt-1">Across all services</p>
                     </Card>
                     <Card className="text-white" style={getCardStyle(2)}>
@@ -205,7 +207,7 @@ export default function ServicesPage() {
                                 <div className="flex items-center justify-between pt-3 border-t border-gray-200">
                                     <div className="flex items-center gap-2">
                                         <DollarSign className="w-5 h-5 text-primary" />
-                                        <span className="text-2xl font-bold text-primary">€{service.price}</span>
+                                        <span className="text-2xl font-bold text-primary">{formatCurrency(Number(service.price))}</span>
                                     </div>
                                     <div className="text-right">
                                         <p className="text-xs text-gray-500">{t("services.popularity")}</p>
@@ -290,7 +292,7 @@ export default function ServicesPage() {
                                                     </div>
                                                 </td>
                                                 <td className="hidden lg:table-cell px-4 py-4 text-sm text-gray-600 font-medium">{service.duration}</td>
-                                                <td className="hidden sm:table-cell px-4 py-4 text-right font-bold text-color-primary text-sm">€{service.price}</td>
+                                                <td className="hidden sm:table-cell px-4 py-4 text-right font-bold text-color-primary text-sm">{formatCurrency(Number(service.price))}</td>
                                                 <td className="hidden md:table-cell px-4 py-4 text-center">
                                                     <div className="flex items-center justify-center gap-1 bg-warning-light px-2 py-1 rounded-lg w-fit mx-auto">
                                                         <Star className="w-3.5 h-3.5 text-warning fill-warning" />
@@ -299,7 +301,7 @@ export default function ServicesPage() {
                                                 </td>
                                                 <td className="hidden xl:table-cell px-4 py-4 text-right font-bold text-gray-600 text-sm">{bookings}</td>
                                                 <td className="px-4 py-4 text-right">
-                                                    <span className="font-black text-success text-sm italic">€{revenue.toLocaleString()}</span>
+                                                    <span className="font-black text-success text-sm italic">{formatCurrency(revenue)}</span>
                                                 </td>
                                                 <td className="hidden sm:table-cell px-4 py-4 text-center" onClick={(e) => e.stopPropagation()}>
                                                     <div className="flex items-center justify-center gap-2">
@@ -375,7 +377,7 @@ export default function ServicesPage() {
                             <div className="grid grid-cols-2 gap-4 mb-8">
                                 <div className="p-4 bg-primary-light rounded-2xl">
                                     <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-1">{t("services.price")}</p>
-                                    <p className="text-lg font-black text-primary">€{selectedService.price}</p>
+                                    <p className="text-lg font-black text-primary">{formatCurrency(Number(selectedService.price))}</p>
                                 </div>
                                 <div className="p-4 bg-info-light rounded-2xl">
                                     <p className="text-[10px] font-black text-info uppercase tracking-widest mb-1">{t("services.duration")}</p>

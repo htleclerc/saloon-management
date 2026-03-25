@@ -1,29 +1,71 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthProvider';
 import SettingsLayout from '@/components/layout/SettingsLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
-import { Check, AlertTriangle, ArrowRight, Sparkles, Zap, Crown } from 'lucide-react';
+import { Check, AlertTriangle, ArrowRight, Sparkles, Zap, Crown, Loader2 } from 'lucide-react';
 import { getActivePlans, getPlanConfig } from '@/lib/utils/subscriptionHelpers';
 import { PlanConfig } from '@/types';
 import { useToast } from '@/context/ToastProvider';
 import { useTranslation } from '@/i18n';
+import { useCurrency } from '@/hooks/useCurrency';
+import { usePayment } from '@/hooks/usePayment';
+
+// Map plan IDs to Stripe price IDs (from env)
+const PLAN_PRICE_MAP: Record<string, string> = {
+    pro: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || '',
+    enterprise: process.env.NEXT_PUBLIC_STRIPE_PRICE_ENTERPRISE || '',
+};
 
 export default function UpgradePage() {
     const router = useRouter();
     const { currentTenant, user } = useAuth();
     const { showToast } = useToast();
     const { t } = useTranslation();
+    const { format } = useCurrency();
+    const { isDemoMode, providers, checkout } = usePayment();
+    const [upgradingPlan, setUpgradingPlan] = useState<string | null>(null);
+    const [selectedProvider, setSelectedProvider] = useState<string>('');
 
     const activePlans = getActivePlans();
     const currentPlanId = currentTenant?.subscriptionPlan || 'free';
     const currentPlan = getPlanConfig(currentPlanId);
 
-    const handleUpgrade = (planId: string) => {
-        // In demo mode, just show a success message
-        showToast(t("common.info"), t("settings.billing.demoUpgradeMessage", { planId }), "info");
+    const handleUpgrade = async (planId: string) => {
+        // Demo mode — show info toast
+        if (isDemoMode) {
+            showToast(t("common.info"), t("settings.billing.demoUpgradeMessage", { planId }), "info");
+            return;
+        }
+
+        // Free plan — no checkout needed
+        if (planId === 'free') return;
+
+        const priceId = PLAN_PRICE_MAP[planId];
+        if (!priceId) {
+            showToast(t("common.error"), t("settings.billing.noPriceConfigured"), "error");
+            return;
+        }
+
+        setUpgradingPlan(planId);
+        try {
+            await checkout({
+                planId,
+                priceId,
+                provider: selectedProvider || undefined,
+            });
+        } catch (err) {
+            if ((err as Error).message === 'DEMO_MODE') {
+                showToast(t("common.info"), t("settings.billing.demoModeActive"), "info");
+            } else {
+                showToast(t("common.error"), (err as Error).message, "error");
+            }
+        } finally {
+            setUpgradingPlan(null);
+        }
     };
 
     const getPlanIcon = (planId: string) => {
@@ -59,6 +101,29 @@ export default function UpgradePage() {
             title={t("settings.billing.upgradeTitle")}
             description={t("settings.billing.upgradeSubtitle")}
         >
+            {/* Provider Selector — only show if multiple providers */}
+            {providers.length > 1 && (
+                <Card>
+                    <h3 className="font-semibold text-gray-900 mb-3">{t("settings.billing.selectProvider")}</h3>
+                    <div className="flex gap-3">
+                        {providers.map((provider) => (
+                            <button
+                                key={provider}
+                                type="button"
+                                onClick={() => setSelectedProvider(provider)}
+                                className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                                    (selectedProvider || providers[0]) === provider
+                                        ? 'border-primary bg-primary-light text-color-primary'
+                                        : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                                }`}
+                            >
+                                {t(`settings.billing.provider_${provider}`)}
+                            </button>
+                        ))}
+                    </div>
+                </Card>
+            )}
+
             {/* Alert if user reached limit */}
             {currentPlan && user?.tenants && user.tenants.length >= currentPlan.limits.maxSalons && (
                 <Card className="bg-gradient-to-r from-orange-50 to-red-50 border-orange-200">
@@ -113,7 +178,7 @@ export default function UpgradePage() {
                                     <div className="text-4xl font-bold text-gray-900">{t("settings.billing.free")}</div>
                                 ) : (
                                     <div className="flex items-baseline gap-1">
-                                        <span className="text-4xl font-bold text-gray-900">{plan.price}€</span>
+                                        <span className="text-4xl font-bold text-gray-900">{format(plan.price)}</span>
                                         <span className="text-gray-500 text-sm">{t("settings.billing.perMonth")}</span>
                                     </div>
                                 )}
@@ -133,17 +198,29 @@ export default function UpgradePage() {
                                     variant="outline"
                                     className="w-full mb-6"
                                     onClick={() => handleUpgrade(plan.id)}
+                                    disabled={upgradingPlan !== null}
                                 >
-                                    {t("settings.billing.downgrade")}
+                                    {upgradingPlan === plan.id ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        t("settings.billing.downgrade")
+                                    )}
                                 </Button>
                             ) : (
                                 <Button
                                     variant="primary"
                                     className="w-full mb-6 bg-gradient-primary hover:from-primary hover:to-secondary"
                                     onClick={() => handleUpgrade(plan.id)}
+                                    disabled={upgradingPlan !== null}
                                 >
-                                    <span>{t("settings.billing.upgrade")}</span>
-                                    <ArrowRight className="w-4 h-4 ml-2" />
+                                    {upgradingPlan === plan.id ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        <>
+                                            <span>{t("settings.billing.upgrade")}</span>
+                                            <ArrowRight className="w-4 h-4 ml-2" />
+                                        </>
+                                    )}
                                 </Button>
                             )}
 

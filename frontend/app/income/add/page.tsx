@@ -42,6 +42,7 @@ import { useToast } from "@/context/ToastProvider";
 import { IncomeStatus, PromoCode } from "@/types";
 import { useActionPermissions } from "@/lib/permissions";
 import { useTranslation } from "@/i18n";
+import { useCurrency } from "@/hooks/useCurrency";
 import { useNotifications } from "@/context/NotificationProvider";
 
 
@@ -54,6 +55,7 @@ function AddIncomeContent() {
     const { activeSalonId } = auth; // Ensure activeSalonId is available
     const { addNotification } = useNotifications();
     const { t } = useTranslation();
+    const { format: formatCurrency, symbol } = useCurrency();
     const { bookings, updateBooking } = useBooking();
     const { showToast } = useToast();
 
@@ -427,7 +429,8 @@ function AddIncomeContent() {
         // Admin Override Support
         const effectiveKey = aw.keyOverride !== undefined ? aw.keyOverride : (worker?.sharingKey || 50);
 
-        const workerServiceAmount = (serviceShare * effectiveKey) / 100;
+        // Round worker amount first, then salon = remainder to ensure worker + salon = serviceShare
+        const workerServiceAmount = Math.round((serviceShare * effectiveKey) / 100);
         const salonServiceAmount = serviceShare - workerServiceAmount;
 
         const tipSplit = tipSplits.find(ts => ts.workerId === aw.workerId);
@@ -752,7 +755,7 @@ function AddIncomeContent() {
                                             className={`p-3 rounded-xl border-2 text-left transition-all ${selectedServices.includes(service.id) ? "border-color-primary bg-primary-light" : "border-gray-200"} disabled:opacity-50`}
                                         >
                                             <p className="font-semibold text-sm truncate">{service.name}</p>
-                                            <p className="text-xs text-color-primary font-bold">€{service.price}</p>
+                                            <p className="text-xs text-color-primary font-bold">{formatCurrency(service.price)}</p>
                                         </button>
                                     ))}
 
@@ -805,7 +808,7 @@ function AddIncomeContent() {
                                                         onChange={e => setNewServiceName(e.target.value)}
                                                     />
                                                     <input
-                                                        placeholder="Price (€)"
+                                                        placeholder={`Price (${symbol()})`}
                                                         type="number"
                                                         disabled={!canModify}
                                                         className="px-2 py-1.5 text-xs border rounded-lg disabled:opacity-50"
@@ -860,7 +863,7 @@ function AddIncomeContent() {
                                                             <p className="text-xs text-gray-500">{service.duration}</p>
                                                         </div>
                                                         <div className="flex items-center gap-3">
-                                                            <span className="font-bold text-color-primary">€{service.price}</span>
+                                                            <span className="font-bold text-color-primary">{formatCurrency(service.price)}</span>
                                                             {selectedServices.includes(service.id) && <CheckCircle2 className="w-5 h-5 text-color-primary fill-[var(--color-primary-light)]" />}
                                                         </div>
                                                     </div>
@@ -967,7 +970,7 @@ function AddIncomeContent() {
                                 <div className="p-4 bg-primary-light rounded-xl border border-color-primary/30">
                                     <div className="flex justify-between items-center mb-4">
                                         <span className="text-sm font-bold text-color-primary">Amount</span>
-                                        <span className="text-2xl font-black text-color-primary">€{totalAmount.toFixed(2)}</span>
+                                        <span className="text-2xl font-black text-color-primary">{formatCurrency(totalAmount)}</span>
                                     </div>
                                     <div className="grid grid-cols-3 gap-2">
                                         <div>
@@ -1000,7 +1003,7 @@ function AddIncomeContent() {
                                         </div>
                                         {appliedPromo && (
                                             <p className="text-[10px] text-green-600 font-bold mt-2 flex items-center gap-1">
-                                                <CheckCircle2 className="w-3 h-3" /> Code {appliedPromo.code} applied (-{appliedPromo.type === 'percentage' ? `${appliedPromo.value}%` : `€${appliedPromo.value}`})
+                                                <CheckCircle2 className="w-3 h-3" /> Code {appliedPromo.code} applied (-{appliedPromo.type === 'percentage' ? `${appliedPromo.value}%` : formatCurrency(appliedPromo.value)})
                                             </p>
                                         )}
                                     </div>
@@ -1092,7 +1095,7 @@ function AddIncomeContent() {
                                                         disabled={!canModify}
                                                         className="w-full bg-white/20 border border-white/30 rounded-lg pl-3 pr-6 h-10 text-white text-sm font-bold focus:outline-none focus:ring-2 focus:ring-white/50 outline-none hover:bg-white/25 transition disabled:opacity-50"
                                                     />
-                                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] opacity-60 font-black">€</span>
+                                                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] opacity-60 font-black">{symbol()}</span>
                                                 </>
                                             ) : (
                                                 <div className="w-full bg-white/10 border border-white/10 rounded-lg pl-3 pr-3 h-10 flex items-center justify-center gap-2 text-white/60 text-xs font-medium cursor-not-allowed">
@@ -1106,7 +1109,7 @@ function AddIncomeContent() {
                                         <div className="flex justify-between items-center opacity-80">
                                             <p className="text-[10px] uppercase font-bold tracking-wider">{t("income.serviceNet")}</p>
                                             {permissions.canViewSensitiveWorkerFinancials(workerId) ? (
-                                                <p className="text-sm font-black">€{workerAmount.toFixed(2)}</p>
+                                                <p className="text-sm font-black">{formatCurrency(workerAmount)}</p>
                                             ) : (
                                                 <Lock className="w-3 h-3" />
                                             )}
@@ -1135,10 +1138,10 @@ function AddIncomeContent() {
                                         <div className="flex justify-between items-center opacity-60">
                                             <p className="text-[10px] uppercase">{t("income.salonPart")}</p>
                                             {permissions.isManager ? (
-                                                <p className="text-[10px] font-bold">€{(serviceShare - workerAmount).toFixed(2)}</p>
+                                                <p className="text-[10px] font-bold">{formatCurrency(serviceShare - workerAmount)}</p>
                                             ) : (
                                                 permissions.canViewSensitiveWorkerFinancials(workerId) ? (
-                                                    <p className="text-[10px] font-bold">€{(serviceShare - workerAmount).toFixed(2)}</p>
+                                                    <p className="text-[10px] font-bold">{formatCurrency(serviceShare - workerAmount)}</p>
                                                 ) : (
                                                     <Lock className="w-3 h-3" />
                                                 )
@@ -1156,7 +1159,7 @@ function AddIncomeContent() {
                                                             disabled={!canModify}
                                                             className="w-20 bg-emerald-500/20 border border-emerald-500/30 rounded text-right text-sm font-black italic px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-emerald-400 outline-none hover:bg-emerald-500/30 transition disabled:opacity-50"
                                                         />
-                                                        <span className="absolute -right-3 top-1/2 -translate-y-1/2 text-[10px] opacity-60 font-black">€</span>
+                                                        <span className="absolute -right-3 top-1/2 -translate-y-1/2 text-[10px] opacity-60 font-black">{symbol()}</span>
                                                     </div>
                                                 ) : (
                                                     <Lock className="w-3 h-3" />
@@ -1211,7 +1214,7 @@ function AddIncomeContent() {
                                             setUsedProducts(next);
                                         }} />
                                         <div className="w-16 text-right text-xs font-bold text-gray-700">
-                                            €{((products.find(p => p.id === up.productId)?.price || 0) * up.quantity).toFixed(2)}
+                                            {formatCurrency((products.find(p => p.id === up.productId)?.price || 0) * up.quantity)}
                                         </div>
                                         <button onClick={() => { if (!canModify) handleReadOnlyClick(); else removeProduct(up.productId); }} disabled={!canModify} className="text-red-400 disabled:opacity-50"><Trash2 className="w-3 h-3" /></button>
                                     </div>
@@ -1235,23 +1238,23 @@ function AddIncomeContent() {
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 w-full">
                             <div>
                                 <p className="text-[10px] opacity-60 uppercase font-black">{t("income.totalService")}</p>
-                                <p className="text-2xl font-black">€{totalAmount.toFixed(2)}</p>
+                                <p className="text-2xl font-black">{formatCurrency(totalAmount)}</p>
                             </div>
                             {permissions.canViewFinancialDashboard && (
                                 <>
                                     <div>
                                         <p className="text-[10px] opacity-60 uppercase font-black">{t("common.workers")}</p>
-                                        <p className="text-2xl font-black text-green-400">€{totalWorkerAmount.toFixed(2)}</p>
+                                        <p className="text-2xl font-black text-green-400">{formatCurrency(totalWorkerAmount)}</p>
                                     </div>
                                     <div>
                                         <p className="text-[10px] opacity-60 uppercase font-black">{t("common.salon")}</p>
-                                        <p className="text-2xl font-black text-yellow-400">€{totalSalonAmount.toFixed(2)}</p>
+                                        <p className="text-2xl font-black text-yellow-400">{formatCurrency(totalSalonAmount)}</p>
                                     </div>
                                 </>
                             )}
                             <div>
                                 <p className="text-[10px] opacity-60 uppercase font-black">{t("dashboard.expenseCategories.products")}</p>
-                                <p className="text-2xl font-black">€{totalProductsCost.toFixed(2)}</p>
+                                <p className="text-2xl font-black">{formatCurrency(totalProductsCost)}</p>
                             </div>
                         </div>
                         <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">

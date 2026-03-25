@@ -11,6 +11,7 @@ import { incomeService, serviceService, productService } from "@/lib/services";
 import { invoiceService } from "@/lib/services/InvoiceService";
 import { tokenService } from "@/lib/services/TokenService";
 import { useTranslation } from "@/i18n";
+import { useCurrency } from "@/hooks/useCurrency";
 import { format } from "date-fns";
 import { useAuth } from "@/context/AuthProvider";
 import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
@@ -23,6 +24,7 @@ export default function IncomeDetailPage() {
     const { id } = useParams();
     const router = useRouter();
     const { t } = useTranslation();
+    const { format: formatCurrency, symbol } = useCurrency();
     const auth = useAuth();
     const { activeSalonId, canModify, user } = auth;
     const { confirm } = useConfirm();
@@ -196,7 +198,7 @@ export default function IncomeDetailPage() {
                         </div>
                         <div className="text-right">
                             <p className="text-sm font-bold text-gray-500 uppercase">{t("common.totalAmount")}</p>
-                            <p className="text-3xl font-black text-color-primary">€{income.amount}</p>
+                            <p className="text-3xl font-black text-color-primary">{formatCurrency(income.amount)}</p>
                         </div>
                     </div>
                 </Card>
@@ -232,7 +234,7 @@ export default function IncomeDetailPage() {
                             {income.discountAmount > 0 && (
                                 <div className="flex justify-between text-green-600">
                                     <p className="text-xs uppercase font-bold">{t("income.discount")}</p>
-                                    <p className="font-bold">-€{income.discountAmount}</p>
+                                    <p className="font-bold">-{formatCurrency(income.discountAmount)}</p>
                                 </div>
                             )}
                         </div>
@@ -263,7 +265,7 @@ export default function IncomeDetailPage() {
                                         <div className="flex justify-between items-center text-sm">
                                             <span className="text-gray-500">{t("income.service")} {t("team.share")}</span>
                                             {canView ? (
-                                                <span className="font-mono font-bold text-gray-900">€{((share.amount || 0)).toFixed(2)}</span>
+                                                <span className="font-mono font-bold text-gray-900">{formatCurrency(share.amount || 0)}</span>
                                             ) : (
                                                 <div className="flex items-center gap-1 text-gray-400 bg-gray-100 px-2 py-0.5 rounded text-xs select-none">
                                                     <Lock className="w-3 h-3" /> {t("common.secure")}
@@ -273,7 +275,7 @@ export default function IncomeDetailPage() {
                                         <div className="flex justify-between items-center text-sm">
                                             <span className="text-gray-500">{t("income.tips")}</span>
                                             {canView ? (
-                                                <span className="font-mono font-bold text-emerald-600">+€{((share.tips || 0)).toFixed(2)}</span>
+                                                <span className="font-mono font-bold text-emerald-600">+{formatCurrency(share.tips || 0)}</span>
                                             ) : (
                                                 <div className="flex items-center gap-1 text-gray-400 bg-gray-100 px-2 py-0.5 rounded text-xs select-none">
                                                     <Lock className="w-3 h-3" /> {t("common.secure")}
@@ -285,7 +287,7 @@ export default function IncomeDetailPage() {
                                     {canView && (
                                         <div className="pt-2 mt-auto border-t border-gray-200 flex justify-between items-center">
                                             <span className="text-xs font-bold uppercase text-gray-400 border-gray-200">{t("common.total")}</span>
-                                            <span className="font-black text-lg text-color-primary">€{((share.amount || 0) + (share.tips || 0)).toFixed(2)}</span>
+                                            <span className="font-black text-lg text-color-primary">{formatCurrency((share.amount || 0) + (share.tips || 0))}</span>
                                         </div>
                                     )}
                                 </div>
@@ -308,7 +310,7 @@ export default function IncomeDetailPage() {
                                     return (
                                         <div key={sId} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl border border-gray-100">
                                             <span className="font-bold text-gray-900">{service?.name || `Service #${sId}`}</span>
-                                            <span className="font-bold text-color-primary">€{service?.price || "?"}</span>
+                                            <span className="font-bold text-color-primary">{service?.price != null ? formatCurrency(service.price) : "?"}</span>
                                         </div>
                                     );
                                 })}
@@ -337,7 +339,7 @@ export default function IncomeDetailPage() {
                                                 <p className="font-bold text-gray-900">{productName}</p>
                                                 <p className="text-xs text-gray-500">x {p.quantity}</p>
                                             </div>
-                                            <span className="font-bold text-color-primary">€{(productPrice * p.quantity).toFixed(2)}</span>
+                                            <span className="font-bold text-color-primary">{formatCurrency(productPrice * p.quantity)}</span>
                                         </div>
                                     );
                                 })}

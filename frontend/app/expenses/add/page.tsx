@@ -9,10 +9,12 @@ import { Save, X } from "lucide-react";
 import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 import { useToast } from "@/context/ToastProvider";
 import { useTranslation } from "@/i18n";
+import { useCurrency } from "@/hooks/useCurrency";
 
 export default function AddExpensePage() {
     const router = useRouter();
     const { t } = useTranslation();
+    const { symbol } = useCurrency();
     const { handleReadOnlyClick } = useReadOnlyGuard();
     const [formData, setFormData] = useState({
         date: new Date().toISOString().split('T')[0],
@@ -125,7 +127,7 @@ export default function AddExpensePage() {
                             {/* Amount */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    {t("common.amount")} (€) <span className="text-red-500">*</span>
+                                    {t("common.amount")} ({symbol()}) <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="number"

@@ -13,6 +13,7 @@ import {
     CheckCircle,
     Layout
 } from "lucide-react";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface ServiceFormProps {
     initialData?: any;
@@ -22,6 +23,7 @@ interface ServiceFormProps {
 }
 
 export default function ServiceForm({ initialData, mode, onSubmit, onCancel }: ServiceFormProps) {
+    const { symbol } = useCurrency();
     const [formData, setFormData] = useState(initialData || {
         name: "",
         description: "",
@@ -91,7 +93,7 @@ export default function ServiceForm({ initialData, mode, onSubmit, onCancel }: S
                         <div className="space-y-2">
                             <label className="text-sm font-black text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-2">
                                 <Euro className="w-4 h-4" />
-                                Price (€)
+                                {`Price (${symbol()})`}
                             </label>
                             <input
                                 type="number"

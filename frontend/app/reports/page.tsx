@@ -29,9 +29,11 @@ import { revenueStatsService } from "@/lib/services";
 import { useTranslation } from "@/i18n";
 import { format, startOfYear, endOfYear, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from "date-fns";
 import { exportToCSV, exportToPDF } from "@/lib/export";
+import { useCurrency } from "@/hooks/useCurrency";
 
 export default function ReportsPage() {
     const { t } = useTranslation();
+    const { format: formatCurrency, symbol } = useCurrency();
     const { getCardStyle } = useKpiCardStyle();
     const { user, activeSalonId } = useAuth();
     const { showToast } = useToast();
@@ -102,9 +104,9 @@ export default function ReportsPage() {
             const columns = [
                 { key: 'date', header: t('reports.monthlyBreakdown.date') },
                 { key: 'worker', header: t('reports.monthlyBreakdown.worker') },
-                { key: 'revenue', header: t('reports.monthlyBreakdown.revenue'), formatter: (v: any) => `€${v.toLocaleString()}` },
-                { key: 'expense', header: t('reports.monthlyBreakdown.expense'), formatter: (v: any) => `€${v.toLocaleString()}` },
-                { key: 'profit', header: t('reports.monthlyBreakdown.profit'), formatter: (v: any) => `€${v.toLocaleString()}` },
+                { key: 'revenue', header: t('reports.monthlyBreakdown.revenue'), formatter: (v: unknown) => formatCurrency(Number(v)) },
+                { key: 'expense', header: t('reports.monthlyBreakdown.expense'), formatter: (v: unknown) => formatCurrency(Number(v)) },
+                { key: 'profit', header: t('reports.monthlyBreakdown.profit'), formatter: (v: unknown) => formatCurrency(Number(v)) },
             ];
 
             const dataToExport = filterDataByPeriod(monthlyFinancials, 'date');
@@ -250,7 +252,7 @@ export default function ReportsPage() {
                                     <span className="text-xl">💰</span>
                                     <p className="text-xs opacity-90">{t('reports.totalRevenue')}</p>
                                 </div>
-                                <h3 className="text-2xl font-bold">€{financialReport.totalRevenue.toLocaleString()}</h3>
+                                <h3 className="text-2xl font-bold">{formatCurrency(financialReport.totalRevenue)}</h3>
                                 <div className="flex items-center gap-1 mt-2">
                                     <TrendingUp className="w-3 h-3" />
                                     <span className="text-xs">+--% {t('reports.lastYear')}</span>
@@ -261,7 +263,7 @@ export default function ReportsPage() {
                                     <span className="text-xl">📊</span>
                                     <p className="text-xs opacity-90">{t('reports.totalExpenses')}</p>
                                 </div>
-                                <h3 className="text-2xl font-bold">€{financialReport.totalExpenses.toLocaleString()}</h3>
+                                <h3 className="text-2xl font-bold">{formatCurrency(financialReport.totalExpenses)}</h3>
                                 <div className="flex items-center gap-1 mt-2">
                                     <TrendingDown className="w-3 h-3" />
                                     <span className="text-xs">--% {t('reports.lastYear')}</span>
@@ -272,7 +274,7 @@ export default function ReportsPage() {
                                     <span className="text-xl">📈</span>
                                     <p className="text-xs opacity-90">{t('reports.netProfit')}</p>
                                 </div>
-                                <h3 className="text-2xl font-bold">€{financialReport.netProfit.toLocaleString()}</h3>
+                                <h3 className="text-2xl font-bold">{formatCurrency(financialReport.netProfit)}</h3>
                                 <div className="flex items-center gap-1 mt-2">
                                     <TrendingUp className="w-3 h-3" />
                                     <span className="text-xs">+--% {t('reports.lastYear')}</span>
@@ -283,7 +285,7 @@ export default function ReportsPage() {
                                     <span className="text-xl">🧾</span>
                                     <p className="text-xs opacity-90">{t('reports.taxPayments')}</p>
                                 </div>
-                                <h3 className="text-2xl font-bold">€{financialReport.taxPayments.toLocaleString()}</h3>
+                                <h3 className="text-2xl font-bold">{formatCurrency(financialReport.taxPayments)}</h3>
                                 <div className="flex items-center gap-1 mt-2">
                                     <TrendingUp className="w-3 h-3" />
                                     <span className="text-xs">{t('reports.est')} 20%</span>
@@ -294,7 +296,7 @@ export default function ReportsPage() {
                                     <span className="text-xl">💎</span>
                                     <p className="text-xs opacity-90">{t('reports.savings')}</p>
                                 </div>
-                                <h3 className="text-2xl font-bold">€{financialReport.savings.toLocaleString()}</h3>
+                                <h3 className="text-2xl font-bold">{formatCurrency(financialReport.savings)}</h3>
                                 <div className="flex items-center gap-1 mt-2">
                                     <TrendingUp className="w-3 h-3" />
                                     <span className="text-xs">{t('reports.est')} 15%</span>
@@ -330,11 +332,11 @@ export default function ReportsPage() {
                                                     <span className="text-sm font-medium text-gray-900">{row.worker}</span>
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-4 text-right font-semibold text-[var(--color-success)]">€{row.revenue.toLocaleString()}</td>
-                                            <td className="px-4 py-4 text-right font-semibold text-[var(--color-error)]">€{row.expense.toLocaleString()}</td>
-                                            <td className="px-4 py-4 text-right font-semibold text-[var(--color-success)]">€{row.profit.toLocaleString()}</td>
-                                            <td className="px-4 py-4 text-right font-semibold text-[var(--color-warning)]">€{row.tax.toLocaleString()}</td>
-                                            <td className="px-4 py-4 text-right font-semibold text-[var(--color-primary)]">€{row.savings.toLocaleString()}</td>
+                                            <td className="px-4 py-4 text-right font-semibold text-[var(--color-success)]">{formatCurrency(row.revenue)}</td>
+                                            <td className="px-4 py-4 text-right font-semibold text-[var(--color-error)]">{formatCurrency(row.expense)}</td>
+                                            <td className="px-4 py-4 text-right font-semibold text-[var(--color-success)]">{formatCurrency(row.profit)}</td>
+                                            <td className="px-4 py-4 text-right font-semibold text-[var(--color-warning)]">{formatCurrency(row.tax)}</td>
+                                            <td className="px-4 py-4 text-right font-semibold text-[var(--color-primary)]">{formatCurrency(row.savings)}</td>
                                             <td className="px-4 py-4 text-center">
                                                 <ReadOnlyGuard>
                                                     <button className="text-[var(--color-primary)] hover:opacity-80 transition">
@@ -412,7 +414,7 @@ export default function ReportsPage() {
                                             <span className="font-medium text-gray-700">{cat.name}</span>
                                         </div>
                                         <div className="text-right">
-                                            <span className="font-semibold text-gray-900">€{cat.amount.toLocaleString()}</span>
+                                            <span className="font-semibold text-gray-900">{formatCurrency(cat.amount)}</span>
                                             <span className="text-sm text-gray-500 ml-2">{cat.value}%</span>
                                         </div>
                                     </div>
@@ -429,7 +431,7 @@ export default function ReportsPage() {
                             {(periodFilter === 'yearly' ? quarterlyFinancials : filterDataByPeriod(quarterlyFinancials, 'date')).map((q, idx) => (
                                 <div key={idx} className="p-4 rounded-xl" style={{ backgroundColor: `${q.color}15` }}>
                                     <p className="text-sm font-medium text-gray-600">{q.quarter}</p>
-                                    <h4 className="text-2xl font-bold mt-1" style={{ color: q.color }}>€{q.value.toLocaleString()}</h4>
+                                    <h4 className="text-2xl font-bold mt-1" style={{ color: q.color }}>{formatCurrency(q.value)}</h4>
                                     <div className="mt-2 h-2 rounded-full" style={{ backgroundColor: `${q.color}30` }}>
                                         <div className="h-full rounded-full" style={{ width: `${(q.value / 6000) * 100}%`, backgroundColor: q.color }}></div>
                                     </div>
@@ -465,21 +467,21 @@ export default function ReportsPage() {
                                     <span className="text-xl">📋</span>
                                     <p className="text-xs opacity-90">{t('reports.taxSummary.incomeTax')}</p>
                                 </div>
-                                <h3 className="text-2xl font-bold">€{taxSummary.incomeTax.toLocaleString()}</h3>
+                                <h3 className="text-2xl font-bold">{formatCurrency(taxSummary.incomeTax)}</h3>
                             </Card>
                             <Card gradient="" style={getCardStyle(1)} className="text-white">
                                 <div className="flex items-center gap-2 mb-2">
                                     <span className="text-xl">📊</span>
                                     <p className="text-xs opacity-90">{t('reports.taxSummary.estimatedTax')}</p>
                                 </div>
-                                <h3 className="text-2xl font-bold">€{taxSummary.estimatedTax.toLocaleString()}</h3>
+                                <h3 className="text-2xl font-bold">{formatCurrency(taxSummary.estimatedTax)}</h3>
                             </Card>
                             <Card gradient="" style={getCardStyle(2)} className="text-white">
                                 <div className="flex items-center gap-2 mb-2">
                                     <span className="text-xl">💵</span>
                                     <p className="text-xs opacity-90">{t('reports.taxSummary.taxThisMonth')}</p>
                                 </div>
-                                <h3 className="text-2xl font-bold">€{taxSummary.taxThisMonth.toLocaleString()}</h3>
+                                <h3 className="text-2xl font-bold">{formatCurrency(taxSummary.taxThisMonth)}</h3>
                             </Card>
                         </div>
 
@@ -502,7 +504,7 @@ export default function ReportsPage() {
                                                 <tr key={idx} className="hover:bg-gray-50">
                                                     <td className="px-4 py-3 text-sm text-gray-700">{tax.date}</td>
                                                     <td className="px-4 py-3 text-sm text-gray-900">{tax.description}</td>
-                                                    <td className="px-4 py-3 text-right font-semibold text-gray-900">€{tax.amount.toLocaleString()}</td>
+                                                    <td className="px-4 py-3 text-right font-semibold text-gray-900">{formatCurrency(tax.amount)}</td>
                                                     <td className="px-4 py-3 text-center">
                                                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${tax.status === 'Paid' ? 'bg-[var(--color-success-light)] text-[var(--color-success)]' : 'bg-[var(--color-warning-light)] text-[var(--color-warning)]'}`}>
                                                             {tax.status}
@@ -579,7 +581,7 @@ export default function ReportsPage() {
                                             <tr key={idx} className="hover:bg-gray-50">
                                                 <td className="px-4 py-3 text-sm font-medium text-gray-900">{t(`reports.feeBreakdown.categories.${fee.category}`)}</td>
                                                 <td className="px-4 py-3 text-right text-sm text-gray-600">{fee.percentage}%</td>
-                                                <td className="px-4 py-3 text-right font-semibold text-[var(--color-error)]">-€{fee.amount.toLocaleString()}</td>
+                                                <td className="px-4 py-3 text-right font-semibold text-[var(--color-error)]">{formatCurrency(-fee.amount)}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -587,7 +589,7 @@ export default function ReportsPage() {
                                         <tr>
                                             <td className="px-4 py-2 text-sm">{t('reports.feeBreakdown.totalFees')}</td>
                                             <td className="px-4 py-2 text-right text-sm">{feeBreakdown.reduce((sum, f) => sum + f.percentage, 0).toFixed(1)}%</td>
-                                            <td className="px-4 py-2 text-right text-[var(--color-error)]">-€{feeBreakdown.reduce((sum, f) => sum + f.amount, 0).toLocaleString()}</td>
+                                            <td className="px-4 py-2 text-right text-[var(--color-error)]">{formatCurrency(-feeBreakdown.reduce((sum, f) => sum + f.amount, 0))}</td>
                                         </tr>
                                     </tfoot>
                                 </table>
@@ -601,15 +603,15 @@ export default function ReportsPage() {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div className="p-4 bg-[var(--color-secondary-light)] rounded-xl border border-[var(--color-secondary-light)]">
                                 <p className="text-sm font-medium text-[var(--color-secondary)] mb-1">{t('reports.analysis.weeklyAverage')}</p>
-                                <h4 className="text-2xl font-bold text-gray-900">€{monthlyWeeklyAnalysis.weekly.toLocaleString()}</h4>
+                                <h4 className="text-2xl font-bold text-gray-900">{formatCurrency(monthlyWeeklyAnalysis.weekly)}</h4>
                             </div>
                             <div className="p-4 bg-[var(--color-primary-light)] rounded-xl border border-[var(--color-primary-light)]">
                                 <p className="text-sm font-medium text-[var(--color-primary)] mb-1">{t('reports.analysis.monthlyTotal')}</p>
-                                <h4 className="text-2xl font-bold text-gray-900">€{monthlyWeeklyAnalysis.monthly.toLocaleString()}</h4>
+                                <h4 className="text-2xl font-bold text-gray-900">{formatCurrency(monthlyWeeklyAnalysis.monthly)}</h4>
                             </div>
                             <div className="p-4 bg-[var(--color-success-light)] rounded-xl border border-[var(--color-success-light)]">
                                 <p className="text-sm font-medium text-[var(--color-success)] mb-1">{t('reports.analysis.monthVsPrevious')}</p>
-                                <h4 className="text-2xl font-bold text-[var(--color-success)]">+€{monthlyWeeklyAnalysis.difference.toLocaleString()}</h4>
+                                <h4 className="text-2xl font-bold text-[var(--color-success)]">{`+${formatCurrency(monthlyWeeklyAnalysis.difference)}`}</h4>
                             </div>
                         </div>
                     </Card>
