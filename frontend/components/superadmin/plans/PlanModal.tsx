@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import Button from '@/components/ui/Button';
-import { X, Save, AlertCircle, BarChart3, Code, Info, Plus, Trash2, Globe } from 'lucide-react';
+import { X, Save, AlertCircle, BarChart3, Code, Info, Plus, Trash2, Globe, Zap } from 'lucide-react';
 import { PlanConfig } from '@/types';
 import { useToast } from '@/context/ToastProvider';
 import { useTranslation } from '@/i18n';
+import { FEATURE_CATALOG, FEATURE_CATEGORIES } from '@/lib/data/featureCatalog';
 
+/** Plan edit modal */
 interface PlanModalProps {
     isOpen: boolean;
     plan: PlanConfig | null;
@@ -14,6 +16,8 @@ interface PlanModalProps {
 
 export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalProps) {
     const [formData, setFormData] = useState<PlanConfig | null>(null);
+    const { showToast } = useToast();
+    const { t } = useTranslation();
 
     useEffect(() => {
         if (plan) {
@@ -75,8 +79,13 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
         setFormData({ ...formData, features: newFeatures });
     };
 
-    const { showToast } = useToast();
-    const { t } = useTranslation();
+    const toggleCatalogFeature = (featureId: string) => {
+        const has = formData.features.includes(featureId);
+        const newFeatures = has
+            ? formData.features.filter(f => f !== featureId)
+            : [...formData.features, featureId];
+        setFormData({ ...formData, features: newFeatures });
+    };
 
     const handleSave = () => {
         if (!formData.name) {
@@ -251,6 +260,40 @@ export default function PlanModal({ isOpen, plan, onSave, onClose }: PlanModalPr
                         </div>
 
                         <div className="space-y-4">
+                            {/* System Feature Flags */}
+                            <div className="flex items-center gap-2 text-purple-600 mb-2">
+                                <Zap className="w-5 h-5" />
+                                <h3 className="font-black uppercase tracking-wider text-xs">{t("superadmin.systemFeatureFlags")}</h3>
+                            </div>
+                            <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+                                {FEATURE_CATEGORIES.map(category => {
+                                    const features = FEATURE_CATALOG.filter(f => f.category === category.id);
+                                    if (features.length === 0) return null;
+                                    return (
+                                        <div key={category.id}>
+                                            <p className={`text-[10px] font-black uppercase tracking-widest mb-1.5 ${category.color}`}>{category.name}</p>
+                                            {features.map(feature => (
+                                                <label key={feature.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-200 cursor-pointer group hover:border-color-primary/30 transition-all mb-1.5">
+                                                    <div className="flex-1 min-w-0">
+                                                        <span className="text-sm font-bold text-gray-700 block">{feature.name}</span>
+                                                        <span className="text-[10px] text-gray-400">{feature.description}</span>
+                                                    </div>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={formData.features.includes(feature.id)}
+                                                        onChange={() => toggleCatalogFeature(feature.id)}
+                                                        className="w-5 h-5 text-color-primary rounded-md focus:ring-primary transition-all cursor-pointer flex-shrink-0 ml-3"
+                                                    />
+                                                </label>
+                                            ))}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="border-t border-gray-100 pt-4 mt-4" />
+
+                            {/* Custom features list */}
                             <div className="flex items-center gap-2 text-amber-600 mb-2">
                                 <Plus className="w-5 h-5" />
                                 <h3 className="font-black uppercase tracking-wider text-xs">{t("superadmin.includedFeatures")}</h3>

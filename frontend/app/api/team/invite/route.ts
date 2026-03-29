@@ -254,12 +254,23 @@ export async function POST(request: NextRequest) {
         }
 
         // Step 4: Send custom welcome email via Brevo (non-blocking)
+        // Check for salon-specific Brevo config first, fallback to platform default
         let brevoSent = false;
         try {
             const { getEmailService } = await import('@/lib/email/service');
             const { isEmailConfigured } = await import('@/lib/email/config');
 
-            if (isEmailConfigured()) {
+            // Load salon-specific email config
+            const { data: salonSettings } = await supabase
+                .from('salon_settings')
+                .select('email_config')
+                .eq('salon_id', salonId)
+                .single();
+
+            const salonEmailConfig = salonSettings?.email_config as { brevoApiKey?: string; senderEmail?: string; senderName?: string } | null;
+            const hasConfig = isEmailConfigured() || !!salonEmailConfig?.brevoApiKey;
+
+            if (hasConfig) {
                 // Fetch salon name for the email template
                 const { data: salonData } = await supabase
                     .from('salons')
@@ -278,6 +289,7 @@ export async function POST(request: NextRequest) {
                         role,
                         inviteUrl: `${request.nextUrl.origin}/auth/callback`,
                     },
+                    salonEmailConfig: salonEmailConfig || undefined,
                 });
                 brevoSent = result.success;
             }

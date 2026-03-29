@@ -122,11 +122,11 @@ export default function Sidebar() {
     const navContent = (
         <div className={`p-4 ${isCollapsed && !isMobile ? "px-2" : ""}`}>
             {/* Header / Brand */}
-            <div className={`flex ${isCollapsed && !isMobile ? "flex-col items-center gap-2" : "items-center justify-between gap-3"} mb-6`}>
+            <div className={`flex ${isCollapsed && !isMobile ? "flex-col items-center gap-3" : "items-center justify-between gap-3"} mb-6`}>
                 <div className={`flex items-center gap-3 overflow-hidden ${isCollapsed && !isMobile ? "justify-center" : ""}`}>
-                    <div className="w-9 h-9 flex-shrink-0 bg-white/10 rounded-xl flex items-center justify-center overflow-hidden border border-white/10">
-                        {currentTenant?.logo ? (
-                            <img src={currentTenant.logo} alt={currentTenant.name} className="w-full h-full object-cover" />
+                    <div className={`${isCollapsed && !isMobile ? "w-10 h-10" : "w-9 h-9"} flex-shrink-0 bg-white/10 rounded-xl flex items-center justify-center overflow-hidden border border-white/10 transition-all`}>
+                        {currentTenant?.logo && !currentTenant.logo.includes('ui-avatars') ? (
+                            <img src={currentTenant.logo} alt={currentTenant.name} className="w-full h-full object-contain p-0.5" />
                         ) : (
                             <FlaskConical className="w-5 h-5 text-white" />
                         )}

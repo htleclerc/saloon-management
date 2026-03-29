@@ -24,6 +24,7 @@ import { TipsService, tipsService } from './TipsService';
 import { PromoCodeService, promoCodeService } from './PromoCodeService';
 import { invoiceService } from './InvoiceService';
 import { PayrollService, payrollService, type PayrollSummary } from './PayrollService';
+import { ReferralService, referralService } from './ReferralService';
 
 // Export everything
 export {
@@ -43,7 +44,8 @@ export {
     PromoCodeService, promoCodeService,
     invoiceService,
     PayrollService, payrollService,
-    PayrollSummary
+    PayrollSummary,
+    ReferralService, referralService
 };
 
 // Export all service instances as a namespace for easy access
@@ -62,5 +64,6 @@ export const Services = {
     tips: tipsService,
     promo: promoCodeService,
     invoice: invoiceService,
-    payroll: payrollService
+    payroll: payrollService,
+    referral: referralService
 };

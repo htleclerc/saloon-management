@@ -4,13 +4,14 @@ import SettingsLayout from "@/components/layout/SettingsLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { useState, useEffect, useRef } from "react";
-import { Plus, MoreHorizontal, Mail, Shield, Crown, UserMinus, ArrowUpDown, X, Loader2 } from "lucide-react";
+import { Plus, MoreHorizontal, Mail, Shield, Crown, UserMinus, X, Loader2, Check, RotateCcw, ChevronDown } from "lucide-react";
 import { useAuth } from "@/context/AuthProvider";
 import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 import { useTranslation } from "@/i18n";
 import { useToast } from "@/context/ToastProvider";
 import { useConfirm } from "@/context/ConfirmProvider";
 import { workerService } from "@/lib/services/WorkerService";
+import { salonService } from "@/lib/services/SalonService";
 import type { SalonWorker } from "@/types";
 
 function getInitials(name: string): string {
@@ -36,9 +37,28 @@ interface TeamMember {
     name: string;
     email: string;
     role: string;
+    specialty?: string;
     avatar: string;
     status: string;
 }
+
+interface PermissionRow {
+    key: string;
+    nameKey: string;
+    admin: boolean;
+    manager: boolean;
+    worker: boolean;
+}
+
+const DEFAULT_PERMISSIONS: PermissionRow[] = [
+    { key: "viewDashboard", nameKey: "settings.usersPage.permViewDashboard", admin: true, manager: true, worker: true },
+    { key: "manageIncome", nameKey: "settings.usersPage.permManageIncome", admin: true, manager: true, worker: true },
+    { key: "manageExpenses", nameKey: "settings.usersPage.permManageExpenses", admin: true, manager: true, worker: false },
+    { key: "manageClients", nameKey: "settings.usersPage.permManageClients", admin: true, manager: true, worker: false },
+    { key: "manageTeam", nameKey: "settings.usersPage.permManageTeam", admin: true, manager: false, worker: false },
+    { key: "viewReports", nameKey: "settings.usersPage.permViewReports", admin: true, manager: true, worker: false },
+    { key: "manageSettings", nameKey: "settings.usersPage.permManageSettings", admin: true, manager: false, worker: false },
+];
 
 export default function UsersSettingsPage() {
     const { canModify, activeSalonId, user } = useAuth();
@@ -52,10 +72,22 @@ export default function UsersSettingsPage() {
     const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [inviteLoading, setInviteLoading] = useState(false);
+    const [changingRoleId, setChangingRoleId] = useState<number | null>(null);
 
-    // Dropdown menu state
+    // Role dropdown state
+    const [openRoleDropdownId, setOpenRoleDropdownId] = useState<number | null>(null);
+    const roleDropdownRef = useRef<HTMLDivElement>(null);
+
+    // Dropdown menu state (for remove action)
     const [activeDropdownId, setActiveDropdownId] = useState<number | null>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Permissions state
+    const [permissions, setPermissions] = useState<PermissionRow[]>(DEFAULT_PERMISSIONS);
+    const [permissionsChanged, setPermissionsChanged] = useState(false);
+    const [savingPermissions, setSavingPermissions] = useState(false);
+
+    const isOwner = user?.role === 'owner' || user?.role === 'super_admin';
 
     const roleLabels: Record<string, string> = {
         owner: t("settings.usersPage.roleOwner"),
@@ -64,20 +96,29 @@ export default function UsersSettingsPage() {
         worker: t("settings.usersPage.roleWorker"),
     };
 
-    // Close dropdown on outside click
+    // Close dropdowns on outside click
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+            const target = e.target as Node;
+            if (dropdownRef.current && !dropdownRef.current.contains(target)) {
                 setActiveDropdownId(null);
+            }
+            // Close role dropdown only if click is outside ALL role dropdown containers
+            if (openRoleDropdownId !== null) {
+                const roleContainer = document.querySelector(`[data-role-dropdown="${openRoleDropdownId}"]`);
+                if (roleContainer && !roleContainer.contains(target)) {
+                    setOpenRoleDropdownId(null);
+                }
             }
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
+    }, [openRoleDropdownId]);
 
     useEffect(() => {
         if (activeSalonId) {
             loadTeam();
+            loadPermissions();
         }
     }, [activeSalonId]);
 
@@ -95,14 +136,22 @@ export default function UsersSettingsPage() {
                 status: "active",
             };
 
-            const workerEntries: TeamMember[] = workers.map((w: SalonWorker) => ({
-                id: w.id,
-                name: w.name,
-                email: w.email || "",
-                role: (w.employeeRole || "worker").toLowerCase(),
-                avatar: getInitials(w.name),
-                status: w.status === "Active" ? "active" : "pending",
-            }));
+            const workerEntries: TeamMember[] = workers.map((w: SalonWorker) => {
+                // Determine system role: "Manager" or "Worker" (employeeRole may contain a specialty like "barber")
+                const rawRole = (w.employeeRole || "worker").toLowerCase();
+                const systemRole = rawRole === "manager" ? "manager" : "worker";
+                const specialty = rawRole !== "manager" && rawRole !== "worker" ? w.employeeRole : undefined;
+
+                return {
+                    id: w.id,
+                    name: w.name,
+                    email: w.email || "",
+                    role: systemRole,
+                    specialty,
+                    avatar: getInitials(w.name),
+                    status: w.status === "Active" ? "active" : "pending",
+                };
+            });
 
             setTeamMembers([ownerEntry, ...workerEntries]);
         } catch (error) {
@@ -110,6 +159,22 @@ export default function UsersSettingsPage() {
             showToast(t("common.error"), t("settings.usersPage.loadError"), "error");
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const loadPermissions = async () => {
+        try {
+            const settings = await salonService.getSettings(Number(activeSalonId));
+            if (settings?.customPermissions) {
+                const saved = settings.customPermissions as Record<string, Record<string, boolean>>;
+                setPermissions(DEFAULT_PERMISSIONS.map(p => ({
+                    ...p,
+                    manager: saved[p.key]?.manager ?? p.manager,
+                    worker: saved[p.key]?.worker ?? p.worker,
+                })));
+            }
+        } catch {
+            // Use defaults silently
         }
     };
 
@@ -164,17 +229,38 @@ export default function UsersSettingsPage() {
 
     const handleChangeRole = async (member: TeamMember, newRole: string) => {
         if (handleReadOnlyClick()) return;
-        setActiveDropdownId(null);
+        setOpenRoleDropdownId(null);
+
+        if (member.role === newRole) return;
 
         try {
-            await workerService.update(member.id, {
-                employeeRole: newRole.charAt(0).toUpperCase() + newRole.slice(1),
+            setChangingRoleId(member.id);
+
+            // Use the API route that syncs both workers AND user_salons
+            const res = await fetch('/api/team/change-role', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    workerId: member.id,
+                    salonId: Number(activeSalonId),
+                    newRole: newRole.charAt(0).toUpperCase() + newRole.slice(1),
+                }),
             });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                showToast(t("common.error"), data.error || t("errors.generic"), "error");
+                return;
+            }
+
             showToast(t("common.success"), t("settings.usersPage.roleChanged"), "success");
             loadTeam();
         } catch (error) {
             console.error("Failed to change role:", error);
             showToast(t("common.error"), t("errors.generic"), "error");
+        } finally {
+            setChangingRoleId(null);
         }
     };
 
@@ -196,6 +282,43 @@ export default function UsersSettingsPage() {
         } catch (error) {
             console.error("Failed to remove member:", error);
             showToast(t("common.error"), t("errors.generic"), "error");
+        }
+    };
+
+    const togglePermission = (permKey: string, role: 'manager' | 'worker') => {
+        if (!isOwner || !canModify) return;
+        // Admin column is always locked (owner always has full access)
+        setPermissions(prev => prev.map(p =>
+            p.key === permKey ? { ...p, [role]: !p[role] } : p
+        ));
+        setPermissionsChanged(true);
+    };
+
+    const resetPermissions = () => {
+        setPermissions(DEFAULT_PERMISSIONS);
+        setPermissionsChanged(true);
+    };
+
+    const savePermissions = async () => {
+        if (!activeSalonId) return;
+        try {
+            setSavingPermissions(true);
+            const customPerms: Record<string, Record<string, boolean>> = {};
+            permissions.forEach(p => {
+                customPerms[p.key] = { manager: p.manager, worker: p.worker };
+            });
+
+            await salonService.updateSettings(Number(activeSalonId), {
+                customPermissions: customPerms,
+            });
+
+            showToast(t("common.success"), t("settings.usersPage.permissionsSaved"), "success");
+            setPermissionsChanged(false);
+        } catch (error) {
+            console.error("Failed to save permissions:", error);
+            showToast(t("common.error"), t("errors.generic"), "error");
+        } finally {
+            setSavingPermissions(false);
         }
     };
 
@@ -242,18 +365,67 @@ export default function UsersSettingsPage() {
                                         <div className="flex items-center gap-2">
                                             <p className="font-medium text-gray-900 text-sm">{member.name}</p>
                                             {member.role === "owner" && <Crown className="w-4 h-4 text-yellow-500" />}
+                                            {member.specialty && (
+                                                <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-500 capitalize">
+                                                    {member.specialty}
+                                                </span>
+                                            )}
                                         </div>
                                         <p className="text-xs text-gray-500">{member.email}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${roleColors[member.role] || roleColors.worker}`}>
-                                        {roleLabels[member.role] || member.role}
-                                    </span>
+                                    {/* Role selector — inline dropdown for non-owners */}
+                                    {member.role === "owner" ? (
+                                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${roleColors.owner}`}>
+                                            {roleLabels.owner}
+                                        </span>
+                                    ) : isOwner && canModify ? (
+                                        <div className="relative" data-role-dropdown={member.id}>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setOpenRoleDropdownId(openRoleDropdownId === member.id ? null : member.id); }}
+                                                disabled={changingRoleId === member.id}
+                                                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer hover:shadow-sm ${roleColors[member.role] || roleColors.worker} ${changingRoleId === member.id ? 'opacity-50' : ''}`}
+                                            >
+                                                {changingRoleId === member.id ? (
+                                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                                ) : null}
+                                                {roleLabels[member.role] || member.role}
+                                                <ChevronDown className="w-3 h-3" />
+                                            </button>
+                                            {openRoleDropdownId === member.id && (
+                                                <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-lg border border-gray-100 py-1 min-w-[140px] z-50">
+                                                    <button
+                                                        onClick={() => handleChangeRole(member, "manager")}
+                                                        className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${member.role === 'manager' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700 hover:bg-gray-50'}`}
+                                                    >
+                                                        <span className="w-2 h-2 rounded-full bg-blue-500" />
+                                                        {roleLabels.manager}
+                                                        {member.role === 'manager' && <Check className="w-3.5 h-3.5 ml-auto" />}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleChangeRole(member, "worker")}
+                                                        className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${member.role === 'worker' ? 'bg-green-50 text-green-700 font-medium' : 'text-gray-700 hover:bg-gray-50'}`}
+                                                    >
+                                                        <span className="w-2 h-2 rounded-full bg-green-500" />
+                                                        {roleLabels.worker}
+                                                        {member.role === 'worker' && <Check className="w-3.5 h-3.5 ml-auto" />}
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${roleColors[member.role] || roleColors.worker}`}>
+                                            {roleLabels[member.role] || member.role}
+                                        </span>
+                                    )}
+
                                     <span className={`text-xs hidden sm:inline ${member.status === "pending" ? "text-orange-600" : "text-gray-500"}`}>
                                         {member.status === "active" ? t("settings.usersPage.online") : t("settings.usersPage.pendingInvitation", { count: 1 })}
                                     </span>
-                                    {member.role !== "owner" && (
+
+                                    {/* Remove action — only for non-owners */}
+                                    {member.role !== "owner" && isOwner && (
                                         <div className="relative" ref={activeDropdownId === member.id ? dropdownRef : undefined}>
                                             <ReadOnlyGuard>
                                                 <button
@@ -266,28 +438,6 @@ export default function UsersSettingsPage() {
 
                                             {activeDropdownId === member.id && (
                                                 <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-lg border border-gray-100 py-1 min-w-[180px] z-50">
-                                                    {/* Change role options */}
-                                                    {member.role !== "manager" && (
-                                                        <button
-                                                            onClick={() => handleChangeRole(member, "manager")}
-                                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                                                        >
-                                                            <ArrowUpDown className="w-4 h-4 text-blue-500" />
-                                                            {t("settings.usersPage.changeToManager")}
-                                                        </button>
-                                                    )}
-                                                    {member.role !== "worker" && (
-                                                        <button
-                                                            onClick={() => handleChangeRole(member, "worker")}
-                                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                                                        >
-                                                            <ArrowUpDown className="w-4 h-4 text-green-500" />
-                                                            {t("settings.usersPage.changeToWorker")}
-                                                        </button>
-                                                    )}
-                                                    {/* Divider */}
-                                                    <div className="border-t border-gray-100 my-1" />
-                                                    {/* Remove */}
                                                     <button
                                                         onClick={() => handleRemoveMember(member)}
                                                         className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
@@ -313,7 +463,6 @@ export default function UsersSettingsPage() {
                         className="bg-white rounded-2xl shadow-2xl w-full max-w-md"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {/* Modal Header */}
                         <div className="flex items-center justify-between p-6 border-b border-gray-100">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-teal-600 rounded-lg flex items-center justify-center">
@@ -332,7 +481,6 @@ export default function UsersSettingsPage() {
                             </button>
                         </div>
 
-                        {/* Modal Body */}
                         <div className="p-6 space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">{t("common.email")}</label>
@@ -359,7 +507,6 @@ export default function UsersSettingsPage() {
                             </div>
                         </div>
 
-                        {/* Modal Footer */}
                         <div className="flex justify-end gap-3 p-6 border-t border-gray-100">
                             <Button variant="outline" size="sm" onClick={() => setShowInviteModal(false)}>
                                 {t("common.cancel")}
@@ -377,16 +524,32 @@ export default function UsersSettingsPage() {
                 </div>
             )}
 
-            {/* Roles & Permissions */}
+            {/* Roles & Permissions — Editable by Owner */}
             <Card>
-                <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center">
-                        <Shield className="w-5 h-5 text-white" />
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                            <Shield className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                            <h3 className="font-semibold text-gray-900">{t("settings.usersPage.rolesPermissions")}</h3>
+                            <p className="text-xs text-gray-500">
+                                {isOwner ? t("settings.usersPage.rolesPermissionsEditDesc") : t("settings.usersPage.rolesPermissionsDesc")}
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <h3 className="font-semibold text-gray-900">{t("settings.usersPage.rolesPermissions")}</h3>
-                        <p className="text-xs text-gray-500">{t("settings.usersPage.rolesPermissionsDesc")}</p>
-                    </div>
+                    {isOwner && permissionsChanged && (
+                        <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" onClick={resetPermissions}>
+                                <RotateCcw className="w-3.5 h-3.5" />
+                                {t("settings.usersPage.resetDefaults")}
+                            </Button>
+                            <Button variant="primary" size="sm" onClick={savePermissions} disabled={savingPermissions}>
+                                {savingPermissions ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                                {t("common.save")}
+                            </Button>
+                        </div>
+                    )}
                 </div>
 
                 <div className="overflow-x-auto">
@@ -394,30 +557,74 @@ export default function UsersSettingsPage() {
                         <thead>
                             <tr className="border-b border-gray-100">
                                 <th className="text-left py-3 px-2 text-xs font-medium text-gray-500 uppercase">{t("settings.usersPage.permission")}</th>
-                                <th className="text-center py-3 px-2 text-xs font-medium text-gray-500 uppercase w-24">{t("settings.usersPage.roleAdmin")}</th>
-                                <th className="text-center py-3 px-2 text-xs font-medium text-gray-500 uppercase w-24">{t("settings.usersPage.roleManager")}</th>
-                                <th className="text-center py-3 px-2 text-xs font-medium text-gray-500 uppercase w-24">{t("settings.usersPage.roleWorker")}</th>
+                                <th className="text-center py-3 px-2 text-xs font-medium text-gray-500 uppercase w-28">
+                                    <span className="flex items-center justify-center gap-1">
+                                        <Crown className="w-3 h-3 text-yellow-500" />
+                                        {t("settings.usersPage.roleAdmin")}
+                                    </span>
+                                </th>
+                                <th className="text-center py-3 px-2 text-xs font-medium text-gray-500 uppercase w-28">
+                                    <span className="flex items-center justify-center gap-1">
+                                        <span className="w-2 h-2 rounded-full bg-blue-500" />
+                                        {t("settings.usersPage.roleManager")}
+                                    </span>
+                                </th>
+                                <th className="text-center py-3 px-2 text-xs font-medium text-gray-500 uppercase w-28">
+                                    <span className="flex items-center justify-center gap-1">
+                                        <span className="w-2 h-2 rounded-full bg-green-500" />
+                                        {t("settings.usersPage.roleWorker")}
+                                    </span>
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
-                            {[
-                                { name: t("settings.usersPage.permViewDashboard"), admin: true, manager: true, worker: true },
-                                { name: t("settings.usersPage.permManageIncome"), admin: true, manager: true, worker: true },
-                                { name: t("settings.usersPage.permManageExpenses"), admin: true, manager: true, worker: false },
-                                { name: t("settings.usersPage.permManageClients"), admin: true, manager: true, worker: false },
-                                { name: t("settings.usersPage.permManageTeam"), admin: true, manager: false, worker: false },
-                                { name: t("settings.usersPage.permViewReports"), admin: true, manager: true, worker: false },
-                                { name: t("settings.usersPage.permManageSettings"), admin: true, manager: false, worker: false },
-                            ].map((perm, idx) => (
-                                <tr key={idx} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                                    <td className="py-3 px-2 font-medium text-gray-900">{perm.name}</td>
-                                    {(["admin", "manager", "worker"] as const).map(role => (
-                                        <td key={role} className="text-center py-3 px-2">
-                                            <span className={`w-5 h-5 inline-flex items-center justify-center rounded-full text-xs ${perm[role] ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-400"}`}>
-                                                {perm[role] ? "\u2713" : "\u00d7"}
+                            {permissions.map((perm) => (
+                                <tr key={perm.key} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                                    <td className="py-3 px-2 font-medium text-gray-900">{t(perm.nameKey)}</td>
+                                    {/* Admin column — always locked (full access) */}
+                                    <td className="text-center py-3 px-2">
+                                        <span className="w-6 h-6 inline-flex items-center justify-center rounded-full bg-green-100 text-green-600 text-xs">
+                                            ✓
+                                        </span>
+                                    </td>
+                                    {/* Manager column — editable by owner */}
+                                    <td className="text-center py-3 px-2">
+                                        {isOwner && canModify ? (
+                                            <button
+                                                onClick={() => togglePermission(perm.key, 'manager')}
+                                                className={`w-6 h-6 inline-flex items-center justify-center rounded-full text-xs transition-all hover:scale-110 ${
+                                                    perm.manager ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-400"
+                                                }`}
+                                            >
+                                                {perm.manager ? "✓" : "×"}
+                                            </button>
+                                        ) : (
+                                            <span className={`w-6 h-6 inline-flex items-center justify-center rounded-full text-xs ${
+                                                perm.manager ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-400"
+                                            }`}>
+                                                {perm.manager ? "✓" : "×"}
                                             </span>
-                                        </td>
-                                    ))}
+                                        )}
+                                    </td>
+                                    {/* Worker column — editable by owner */}
+                                    <td className="text-center py-3 px-2">
+                                        {isOwner && canModify ? (
+                                            <button
+                                                onClick={() => togglePermission(perm.key, 'worker')}
+                                                className={`w-6 h-6 inline-flex items-center justify-center rounded-full text-xs transition-all hover:scale-110 ${
+                                                    perm.worker ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-400"
+                                                }`}
+                                            >
+                                                {perm.worker ? "✓" : "×"}
+                                            </button>
+                                        ) : (
+                                            <span className={`w-6 h-6 inline-flex items-center justify-center rounded-full text-xs ${
+                                                perm.worker ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-400"
+                                            }`}>
+                                                {perm.worker ? "✓" : "×"}
+                                            </span>
+                                        )}
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>

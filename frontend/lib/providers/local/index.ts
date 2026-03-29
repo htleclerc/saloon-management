@@ -8,7 +8,7 @@
  * mode for the application (demo-local).
  */
 
-import { IDataProvider, DataMode, PaginatedResponse, BookingFilters, IncomeFilters, ExpenseFilters, Review, ReviewFilters, PromoCode, InteractionHistory, SalonComment, BookingCreateData, IncomeCreateData, IncomeWorkerShare, WorkerStats, ClientStats, ClientAnalytics, DashboardAnalytics, Salon, User, UserSalon, SalonSettings, SalonStats, ServiceCategory, Product, PaginationParams, BookingWithRelations, IncomeWithRelations, SalonWorker, SalaryPayment, PaymentStatusHistory, PaymentStatus, PayrollFilters } from '../types';
+import { IDataProvider, DataMode, PaginatedResponse, BookingFilters, IncomeFilters, ExpenseFilters, Review, ReviewFilters, PromoCode, InteractionHistory, SalonComment, BookingCreateData, IncomeCreateData, IncomeWorkerShare, WorkerStats, ClientStats, ClientAnalytics, DashboardAnalytics, Salon, User, UserSalon, SalonSettings, SalonStats, ServiceCategory, Product, PaginationParams, BookingWithRelations, IncomeWithRelations, SalonWorker, SalaryPayment, PaymentStatusHistory, PaymentStatus, PayrollFilters, ReferralSettings, Referral } from '../types';
 import { Client, Service, Booking, Income, Expense, ExpenseCategory } from '@/types';
 import { INITIAL_SALONS, INITIAL_WORKERS, INITIAL_CLIENTS, INITIAL_SERVICES, INITIAL_SERVICE_CATEGORIES, INITIAL_EXPENSE_CATEGORIES, INITIAL_SALON_SETTINGS } from '../../constants/initialData';
 
@@ -1284,4 +1284,23 @@ export class LocalStorageProvider implements IDataProvider {
 
         return token.payload;
     }
+
+    // ============================================
+    // REFERRALS (stubs for local provider)
+    // ============================================
+    async getReferralSettings(): Promise<ReferralSettings | null> { return null; }
+    async upsertReferralSettings(salonId: number, data: Partial<ReferralSettings>): Promise<ReferralSettings> {
+        return { id: 1, salonId, isActive: false, referrerRewardType: 'percentage', referrerRewardValue: 10, referredRewardType: 'percentage', referredRewardValue: 10, maxReferralsPerClient: null, rewardExpiryDays: 90, createdAt: new Date(), updatedAt: new Date(), ...data } as ReferralSettings;
+    }
+    async getReferrals(): Promise<Referral[]> { return []; }
+    async getReferral(): Promise<Referral | null> { return null; }
+    async getReferralsByReferrer(): Promise<Referral[]> { return []; }
+    async getReferralByReferred(): Promise<Referral | null> { return null; }
+    async createReferral(data: Omit<Referral, 'id' | 'createdAt' | 'updatedAt'>): Promise<Referral> {
+        return { id: Date.now(), ...data, createdAt: new Date(), updatedAt: new Date() } as Referral;
+    }
+    async updateReferral(id: number, data: Partial<Referral>): Promise<Referral> {
+        return { id, salonId: 0, referrerClientId: 0, referredClientId: 0, referralCode: '', status: 'pending', referrerPromoCodeId: null, referredPromoCodeId: null, referrerRewardUsed: false, referredRewardUsed: false, completedAt: null, createdAt: new Date(), updatedAt: new Date(), ...data } as Referral;
+    }
+    async getClientByReferralCode(): Promise<Client | null> { return null; }
 }

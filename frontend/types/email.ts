@@ -24,6 +24,12 @@ export interface EmailSendRequest {
     params: Record<string, string | number | boolean>;
     replyTo?: EmailRecipient;
     senderName?: string;
+    /** Per-salon Brevo config override (loaded from salon_settings.email_config) */
+    salonEmailConfig?: {
+        brevoApiKey?: string;
+        senderEmail?: string;
+        senderName?: string;
+    };
 }
 
 export interface EmailSendResult {

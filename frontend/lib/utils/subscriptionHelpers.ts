@@ -78,8 +78,15 @@ export function formatPlanPrice(price: number, currency: string): string {
 }
 
 /**
- * Check if a feature is included in a plan
+ * Check if a feature is included in a plan (loose matching for display strings)
  */
 export function hasFeature(plan: PlanConfig, featureName: string): boolean {
     return plan.features.some(f => f.toLowerCase().includes(featureName.toLowerCase()));
+}
+
+/**
+ * Check if a feature flag ID is included in a plan (exact matching for feature gating)
+ */
+export function hasPlanFeatureById(plan: PlanConfig, featureId: string): boolean {
+    return plan.features.includes(featureId);
 }

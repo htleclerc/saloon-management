@@ -216,40 +216,37 @@ async function buildUserFromAuthId(authId: string): Promise<User | null> {
             return null;
         }
 
-        // Fetch user's salons via user_salons junction table
-        const { data: userSalons } = await supabase
+        // Fetch user's salons via user_salons junction table with joined salon data (single query)
+        const { data: userSalonsWithSalon } = await supabase
             .from('user_salons')
-            .select('salon_id, role_in_salon')
+            .select('salon_id, role_in_salon, salons(*)')
             .eq('user_id', dbUser.id)
             .eq('is_active', true);
 
         let tenants: Tenant[] = [];
         let workerRole: string | undefined;
 
-        if (userSalons && userSalons.length > 0) {
-            const salonIds = userSalons.map((us: { salon_id: number }) => us.salon_id);
-            const { data: salons } = await supabase
-                .from('salons')
-                .select('*')
-                .in('id', salonIds);
-
-            if (salons) {
-                tenants = salons.map((salon: Record<string, unknown>) => ({
-                    id: String(salon.id),
-                    name: String(salon.name || ''),
-                    slug: String(salon.slug || ''),
-                    logo: salon.logo_url
-                        ? String(salon.logo_url)
-                        : `https://ui-avatars.com/api/?name=${encodeURIComponent(String(salon.name || ''))}&background=9333ea&color=fff`,
-                    subscriptionPlan: (salon.subscription_plan || 'free') as Tenant['subscriptionPlan'],
-                    subscriptionStatus: (salon.subscription_status || 'active') as Tenant['subscriptionStatus'],
-                    currency: String(salon.currency || 'EUR'),
-                    locale: deriveLocale(String(salon.currency || 'EUR')),
-                }));
-            }
+        if (userSalonsWithSalon && userSalonsWithSalon.length > 0) {
+            tenants = userSalonsWithSalon
+                .filter((us: Record<string, unknown>) => us.salons)
+                .map((us: Record<string, unknown>) => {
+                    const salon = us.salons as Record<string, unknown>;
+                    return {
+                        id: String(salon.id),
+                        name: String(salon.name || ''),
+                        slug: String(salon.slug || ''),
+                        logo: salon.logo_url
+                            ? String(salon.logo_url)
+                            : `https://ui-avatars.com/api/?name=${encodeURIComponent(String(salon.name || ''))}&background=9333ea&color=fff`,
+                        subscriptionPlan: (salon.subscription_plan || 'free') as Tenant['subscriptionPlan'],
+                        subscriptionStatus: (salon.subscription_status || 'active') as Tenant['subscriptionStatus'],
+                        currency: String(salon.currency || 'EUR'),
+                        locale: deriveLocale(String(salon.currency || 'EUR')),
+                    };
+                });
 
             // Check if user is a worker in any salon
-            const workerEntry = userSalons.find((us: { role_in_salon: string }) => us.role_in_salon === 'Worker');
+            const workerEntry = userSalonsWithSalon.find((us: { role_in_salon: string }) => us.role_in_salon === 'Worker');
             if (workerEntry) workerRole = 'worker';
         }
 
@@ -317,39 +314,81 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
                 if (session?.user) {
                     console.log('[Auth] Session found for user:', session.user.id, session.user.email);
-                    let appUser = await buildUserFromAuthId(session.user.id);
-                    console.log('[Auth] buildUserFromAuthId result:', appUser ? 'found' : 'null');
 
-                    // If no app user found, auto-provision from Supabase Auth user
-                    if (!appUser) {
-                        console.log('[Auth] Auto-provisioning user...');
-                        const provisionedId = await autoProvisionUser(session.user);
-                        console.log('[Auth] Auto-provision result:', provisionedId);
-                        if (provisionedId) {
-                            appUser = await buildUserFromAuthId(session.user.id);
-                            console.log('[Auth] buildUserFromAuthId after provision:', appUser ? 'found' : 'null');
+                    // Stale-while-revalidate: serve cached user instantly, then refresh in background
+                    const AUTH_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+                    const cacheKey = `auth-cache-${session.user.id}`;
+                    const cached = sessionStorage.getItem(cacheKey);
+                    let usedCache = false;
+
+                    if (cached) {
+                        try {
+                            const { user: cachedUser, timestamp } = JSON.parse(cached);
+                            if (Date.now() - timestamp < AUTH_CACHE_TTL) {
+                                console.log('[Auth] Using cached user (stale-while-revalidate)');
+                                setUser(cachedUser);
+                                setIsLoading(false);
+                                usedCache = true;
+                                if (!cachedUser.isDemo) {
+                                    localStorage.setItem('saloon-data-mode', 'demo-supabase');
+                                }
+                            }
+                        } catch {
+                            sessionStorage.removeItem(cacheKey);
                         }
                     }
 
-                    if (appUser) {
-                        setUser(appUser);
-                        setIsLoading(false);
+                    // Build fresh user (foreground if no cache, background if cache was used)
+                    const refreshUser = async () => {
+                        let appUser = await buildUserFromAuthId(session.user.id);
+                        console.log('[Auth] buildUserFromAuthId result:', appUser ? 'found' : 'null');
 
-                        // If user has no tenants, redirect to onboarding (unless already there)
-                        if (!appUser.tenants || appUser.tenants.length === 0) {
-                            if (!window.location.pathname.startsWith('/onboarding')) {
-                                const salonName = session.user.user_metadata?.salon_name || '';
-                                const onboardingUrl = salonName
-                                    ? `/onboarding/setup?salonName=${encodeURIComponent(salonName)}`
-                                    : '/onboarding/setup';
-                                window.location.href = onboardingUrl;
+                        // If no app user found, auto-provision from Supabase Auth user
+                        if (!appUser) {
+                            console.log('[Auth] Auto-provisioning user...');
+                            const provisionedId = await autoProvisionUser(session.user);
+                            console.log('[Auth] Auto-provision result:', provisionedId);
+                            if (provisionedId) {
+                                appUser = await buildUserFromAuthId(session.user.id);
+                                console.log('[Auth] buildUserFromAuthId after provision:', appUser ? 'found' : 'null');
                             }
                         }
+
+                        if (appUser) {
+                            // Cache the fresh user
+                            sessionStorage.setItem(cacheKey, JSON.stringify({ user: appUser, timestamp: Date.now() }));
+
+                            setUser(appUser);
+                            if (!usedCache) setIsLoading(false);
+
+                            // Ensure storage mode is set to supabase for real (non-demo) users
+                            if (!appUser.isDemo) {
+                                localStorage.setItem('saloon-data-mode', 'demo-supabase');
+                            }
+
+                            // If user has no tenants, redirect to onboarding (unless already there)
+                            if (!appUser.tenants || appUser.tenants.length === 0) {
+                                if (!window.location.pathname.startsWith('/onboarding')) {
+                                    const salonName = session.user.user_metadata?.salon_name || '';
+                                    const onboardingUrl = salonName
+                                        ? `/onboarding/setup?salonName=${encodeURIComponent(salonName)}`
+                                        : '/onboarding/setup';
+                                    window.location.href = onboardingUrl;
+                                }
+                            }
+                        } else if (!usedCache) {
+                            console.error('[Auth] Supabase session exists but failed to build app user. Possible RLS issue.');
+                        }
+                    };
+
+                    if (usedCache) {
+                        // Revalidate in background — don't await
+                        refreshUser();
                         return;
                     }
 
-                    // Session exists but no app user could be built — log and show error
-                    console.error('[Auth] Supabase session exists but failed to build app user. Possible RLS issue.');
+                    await refreshUser();
+                    return;
                 }
 
                 // 2. Fallback to demo mode (localStorage)
@@ -645,6 +684,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Clear client-side state immediately
         setUser(null);
         localStorage.removeItem("workshop-user");
+        sessionStorage.clear(); // Clear auth cache
         document.cookie = "workshop-demo-active=; Max-Age=0; path=/";
 
         try {

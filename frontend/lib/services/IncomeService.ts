@@ -98,6 +98,20 @@ export class IncomeService extends BaseService {
             }
         }
 
+        // Complete referral if this client was referred and has a pending referral
+        if (data.clientId) {
+            try {
+                const referral = await this.provider.getReferralByReferred(data.clientId);
+                if (referral && referral.status === 'pending') {
+                    const { referralService } = await import('./ReferralService');
+                    await referralService.completeReferral(referral.id);
+                }
+            } catch {
+                // Non-blocking: referral completion failure shouldn't prevent income creation
+                console.warn('Failed to complete referral for client', data.clientId);
+            }
+        }
+
         // Log action
         await this.logInteraction('income', income.id, 'created', `Income of ${income.finalAmount}€ created`);
 

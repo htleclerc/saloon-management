@@ -81,6 +81,12 @@ export interface SalonSettings {
     defaultWorkerSharePct: number;
     vatRate?: number;  // VAT/Tax percentage for invoicing (0-100)
     openingHours: OpeningHours[];
+    customPermissions?: Record<string, Record<string, boolean>> | null;
+    emailConfig?: {
+        brevoApiKey?: string;
+        senderEmail?: string;
+        senderName?: string;
+    } | null;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -183,6 +189,8 @@ export interface Client {
     updatedAt: Date;
     createdBy: string;
     updatedBy: string;
+    referralCode?: string;
+    referredByClientId?: number;
 }
 
 // Calculated stats (from client_stats view)
@@ -506,6 +514,61 @@ export interface PromoCode {
     updatedAt: Date;
     createdBy: string;
     updatedBy: string;
+}
+
+// ============================================================
+// REFERRALS
+// ============================================================
+
+export interface ReferralSettings {
+    id: number;
+    salonId: number;
+    isActive: boolean;
+    referrerRewardType: 'percentage' | 'fixed';
+    referrerRewardValue: number;
+    referredRewardType: 'percentage' | 'fixed';
+    referredRewardValue: number;
+    maxReferralsPerClient: number | null;
+    rewardExpiryDays: number;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export type ReferralStatus = 'pending' | 'completed' | 'expired' | 'cancelled';
+
+export interface Referral {
+    id: number;
+    salonId: number;
+    referrerClientId: number;
+    referredClientId: number;
+    referralCode: string;
+    status: ReferralStatus;
+    referrerPromoCodeId: number | null;
+    referredPromoCodeId: number | null;
+    referrerRewardUsed: boolean;
+    referredRewardUsed: boolean;
+    completedAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface ReferralWithRelations extends Referral {
+    referrerClient?: Client;
+    referredClient?: Client;
+    referrerPromoCode?: PromoCode;
+    referredPromoCode?: PromoCode;
+}
+
+export interface ReferralStats {
+    totalReferrals: number;
+    completedReferrals: number;
+    pendingReferrals: number;
+    totalRewardsGiven: number;
+    topReferrers: Array<{
+        clientId: number;
+        clientName: string;
+        referralCount: number;
+    }>;
 }
 
 // ============================================================

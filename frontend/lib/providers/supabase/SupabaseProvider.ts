@@ -18,6 +18,8 @@ import type {
     ExpenseCategory, Expense, ExpenseFilters,
     Review, ReviewFilters,
     PromoCode,
+    // Referrals
+    ReferralSettings, Referral,
     // Audit
     InteractionHistory, SalonComment,
     PaginationParams, PaginatedResponse,
@@ -263,26 +265,17 @@ export class SupabaseProvider implements IDataProvider {
     }
 
     async updateSalonSettings(salonId: number, data: Partial<SalonSettings>): Promise<SalonSettings> {
-        const { data: updated, error } = await supabase
+        const { data: upserted, error } = await supabase
             .from('salon_settings')
-            .update(this.mapSalonSettingsToDB(data))
-            .eq('salon_id', salonId)
+            .upsert(
+                { salon_id: salonId, ...this.mapSalonSettingsToDB(data) },
+                { onConflict: 'salon_id' }
+            )
             .select()
             .single();
 
-        if (error) {
-            // If not exists, create
-            const { data: created, error: createError } = await supabase
-                .from('salon_settings')
-                .insert([{ salon_id: salonId, ...this.mapSalonSettingsToDB(data) }])
-                .select()
-                .single();
-
-            if (createError) throw new Error(`Failed to update salon settings: ${createError.message}`);
-            return this.mapSalonSettingsFromDB(created);
-        }
-
-        return this.mapSalonSettingsFromDB(updated);
+        if (error) throw new Error(`Failed to update salon settings: ${error.message}`);
+        return this.mapSalonSettingsFromDB(upserted);
     }
 
     // Salon Stats (from view)
@@ -910,6 +903,8 @@ export class SupabaseProvider implements IDataProvider {
             defaultWorkerSharePct: db.default_worker_share_pct,
             vatRate: db.vat_rate,
             openingHours: db.opening_hours || [],
+            customPermissions: db.custom_permissions || null,
+            emailConfig: db.email_config || null,
             createdAt: new Date(db.created_at),
             updatedAt: new Date(db.updated_at)
         };
@@ -929,6 +924,8 @@ export class SupabaseProvider implements IDataProvider {
         if (settings.defaultWorkerSharePct !== undefined) db.default_worker_share_pct = settings.defaultWorkerSharePct;
         if (settings.vatRate !== undefined) db.vat_rate = settings.vatRate;
         if (settings.openingHours !== undefined) db.opening_hours = settings.openingHours;
+        if (settings.customPermissions !== undefined) db.custom_permissions = settings.customPermissions;
+        if (settings.emailConfig !== undefined) db.email_config = settings.emailConfig;
         return db;
     }
 
@@ -1052,7 +1049,9 @@ export class SupabaseProvider implements IDataProvider {
             createdAt: new Date(db.created_at),
             updatedAt: new Date(db.updated_at),
             createdBy: db.created_by,
-            updatedBy: db.updated_by
+            updatedBy: db.updated_by,
+            referralCode: db.referral_code,
+            referredByClientId: db.referred_by_client_id
         };
     }
 
@@ -1071,6 +1070,8 @@ export class SupabaseProvider implements IDataProvider {
         if (client.isActive !== undefined) db.is_active = client.isActive;
         if (client.createdBy !== undefined) db.created_by = client.createdBy;
         if (client.updatedBy !== undefined) db.updated_by = client.updatedBy;
+        if (client.referralCode !== undefined) db.referral_code = client.referralCode;
+        if (client.referredByClientId !== undefined) db.referred_by_client_id = client.referredByClientId;
         return db;
     }
 
@@ -2530,6 +2531,174 @@ export class SupabaseProvider implements IDataProvider {
         if (!promoCode) return;
 
         await this.updatePromoCode(id, { usageCount: promoCode.usageCount + 1 });
+    }
+
+    // ============================================
+    // REFERRALS
+    // ============================================
+
+    private mapReferralSettingsFromDB(db: any): ReferralSettings {
+        return {
+            id: db.id,
+            salonId: db.salon_id,
+            isActive: db.is_active ?? false,
+            referrerRewardType: db.referrer_reward_type || 'percentage',
+            referrerRewardValue: Number(db.referrer_reward_value) || 10,
+            referredRewardType: db.referred_reward_type || 'percentage',
+            referredRewardValue: Number(db.referred_reward_value) || 10,
+            maxReferralsPerClient: db.max_referrals_per_client,
+            rewardExpiryDays: db.reward_expiry_days || 90,
+            createdAt: new Date(db.created_at),
+            updatedAt: new Date(db.updated_at),
+        };
+    }
+
+    private mapReferralFromDB(db: any): Referral {
+        return {
+            id: db.id,
+            salonId: db.salon_id,
+            referrerClientId: db.referrer_client_id,
+            referredClientId: db.referred_client_id,
+            referralCode: db.referral_code,
+            status: db.status,
+            referrerPromoCodeId: db.referrer_promo_code_id,
+            referredPromoCodeId: db.referred_promo_code_id,
+            referrerRewardUsed: db.referrer_reward_used ?? false,
+            referredRewardUsed: db.referred_reward_used ?? false,
+            completedAt: db.completed_at ? new Date(db.completed_at) : null,
+            createdAt: new Date(db.created_at),
+            updatedAt: new Date(db.updated_at),
+        };
+    }
+
+    async getReferralSettings(salonId: number): Promise<ReferralSettings | null> {
+        const { data, error } = await supabase
+            .from('referral_settings')
+            .select('*')
+            .eq('salon_id', salonId)
+            .single();
+
+        if (error || !data) return null;
+        return this.mapReferralSettingsFromDB(data);
+    }
+
+    async upsertReferralSettings(salonId: number, data: Partial<ReferralSettings>): Promise<ReferralSettings> {
+        const dbData: Record<string, unknown> = { salon_id: salonId };
+        if (data.isActive !== undefined) dbData.is_active = data.isActive;
+        if (data.referrerRewardType !== undefined) dbData.referrer_reward_type = data.referrerRewardType;
+        if (data.referrerRewardValue !== undefined) dbData.referrer_reward_value = data.referrerRewardValue;
+        if (data.referredRewardType !== undefined) dbData.referred_reward_type = data.referredRewardType;
+        if (data.referredRewardValue !== undefined) dbData.referred_reward_value = data.referredRewardValue;
+        if (data.maxReferralsPerClient !== undefined) dbData.max_referrals_per_client = data.maxReferralsPerClient;
+        if (data.rewardExpiryDays !== undefined) dbData.reward_expiry_days = data.rewardExpiryDays;
+        dbData.updated_at = new Date().toISOString();
+
+        const { data: upserted, error } = await supabase
+            .from('referral_settings')
+            .upsert(dbData, { onConflict: 'salon_id' })
+            .select()
+            .single();
+
+        if (error) throw new Error(`Failed to upsert referral settings: ${error.message}`);
+        return this.mapReferralSettingsFromDB(upserted);
+    }
+
+    async getReferrals(salonId: number): Promise<Referral[]> {
+        const { data, error } = await supabase
+            .from('referrals')
+            .select('*')
+            .eq('salon_id', salonId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw new Error(`Failed to fetch referrals: ${error.message}`);
+        return (data || []).map(this.mapReferralFromDB);
+    }
+
+    async getReferral(id: number): Promise<Referral | null> {
+        const { data, error } = await supabase
+            .from('referrals')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (error || !data) return null;
+        return this.mapReferralFromDB(data);
+    }
+
+    async getReferralsByReferrer(clientId: number): Promise<Referral[]> {
+        const { data, error } = await supabase
+            .from('referrals')
+            .select('*')
+            .eq('referrer_client_id', clientId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw new Error(`Failed to fetch referrals by referrer: ${error.message}`);
+        return (data || []).map(this.mapReferralFromDB);
+    }
+
+    async getReferralByReferred(clientId: number): Promise<Referral | null> {
+        const { data, error } = await supabase
+            .from('referrals')
+            .select('*')
+            .eq('referred_client_id', clientId)
+            .maybeSingle();
+
+        if (error) throw new Error(`Failed to fetch referral by referred: ${error.message}`);
+        return data ? this.mapReferralFromDB(data) : null;
+    }
+
+    async createReferral(data: Omit<Referral, 'id' | 'createdAt' | 'updatedAt'>): Promise<Referral> {
+        const { data: created, error } = await supabase
+            .from('referrals')
+            .insert([{
+                salon_id: data.salonId,
+                referrer_client_id: data.referrerClientId,
+                referred_client_id: data.referredClientId,
+                referral_code: data.referralCode,
+                status: data.status,
+                referrer_promo_code_id: data.referrerPromoCodeId,
+                referred_promo_code_id: data.referredPromoCodeId,
+                referrer_reward_used: data.referrerRewardUsed,
+                referred_reward_used: data.referredRewardUsed,
+                completed_at: data.completedAt?.toISOString() || null,
+            }])
+            .select()
+            .single();
+
+        if (error) throw new Error(`Failed to create referral: ${error.message}`);
+        return this.mapReferralFromDB(created);
+    }
+
+    async updateReferral(id: number, data: Partial<Referral>): Promise<Referral> {
+        const dbData: Record<string, unknown> = { updated_at: new Date().toISOString() };
+        if (data.status !== undefined) dbData.status = data.status;
+        if (data.referrerPromoCodeId !== undefined) dbData.referrer_promo_code_id = data.referrerPromoCodeId;
+        if (data.referredPromoCodeId !== undefined) dbData.referred_promo_code_id = data.referredPromoCodeId;
+        if (data.referrerRewardUsed !== undefined) dbData.referrer_reward_used = data.referrerRewardUsed;
+        if (data.referredRewardUsed !== undefined) dbData.referred_reward_used = data.referredRewardUsed;
+        if (data.completedAt !== undefined) dbData.completed_at = data.completedAt?.toISOString() || null;
+
+        const { data: updated, error } = await supabase
+            .from('referrals')
+            .update(dbData)
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw new Error(`Failed to update referral: ${error.message}`);
+        return this.mapReferralFromDB(updated);
+    }
+
+    async getClientByReferralCode(salonId: number, code: string): Promise<Client | null> {
+        const { data, error } = await supabase
+            .from('clients')
+            .select('*')
+            .eq('salon_id', salonId)
+            .eq('referral_code', code)
+            .single();
+
+        if (error || !data) return null;
+        return this.mapClientFromDB(data);
     }
 
     // ============================================

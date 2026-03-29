@@ -26,6 +26,8 @@ import {
     Review, ReviewFilters,
     // Promo
     PromoCode,
+    // Referrals
+    ReferralSettings, Referral,
     // Payroll
     SalaryPayment, PaymentStatusHistory, PaymentStatus, PayrollFilters,
     // Audit
@@ -46,6 +48,7 @@ export type {
     ExpenseCategory, Expense, ExpenseFilters,
     Review, ReviewFilters,
     PromoCode,
+    ReferralSettings, Referral,
     SalaryPayment, PaymentStatusHistory, PaymentStatus, PayrollFilters,
     InteractionHistory, SalonComment,
     PaginationParams, PaginatedResponse
@@ -257,6 +260,19 @@ export interface IDataProvider {
     updatePromoCode(id: number, data: Partial<PromoCode>): Promise<PromoCode>;
     deletePromoCode(id: number): Promise<void>;
     incrementPromoCodeUsage(id: number): Promise<void>;
+
+    // ============================================
+    // REFERRALS
+    // ============================================
+    getReferralSettings(salonId: number): Promise<ReferralSettings | null>;
+    upsertReferralSettings(salonId: number, data: Partial<ReferralSettings>): Promise<ReferralSettings>;
+    getReferrals(salonId: number): Promise<Referral[]>;
+    getReferral(id: number): Promise<Referral | null>;
+    getReferralsByReferrer(clientId: number): Promise<Referral[]>;
+    getReferralByReferred(clientId: number): Promise<Referral | null>;
+    createReferral(data: Omit<Referral, 'id' | 'createdAt' | 'updatedAt'>): Promise<Referral>;
+    updateReferral(id: number, data: Partial<Referral>): Promise<Referral>;
+    getClientByReferralCode(salonId: number, code: string): Promise<Client | null>;
 
     // ============================================
     // AUDIT & HISTORY

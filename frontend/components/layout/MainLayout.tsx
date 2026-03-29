@@ -4,6 +4,7 @@ import { ReactNode } from "react";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import DemoModeBanner from "../ui/DemoModeBanner";
+import LoadingScreen from "../ui/LoadingScreen";
 import { useTheme, useResponsive } from "@/context/ThemeProvider";
 import { useAuth } from "@/context/AuthProvider";
 import { useEffect } from "react";
@@ -26,14 +27,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
     }, [isAuthenticated, isLoading, router]);
 
     if (isLoading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="flex flex-col items-center gap-4">
-                    <div className="w-12 h-12 border-4 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin"></div>
-                    <p className="text-gray-500 font-medium animate-pulse">Initializing Workspace...</p>
-                </div>
-            </div>
-        );
+        return <LoadingScreen />;
     }
 
     if (!isAuthenticated) return null;
