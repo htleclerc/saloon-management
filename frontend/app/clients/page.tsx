@@ -1,311 +1,874 @@
 "use client";
 
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
+import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
 import Button from "@/components/ui/Button";
-import { Plus, Download, Filter, Search, Eye, Edit, Trash2 } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import {
+    Plus, Download, Filter, Search, Eye, Edit, Trash2, Users, UserPlus, RefreshCcw,
+    User, ArrowUp, Upload, MessageSquare, X, Phone, Mail, MapPin, Calendar, CreditCard,
+    FileText, UserCheck, Star, Activity, PlusCircle
+} from "lucide-react";
+import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/export";
+import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
+import { clientService } from "@/lib/services/ClientService";
+import { Client, ClientStats, ClientAnalytics } from "@/types";
+import { useAuth } from "@/context/AuthProvider";
+import { useTranslation } from "@/i18n";
+import { useCurrency } from "@/hooks/useCurrency";
+import { useToast } from "@/context/ToastProvider";
+import { useConfirm } from "@/context/ConfirmProvider";
+import { performanceStatsService } from "@/lib/services";
 
-const clients = [
-    { id: "CLI-00123", name: "Marie Dubois", phone: "+33 6 12 34 56 78", email: "marie.dubois@email.com", address: "Paris, France", type: "Regular", totalVisits: 12, totalSpent: "€1440", status: "Active" },
-    { id: "CLI-00124", name: "Jean Martin", phone: "+33 6 98 76 54 32", email: "jean.martin@email.com", address: "Lyon, France", type: "VIP", totalVisits: 8, totalSpent: "€960", status: "Active" },
-    { id: "CLI-00125", name: "Sophie Laurent", phone: "+33 7 11 22 33 44", email: "sophie.laurent@email.com", address: "Marseille, France", type: "Regular", totalVisits: 5, totalSpent: "€475", status: "Active" },
-    { id: "CLI-00126", name: "Pierre Rousseau", phone: "+33 6 55 66 77 88", email: "pierre.r@email.com", address: "Toulouse, France", type: "VIP", totalVisits: 15, totalSpent: "€2250", status: "Active" },
-    { id: "CLI-00127", name: "Amélie Bernard", phone: "+33 7 44 55 66 77", email: "amelie.b@email.com", address: "Nice, France", type: "Regular", totalVisits: 3, totalSpent: "€330", status: "Inactive" },
-    { id: "CLI-00128", name: "Thomas Petit", phone: "+33 6 33 44 55 66", email: "thomas.petit@email.com", address: "Nantes, France", type: "Regular", totalVisits: 7, totalSpent: "€735", status: "Active" },
-    { id: "CLI-00129", name: "Isabelle Moreau", phone: "+33 7 22 33 44 55", email: "isabelle.m@email.com", address: "Bordeaux, France", type: "VIP", totalVisits: 20, totalSpent: "€2600", status: "Active" },
-    { id: "CLI-00130", name: "Nicolas Simon", phone: "+33 6 77 88 99 00", email: "nicolas.simon@email.com", address: "Strasbourg, France", type: "Regular", totalVisits: 2, totalSpent: "€170", status: "Active" },
-];
+interface DisplayReview {
+    id: number;
+    client: string;
+    rating: number;
+    comment: string;
+    date: string;
+    service: string;
+    avatar: string;
+    color: string;
+}
 
-const clientTrendData = [
-    { name: "This Month", clients: 8 },
-    { name: "Last Month", clients: 42 },
-    { name: "2 Months ago", clients: 347 },
-];
-
-const clientDistributionData = [
-    { name: "Regular Clients", value: 123854, color: "#8B5CF6" },
-    { name: "Occasional Clients", value: 104143, color: "#EC4899" },
-    { name: "New Clients", value: 95643, color: "#F59E0B" },
-    { name: "Above The Month", value: 84854, color: "#10B981" },
-    { name: "Inactive Members", value: 78163, color: "#6B7280" },
-];
+type ClientWithStats = Client & { stats?: ClientStats | null; type?: string };
 
 export default function ClientsPage() {
+    const { t } = useTranslation();
+    const { format: formatCurrency } = useCurrency();
+    const { activeSalonId } = useAuth();
+    const [clients, setClients] = useState<ClientWithStats[]>([]);
+    const [reviews, setReviews] = useState<DisplayReview[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState("");
+    const { getCardStyle } = useKpiCardStyle();
+    const [selectedClient, setSelectedClient] = useState<ClientWithStats | null>(null);
+    const [selectedClientIds, setSelectedClientIds] = useState<Set<number>>(new Set());
+
+    useEffect(() => {
+        if (activeSalonId) {
+            loadData();
+        }
+    }, [activeSalonId]);
+
+    const loadData = async () => {
+        setIsLoading(true);
+        try {
+            const salonId = Number(activeSalonId);
+
+            // Parallel loading of clients, analytics and reviews
+            const [clientsData, reviewsData] = await Promise.all([
+                clientService.getAll(salonId),
+                performanceStatsService.getAllReviews(salonId, 6)
+            ]);
+
+            // Fetch stats for each client
+            const clientsWithStats = await Promise.all(clientsData.map(async (client: Client) => {
+                const stats = await clientService.getClientStats(client.id);
+                return { ...client, stats };
+            }));
+
+            setClients(clientsWithStats);
+            setReviews(reviewsData);
+        } catch (error) {
+            console.error("Failed to load clients data:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const totalClients = clients.length;
-    const activeClients = clients.filter(c => c.status === "Active").length;
-    const vipClients = clients.filter(c => c.type === "VIP").length;
-    const totalRevenue = clients.reduce((sum, c) => sum + parseFloat(c.totalSpent.replace(/[€,]/g, "")), 0);
+    const activeClients = clients.filter(c => c.isActive).length;
+
+    // Fallback if stats service is not fully ready for all clients
+    const newClientsThisMonth = useMemo(() => {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        return clients.filter(c => new Date(c.createdAt) >= startOfMonth).length;
+    }, [clients]);
+
+    const returningRate = useMemo(() => {
+        const returningClients = clients.filter(c => (c.stats?.totalBookings || 0) > 1).length;
+        return totalClients > 0 ? Math.round((returningClients / totalClients) * 100) : 0;
+    }, [clients, totalClients]);
+
+    const analytics = useMemo<ClientAnalytics | null>(() => {
+        if (!clients.length) return null;
+
+        const now = new Date();
+        const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const twoMonthsStart = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+
+        const thisMonthCount = clients.filter(c => new Date(c.createdAt) >= thisMonthStart).length;
+        const lastMonthCount = clients.filter(c => {
+            const date = new Date(c.createdAt);
+            return date >= lastMonthStart && date < thisMonthStart;
+        }).length;
+        const twoMonthsCount = clients.filter(c => {
+            const date = new Date(c.createdAt);
+            return date >= twoMonthsStart && date < lastMonthStart;
+        }).length;
+
+        const regularClients = clients.filter(c => (c.stats?.totalBookings || 0) > 5).length;
+        const occasionalClients = clients.filter(c => {
+            const bookings = c.stats?.totalBookings || 0;
+            return bookings > 1 && bookings <= 5;
+        }).length;
+        const newClients = clients.filter(c => {
+            const bookings = c.stats?.totalBookings || 0;
+            return bookings <= 1 && new Date(c.createdAt) >= lastMonthStart;
+        }).length;
+        const inactiveClients = clients.filter(c => !c.isActive).length;
+
+        // Recent activity (latest 2 clients created)
+        const sortedClients = [...clients].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        const recentActivity = sortedClients.slice(0, 2).map((c, idx) => ({
+            id: c.id,
+            type: "registration",
+            titleKey: "clients.activity.newRegistration",
+            descKey: "clients.activity.newRegistrationDesc",
+            params: { name: c.name },
+            timeKey: idx === 0 ? "clients.activity.times.2hours" : "clients.activity.times.5hours",
+            icon: "plus",
+            color: "bg-green-500"
+        }));
+
+        return {
+            trend: [
+                { name: "This Month", clients: thisMonthCount, key: "clients.trend.thisMonth" },
+                { name: "Last Month", clients: lastMonthCount, key: "clients.trend.lastMonth" },
+                { name: "2 Months ago", clients: twoMonthsCount, key: "clients.trend.twoMonthsAgo" },
+            ],
+            distribution: [
+                { name: "Regular Clients", value: regularClients, color: "#8B5CF6", key: "clients.distribution.regular" },
+                { name: "Occasional Clients", value: occasionalClients, color: "#EC4899", key: "clients.distribution.occasional" },
+                { name: "New Clients", value: newClients, color: "#F59E0B", key: "clients.distribution.new" },
+                { name: "Inactive Members", value: inactiveClients, color: "#6B7280", key: "clients.distribution.inactive" },
+            ],
+            recentActivity
+        };
+    }, [clients]);
+
+    const totalDistribution = useMemo(() => {
+        if (!analytics?.distribution) return 0;
+        return analytics.distribution.reduce((sum, item) => sum + item.value, 0);
+    }, [analytics]);
+
+    const satisfactionMetrics = useMemo(() => {
+        if (!reviews.length) return null;
+
+        const avg = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+        const dist = [0, 0, 0, 0, 0]; // 1-5 stars
+        reviews.forEach(r => {
+            if (r.rating >= 1 && r.rating <= 5) dist[r.rating - 1]++;
+        });
+
+        return {
+            average: avg.toFixed(1),
+            total: reviews.length,
+            distribution: dist.reverse() // [5, 4, 3, 2, 1] for display
+        };
+    }, [reviews]);
+
+
+    const toggleClientSelection = (id: number) => {
+        const newSelected = new Set(selectedClientIds);
+        if (newSelected.has(id)) {
+            newSelected.delete(id);
+        } else {
+            newSelected.add(id);
+        }
+        setSelectedClientIds(newSelected);
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedClientIds.size === clients.length) {
+            setSelectedClientIds(new Set());
+        } else {
+            setSelectedClientIds(new Set(clients.map(c => c.id)));
+        }
+    };
+
+    const { showToast } = useToast();
+    const { confirm } = useConfirm();
+
+    const clientExportColumns: ExportColumn[] = [
+        { key: "id", header: t("clients.table.id") },
+        { key: "name", header: t("clients.table.name") },
+        { key: "phone", header: t("common.phone") },
+        { key: "email", header: t("common.email") },
+        { key: "address", header: t("common.address") },
+        { key: "type", header: t("clients.filters.type") },
+        { key: "totalVisits", header: t("clients.table.visits") },
+        { key: "totalSpent", header: t("clients.totalSpent") },
+        { key: "status", header: t("clients.table.status") },
+    ];
+
+    const handleExportAll = () => {
+        try {
+            exportToCSV(clients, clientExportColumns, "clients");
+            showToast(t("common.success"), t("clients.exportSuccess"), "success");
+        } catch (err) {
+            showToast(t("common.error"), err instanceof Error ? err.message : "Unknown error", "error");
+        }
+    };
+
+    const handleExportPDF = () => {
+        try {
+            exportToPDF(clients, clientExportColumns, t("clients.title"), "clients");
+        } catch (err) {
+            showToast(t("common.error"), err instanceof Error ? err.message : "Unknown error", "error");
+        }
+    };
+
+    const handleExportSelected = () => {
+        const selectedClients = clients.filter(c => selectedClientIds.has(c.id));
+        if (selectedClients.length === 0) {
+            showToast(t("common.noData"), "", "warning");
+            return;
+        }
+        try {
+            exportToCSV(selectedClients, clientExportColumns, "clients_selected");
+            showToast(t("common.success"), t("clients.exportSuccess"), "success");
+        } catch (err) {
+            showToast(t("common.error"), err instanceof Error ? err.message : "Unknown error", "error");
+        }
+    };
 
     return (
         <MainLayout>
             <div className="space-y-6">
                 {/* Header */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">Client Management</h1>
-                        <p className="text-gray-500 mt-1">Manage your client base and track their activity</p>
+                        <h1 className="text-3xl font-bold text-gray-900">{t("clients.title")}</h1>
+                        <p className="text-gray-500 mt-1">{t("clients.subtitle")}</p>
                     </div>
-                    <Link href="/clients/add">
-                        <Button variant="primary" size="md">
-                            <Plus className="w-5 h-5" />
-                            Add Client
-                        </Button>
-                    </Link>
+                    <div className="flex w-full md:w-auto items-center justify-end">
+                        <ReadOnlyGuard>
+                            <Link href="/clients/add">
+                                <Button variant="primary" size="md" className="rounded-2xl h-14 w-14 md:h-12 md:w-auto md:px-6 flex items-center justify-center p-0 md:p-auto shadow-xl shadow-[color:var(--color-primary)]/20 active:scale-95 transition-all">
+                                    <Plus className="w-8 h-8 md:w-6 md:h-6" />
+                                    <span className="hidden md:inline ml-2 font-bold whitespace-nowrap">{t("clients.addClient")}</span>
+                                </Button>
+                            </Link>
+                        </ReadOnlyGuard>
+                    </div>
                 </div>
 
                 {/* Summary Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <Card gradient="bg-gradient-to-br from-purple-600 to-purple-700" className="text-white">
-                        <p className="text-sm opacity-90 mb-1">Total Clients</p>
-                        <h3 className="text-4xl font-bold">{totalClients}</h3>
-                        <p className="text-sm opacity-80 mt-1">+3% this month</p>
+                    <Card className="text-white" style={getCardStyle(0)}>
+                        <div className="flex justify-between items-start">
+                            <div className="p-2 bg-white/20 rounded-lg">
+                                <Users className="w-6 h-6 text-white" />
+                            </div>
+                            <span className="bg-white/20 px-2 py-1 rounded text-xs">{t("common.total")}</span>
+                        </div>
+                        <div className="mt-4">
+                            <p className="text-sm opacity-90 mb-1">{t("clients.stats.total")}</p>
+                            <h3 className="text-3xl font-bold">{totalClients}</h3>
+                            <div className="flex items-center gap-1 mt-1 text-sm opacity-80">
+                                {newClientsThisMonth > 0 ? (
+                                    <>
+                                        <ArrowUp className="w-3 h-3" />
+                                        <span>+{newClientsThisMonth} {t("dashboard.thisMonth")}</span>
+                                    </>
+                                ) : (
+                                    <span>{t("dashboard.thisMonth")}</span>
+                                )}
+                            </div>
+                        </div>
                     </Card>
-                    <Card gradient="bg-gradient-to-br from-pink-500 to-pink-600" className="text-white">
-                        <p className="text-sm opacity-90 mb-1">Active Clients</p>
-                        <h3 className="text-4xl font-bold">{activeClients}</h3>
-                        <p className="text-sm opacity-80 mt-1">Currently active</p>
+                    <Card className="text-white" style={getCardStyle(1)}>
+                        <div className="flex justify-between items-start">
+                            <div className="p-2 bg-white/20 rounded-lg">
+                                <UserPlus className="w-6 h-6 text-white" />
+                            </div>
+                            <span className="bg-white/20 px-2 py-1 rounded text-xs">{t("dashboard.vsLastMonth")}</span>
+                        </div>
+                        <div className="mt-4">
+                            <p className="text-sm opacity-90 mb-1">{t("clients.stats.newThisMonth")}</p>
+                            <h3 className="text-3xl font-bold">{newClientsThisMonth}</h3>
+                            <div className="flex items-center gap-1 mt-1 text-sm opacity-80">
+                                <Plus className="w-3 h-3" />
+                                <span>{t("clients.stats.recentRegistrations")}</span>
+                            </div>
+                        </div>
                     </Card>
-                    <Card gradient="bg-gradient-to-br from-orange-500 to-orange-600" className="text-white">
-                        <p className="text-sm opacity-90 mb-1">VIP Clients</p>
-                        <h3 className="text-4xl font-bold">{vipClients}</h3>
-                        <p className="text-sm opacity-80 mt-1">Premium members</p>
+                    <Card className="text-white" style={getCardStyle(2)}>
+                        <div className="flex justify-between items-start">
+                            <div className="p-2 bg-white/20 rounded-lg">
+                                <RefreshCcw className="w-6 h-6 text-white" />
+                            </div>
+                            <span className="bg-white/20 px-2 py-1 rounded text-xs">{t("clients.stats.returningRate")}</span>
+                        </div>
+                        <div className="mt-4">
+                            <p className="text-sm opacity-90 mb-1">{t("clients.stats.returningRate")}</p>
+                            <h3 className="text-3xl font-bold">{returningRate}%</h3>
+                            <div className="flex items-center gap-1 mt-1 text-sm opacity-80">
+                                <RefreshCcw className="w-3 h-3" />
+                                <span>{t("clients.stats.loyaltyIndex")}</span>
+                            </div>
+                        </div>
                     </Card>
-                    <Card gradient="bg-gradient-to-br from-teal-500 to-teal-600" className="text-white">
-                        <p className="text-sm opacity-90 mb-1">Total Revenue</p>
-                        <h3 className="text-3xl font-bold">€{totalRevenue.toLocaleString()}</h3>
-                        <p className="text-sm opacity-80 mt-1">All clients</p>
+                    <Card className="text-white" style={getCardStyle(3)}>
+                        <div className="flex justify-between items-start">
+                            <div className="p-2 bg-white/20 rounded-lg">
+                                <UserCheck className="w-6 h-6 text-white" />
+                            </div>
+                            <span className="bg-white/20 px-2 py-1 rounded text-xs">{t("common.active")}</span>
+                        </div>
+                        <div className="mt-4">
+                            <p className="text-sm opacity-90 mb-1">{t("clients.stats.active")}</p>
+                            <h3 className="text-3xl font-bold">{activeClients}</h3>
+                            <div className="flex items-center gap-1 mt-1 text-sm opacity-80">
+                                <UserCheck className="w-3 h-3" />
+                                <span>{t("clients.stats.activeDatabase")}</span>
+                            </div>
+                        </div>
                     </Card>
                 </div>
 
                 {/* Quick Actions */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Link href="/clients/add">
-                        <Button variant="primary" size="lg" className="w-full">
-                            <Plus className="w-5 h-5" />
-                            Add New Client
-                        </Button>
-                    </Link>
-                    <Button variant="secondary" size="lg" className="w-full">
-                        <Download className="w-5 h-5" />
-                        Generate Anonymous
-                    </Button>
-                    <Button variant="secondary" size="lg" className="w-full">
-                        <Download className="w-5 h-5" />
-                        Import Clients
-                    </Button>
+                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-semibold text-gray-900">{t("clients.actions.quickActions")}</h3>
+                        <div className="flex gap-2">
+                            <Button variant="outline" size="sm" className="bg-gray-50 border-gray-200">
+                                <Filter className="w-4 h-4 mr-2" />
+                                {t("common.filters")}
+                            </Button>
+                            <Button variant="outline" size="sm" className="bg-gray-50 border-gray-200" onClick={handleExportAll}>
+                                <Download className="w-4 h-4 mr-2" />
+                                CSV
+                            </Button>
+                            <Button variant="outline" size="sm" className="bg-gray-50 border-gray-200" onClick={handleExportPDF}>
+                                <FileText className="w-4 h-4 mr-2" />
+                                PDF
+                            </Button>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <ReadOnlyGuard>
+                            <button className="flex-1 h-14 flex items-center justify-center gap-2 bg-[#10B981] hover:bg-[#059669] text-white rounded-2xl transition-all font-bold active:scale-95">
+                                <Plus className="w-6 h-6" />
+                                <span className="hidden sm:inline">{t("clients.actions.quickGeneric")}</span>
+                            </button>
+                        </ReadOnlyGuard>
+                        <ReadOnlyGuard>
+                            <button className="flex-1 h-14 flex items-center justify-center gap-2 bg-[var(--color-secondary)] hover:bg-[#DB2777] text-white rounded-2xl transition-all font-bold active:scale-95">
+                                <Upload className="w-6 h-6" />
+                                <span className="hidden sm:inline">{t("clients.actions.import")}</span>
+                            </button>
+                        </ReadOnlyGuard>
+                    </div>
                 </div>
 
-                {/* Filter & Sort */}
-                <Card>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Client Type</label>
-                            <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-                                <option>All Clients</option>
-                                <option>Regular</option>
-                                <option>VIP</option>
+                {/* Filter & Sort Clients */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">{t("clients.filters.title")}</h3>
+                    <div className="flex flex-col md:flex-row gap-4 items-end">
+                        <div className="w-full">
+                            <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">{t("clients.filters.type")}</label>
+                            <select className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent">
+                                <option>{t("clients.filters.allTypes")}</option>
+                                <option>{t("clients.filters.regular")}</option>
+                                <option>{t("clients.filters.vip")}</option>
                             </select>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                            <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-                                <option>All Status</option>
-                                <option>Active</option>
-                                <option>Inactive</option>
+                        <div className="w-full">
+                            <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">{t("clients.filters.status")}</label>
+                            <select className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent">
+                                <option>{t("clients.filters.allStatus")}</option>
+                                <option>{t("clients.filters.active")}</option>
+                                <option>{t("clients.filters.inactive")}</option>
                             </select>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Registration Date</label>
-                            <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-                                <option>All Time</option>
-                                <option>This Month</option>
-                                <option>Last 3 Months</option>
+                        <div className="w-full">
+                            <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">{t("clients.filters.regDate")}</label>
+                            <select className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent">
+                                <option>{t("clients.filters.allTime")}</option>
+                                <option>{t("clients.filters.thisMonth")}</option>
+                                <option>{t("clients.filters.last3Months")}</option>
                             </select>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
-                            <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-                                <option>Name (A-Z)</option>
-                                <option>Name (Z-A)</option>
-                                <option>Total Spent</option>
-                                <option>Recent</option>
+                        <div className="w-full">
+                            <label className="block text-xs font-semibold text-gray-500 mb-1 uppercase tracking-wider">{t("clients.filters.sortBy")}</label>
+                            <select className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent">
+                                <option>{t("clients.filters.nameAsc")}</option>
+                                <option>{t("clients.filters.nameDesc")}</option>
+                                <option>{t("clients.filters.totalSpent")}</option>
+                                <option>{t("clients.filters.recent")}</option>
                             </select>
+                        </div>
+                        <div className="w-full md:w-auto">
+                            <Button variant="primary" size="md" className="w-full md:w-auto bg-[var(--color-primary)] hover:bg-[#9333EA] border-none h-[42px] px-6">
+                                {t("clients.actions.applyFilters")}
+                            </Button>
                         </div>
                     </div>
-                    <div className="mt-4 flex gap-3">
-                        <Button variant="primary" size="md">
-                            <Filter className="w-5 h-5" />
-                            Apply Filters
-                        </Button>
-                        <Button variant="outline" size="md">
-                            <Download className="w-5 h-5" />
-                            Export
-                        </Button>
-                    </div>
-                </Card>
+                </div>
 
                 {/* Clients Table */}
-                <Card>
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-semibold">All Clients</h3>
-                        <p className="text-sm text-gray-500">Showing {clients.length} of 8,447 results</p>
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+                        <div>
+                            <h3 className="text-lg font-semibold text-gray-900">{t("clients.table.title")}</h3>
+                            <p className="text-sm text-gray-500">{t("clients.table.subtitle")}</p>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <span>{t("clients.table.show")}:</span>
+                            <select className="border-none bg-transparent font-semibold text-gray-900 focus:ring-0 cursor-pointer">
+                                <option>10</option>
+                                <option>20</option>
+                                <option>50</option>
+                            </select>
+                            <span>{t("clients.table.perPage")}</span>
+                        </div>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full">
-                            <thead className="bg-gray-50">
+                            <thead className="bg-white border-b border-gray-100">
                                 <tr>
-                                    <th className="px-4 py-3 text-left">
-                                        <input type="checkbox" className="rounded" />
+                                    <th className="px-6 py-4 text-left w-10">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedClientIds.size === clients.length && clients.length > 0}
+                                            onChange={toggleSelectAll}
+                                            className="rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                                        />
                                     </th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Client ID</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Name</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Contact</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Address</th>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Type</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Total Visits</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Total Spent</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Status</th>
-                                    <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">Actions</th>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">{t("clients.table.id")}</th>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("clients.table.name")}</th>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">{t("clients.table.contact")}</th>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">{t("clients.table.address")}</th>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("clients.table.visits")}</th>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("clients.totalSpent")}</th>
+                                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">{t("clients.table.status")}</th>
+                                    <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("clients.table.actions")}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {clients.map((client) => (
-                                    <tr key={client.id} className="hover:bg-gray-50 transition">
-                                        <td className="px-4 py-4">
-                                            <input type="checkbox" className="rounded" />
-                                        </td>
-                                        <td className="px-4 py-4 text-sm text-gray-500">{client.id}</td>
-                                        <td className="px-4 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-semibold">
-                                                    {client.name.charAt(0)}
+                                {clients
+                                    .filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()) || (c.email && c.email.toLowerCase().includes(searchTerm.toLowerCase())))
+                                    .map((client) => (
+                                        <tr
+                                            key={client.id}
+                                            onClick={() => setSelectedClient(client)}
+                                            className="hover:bg-gray-50 transition-colors cursor-pointer"
+                                        >
+                                            <td className="px-6 py-4">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedClientIds.has(client.id)}
+                                                    onChange={() => toggleClientSelection(client.id)}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    className="rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                                                />
+                                            </td>
+                                            <td className="px-6 py-4 text-sm text-gray-500 font-mono hidden lg:table-cell">{client.id}</td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex flex-col md:flex-row items-center gap-1 md:gap-3">
+                                                    <div className="w-10 h-10 bg-gradient-to-br from-primary to-[var(--color-primary-light)] rounded-full flex items-center justify-center text-[var(--color-primary)] font-bold text-sm border border-color-primary/30">
+                                                        {client.name.charAt(0)}
+                                                    </div>
+                                                    <div className="text-center md:text-left">
+                                                        <span className="font-semibold text-gray-900 hidden md:block">{client.name}</span>
+                                                        <span className="text-xs text-gray-400 hidden md:block">{t("clients.table.registered")} {new Date(client.createdAt).toLocaleDateString()}</span>
+                                                    </div>
                                                 </div>
-                                                <span className="font-medium text-gray-900">{client.name}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-4">
-                                            <div className="text-sm">
-                                                <p className="text-gray-900">{client.phone}</p>
-                                                <p className="text-gray-500">{client.email}</p>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-4 text-sm text-gray-900">{client.address}</td>
-                                        <td className="px-4 py-4">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${client.type === "VIP" ? "bg-purple-100 text-purple-800" : "bg-blue-100 text-blue-800"
-                                                }`}>
-                                                {client.type}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-4 text-right font-medium text-gray-900">{client.totalVisits}</td>
-                                        <td className="px-4 py-4 text-right font-semibold text-gray-900">{client.totalSpent}</td>
-                                        <td className="px-4 py-4 text-center">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${client.status === "Active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-700"
-                                                }`}>
-                                                {client.status}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-4">
-                                            <div className="flex items-center justify-center gap-2">
-                                                <button className="text-purple-600 hover:text-purple-800 p-1">
-                                                    <Eye className="w-4 h-4" />
-                                                </button>
-                                                <Link href={`/clients/edit/${client.id}`}>
-                                                    <button className="text-blue-600 hover:text-blue-800 p-1">
-                                                        <Edit className="w-4 h-4" />
-                                                    </button>
-                                                </Link>
-                                                <button className="text-red-600 hover:text-red-800 p-1">
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
+                                            </td>
+                                            <td className="px-6 py-4 hidden lg:table-cell">
+                                                <div className="text-sm">
+                                                    <p className="text-gray-900 font-medium flex items-center gap-2">
+                                                        <span className="w-4 h-4 flex items-center justify-center bg-gray-100 rounded-full text-xs">@</span>
+                                                        {client.email || "N/A"}
+                                                    </p>
+                                                    <p className="text-gray-500 mt-1 flex items-center gap-2">
+                                                        <span className="w-4 h-4 flex items-center justify-center bg-gray-100 rounded-full text-xs">Ph</span>
+                                                        {client.phone}
+                                                    </p>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-sm text-gray-700 hidden lg:table-cell">{client.address || "N/A"}</td>
+                                            <td className="px-6 py-4 text-gray-900 font-semibold">{client.stats?.totalBookings || 0}</td>
+                                            <td className="px-6 py-4 text-gray-900 font-bold">{formatCurrency(client.stats?.totalSpent || 0)}</td>
+                                            <td className="px-6 py-4 hidden lg:table-cell">
+                                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${client.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
+                                                    }`}>
+                                                    {client.isActive ? t("common.active") : t("common.inactive")}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                                                    <ReadOnlyGuard>
+                                                        <Link href={`/clients/edit/${client.id}`}>
+                                                            <button className="p-2 bg-primary-light text-color-primary rounded-lg hover:bg-primary-light transition-colors">
+                                                                <Edit className="w-4 h-4" />
+                                                            </button>
+                                                        </Link>
+                                                    </ReadOnlyGuard>
+
+                                                    <ReadOnlyGuard>
+                                                        <button
+                                                            className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                                                            onClick={async (e) => {
+                                                                e.stopPropagation();
+                                                                const isConfirmed = await confirm({
+                                                                    title: t("common.delete"),
+                                                                    message: t("dialogs.confirmDelete"),
+                                                                    type: 'error',
+                                                                    confirmText: t("common.delete"),
+                                                                    cancelText: t("common.cancel")
+                                                                });
+
+                                                                if (isConfirmed) {
+                                                                    try {
+                                                                        await clientService.delete(client.id);
+                                                                        showToast(t("common.success"), t("clients.deleteSuccess"), "success");
+                                                                        loadData();
+                                                                    } catch (error) {
+                                                                        showToast(t("common.error"), t("clients.deleteError"), "error");
+                                                                    }
+                                                                }
+                                                            }}
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </ReadOnlyGuard>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
                             </tbody>
                         </table>
                     </div>
-                </Card>
-
-                {/* Bulk Actions & Stats */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Bulk Actions */}
-                    <Card>
-                        <h3 className="text-lg font-semibold mb-4">Bulk Actions</h3>
-                        <div className="grid grid-cols-2 gap-3">
-                            <Button variant="outline" size="sm" className="w-full">Send Email</Button>
-                            <Button variant="outline" size="sm" className="w-full">Send SMS</Button>
-                            <Button variant="outline" size="sm" className="w-full">Export Selected</Button>
-                            <Button variant="danger" size="sm" className="w-full">Delete Selected</Button>
-                        </div>
-                    </Card>
-
-                    {/* Client Distribution */}
-                    <Card>
-                        <h3 className="text-lg font-semibold mb-4">Client Distribution</h3>
-                        <div className="space-y-3">
-                            {clientDistributionData.map((item, idx) => (
-                                <div key={idx}>
-                                    <div className="flex items-center justify-between mb-1">
-                                        <span className="text-sm font-medium text-gray-700">{item.name}</span>
-                                        <span className="text-sm font-semibold text-gray-900">{item.value.toLocaleString()}</span>
-                                    </div>
-                                    <div className="w-full bg-gray-200 rounded-full h-2">
-                                        <div
-                                            className="h-2 rounded-full"
-                                            style={{ width: `${(item.value / 500000) * 100}%`, backgroundColor: item.color }}
-                                        ></div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </Card>
                 </div>
 
-                {/* Client Registration Trend */}
-                <Card>
-                    <h3 className="text-lg font-semibold mb-4">Client Registration Trend</h3>
-                    <div className="grid grid-cols-3 gap-6 mb-6">
-                        {clientTrendData.map((item, idx) => (
-                            <div key={idx} className="text-center">
-                                <p className="text-sm text-gray-500 mb-1">{item.name}</p>
-                                <p className={`text-3xl font-bold ${idx === 0 ? 'text-purple-600' : idx === 1 ? 'text-pink-600' : 'text-orange-600'}`}>
-                                    {item.clients}
-                                </p>
-                                <p className="text-sm text-gray-500">{item.clients === 8 ? "clients" : item.clients === 42 ? "clients" : "clients"}</p>
-                            </div>
-                        ))}
-                    </div>
-                </Card>
 
-                {/* Recent Client Activity */}
-                <Card>
-                    <h3 className="text-lg font-semibold mb-4">Recent Client Activity</h3>
-                    <div className="space-y-3">
-                        <div className="flex items-center gap-4 p-3 bg-green-50 rounded-lg">
-                            <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white">
-                                <Plus className="w-5 h-5" />
+                {/* Bulk Actions */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 className="text-lg font-semibold mb-4 text-gray-900">{t("clients.actions.bulkActions")}</h3>
+                    <div className="flex flex-wrap gap-4">
+                        <ReadOnlyGuard>
+                            <Button variant="secondary" size="md" className="bg-primary-light text-color-primary hover:bg-primary border-none flex-1 md:flex-none justify-center">
+                                <Users className="w-4 h-4 mr-2" />
+                                {t("clients.actions.sendEmail")}
+                            </Button>
+                        </ReadOnlyGuard>
+                        <ReadOnlyGuard>
+                            <Button variant="secondary" size="md" className="bg-blue-100 text-blue-700 hover:bg-blue-200 border-none flex-1 md:flex-none justify-center">
+                                <MessageSquare className="w-4 h-4 mr-2" />
+                                {t("clients.actions.sendSms")}
+                            </Button>
+                        </ReadOnlyGuard>
+                        <Button variant="secondary" size="md" className="bg-orange-100 text-orange-700 hover:bg-orange-200 border-none flex-1 md:flex-none justify-center" onClick={handleExportSelected}>
+                            <Download className="w-4 h-4 mr-2" />
+                            {t("clients.actions.exportSelected")} ({selectedClientIds.size})
+                        </Button>
+                        <ReadOnlyGuard>
+                            <Button variant="danger" size="md" className="bg-red-100 text-red-700 hover:bg-red-200 border-none flex-1 md:flex-none justify-center">
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                {t("clients.actions.deleteSelected")}
+                            </Button>
+                        </ReadOnlyGuard>
+                    </div>
+                </div>
+
+                {/* Trend & Distribution */}
+                {analytics && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Client Registration Trend */}
+                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                            <h3 className="text-lg font-semibold mb-6 text-gray-900">{t("clients.trend.title")}</h3>
+                            <div className="space-y-4">
+                                {analytics.trend.map((item, idx) => (
+                                    <div key={idx} className={`flex items-center justify-between p-4 rounded-xl ${idx === 0 ? "bg-gray-50" : idx === 1 ? "bg-red-50" : "bg-orange-50"}`}>
+                                        <div>
+                                            <p className="text-sm text-gray-500 mb-1">{t(item.key)}</p>
+                                            <h4 className="text-2xl font-bold text-gray-900">{item.clients} {t("clients.trend.clientsSuffix")}</h4>
+                                        </div>
+                                        <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-sm ${idx === 0 ? "bg-[var(--color-primary)] shadow-[color:var(--color-primary)]/20" : idx === 1 ? "bg-[var(--color-secondary)] shadow-[color:var(--color-secondary)]/20" : "bg-[#F59E0B] shadow-orange-200"}`}>
+                                            +{item.clients}
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
-                            <div className="flex-1">
-                                <p className="font-semibold text-gray-900">New Client registered</p>
-                                <p className="text-sm text-gray-500">Marie Smith created a new account with email verification</p>
-                            </div>
-                            <span className="text-sm text-gray-500">2 hours ago</span>
                         </div>
-                        <div className="flex items-center gap-4 p-3 bg-blue-50 rounded-lg">
-                            <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white">
-                                <Edit className="w-5 h-5" />
+
+                        {/* Client Distribution */}
+                        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                            <h3 className="text-lg font-semibold mb-6 text-gray-900">{t("clients.distribution.title")}</h3>
+                            <div className="space-y-6">
+                                {analytics.distribution.map((item, idx) => (
+                                    <div key={idx}>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-sm font-medium text-gray-600">{t(item.key)}</span>
+                                            <span className="text-sm font-semibold text-gray-900">{item.value.toLocaleString()} ({totalDistribution > 0 ? ((item.value / totalDistribution) * 100).toFixed(1) : 0}%)</span>
+                                        </div>
+                                        <div className="w-full bg-gray-100 rounded-full h-2.5">
+                                            <div
+                                                className="h-2.5 rounded-full transition-all duration-1000"
+                                                style={{ width: `${totalDistribution > 0 ? (item.value / totalDistribution) * 100 : 0}%`, backgroundColor: item.color }}
+                                            ></div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
-                            <div className="flex-1">
-                                <p className="font-semibold text-gray-900">Client information updated</p>
-                                <p className="text-sm text-gray-500">James Clerk updated his phone number and address</p>
+                            <div className="mt-6 pt-6 border-t border-gray-100">
+                                <p className="text-xs text-center text-gray-400">{t("clients.distribution.updatedEvery")}</p>
                             </div>
-                            <span className="text-sm text-gray-500">5 hours ago</span>
                         </div>
                     </div>
-                </Card>
+                )}
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Client Satisfaction Ratings */}
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                        <h3 className="text-lg font-semibold mb-6 text-gray-900 flex items-center gap-2">
+                            <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+                            {t("clients.satisfaction.title")}
+                        </h3>
+                        {satisfactionMetrics ? (
+                            <div className="space-y-6">
+                                <div className="flex items-end gap-4 mb-8">
+                                    <div className="text-5xl font-black text-gray-900">{satisfactionMetrics.average}</div>
+                                    <div className="pb-1">
+                                        <div className="flex mb-1">
+                                            {[1, 2, 3, 4, 5].map((star) => (
+                                                <Star
+                                                    key={star}
+                                                    className={`w-4 h-4 ${star <= Math.round(Number(satisfactionMetrics.average)) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200'}`}
+                                                />
+                                            ))}
+                                        </div>
+                                        <p className="text-sm text-gray-500 font-medium">
+                                            {satisfactionMetrics.total} {t("clients.satisfaction.totalReviews")}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="space-y-3">
+                                    {satisfactionMetrics.distribution.map((count, idx) => {
+                                        const rating = 5 - idx;
+                                        const percentage = satisfactionMetrics.total > 0 ? (count / satisfactionMetrics.total) * 100 : 0;
+                                        return (
+                                            <div key={rating} className="flex items-center gap-3">
+                                                <div className="flex items-center gap-1 w-12 shrink-0">
+                                                    <span className="text-sm font-bold text-gray-600">{rating}</span>
+                                                    <Star className="w-3 h-3 text-gray-400 fill-gray-400" />
+                                                </div>
+                                                <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                                                    <div
+                                                        className="h-full bg-yellow-400 transition-all duration-1000"
+                                                        style={{ width: `${percentage}%` }}
+                                                    ></div>
+                                                </div>
+                                                <span className="text-xs font-semibold text-gray-400 w-10 text-right">
+                                                    {Math.round(percentage)}%
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="h-48 flex items-center justify-center text-gray-400 italic">
+                                {t("common.comingSoon")}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Client Comments & Reviews */}
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col">
+                        <h3 className="text-lg font-semibold mb-6 text-gray-900 flex items-center gap-2">
+                            <MessageSquare className="w-5 h-5 text-color-primary" />
+                            {t("clients.reviews.title")}
+                        </h3>
+                        <div className="space-y-4 flex-1 overflow-y-auto max-h-[350px] pr-2 custom-scrollbar">
+                            {reviews.length > 0 ? (
+                                reviews.map((review) => (
+                                    <div key={review.id} className="p-4 rounded-xl bg-gray-50 border border-gray-100 space-y-2 hover:bg-white hover:shadow-md transition-all duration-300">
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-8 h-8 rounded-full bg-primary-light flex items-center justify-center text-color-primary font-bold text-xs">
+                                                    {review.avatar || review.client?.charAt(0) || "C"}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-bold text-gray-900">{review.client}</p>
+                                                    <p className="text-[10px] text-gray-500">{review.date}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-0.5">
+                                                {[1, 2, 3, 4, 5].map((s) => (
+                                                    <Star
+                                                        key={s}
+                                                        className={`w-3 h-3 ${s <= review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200'}`}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <p className="text-sm text-gray-600 italic leading-relaxed">
+                                            "{review.comment}"
+                                        </p>
+                                        <div className="pt-1">
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--color-primary)] opacity-70">
+                                                {review.service || "General Service"}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="h-full flex items-center justify-center text-gray-400 italic">
+                                    {t("common.comingSoon")}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {analytics && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Recent Client Activity */}
+                        <Card>
+                            <h3 className="text-lg font-semibold mb-4">{t("clients.activity.title")}</h3>
+                            <div className="space-y-3">
+                                {analytics.recentActivity.map((activity) => (
+                                    <div key={activity.id} className={`flex items-center gap-4 p-3 rounded-lg ${activity.type === 'registration' ? 'bg-green-50' : 'bg-blue-50'}`}>
+                                        <div className={`w-10 h-10 ${activity.color} rounded-full flex items-center justify-center text-white`}>
+                                            {activity.icon === 'plus' ? <Plus className="w-5 h-5" /> : <Edit className="w-5 h-5" />}
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="font-semibold text-gray-900">{t(activity.titleKey)}</p>
+                                            <p className="text-sm text-gray-500">{t(activity.descKey, activity.params)}</p>
+                                        </div>
+                                        <span className="text-sm text-gray-500">{t(activity.timeKey)}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </Card>
+                    </div>
+                )}
             </div>
-        </MainLayout >
+
+            {/* Client Details Modal */}
+            {selectedClient && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setSelectedClient(null)}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative" onClick={(e) => e.stopPropagation()}>
+                        <button
+                            onClick={() => setSelectedClient(null)}
+                            className="absolute top-4 right-4 z-10 p-2 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                        <div className="px-6 pt-6 pb-6">
+                            <div className="flex justify-between items-center mb-4">
+                                <div className="w-24 h-24 bg-gradient-to-br from-primary to-[var(--color-primary-light)] rounded-full flex items-center justify-center text-[var(--color-primary)] font-bold text-3xl border-2 border-color-primary/30">
+                                    {selectedClient.name.charAt(0)}
+                                </div>
+                                <div className="flex gap-2">
+                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${selectedClient.type === "VIP" ? "bg-orange-100 text-orange-700" : "bg-blue-100 text-blue-700"}`}>
+                                        {selectedClient.type || t("clients.filters.regular")}
+                                    </span>
+                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${selectedClient.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}>
+                                        {selectedClient.isActive ? t("common.active") : t("common.inactive")}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <h2 className="text-2xl font-bold text-gray-900 mb-1">{selectedClient.name}</h2>
+                            <p className="text-gray-500 text-sm mb-6 flex items-center gap-2">
+                                <span className="font-mono bg-gray-100 px-2 py-0.5 rounded text-xs">{t("common.id")}: {selectedClient.id}</span>
+                            </p>
+
+                            <div className="grid gap-4 mb-6">
+                                <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-100">
+                                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-color-primary">
+                                        <Phone className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold">{t("common.phone")}</p>
+                                        <p className="font-medium text-gray-900">{selectedClient.phone}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-100">
+                                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-color-secondary">
+                                        <Mail className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold">{t("common.email")}</p>
+                                        <p className="font-medium text-gray-900">{selectedClient.email || "N/A"}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-100">
+                                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-orange-600">
+                                        <MapPin className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold">{t("common.address")}</p>
+                                        <p className="font-medium text-gray-900">{selectedClient.address || "N/A"}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4 mb-6">
+                                <div className="p-4 rounded-xl bg-primary-light border border-color-primary/30 text-center">
+                                    <p className="text-color-primary text-sm font-semibold mb-1">{t("clients.totalSpent")}</p>
+                                    <p className="text-2xl font-bold text-gray-900">{formatCurrency(selectedClient.stats?.totalSpent || 0)}</p>
+                                </div>
+                                <div className="p-4 rounded-xl bg-blue-50 border border-blue-100 text-center">
+                                    <p className="text-blue-600 text-sm font-semibold mb-1">{t("clients.visits")}</p>
+                                    <p className="text-2xl font-bold text-gray-900">{selectedClient.stats?.totalBookings || 0}</p>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3">
+                                <ReadOnlyGuard>
+                                    <Link href={`/clients/edit/${selectedClient.id}`} className="w-full">
+                                        <Button variant="primary" size="lg" className="w-full justify-center">
+                                            <Edit className="w-4 h-4 mr-2" />
+                                            {t("clients.editClient")}
+                                        </Button>
+                                    </Link>
+                                </ReadOnlyGuard>
+                                <ReadOnlyGuard>
+                                    <Button
+                                        variant="outline"
+                                        size="lg"
+                                        className="w-full justify-center text-red-600 hover:bg-red-50 hover:border-red-200"
+                                        onClick={async () => {
+                                            const isConfirmed = await confirm({
+                                                title: t("common.delete"),
+                                                message: t("dialogs.confirmDelete"),
+                                                type: 'error',
+                                                confirmText: t("common.delete"),
+                                                cancelText: t("common.cancel")
+                                            });
+
+                                            if (isConfirmed) {
+                                                try {
+                                                    await clientService.delete(selectedClient.id);
+                                                    showToast(t("common.success"), t("clients.deleteSuccess"), "success");
+                                                    setSelectedClient(null);
+                                                    loadData();
+                                                } catch (error) {
+                                                    showToast(t("common.error"), t("clients.deleteError"), "error");
+                                                }
+                                            }
+                                        }}
+                                    >
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                        {t("common.delete")}
+                                    </Button>
+                                </ReadOnlyGuard>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </MainLayout>
     );
 }

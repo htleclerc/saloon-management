@@ -1,10 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useTranslation } from "@/i18n";
+import { useState, useEffect, useMemo, useRef } from "react";
 import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import StatCard from "@/components/ui/StatCard";
+import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
+import { useCurrency } from "@/hooks/useCurrency";
+import { useAuth } from "@/context/AuthProvider";
+import { useBooking } from "@/context/BookingProvider";
+import { useConfirm } from "@/context/ConfirmProvider";
+import { format, addDays, subDays } from "date-fns";
+import { workerService, incomeService, serviceService } from "@/lib/services";
+import { SalonWorker, Income, Service } from "@/types";
 import {
     Calendar,
     ChevronLeft,
@@ -14,18 +23,83 @@ import {
     Scissors,
     DollarSign,
     TrendingUp,
-    AlertCircle
+    AlertCircle,
+    CheckCircle,
+    PlayCircle
 } from "lucide-react";
 
-const appointments = [
-    { id: 1, time: "09:00", client: "Marie Dubois", service: "Box Braids", worker: "Orphelia", amount: "€120", status: "Completed" },
-    { id: 2, time: "10:30", client: "Jean Martin", service: "Cornrows", worker: "Worker 2", amount: "€85", status: "In Progress" },
-    { id: 3, time: "13:00", client: "Sophie Laurent", service: "Twists", worker: "Orphelia", amount: "€95", status: "Scheduled" },
-    { id: 4, time: "15:30", client: "Pierre Rousseau", service: "Locs", worker: "Worker 3", amount: "€150", status: "Scheduled" },
-];
+export default function DailyPage() {
+    const { t } = useTranslation();
+    const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
+    const { getCardStyle } = useKpiCardStyle();
+    const { format: formatCurrency } = useCurrency();
+    const { user, hasPermission, getWorkerId, canModify, activeSalonId } = useAuth();
+    const { bookings, startBooking } = useBooking();
+    const { confirm } = useConfirm();
+    const [workers, setWorkers] = useState<SalonWorker[]>([]);
+    const [servicesMap, setServicesMap] = useState<Record<number, string>>({});
+    const [draftIncome, setDraftIncome] = useState(0);
+    const dateInputRef = useRef<HTMLInputElement>(null);
 
-export default function DailyOverviewPage() {
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    useEffect(() => {
+        if (activeSalonId) {
+            workerService.getAll(Number(activeSalonId)).then(setWorkers);
+
+            // Fetch services for mapping IDs to Names
+            serviceService.getAll(Number(activeSalonId)).then((salonServices: Service[]) => {
+                const map: Record<number, string> = {};
+                salonServices.forEach(s => { map[s.id] = s.name; });
+                setServicesMap(map);
+            });
+
+            incomeService.getAll(Number(activeSalonId), {
+                startDate: selectedDate,
+                endDate: selectedDate,
+                status: 'Draft'
+            }).then((incomes: Income[]) => {
+                const total = incomes.reduce((sum, inc) => sum + inc.finalAmount, 0);
+                setDraftIncome(total);
+            });
+        }
+    }, [activeSalonId, selectedDate]);
+
+    const workerId = getWorkerId();
+    const isWorker = user?.role === 'worker';
+
+    // Simple date filter: only selected date bookings
+    const dailyBookings = bookings.filter(b => b.date === selectedDate);
+
+    const filteredAppointments = useMemo(() => {
+        return isWorker
+            ? dailyBookings.filter(apt => (apt.workerIds || []).includes(Number(workerId) || 0))
+            : dailyBookings;
+    }, [isWorker, dailyBookings, workerId]);
+
+    const availableWorkers = useMemo(() => {
+        if (isWorker) return [user?.name || t('common.worker')];
+        return workers.map(w => w.name);
+    }, [isWorker, user, workers, t]);
+
+    const handleStart = async (id: number) => {
+        const isConfirmed = await confirm({
+            title: t('dialogs.confirmStartBooking'),
+            message: t('dialogs.confirmStartBookingMsg'),
+            type: "info",
+            confirmText: t('common.dailyOverview.schedule.start'),
+            cancelText: t('common.cancel')
+        });
+        if (isConfirmed) {
+            startBooking(id);
+        }
+    };
+
+    const handlePrevDay = () => {
+        setSelectedDate(prev => format(subDays(new Date(prev), 1), "yyyy-MM-dd"));
+    };
+
+    const handleNextDay = () => {
+        setSelectedDate(prev => format(addDays(new Date(prev), 1), "yyyy-MM-dd"));
+    };
 
     return (
         <MainLayout>
@@ -33,18 +107,32 @@ export default function DailyOverviewPage() {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900">Daily Overview</h1>
-                        <p className="text-gray-500 mt-1">Manage today's schedule and track daily performance</p>
+                        <h1 className="text-3xl font-bold text-foreground">
+                            {t('common.dailyOverview.title')}
+                        </h1>
+                        <p className="text-muted-foreground mt-1">
+                            {t('common.dailyOverview.subtitle')}
+                        </p>
                     </div>
-                    <div className="flex items-center gap-3 bg-white p-2 rounded-xl border border-gray-100 shadow-sm">
-                        <Button variant="outline" size="sm" className="p-2">
+                    <div className="flex items-center gap-3 bg-card p-2 rounded-xl border border-border shadow-sm mr-4">
+                        <Button variant="outline" size="sm" className="p-2" onClick={handlePrevDay}>
                             <ChevronLeft className="w-5 h-5" />
                         </Button>
-                        <div className="flex items-center gap-2 px-4 font-semibold text-gray-700">
-                            <Calendar className="w-5 h-5 text-purple-600" />
-                            <span>{selectedDate}</span>
+                        <div
+                            className="relative flex items-center gap-2 px-4 font-semibold text-foreground cursor-pointer hover:bg-accent transition-colors rounded-lg"
+                            onClick={() => dateInputRef.current?.showPicker()}
+                        >
+                            <Calendar className="w-5 h-5 text-primary pointer-events-none" />
+                            <input
+                                ref={dateInputRef}
+                                type="date"
+                                value={selectedDate}
+                                onChange={(e) => setSelectedDate(e.target.value)}
+                                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+                            />
+                            <span className="z-0 pointer-events-none">{selectedDate}</span>
                         </div>
-                        <Button variant="outline" size="sm" className="p-2">
+                        <Button variant="outline" size="sm" className="p-2" onClick={handleNextDay}>
                             <ChevronRight className="w-5 h-5" />
                         </Button>
                     </div>
@@ -53,102 +141,122 @@ export default function DailyOverviewPage() {
                 {/* Daily Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <StatCard
-                        title="Today's Revenue"
-                        value="€450"
-                        subtitle="85% of target"
-                        icon={DollarSign}
-                        gradient="bg-gradient-to-br from-purple-600 to-purple-700"
+                        title={t('common.dailyOverview.stats.bookings')}
+                        value={filteredAppointments.length.toString()}
+                        subtitle={t('common.dailyOverview.stats.bookingsSubtitle')}
+                        icon={Calendar}
+                        gradient=""
+                        style={getCardStyle(0)}
                     />
                     <StatCard
-                        title="Appointments"
-                        value="8"
-                        subtitle="3 completed"
+                        title={t('common.dailyOverview.stats.completed')}
+                        value={filteredAppointments.filter(b => b.status === 'Closed' || b.status === 'Finished').length.toString()}
+                        subtitle={t('common.dailyOverview.stats.completedSubtitle')}
+                        icon={CheckCircle}
+                        gradient=""
+                        style={getCardStyle(1)}
+                    />
+                    <StatCard
+                        title={t('common.dailyOverview.stats.inProgress')}
+                        value={filteredAppointments.filter(b => b.status === 'Started').length.toString()}
+                        subtitle={t('common.dailyOverview.stats.inProgressSubtitle')}
                         icon={Clock}
-                        gradient="bg-gradient-to-br from-pink-500 to-pink-600"
+                        gradient=""
+                        style={getCardStyle(2)}
                     />
                     <StatCard
-                        title="New Clients"
-                        value="2"
-                        subtitle="Today"
-                        icon={User}
-                        gradient="bg-gradient-to-br from-orange-500 to-orange-600"
-                    />
-                    <StatCard
-                        title="Avg. Ticket"
-                        value="€56"
-                        subtitle="+5% from yesterday"
-                        icon={TrendingUp}
-                        gradient="bg-gradient-to-br from-teal-500 to-teal-600"
+                        title={t('common.dailyOverview.stats.incomeDraft')}
+                        value={formatCurrency(draftIncome)}
+                        subtitle={t('common.dailyOverview.stats.incomeDraftSubtitle')}
+                        icon={DollarSign}
+                        gradient=""
+                        style={getCardStyle(3)}
                     />
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Timeline/Schedule */}
                     <Card className="lg:col-span-2">
                         <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-xl font-bold text-gray-900">Today's Schedule</h3>
-                            <Button variant="outline" size="sm">Print Schedule</Button>
+                            <h3 className="text-xl font-bold text-foreground">
+                                {t('common.dailyOverview.schedule.title')}
+                            </h3>
+                            <Button variant="outline" size="sm">
+                                {t('common.dailyOverview.schedule.print')}
+                            </Button>
                         </div>
                         <div className="space-y-6">
-                            {appointments.map((apt) => (
-                                <div key={apt.id} className="relative pl-8 border-l-2 border-purple-100 pb-6 last:pb-0">
-                                    <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-purple-500 border-2 border-white"></div>
-                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 bg-gray-50 rounded-xl hover:bg-white hover:shadow-md transition">
+                            {filteredAppointments.length > 0 ? filteredAppointments.sort((a, b) => a.time.localeCompare(b.time)).map((apt) => (
+                                <div key={apt.id} className="relative pl-8 border-l-2 border-primary-100 pb-6 last:pb-0">
+                                    <div className={`absolute -left-[9px] top-0 w-4 h-4 rounded-full border-2 border-background ${apt.status === 'Started' ? 'bg-blue-500' :
+                                        apt.status === 'Closed' || apt.status === 'Finished' ? 'bg-green-500' : 'bg-primary-500'
+                                        }`}></div>
+                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 bg-muted/50 rounded-xl hover:bg-background hover:shadow-md transition">
                                         <div className="flex items-center gap-4">
-                                            <div className="text-lg font-bold text-purple-600 w-16">{apt.time}</div>
+                                            <div className="text-lg font-bold text-primary w-16">{apt.time}</div>
                                             <div>
-                                                <p className="font-bold text-gray-900">{apt.client}</p>
-                                                <p className="text-sm text-gray-500">{apt.service} • {apt.worker}</p>
+                                                <p className="font-bold text-foreground">{apt.clientName}</p>
+                                                <p className="text-sm text-muted-foreground">
+                                                    {(apt.serviceIds && apt.serviceIds.length > 0)
+                                                        ? apt.serviceIds.map(id => servicesMap[id] || `${t('common.service')}: #${id}`).join(", ")
+                                                        : t('common.service')}
+                                                </p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-4">
                                             <div className="text-right">
-                                                <p className="font-bold text-gray-900">{apt.amount}</p>
-                                                <span className={`text-xs px-2 py-1 rounded-full font-medium ${apt.status === 'Completed' ? 'bg-green-100 text-green-700' :
-                                                        apt.status === 'In Progress' ? 'bg-blue-100 text-blue-700' :
-                                                            'bg-orange-100 text-orange-700'
+                                                <span className={`text-xs px-2 py-1 rounded-full font-medium ${apt.status === 'Closed' || apt.status === 'Finished' ? 'bg-green-100 text-green-700' :
+                                                    apt.status === 'Started' ? 'bg-blue-100 text-blue-700' :
+                                                        'bg-orange-100 text-orange-700'
                                                     }`}>
                                                     {apt.status}
                                                 </span>
                                             </div>
-                                            <Button variant="outline" size="sm">Edit</Button>
+                                            {canModify && (apt.status === 'Pending' || apt.status === 'Confirmed') && (
+                                                <Button size="sm" onClick={() => handleStart(apt.id)} className="bg-blue-600 hover:bg-blue-700 text-white gap-2">
+                                                    <PlayCircle className="w-4 h-4" /> {t('common.dailyOverview.schedule.start')}
+                                                </Button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
-                            ))}
+                            )) : (
+                                <p className="text-center text-muted-foreground py-12">
+                                    {t('common.dailyOverview.schedule.noAppointments')}
+                                </p>
+                            )}
                         </div>
                     </Card>
 
-                    {/* Side Info */}
                     <div className="space-y-6">
                         <Card>
-                            <h3 className="text-lg font-bold text-gray-900 mb-4">Worker Availability</h3>
+                            <h3 className="text-lg font-bold text-foreground mb-4">
+                                {t('common.dailyOverview.staffStatus')}
+                            </h3>
                             <div className="space-y-4">
-                                {['Orphelia', 'Worker 2', 'Worker 3'].map((worker, i) => (
+                                {availableWorkers.map((worker, i) => (
                                     <div key={i} className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold text-xs">
+                                            <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center text-primary-600 font-bold text-xs">
                                                 {worker.charAt(0)}
                                             </div>
-                                            <span className="text-sm font-medium text-gray-700">{worker}</span>
+                                            <span className="text-sm font-medium text-foreground">{worker}</span>
                                         </div>
-                                        <span className={`w-3 h-3 rounded-full ${i === 2 ? 'bg-red-500' : 'bg-green-500'}`}></span>
+                                        <span className={`w-3 h-3 rounded-full bg-green-500`}></span>
                                     </div>
                                 ))}
                             </div>
                         </Card>
 
-                        <Card className="bg-gradient-to-br from-purple-700 to-purple-900 text-white">
+                        <Card className="bg-gradient-to-br from-primary-700 to-primary-900 text-white">
                             <div className="flex items-center gap-2 mb-4">
                                 <AlertCircle className="w-6 h-6" />
-                                <h3 className="text-lg font-bold">Quick Note</h3>
+                                <h3 className="text-lg font-bold">
+                                    {t('common.dailyOverview.quickNote.title')}
+                                </h3>
                             </div>
                             <p className="text-sm opacity-90 leading-relaxed mb-4">
-                                Remember to check the stock for hair oils. We are running low on the premium brand.
+                                {t('common.dailyOverview.quickNote.content')}
                             </p>
-                            <Button variant="secondary" size="sm" className="w-full">
-                                Add Note
-                            </Button>
                         </Card>
                     </div>
                 </div>

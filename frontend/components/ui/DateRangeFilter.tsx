@@ -1,0 +1,226 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import { Calendar, ChevronDown } from "lucide-react";
+
+// Helper functions
+const getCurrentYear = () => new Date().getFullYear();
+const getCurrentMonth = () => new Date().getMonth() + 1; // 1-12
+const getCurrentWeek = () => {
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const days = Math.floor((now.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
+    return Math.ceil((days + startOfYear.getDay() + 1) / 7);
+};
+
+const getWeeksInMonth = (year: number, month: number) => {
+    const firstDay = new Date(year, month - 1, 1);
+    const lastDay = new Date(year, month, 0);
+    const numDays = lastDay.getDate();
+    return Math.ceil((numDays + firstDay.getDay()) / 7);
+};
+
+const getDaysInMonth = (year: number, month: number) => {
+    return new Date(year, month, 0).getDate();
+};
+
+const months = [
+    { value: 1, label: "January" },
+    { value: 2, label: "February" },
+    { value: 3, label: "March" },
+    { value: 4, label: "April" },
+    { value: 5, label: "May" },
+    { value: 6, label: "June" },
+    { value: 7, label: "July" },
+    { value: 8, label: "August" },
+    { value: 9, label: "September" },
+    { value: 10, label: "October" },
+    { value: 11, label: "November" },
+    { value: 12, label: "December" },
+];
+
+export interface DateFilterValue {
+    year: number;
+    month: number | null; // null = all months
+    week: number | null; // null = all weeks
+    day: number | null; // null = all days
+}
+
+interface DateRangeFilterProps {
+    onChange: (value: DateFilterValue) => void;
+    initialValue?: Partial<DateFilterValue>;
+    showWeekFilter?: boolean;
+    showDayFilter?: boolean;
+    className?: string;
+}
+
+export default function DateRangeFilter({
+    onChange,
+    initialValue,
+    showWeekFilter = true,
+    showDayFilter = true,
+    className = "",
+}: DateRangeFilterProps) {
+    const [year, setYear] = useState(initialValue?.year ?? getCurrentYear());
+    const [month, setMonth] = useState<number | null>(initialValue?.month ?? getCurrentMonth());
+    const [week, setWeek] = useState<number | null>(initialValue?.week ?? null);
+    const [day, setDay] = useState<number | null>(initialValue?.day ?? null);
+
+    // Store callback in ref to avoid stale closure
+    const onChangeRef = useRef(onChange);
+    onChangeRef.current = onChange;
+
+    // Track if this is the first mount to skip initial onChange (prevents infinite loop)
+    const isFirstMountRef = useRef(true);
+
+    // Generate years (current year and 3 previous years as requested)
+    const years = Array.from({ length: 4 }, (_, i) => getCurrentYear() - i);
+
+    // Generate weeks based on selected year and month
+    const weeksCount = month ? getWeeksInMonth(year, month) : 52;
+    const weeks = Array.from({ length: weeksCount }, (_, i) => i + 1);
+
+    // Generate days based on month
+    const daysCount = month ? getDaysInMonth(year, month) : 31;
+    const daysList = Array.from({ length: daysCount }, (_, i) => i + 1);
+
+    // Notify parent when filters change (skip first mount to prevent infinite loop)
+    useEffect(() => {
+        if (isFirstMountRef.current) {
+            isFirstMountRef.current = false;
+            return;
+        }
+        onChangeRef.current({ year, month, week, day });
+    }, [year, month, week, day]);
+
+    // Reset day and week when month changes
+    const handleMonthChange = (newMonth: number | null) => {
+        setMonth(newMonth);
+        setWeek(null);
+        setDay(null);
+    };
+
+    // Reset everything when year changes
+    const handleYearChange = (newYear: number) => {
+        setYear(newYear);
+    };
+
+    return (
+        <div className={`flex flex-col gap-2 md:flex-row md:items-center md:gap-3 ${className}`}>
+            {/* Quick filters + Dropdowns - grouped on desktop */}
+            <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5 text-sm text-gray-500">
+                    <Calendar className="w-4 h-4" />
+                    <span className="font-medium hidden sm:inline">Filter:</span>
+                </div>
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={() => {
+                            const now = new Date();
+                            setYear(now.getFullYear());
+                            setMonth(now.getMonth() + 1);
+                            setDay(now.getDate());
+                            setWeek(null);
+                        }}
+                        className="px-2 py-1 text-xs font-medium rounded-md bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
+                    >
+                        Day
+                    </button>
+                    <button
+                        onClick={() => {
+                            setYear(getCurrentYear());
+                            setMonth(getCurrentMonth());
+                            setWeek(null);
+                            setDay(null);
+                        }}
+                        className="px-2 py-1 text-xs font-medium rounded-md bg-primary-light text-color-primary hover:bg-primary transition-colors"
+                    >
+                        Month
+                    </button>
+                    <button
+                        onClick={() => {
+                            setYear(getCurrentYear());
+                            setMonth(null);
+                            setWeek(null);
+                            setDay(null);
+                        }}
+                        className="px-2 py-1 text-xs font-medium rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                    >
+                        Year
+                    </button>
+                </div>
+            </div>
+
+            {/* Dropdowns - better mobile grid (1 col stacking, then 2 cols on small, row on md) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:items-center gap-2">
+                {/* Year */}
+                <div className="relative">
+                    <select
+                        value={year}
+                        onChange={(e) => handleYearChange(parseInt(e.target.value))}
+                        aria-label="Select year"
+                        className="w-full appearance-none px-2 py-1.5 pr-6 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+                    >
+                        {years.map((y) => (
+                            <option key={y} value={y}>{y}</option>
+                        ))}
+                    </select>
+                    <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+                </div>
+
+                {/* Month */}
+                <div className="relative">
+                    <select
+                        value={month ?? ""}
+                        onChange={(e) => handleMonthChange(e.target.value ? parseInt(e.target.value) : null)}
+                        aria-label="Select month"
+                        className="w-full appearance-none px-2 py-1.5 pr-6 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+                    >
+                        <option value="">All Months</option>
+                        {months.map((m) => (
+                            <option key={m.value} value={m.value}>{m.label}</option>
+                        ))}
+                    </select>
+                    <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+                </div>
+
+                {/* Day */}
+                {showDayFilter && month && (
+                    <div className="relative">
+                        <select
+                            value={day ?? ""}
+                            onChange={(e) => setDay(e.target.value ? parseInt(e.target.value) : null)}
+                            aria-label="Select day"
+                            className="w-full appearance-none px-2 py-1.5 pr-6 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+                        >
+                            <option value="">Full Month</option>
+                            {daysList.map((d) => (
+                                <option key={d} value={d}>Day {d}</option>
+                            ))}
+                        </select>
+                        <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+                    </div>
+                )}
+
+                {/* Week */}
+                {showWeekFilter && month && !day && (
+                    <div className="relative">
+                        <select
+                            value={week ?? ""}
+                            onChange={(e) => setWeek(e.target.value ? parseInt(e.target.value) : null)}
+                            aria-label="Select week"
+                            className="w-full appearance-none px-2 py-1.5 pr-6 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+                        >
+                            <option value="">All Weeks</option>
+                            {weeks.map((w) => (
+                                <option key={w} value={w}>Week {w}</option>
+                            ))}
+                        </select>
+                        <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+                    </div>
+                )}
+            </div>
+        </div>
+
+    );
+}

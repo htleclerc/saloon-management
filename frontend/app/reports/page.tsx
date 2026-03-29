@@ -3,7 +3,11 @@
 import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import { Download, TrendingUp, TrendingDown } from "lucide-react";
+import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
+import { Download, TrendingUp, TrendingDown, Calendar, Edit, ChevronDown, Lightbulb, Loader2 } from "lucide-react";
+import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
+import { useAuth } from "@/context/AuthProvider";
+import { useToast } from "@/context/ToastProvider";
 import {
     LineChart,
     Line,
@@ -19,190 +23,619 @@ import {
     Legend,
     ResponsiveContainer,
 } from "recharts";
-
-const monthlyData = [
-    { month: "Jan", revenue: 12000, expenses: 4500, profit: 7500 },
-    { month: "Feb", revenue: 15000, expenses: 5200, profit: 9800 },
-    { month: "Mar", revenue: 13500, expenses: 4800, profit: 8700 },
-    { month: "Apr", revenue: 18000, expenses: 6200, profit: 11800 },
-    { month: "May", revenue: 22000, expenses: 7100, profit: 14900 },
-    { month: "Jun", revenue: 25430, expenses: 8240, profit: 17190 },
-];
-
-const workerPerformance = [
-    { name: "Orphelia", value: 32, color: "#8B5CF6" },
-    { name: "Worker 2", value: 25, color: "#EC4899" },
-    { name: "Worker 3", value: 20, color: "#F59E0B" },
-    { name: "Others", value: 23, color: "#10B981" },
-];
+import { useState, useEffect } from "react";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import { revenueStatsService } from "@/lib/services";
+import { useTranslation } from "@/i18n";
+import { format, startOfYear, endOfYear, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from "date-fns";
+import { exportToCSV, exportToPDF } from "@/lib/export";
+import { useCurrency } from "@/hooks/useCurrency";
 
 export default function ReportsPage() {
-    const currentRevenue = 25430;
-    const previousRevenue = 22000;
-    const revenueChange = ((currentRevenue - previousRevenue) / previousRevenue * 100).toFixed(1);
+    const { t } = useTranslation();
+    const { format: formatCurrency, symbol } = useCurrency();
+    const { getCardStyle } = useKpiCardStyle();
+    const { user, activeSalonId } = useAuth();
+    const { showToast } = useToast();
+    const [isLoading, setIsLoading] = useState(true);
 
-    const currentProfit = 17190;
-    const previousProfit = 14900;
-    const profitChange = ((currentProfit - previousProfit) / previousProfit * 100).toFixed(1);
+    // Period filtering state
+    const [selectedDate, setSelectedDate] = useState(new Date());
+    const [periodFilter, setPeriodFilter] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('yearly');
+
+    // State for reports
+    const [financialReport, setFinancialReport] = useState({
+        totalRevenue: 0,
+        totalExpenses: 0,
+        netProfit: 0,
+        taxPayments: 0,
+        savings: 0
+    });
+
+    const [expenseDistribution, setExpenseDistribution] = useState<any[]>([]);
+    const [monthlyFinancials, setMonthlyFinancials] = useState<any[]>([]);
+    const [quarterlyFinancials, setQuarterlyFinancials] = useState<any[]>([]);
+    const [taxSummary, setTaxSummary] = useState({
+        incomeTax: 0,
+        estimatedTax: 0,
+        taxThisMonth: 0,
+        details: [] as any[],
+        rates: [] as any[]
+    });
+
+    // New dynamic states
+    const [purchaseTrends, setPurchaseTrends] = useState<any[]>([]);
+    const [feeBreakdown, setFeeBreakdown] = useState<any[]>([]);
+    const [monthlyWeeklyAnalysis, setMonthlyWeeklyAnalysis] = useState({
+        weekly: 0,
+        monthly: 0,
+        difference: 0,
+    });
+    const [recommendations, setRecommendations] = useState<any[]>([]);
+
+    // Helper function to get date range based on filter
+    const getDateRange = () => {
+        switch (periodFilter) {
+            case 'daily':
+                return { start: selectedDate, end: selectedDate };
+            case 'weekly':
+                return { start: startOfWeek(selectedDate), end: endOfWeek(selectedDate) };
+            case 'monthly':
+                return { start: startOfMonth(selectedDate), end: endOfMonth(selectedDate) };
+            case 'yearly':
+                return { start: startOfYear(selectedDate), end: endOfYear(selectedDate) };
+        }
+    };
+
+    const dateRange = getDateRange();
+
+    // Helper function to filter data by period
+    const filterDataByPeriod = (data: any[], dateField: string) => {
+        const { start, end } = dateRange;
+        return data.filter(item => {
+            const itemDate = new Date(item[dateField]);
+            return itemDate >= start && itemDate <= end;
+        });
+    };
+
+    // Export handler
+    const handleExport = async (exportFormat: 'csv' | 'pdf') => {
+        try {
+            const columns = [
+                { key: 'date', header: t('reports.monthlyBreakdown.date') },
+                { key: 'worker', header: t('reports.monthlyBreakdown.worker') },
+                { key: 'revenue', header: t('reports.monthlyBreakdown.revenue'), formatter: (v: unknown) => formatCurrency(Number(v)) },
+                { key: 'expense', header: t('reports.monthlyBreakdown.expense'), formatter: (v: unknown) => formatCurrency(Number(v)) },
+                { key: 'profit', header: t('reports.monthlyBreakdown.profit'), formatter: (v: unknown) => formatCurrency(Number(v)) },
+            ];
+
+            const dataToExport = filterDataByPeriod(monthlyFinancials, 'date');
+
+            if (exportFormat === 'csv') {
+                exportToCSV(dataToExport, columns, 'financial-report');
+            } else {
+                exportToPDF(dataToExport, columns, t('reports.title'), 'financial-report');
+            }
+            showToast(t("common.success"), t("common.exportSuccess"), "success");
+        } catch (error: any) {
+            showToast(t("common.error"), error.message || "Export failed", "error");
+        }
+    };
+
+    useEffect(() => {
+        if (activeSalonId) {
+            setIsLoading(true);
+            const year = new Date().getFullYear();
+
+            Promise.all([
+                revenueStatsService.getFinancialReport(Number(activeSalonId), year),
+                revenueStatsService.getExpenseDistribution(Number(activeSalonId), year),
+                revenueStatsService.getMonthlyFinancials(Number(activeSalonId), year),
+                revenueStatsService.getQuarterlyFinancials(Number(activeSalonId), year),
+                revenueStatsService.getTaxSummary(Number(activeSalonId), year),
+                revenueStatsService.getPurchaseTrends(Number(activeSalonId), year),
+                revenueStatsService.getFeeBreakdown(Number(activeSalonId), year),
+                revenueStatsService.getMonthlyWeeklyAnalysis(Number(activeSalonId), year),
+                revenueStatsService.getRecommendations(Number(activeSalonId))
+            ]).then(([report, distribution, monthly, quarterly, tax, purchases, fees, analysis, recs]) => {
+                setFinancialReport(report);
+                setExpenseDistribution(distribution);
+                setMonthlyFinancials(monthly);
+                setQuarterlyFinancials(quarterly);
+                setTaxSummary(tax);
+                setPurchaseTrends(purchases);
+                setFeeBreakdown(fees);
+                setMonthlyWeeklyAnalysis(analysis);
+                setRecommendations(recs);
+            }).catch(error => {
+                console.error("Failed to load reports:", error);
+            }).finally(() => {
+                setIsLoading(false);
+            });
+        }
+    }, [activeSalonId]);
+
+    const isWorker = user?.role === 'worker';
+
+    if (isLoading) {
+        return (
+            <ProtectedRoute requiredRole={['manager', 'super_admin']}>
+                <MainLayout>
+                    <div className="flex items-center justify-center h-full min-h-[400px]">
+                        <Loader2 className="w-8 h-8 animate-spin text-color-primary" />
+                    </div>
+                </MainLayout>
+            </ProtectedRoute>
+        );
+    }
 
     return (
-        <MainLayout>
-            <div className="space-y-6">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold text-gray-900">Financial Reports</h1>
-                        <p className="text-gray-500 mt-1">Comprehensive financial analysis and insights</p>
+        <ProtectedRoute requiredRole={['manager', 'super_admin']}>
+            <MainLayout>
+                <div className="space-y-6">
+                    {/* Header */}
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                        <div>
+                            <h1 className="text-3xl font-bold text-gray-900">{t('reports.title')}</h1>
+                            <p className="text-gray-500 mt-1">{t('reports.subtitle')}</p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3">
+                            {/* Period Filters */}
+                            <div className="flex bg-gray-100 rounded-lg p-1">
+                                <button
+                                    onClick={() => setPeriodFilter('daily')}
+                                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${
+                                        periodFilter === 'daily'
+                                            ? 'bg-white shadow-sm text-[var(--color-primary)]'
+                                            : 'text-gray-600 hover:bg-white hover:shadow-sm'
+                                    }`}
+                                >
+                                    {t('reports.periodFilters.daily')}
+                                </button>
+                                <button
+                                    onClick={() => setPeriodFilter('weekly')}
+                                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${
+                                        periodFilter === 'weekly'
+                                            ? 'bg-white shadow-sm text-[var(--color-primary)]'
+                                            : 'text-gray-600 hover:bg-white hover:shadow-sm'
+                                    }`}
+                                >
+                                    {t('reports.periodFilters.weekly')}
+                                </button>
+                                <button
+                                    onClick={() => setPeriodFilter('monthly')}
+                                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${
+                                        periodFilter === 'monthly'
+                                            ? 'bg-white shadow-sm text-[var(--color-primary)]'
+                                            : 'text-gray-600 hover:bg-white hover:shadow-sm'
+                                    }`}
+                                >
+                                    {t('reports.periodFilters.monthly')}
+                                </button>
+                                <button
+                                    onClick={() => setPeriodFilter('yearly')}
+                                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${
+                                        periodFilter === 'yearly'
+                                            ? 'bg-white shadow-sm text-[var(--color-primary)]'
+                                            : 'text-gray-600 hover:bg-white hover:shadow-sm'
+                                    }`}
+                                >
+                                    {t('reports.periodFilters.yearly')}
+                                </button>
+                            </div>
+                            <Button variant="outline" size="sm" className="gap-2">
+                                <Calendar className="w-4 h-4" />
+                                {format(dateRange.start, 'MMM d')} - {format(dateRange.end, 'MMM d, yyyy')}
+                                <ChevronDown className="w-4 h-4" />
+                            </Button>
+                            <ReadOnlyGuard>
+                                <div className="flex gap-2">
+                                    <Button variant="primary" size="md" onClick={() => handleExport('csv')} className="gap-2">
+                                        <Download className="w-5 h-5" />
+                                        CSV
+                                    </Button>
+                                    <Button variant="primary" size="md" onClick={() => handleExport('pdf')} className="gap-2">
+                                        <Download className="w-5 h-5" />
+                                        PDF
+                                    </Button>
+                                </div>
+                            </ReadOnlyGuard>
+                        </div>
                     </div>
-                    <Button variant="primary" size="md">
-                        <Download className="w-5 h-5" />
-                        Export Report
-                    </Button>
-                </div>
 
-                {/* Summary Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <Card gradient="bg-gradient-to-br from-purple-600 to-purple-700" className="text-white">
-                        <p className="text-sm opacity-90 mb-1">Total Revenue</p>
-                        <h3 className="text-3xl font-bold">€{currentRevenue.toLocaleString()}</h3>
-                        <div className="flex items-center gap-1 mt-2">
-                            <TrendingUp className="w-4 h-4" />
-                            <span className="text-sm font-medium">+{revenueChange}%</span>
-                            <span className="text-sm opacity-75">vs last month</span>
+                    {/* Annual Financial Overview */}
+                    <div>
+                        <h3 className="text-lg font-semibold mb-4">{t('reports.annualOverview')}</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                            <Card gradient="" style={getCardStyle(0)} className="text-white">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-xl">💰</span>
+                                    <p className="text-xs opacity-90">{t('reports.totalRevenue')}</p>
+                                </div>
+                                <h3 className="text-2xl font-bold">{formatCurrency(financialReport.totalRevenue)}</h3>
+                                <div className="flex items-center gap-1 mt-2">
+                                    <TrendingUp className="w-3 h-3" />
+                                    <span className="text-xs">+--% {t('reports.lastYear')}</span>
+                                </div>
+                            </Card>
+                            <Card gradient="" style={getCardStyle(1)} className="text-white">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-xl">📊</span>
+                                    <p className="text-xs opacity-90">{t('reports.totalExpenses')}</p>
+                                </div>
+                                <h3 className="text-2xl font-bold">{formatCurrency(financialReport.totalExpenses)}</h3>
+                                <div className="flex items-center gap-1 mt-2">
+                                    <TrendingDown className="w-3 h-3" />
+                                    <span className="text-xs">--% {t('reports.lastYear')}</span>
+                                </div>
+                            </Card>
+                            <Card gradient="" style={getCardStyle(2)} className="text-white">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-xl">📈</span>
+                                    <p className="text-xs opacity-90">{t('reports.netProfit')}</p>
+                                </div>
+                                <h3 className="text-2xl font-bold">{formatCurrency(financialReport.netProfit)}</h3>
+                                <div className="flex items-center gap-1 mt-2">
+                                    <TrendingUp className="w-3 h-3" />
+                                    <span className="text-xs">+--% {t('reports.lastYear')}</span>
+                                </div>
+                            </Card>
+                            <Card gradient="" style={getCardStyle(3)} className="text-white">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-xl">🧾</span>
+                                    <p className="text-xs opacity-90">{t('reports.taxPayments')}</p>
+                                </div>
+                                <h3 className="text-2xl font-bold">{formatCurrency(financialReport.taxPayments)}</h3>
+                                <div className="flex items-center gap-1 mt-2">
+                                    <TrendingUp className="w-3 h-3" />
+                                    <span className="text-xs">{t('reports.est')} 20%</span>
+                                </div>
+                            </Card>
+                            <Card gradient="" style={getCardStyle(4)} className="text-white">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-xl">💎</span>
+                                    <p className="text-xs opacity-90">{t('reports.savings')}</p>
+                                </div>
+                                <h3 className="text-2xl font-bold">{formatCurrency(financialReport.savings)}</h3>
+                                <div className="flex items-center gap-1 mt-2">
+                                    <TrendingUp className="w-3 h-3" />
+                                    <span className="text-xs">{t('reports.est')} 15%</span>
+                                </div>
+                            </Card>
                         </div>
-                    </Card>
-                    <Card gradient="bg-gradient-to-br from-pink-500 to-pink-600" className="text-white">
-                        <p className="text-sm opacity-90 mb-1">Total Expenses</p>
-                        <h3 className="text-3xl font-bold">€8,240</h3>
-                        <div className="flex items-center gap-1 mt-2">
-                            <TrendingUp className="w-4 h-4" />
-                            <span className="text-sm font-medium">+15.8%</span>
-                            <span className="text-sm opacity-75">vs last month</span>
-                        </div>
-                    </Card>
-                    <Card gradient="bg-gradient-to-br from-orange-500 to-orange-600" className="text-white">
-                        <p className="text-sm opacity-90 mb-1">Net Profit</p>
-                        <h3 className="text-3xl font-bold">€{currentProfit.toLocaleString()}</h3>
-                        <div className="flex items-center gap-1 mt-2">
-                            <TrendingUp className="w-4 h-4" />
-                            <span className="text-sm font-medium">+{profitChange}%</span>
-                            <span className="text-sm opacity-75">vs last month</span>
-                        </div>
-                    </Card>
-                    <Card gradient="bg-gradient-to-br from-teal-500 to-teal-600" className="text-white">
-                        <p className="text-sm opacity-90 mb-1">Profit Margin</p>
-                        <h3 className="text-3xl font-bold">67.6%</h3>
-                        <div className="flex items-center gap-1 mt-2">
-                            <TrendingUp className="w-4 h-4" />
-                            <span className="text-sm font-medium">+2.1%</span>
-                            <span className="text-sm opacity-75">vs last month</span>
-                        </div>
-                    </Card>
-                </div>
+                    </div>
 
-                {/* Revenue Trend */}
-                <Card>
-                    <h3 className="text-lg font-semibold mb-4">6-Month Financial Trend</h3>
-                    <ResponsiveContainer width="100%" height={350}>
-                        <LineChart data={monthlyData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                            <XAxis dataKey="month" />
-                            <YAxis />
-                            <Tooltip />
-                            <Legend />
-                            <Line type="monotone" dataKey="revenue" stroke="#8B5CF6" strokeWidth={3} name="Revenue" />
-                            <Line type="monotone" dataKey="expenses" stroke="#EC4899" strokeWidth={3} name="Expenses" />
-                            <Line type="monotone" dataKey="profit" stroke="#10B981" strokeWidth={3} name="Profit" />
-                        </LineChart>
-                    </ResponsiveContainer>
-                </Card>
-
-                {/* Charts Row */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Revenue vs Expenses */}
+                    {/* Monthly Financial Breakdown Table */}
                     <Card>
-                        <h3 className="text-lg font-semibold mb-4">Monthly Comparison</h3>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={monthlyData}>
+                        <h3 className="text-lg font-semibold mb-4">{t('reports.monthlyBreakdown.title')}</h3>
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t('reports.monthlyBreakdown.date')}</th>
+                                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">{t('reports.monthlyBreakdown.worker')}</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">{t('reports.monthlyBreakdown.revenue')}</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">{t('reports.monthlyBreakdown.expense')}</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">{t('reports.monthlyBreakdown.profit')}</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">{t('reports.monthlyBreakdown.tax')}</th>
+                                        <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">{t('reports.monthlyBreakdown.savings')}</th>
+                                        <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">{t('reports.monthlyBreakdown.actions')}</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {filterDataByPeriod(monthlyFinancials, 'date').map((row) => (
+                                        <tr key={row.id} className="hover:bg-gray-50 transition">
+                                            <td className="px-4 py-4 text-sm text-gray-900">{row.date}</td>
+                                            <td className="px-4 py-4">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xl">{row.avatar}</span>
+                                                    <span className="text-sm font-medium text-gray-900">{row.worker}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-4 text-right font-semibold text-[var(--color-success)]">{formatCurrency(row.revenue)}</td>
+                                            <td className="px-4 py-4 text-right font-semibold text-[var(--color-error)]">{formatCurrency(row.expense)}</td>
+                                            <td className="px-4 py-4 text-right font-semibold text-[var(--color-success)]">{formatCurrency(row.profit)}</td>
+                                            <td className="px-4 py-4 text-right font-semibold text-[var(--color-warning)]">{formatCurrency(row.tax)}</td>
+                                            <td className="px-4 py-4 text-right font-semibold text-[var(--color-primary)]">{formatCurrency(row.savings)}</td>
+                                            <td className="px-4 py-4 text-center">
+                                                <ReadOnlyGuard>
+                                                    <button className="text-[var(--color-primary)] hover:opacity-80 transition">
+                                                        <Edit className="w-4 h-4" />
+                                                    </button>
+                                                </ReadOnlyGuard>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </Card>
+
+                    {/* Charts Row - Quarterly & Monthly */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Quarterly Revenue vs Expenses */}
+                        <Card>
+                            <h3 className="text-lg font-semibold mb-4">{t('reports.quarterlyChart')}</h3>
+                            <ResponsiveContainer width="100%" height={280}>
+                                <BarChart data={periodFilter === 'yearly' ? quarterlyFinancials : filterDataByPeriod(quarterlyFinancials, 'date')}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                    <XAxis dataKey="quarter" />
+                                    <YAxis />
+                                    <Tooltip />
+                                    <Legend />
+                                    <Bar dataKey="revenue" fill="var(--color-success)" radius={[4, 4, 0, 0]} name={t('reports.totalRevenue')} />
+                                    <Bar dataKey="expenses" fill="var(--color-error)" radius={[4, 4, 0, 0]} name={t('reports.totalExpenses')} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </Card>
+
+                        {/* Monthly Sales Analysis */}
+                        <Card>
+                            <h3 className="text-lg font-semibold mb-4">{t('reports.monthlyChart')}</h3>
+                            <ResponsiveContainer width="100%" height={280}>
+                                <LineChart data={filterDataByPeriod(monthlyFinancials, 'date')}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                    <XAxis dataKey="month" />
+                                    <YAxis />
+                                    <Tooltip />
+                                    <Line type="monotone" dataKey="sales" stroke="var(--color-primary)" strokeWidth={3} dot={{ fill: "var(--color-primary)", strokeWidth: 2 }} name="Sales" />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </Card>
+                    </div>
+
+                    {/* Annual Expense Categories - Pie Chart */}
+                    <Card>
+                        <h3 className="text-lg font-semibold mb-4">{t('reports.expenseCategories')}</h3>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
+                            <ResponsiveContainer width="100%" height={300}>
+                                <PieChart>
+                                    <Pie
+                                        data={filterDataByPeriod(expenseDistribution, 'month').length > 0 ? filterDataByPeriod(expenseDistribution, 'month') : expenseDistribution}
+                                        cx="50%"
+                                        cy="50%"
+                                        labelLine={false}
+                                        outerRadius={120}
+                                        fill="#8884d8"
+                                        dataKey="value"
+                                    >
+                                        {(filterDataByPeriod(expenseDistribution, 'month').length > 0 ? filterDataByPeriod(expenseDistribution, 'month') : expenseDistribution).map((entry: any, index: number) => (
+                                            <Cell key={`cell-${index}`} fill={entry.color} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip />
+                                </PieChart>
+                            </ResponsiveContainer>
+                            <div className="space-y-3">
+                                {(filterDataByPeriod(expenseDistribution, 'month').length > 0 ? filterDataByPeriod(expenseDistribution, 'month') : expenseDistribution).map((cat: any, idx: number) => (
+                                    <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-4 h-4 rounded-full" style={{ backgroundColor: cat.color }}></div>
+                                            <span className="font-medium text-gray-700">{cat.name}</span>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="font-semibold text-gray-900">{formatCurrency(cat.amount)}</span>
+                                            <span className="text-sm text-gray-500 ml-2">{cat.value}%</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </Card>
+
+                    {/* Quarterly Performance Comparison */}
+                    <Card>
+                        <h3 className="text-lg font-semibold mb-4">{t('reports.quarterlyComparison.title')}</h3>
+                        <p className="text-sm text-gray-500 mb-4">{t('reports.quarterlyComparison.subtitle')}</p>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                            {(periodFilter === 'yearly' ? quarterlyFinancials : filterDataByPeriod(quarterlyFinancials, 'date')).map((q, idx) => (
+                                <div key={idx} className="p-4 rounded-xl" style={{ backgroundColor: `${q.color}15` }}>
+                                    <p className="text-sm font-medium text-gray-600">{q.quarter}</p>
+                                    <h4 className="text-2xl font-bold mt-1" style={{ color: q.color }}>{formatCurrency(q.value)}</h4>
+                                    <div className="mt-2 h-2 rounded-full" style={{ backgroundColor: `${q.color}30` }}>
+                                        <div className="h-full rounded-full" style={{ width: `${(q.value / 6000) * 100}%`, backgroundColor: q.color }}></div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <ResponsiveContainer width="100%" height={250}>
+                            <BarChart data={periodFilter === 'yearly' ? quarterlyFinancials : filterDataByPeriod(quarterlyFinancials, 'date')}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                <XAxis dataKey="month" />
+                                <XAxis dataKey="quarter" />
                                 <YAxis />
                                 <Tooltip />
-                                <Legend />
-                                <Bar dataKey="revenue" fill="#8B5CF6" radius={[8, 8, 0, 0]} name="Revenue" />
-                                <Bar dataKey="expenses" fill="#EC4899" radius={[8, 8, 0, 0]} name="Expenses" />
+                                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                                    {(periodFilter === 'yearly' ? quarterlyFinancials : filterDataByPeriod(quarterlyFinancials, 'date')).map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.color} />
+                                    ))}
+                                </Bar>
                             </BarChart>
                         </ResponsiveContainer>
                     </Card>
 
-                    {/* Worker Performance */}
-                    <Card>
-                        <h3 className="text-lg font-semibold mb-4">Revenue by Worker (%)</h3>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <PieChart>
-                                <Pie
-                                    data={workerPerformance}
-                                    cx="50%"
-                                    cy="50%"
-                                    labelLine={false}
-                                    label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
-                                    outerRadius={100}
-                                    fill="#8884d8"
-                                    dataKey="value"
-                                >
-                                    {workerPerformance.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.color} />
+                    {/* Tax Summary & Payment Schedule */}
+                    <div>
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold">{t('reports.taxSummary.title')}</h3>
+                            <Button variant="outline" size="sm">{t('reports.taxSummary.viewAll')}</Button>
+                        </div>
+
+                        {/* Tax Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <Card gradient="" style={getCardStyle(0)} className="text-white">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-xl">📋</span>
+                                    <p className="text-xs opacity-90">{t('reports.taxSummary.incomeTax')}</p>
+                                </div>
+                                <h3 className="text-2xl font-bold">{formatCurrency(taxSummary.incomeTax)}</h3>
+                            </Card>
+                            <Card gradient="" style={getCardStyle(1)} className="text-white">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-xl">📊</span>
+                                    <p className="text-xs opacity-90">{t('reports.taxSummary.estimatedTax')}</p>
+                                </div>
+                                <h3 className="text-2xl font-bold">{formatCurrency(taxSummary.estimatedTax)}</h3>
+                            </Card>
+                            <Card gradient="" style={getCardStyle(2)} className="text-white">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-xl">💵</span>
+                                    <p className="text-xs opacity-90">{t('reports.taxSummary.taxThisMonth')}</p>
+                                </div>
+                                <h3 className="text-2xl font-bold">{formatCurrency(taxSummary.taxThisMonth)}</h3>
+                            </Card>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* Monthly Tax Payment Details */}
+                            <Card>
+                                <h4 className="text-md font-semibold mb-4">{t('reports.taxSummary.monthlyDetails')}</h4>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full">
+                                        <thead className="bg-gray-50">
+                                            <tr>
+                                                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">{t('reports.taxSummary.date')}</th>
+                                                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">{t('reports.taxSummary.description')}</th>
+                                                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600">{t('reports.taxSummary.amount')}</th>
+                                                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-600">{t('reports.taxSummary.status')}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {taxSummary.details.map((tax: any, idx: number) => (
+                                                <tr key={idx} className="hover:bg-gray-50">
+                                                    <td className="px-4 py-3 text-sm text-gray-700">{tax.date}</td>
+                                                    <td className="px-4 py-3 text-sm text-gray-900">{tax.description}</td>
+                                                    <td className="px-4 py-3 text-right font-semibold text-gray-900">{formatCurrency(tax.amount)}</td>
+                                                    <td className="px-4 py-3 text-center">
+                                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${tax.status === 'Paid' ? 'bg-[var(--color-success-light)] text-[var(--color-success)]' : 'bg-[var(--color-warning-light)] text-[var(--color-warning)]'}`}>
+                                                            {tax.status}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                        {/* Fallback if no details */}
+                                        {taxSummary.details.length === 0 && (
+                                            <tbody className="divide-y divide-gray-100">
+                                                <tr>
+                                                    <td colSpan={4} className="px-4 py-3 text-sm text-center text-gray-500">{t('reports.taxSummary.noDetails')}</td>
+                                                </tr>
+                                            </tbody>
+                                        )}
+                                    </table>
+                                </div>
+                            </Card>
+
+                            {/* Tax Rate Comparison */}
+                            <Card>
+                                <h4 className="text-md font-semibold mb-4">{t('reports.taxSummary.rateComparison')}</h4>
+                                <div className="space-y-4">
+                                    {taxSummary.rates.map((tax: any, idx: number) => (
+                                        <div key={idx}>
+                                            <div className="flex justify-between mb-1">
+                                                <span className="text-sm font-medium text-gray-700">{tax.name}</span>
+                                                <span className="text-sm font-semibold text-gray-900">{tax.rate}%</span>
+                                            </div>
+                                            <div className="w-full bg-gray-200 rounded-full h-3">
+                                                <div className="h-3 rounded-full bg-[var(--color-primary)]" style={{ width: `${(tax.rate / 25) * 100}%` }}></div>
+                                            </div>
+                                        </div>
                                     ))}
-                                </Pie>
-                                <Tooltip />
-                            </PieChart>
-                        </ResponsiveContainer>
+                                    {taxSummary.rates.length === 0 && (
+                                        <p className="text-sm text-gray-500 text-center">{t('reports.taxSummary.noRates')}</p>
+                                    )}
+                                </div>
+                            </Card>
+                        </div>
+                    </div>
+
+                    {/* Purchase Trends & Fee Breakdown */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Purchase Trends */}
+                        <Card>
+                            <h3 className="text-lg font-semibold mb-4">{t('reports.purchaseTrends')}</h3>
+                            <ResponsiveContainer width="100%" height={250}>
+                                <LineChart data={filterDataByPeriod(purchaseTrends, 'month')}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                                    <XAxis dataKey="month" />
+                                    <YAxis />
+                                    <Tooltip />
+                                    <Line type="monotone" dataKey="purchases" stroke="var(--color-primary)" strokeWidth={2} dot={{ fill: "var(--color-primary)", strokeWidth: 2 }} name="Purchases" />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </Card>
+
+                        {/* Fee Breakdown */}
+                        <Card>
+                            <h3 className="text-lg font-semibold mb-4">{t('reports.feeBreakdown.title')}</h3>
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead className="bg-gray-50">
+                                        <tr>
+                                            <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600">{t('reports.feeBreakdown.category')}</th>
+                                            <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600">{t('reports.feeBreakdown.percentage')}</th>
+                                            <th className="px-4 py-2 text-right text-xs font-semibold text-gray-600">{t('reports.feeBreakdown.amount')}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {feeBreakdown.map((fee, idx) => (
+                                            <tr key={idx} className="hover:bg-gray-50">
+                                                <td className="px-4 py-3 text-sm font-medium text-gray-900">{t(`reports.feeBreakdown.categories.${fee.category}`)}</td>
+                                                <td className="px-4 py-3 text-right text-sm text-gray-600">{fee.percentage}%</td>
+                                                <td className="px-4 py-3 text-right font-semibold text-[var(--color-error)]">{formatCurrency(-fee.amount)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                    <tfoot className="bg-gray-50 font-semibold">
+                                        <tr>
+                                            <td className="px-4 py-2 text-sm">{t('reports.feeBreakdown.totalFees')}</td>
+                                            <td className="px-4 py-2 text-right text-sm">{feeBreakdown.reduce((sum, f) => sum + f.percentage, 0).toFixed(1)}%</td>
+                                            <td className="px-4 py-2 text-right text-[var(--color-error)]">{formatCurrency(-feeBreakdown.reduce((sum, f) => sum + f.amount, 0))}</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </Card>
+                    </div>
+
+                    {/* Monthly vs Weekly Analysis */}
+                    <Card>
+                        <h3 className="text-lg font-semibold mb-4">{t('reports.analysis.title')}</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="p-4 bg-[var(--color-secondary-light)] rounded-xl border border-[var(--color-secondary-light)]">
+                                <p className="text-sm font-medium text-[var(--color-secondary)] mb-1">{t('reports.analysis.weeklyAverage')}</p>
+                                <h4 className="text-2xl font-bold text-gray-900">{formatCurrency(monthlyWeeklyAnalysis.weekly)}</h4>
+                            </div>
+                            <div className="p-4 bg-[var(--color-primary-light)] rounded-xl border border-[var(--color-primary-light)]">
+                                <p className="text-sm font-medium text-[var(--color-primary)] mb-1">{t('reports.analysis.monthlyTotal')}</p>
+                                <h4 className="text-2xl font-bold text-gray-900">{formatCurrency(monthlyWeeklyAnalysis.monthly)}</h4>
+                            </div>
+                            <div className="p-4 bg-[var(--color-success-light)] rounded-xl border border-[var(--color-success-light)]">
+                                <p className="text-sm font-medium text-[var(--color-success)] mb-1">{t('reports.analysis.monthVsPrevious')}</p>
+                                <h4 className="text-2xl font-bold text-[var(--color-success)]">{`+${formatCurrency(monthlyWeeklyAnalysis.difference)}`}</h4>
+                            </div>
+                        </div>
+                    </Card>
+
+                    {/* Financial Recommendations */}
+                    <Card gradient="" style={getCardStyle(0)}>
+                        <div className="flex items-center gap-2 mb-4">
+                            <Lightbulb className="w-5 h-5 text-white" />
+                            <h3 className="text-lg font-semibold text-white">{t('reports.recommendations.title')}</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {recommendations.map((rec, idx) => (
+                                <div key={idx} className="p-4 bg-white rounded-xl shadow-sm">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className="text-xl">{rec.icon}</span>
+                                        <h4 className="font-semibold text-gray-900">{t(`reports.recommendations.${rec.id || 'savings'}`)}</h4>
+                                    </div>
+                                    <p className="text-sm text-gray-600">{t(`reports.recommendations.${rec.id || 'savings'}Desc`)}</p>
+                                </div>
+                            ))}
+                        </div>
                     </Card>
                 </div>
-
-                {/* Financial Summary Table */}
-                <Card>
-                    <h3 className="text-lg font-semibold mb-4">Monthly Financial Summary</h3>
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Month</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Revenue</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Expenses</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Profit</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Margin %</th>
-                                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Change</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {monthlyData.map((row, idx) => {
-                                    const margin = ((row.profit / row.revenue) * 100).toFixed(1);
-                                    const prevProfit = idx > 0 ? monthlyData[idx - 1].profit : row.profit;
-                                    const change = idx > 0 ? (((row.profit - prevProfit) / prevProfit) * 100).toFixed(1) : 0;
-                                    const isPositive = Number(change) >= 0;
-
-                                    return (
-                                        <tr key={row.month} className="hover:bg-gray-50 transition">
-                                            <td className="px-4 py-4 font-medium text-gray-900">{row.month}</td>
-                                            <td className="px-4 py-4 text-right font-semibold text-purple-600">€{row.revenue.toLocaleString()}</td>
-                                            <td className="px-4 py-4 text-right font-semibold text-pink-600">€{row.expenses.toLocaleString()}</td>
-                                            <td className="px-4 py-4 text-right font-semibold text-green-600">€{row.profit.toLocaleString()}</td>
-                                            <td className="px-4 py-4 text-right font-semibold text-gray-900">{margin}%</td>
-                                            <td className="px-4 py-4 text-right">
-                                                <div className={`flex items-center justify-end gap-1 font-semibold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                                                    {isPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                                                    <span>{isPositive ? '+' : ''}{change}%</span>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
-                </Card>
-            </div>
-        </MainLayout>
+            </MainLayout>
+        </ProtectedRoute>
     );
 }

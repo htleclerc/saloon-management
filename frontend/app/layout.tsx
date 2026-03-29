@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Open_Sans, Inter, Roboto, Poppins } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
+import ReadOnlyBannerWrapper from "@/components/layout/ReadOnlyBannerWrapper";
+import CommandPaletteProvider from "@/components/ai/CommandPaletteProvider";
 
 const openSans = Open_Sans({
   variable: "--font-opensans",
@@ -29,7 +31,7 @@ const poppins = Poppins({
 
 export const metadata: Metadata = {
   title: "Workshop Manager",
-  description: "Manage your workshop, workers, and revenues",
+  description: "Manage your workshop, workers, and income",
 };
 
 export default function RootLayout({
@@ -38,12 +40,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" data-theme="modern" data-accent="purple" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${openSans.variable} ${inter.variable} ${roboto.variable} ${poppins.variable} antialiased`}
       >
         <Providers>
+          <ReadOnlyBannerWrapper />
           {children}
+          <CommandPaletteProvider />
         </Providers>
       </body>
     </html>

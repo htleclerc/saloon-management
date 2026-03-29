@@ -1,6 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
+import { useAuth } from "./AuthProvider";
 
 export type SubmenuLayout = "vertical" | "horizontal";
 export type DesignType = "modern" | "minimal" | "glassmorphism" | "gradient";
@@ -44,11 +45,14 @@ interface ThemeContextType {
     theme: ThemeSettings;
     updateTheme: (updates: Partial<ThemeSettings>) => void;
     toggleSidebar: () => void;
+    toggleDarkMode: () => void;
     currentPalette: ColorPalette;
+    mobileMenuOpen: boolean;
+    setMobileMenuOpen: (open: boolean) => void;
 }
 
 const defaultTheme: ThemeSettings = {
-    submenuLayout: "vertical",
+    submenuLayout: "horizontal",
     designType: "modern",
     sidebarCollapsed: false,
     colorPaletteId: "purple-pink",
@@ -65,29 +69,58 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export function ThemeProvider({ children }: { children: ReactNode }) {
     const [theme, setTheme] = useState<ThemeSettings>(defaultTheme);
     const [mounted, setMounted] = useState(false);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     // Get current color palette
     const currentPalette = colorPalettes.find(p => p.id === theme.colorPaletteId) || colorPalettes[0];
 
-    // Load theme from localStorage on mount
+    // Dynamic Salon Color Override (if provided by Auth)
+    const { currentTenant, activeSalonId, user } = useAuth();
+
+    // Build scoped localStorage key per salon + user
+    const themeKey = activeSalonId && user?.id
+        ? `workshop-theme-${activeSalonId}-${user.id}`
+        : null;
+
+    // Skip saving when theme was just loaded from storage
+    const skipSaveRef = useRef(false);
+
+    // Load theme from localStorage on mount and when salon/user changes
     useEffect(() => {
         setMounted(true);
-        const savedTheme = localStorage.getItem("workshop-theme");
+        const key = themeKey || "workshop-theme";
+        const savedTheme = localStorage.getItem(key);
         if (savedTheme) {
             try {
-                const parsed = JSON.parse(savedTheme);
-                setTheme({ ...defaultTheme, ...parsed });
+                skipSaveRef.current = true;
+                setTheme({ ...defaultTheme, ...JSON.parse(savedTheme) });
             } catch {
                 console.error("Failed to parse saved theme");
             }
+        } else if (themeKey) {
+            // Scoped key has no data — migrate from global key
+            const globalTheme = localStorage.getItem("workshop-theme");
+            if (globalTheme) {
+                try {
+                    skipSaveRef.current = true;
+                    setTheme({ ...defaultTheme, ...JSON.parse(globalTheme) });
+                } catch { /* ignore */ }
+            }
         }
-    }, []);
+    }, [themeKey]);
 
-    // Save theme to localStorage and apply to document
+    // Apply theme to document
     useEffect(() => {
         if (!mounted) return;
 
-        localStorage.setItem("workshop-theme", JSON.stringify(theme));
+        // Save to scoped key only (skip when auth not ready or when just loaded)
+        if (themeKey) {
+            if (skipSaveRef.current) {
+                skipSaveRef.current = false;
+            } else {
+                localStorage.setItem(themeKey, JSON.stringify(theme));
+            }
+        }
 
         // Apply theme to document
         document.documentElement.setAttribute("data-theme", theme.designType);
@@ -96,10 +129,68 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
         // Apply color palette CSS variables
         const palette = colorPalettes.find(p => p.id === theme.colorPaletteId) || colorPalettes[0];
-        document.documentElement.style.setProperty("--color-primary", palette.primary);
-        document.documentElement.style.setProperty("--color-secondary", palette.secondary);
-        document.documentElement.style.setProperty("--color-primary-light", palette.primaryLight);
-        document.documentElement.style.setProperty("--color-secondary-light", palette.secondaryLight);
+
+        // Priority logic based on useCustomColorOverride flag:
+        // - If useCustomColorOverride is true: custom colors (fallback to palette)
+        // - If useCustomColorOverride is false: palette colors
+        const useCustom = currentTenant?.useCustomColorOverride ?? false;
+
+        const primaryColor = useCustom
+            ? (currentTenant?.customPrimaryColor || palette.primary)
+            : palette.primary;
+
+        const secondaryColor = useCustom
+            ? (currentTenant?.customSecondaryColor || palette.secondary)
+            : palette.secondary;
+
+        document.documentElement.style.setProperty("--color-primary", primaryColor);
+        document.documentElement.style.setProperty("--color-secondary", secondaryColor);
+
+        // For light colors: use custom hex+opacity if override is enabled, otherwise palette light colors
+        const hasCustomPrimary = useCustom && currentTenant?.customPrimaryColor;
+        const hasCustomSecondary = useCustom && currentTenant?.customSecondaryColor;
+
+        document.documentElement.style.setProperty(
+            "--color-primary-light",
+            hasCustomPrimary ? `${primaryColor}15` : palette.primaryLight
+        );
+        document.documentElement.style.setProperty(
+            "--color-secondary-light",
+            hasCustomSecondary ? `${secondaryColor}15` : palette.secondaryLight
+        );
+
+        // --- Semantic Colors (Success, Warning, Danger) ---
+        const semanticMode = currentTenant?.semanticColorMode || "default";
+
+        // Defaults from globals.css as fallback
+        const standardColors = {
+            success: "#22c55e",
+            warning: "#f59e0b",
+            error: "#ef4444"
+        };
+
+        let successColor = standardColors.success;
+        let warningColor = standardColors.warning;
+        let errorColor = standardColors.error;
+
+        if (semanticMode === "theme") {
+            successColor = primaryColor;
+            warningColor = secondaryColor;
+            errorColor = "#ef4444"; // Danger usually stays red unless customized
+        } else if (semanticMode === "custom") {
+            successColor = currentTenant?.customSuccessColor || standardColors.success;
+            warningColor = currentTenant?.customWarningColor || standardColors.warning;
+            errorColor = currentTenant?.customDangerColor || standardColors.error;
+        }
+
+        document.documentElement.style.setProperty("--color-success", successColor);
+        document.documentElement.style.setProperty("--color-warning", warningColor);
+        document.documentElement.style.setProperty("--color-error", errorColor);
+
+        // Generate light variants (15% opacity)
+        document.documentElement.style.setProperty("--color-success-light", `${successColor}15`);
+        document.documentElement.style.setProperty("--color-warning-light", `${warningColor}15`);
+        document.documentElement.style.setProperty("--color-error-light", `${errorColor}15`);
 
         // Apply font size
         const fontSizes = { small: "14px", normal: "16px", large: "18px" };
@@ -121,7 +212,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         } else {
             document.documentElement.classList.remove("no-animations");
         }
-    }, [theme, mounted]);
+    }, [theme, mounted, currentTenant, themeKey]);
 
     const updateTheme = (updates: Partial<ThemeSettings>) => {
         setTheme((prev) => ({ ...prev, ...updates }));
@@ -131,9 +222,21 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         setTheme((prev) => ({ ...prev, sidebarCollapsed: !prev.sidebarCollapsed }));
     };
 
+    const toggleDarkMode = () => {
+        setTheme((prev) => ({ ...prev, darkMode: !prev.darkMode }));
+    };
+
     // Always provide the context, even before mount (using default values)
     return (
-        <ThemeContext.Provider value={{ theme, updateTheme, toggleSidebar, currentPalette }}>
+        <ThemeContext.Provider value={{
+            theme,
+            updateTheme,
+            toggleSidebar,
+            toggleDarkMode,
+            currentPalette,
+            mobileMenuOpen,
+            setMobileMenuOpen
+        }}>
             {children}
         </ThemeContext.Provider>
     );

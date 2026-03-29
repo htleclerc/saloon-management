@@ -1,0 +1,276 @@
+# =============================================================================
+# Configuration Agent de Développement (Antigravity / Claude Code)
+# =============================================================================
+# Ce fichier configure le comportement de l'agent IA pour ce projet.
+#
+# Placement: .antigravity/config.yml ou racine du projet
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Informations Agent
+# -----------------------------------------------------------------------------
+agent:
+  name: "antigravity"
+  version: "1.0"
+  # Modèle Claude à utiliser
+  model: "claude-sonnet-4-20250514"  # ou claude-opus-4-20250514 pour tâches complexes
+
+# -----------------------------------------------------------------------------
+# Gestion du Contexte
+# -----------------------------------------------------------------------------
+context:
+  # Fichiers toujours inclus dans le contexte (priorité haute)
+  always_include:
+    - "AGENT.md"
+    - "CLAUDE.md"
+    - "package.json"
+    - "tsconfig.json"
+    - ".env.example"
+
+  # Fichiers à inclure si existants
+  include_if_exists:
+    - "prisma/schema.prisma"
+    - "docker-compose.yml"
+    - ".eslintrc.json"
+    - "next.config.js"
+    - "tailwind.config.js"
+
+  # Patterns à exclure (jamais lus)
+  exclude:
+    - "node_modules/**"
+    - ".next/**"
+    - ".git/**"
+    - "dist/**"
+    - "build/**"
+    - "coverage/**"
+    - "*.lock"
+    - "*.log"
+    - ".env"
+    - ".env.local"
+    - ".env.*.local"
+
+  # Limites
+  limits:
+    max_files_per_search: 50
+    max_file_size_bytes: 100000  # 100KB
+    max_context_files: 30
+
+  # Priorité des fichiers (haute → basse)
+  priority:
+    high:
+      - "AGENT.md"
+      - "src/domain/**/*.ts"
+      - "src/application/**/*.ts"
+      - "app/**/*.tsx"
+    medium:
+      - "src/infrastructure/**/*.ts"
+      - "src/presentation/**/*.tsx"
+      - "components/**/*.tsx"
+      - "lib/**/*.ts"
+    low:
+      - "tests/**/*.ts"
+      - "**/*.test.ts"
+      - "docs/**/*.md"
+
+# -----------------------------------------------------------------------------
+# Comportements
+# -----------------------------------------------------------------------------
+behaviors:
+  # Planification
+  planning:
+    # Utiliser TodoWrite pour les tâches > N étapes
+    use_todo_list_threshold: 3
+    # Toujours planifier avant d'implémenter
+    plan_before_implement: true
+
+  # Code
+  coding:
+    # Lire le fichier avant de le modifier
+    read_before_edit: true
+    # Consulter des fichiers similaires
+    check_similar_files: true
+    # Préférer l'édition à la réécriture
+    prefer_edit_over_rewrite: true
+
+  # Tests
+  testing:
+    # Exécuter les tests après modification
+    run_tests_after_change: true
+    # Écrire les tests pour le nouveau code
+    write_tests_for_new_code: true
+
+  # Git
+  git:
+    # Commits atomiques
+    atomic_commits: true
+    # Format des messages
+    commit_format: "conventional"  # conventional, angular, custom
+    # Ne jamais push sur main directement
+    protect_main_branch: true
+
+  # Sécurité
+  security:
+    # Demander confirmation pour actions destructives
+    confirm_destructive_actions: true
+    # Ne jamais committer de secrets
+    prevent_secret_commits: true
+    # Valider les inputs
+    validate_user_inputs: true
+
+# -----------------------------------------------------------------------------
+# Outils
+# -----------------------------------------------------------------------------
+tools:
+  # Outils autorisés
+  allowed:
+    - read
+    - write
+    - edit
+    - bash
+    - glob
+    - grep
+    - todo_write
+    - web_search
+    - web_fetch
+
+  # Outils nécessitant confirmation
+  restricted:
+    - delete_file
+    - git_push
+    - git_reset
+    - npm_publish
+    - docker_push
+
+  # Outils interdits
+  forbidden:
+    - rm_rf
+    - format_disk
+
+# -----------------------------------------------------------------------------
+# Hooks
+# -----------------------------------------------------------------------------
+hooks:
+  # Avant chaque session
+  on_session_start:
+    - action: "read"
+      file: "AGENT.md"
+    - action: "check"
+      command: "git status"
+
+  # Avant chaque commit
+  pre_commit:
+    - "npm run lint"
+    - "npm run type-check"
+    - "npm run test -- --passWithNoTests"
+
+  # Après chaque commit
+  post_commit:
+    - "git status"
+
+  # Avant création de PR
+  pre_pr:
+    - "npm run test:all"
+    - "npm run build"
+
+  # Sur modification de fichier
+  on_file_change:
+    patterns:
+      "*.test.ts": "npm run test -- --findRelatedTests {file}"
+      "*.spec.ts": "npm run test -- --findRelatedTests {file}"
+      "prisma/schema.prisma": "npm run db:generate"
+      "package.json": "npm install"
+
+# -----------------------------------------------------------------------------
+# Templates de Prompts
+# -----------------------------------------------------------------------------
+prompts:
+  # Chemins vers les templates
+  templates_dir: ".antigravity/prompts"
+
+  # Templates disponibles
+  available:
+    feature:
+      file: "feature.md"
+      description: "Créer une nouvelle fonctionnalité"
+    bugfix:
+      file: "bugfix.md"
+      description: "Corriger un bug"
+    refactor:
+      file: "refactor.md"
+      description: "Refactoring de code"
+    review:
+      file: "review.md"
+      description: "Review de code"
+    docs:
+      file: "docs.md"
+      description: "Générer de la documentation"
+    test:
+      file: "test.md"
+      description: "Écrire des tests"
+
+# -----------------------------------------------------------------------------
+# Mémoire Persistante
+# -----------------------------------------------------------------------------
+memory:
+  # Répertoire de stockage
+  dir: ".antigravity/memory"
+
+  # Fichiers de mémoire
+  files:
+    decisions: "decisions.md"      # Décisions de session
+    context: "context.md"          # Contexte du projet
+    learnings: "learnings.md"      # Apprentissages
+    todo_history: "todo_history.md" # Historique des todos
+
+  # Durée de rétention (jours)
+  retention_days: 30
+
+# -----------------------------------------------------------------------------
+# Logging
+# -----------------------------------------------------------------------------
+logging:
+  # Niveau de log
+  level: "info"  # debug, info, warn, error
+
+  # Fichier de log
+  file: ".antigravity/logs/agent.log"
+
+  # Rotation
+  max_size_mb: 10
+  max_files: 5
+
+# -----------------------------------------------------------------------------
+# Intégration IDE
+# -----------------------------------------------------------------------------
+ide:
+  # VSCode
+  vscode:
+    # Créer .vscode/settings.json recommandé
+    create_settings: true
+    # Extensions recommandées
+    recommended_extensions:
+      - "dbaeumer.vscode-eslint"
+      - "esbenp.prettier-vscode"
+      - "bradlc.vscode-tailwindcss"
+      - "prisma.prisma"
+
+  # Cursor
+  cursor:
+    # Générer .cursorrules depuis AGENT.md
+    sync_from_agent_md: true
+
+# -----------------------------------------------------------------------------
+# Notifications
+# -----------------------------------------------------------------------------
+notifications:
+  # Notifier en cas d'erreur critique
+  on_error: true
+
+  # Notifier à la fin d'une tâche longue
+  on_task_complete: true
+
+  # Canaux (configurer selon votre setup)
+  channels:
+    terminal: true
+    # slack: false
+    # discord: false

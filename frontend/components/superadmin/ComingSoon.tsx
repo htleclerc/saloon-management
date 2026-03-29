@@ -1,0 +1,29 @@
+'use client';
+
+import { Construction, ArrowLeft } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useTranslation } from '@/i18n';
+
+export default function GenericComingSoonPage({ title }: { title: string }) {
+    const router = useRouter();
+    const { t } = useTranslation();
+
+    return (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+            <div className="w-20 h-20 bg-primary-light rounded-full flex items-center justify-center mb-6">
+                <Construction className="w-10 h-10 text-color-primary" />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">{title}</h1>
+            <p className="text-gray-600 max-w-md mb-8">
+                {t("common.comingSoonDescription")}
+            </p>
+            <button
+                onClick={() => router.back()}
+                className="flex items-center gap-2 px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary transition-colors"
+            >
+                <ArrowLeft className="w-4 h-4" />
+                {t("common.back")}
+            </button>
+        </div>
+    );
+}

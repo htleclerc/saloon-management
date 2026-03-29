@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import MainLayout from "@/components/layout/MainLayout";
 import { useTheme, useResponsive } from "@/context/ThemeProvider";
+import { useAuth, UserRole } from "@/context/AuthProvider";
 import {
     User,
     Building2,
@@ -25,17 +26,16 @@ import {
 } from "lucide-react";
 
 const settingsMenuItems = [
-    { id: "profile", name: "Profile", description: "Informations personnelles", icon: User, path: "/settings/profile", color: "from-blue-500 to-blue-600" },
-    { id: "workshop", name: "Workshop", description: "Configuration entreprise", icon: Building2, path: "/settings/workshop", color: "from-purple-500 to-purple-600" },
-    { id: "appearance", name: "Appearance", description: "Thème & polices", icon: Palette, path: "/settings/appearance", color: "from-pink-500 to-pink-600" },
-    { id: "notifications", name: "Notifications", description: "Alertes & rappels", icon: Bell, path: "/settings/notifications", color: "from-orange-500 to-orange-600" },
-    { id: "security", name: "Security", description: "Mots de passe & 2FA", icon: Shield, path: "/settings/security", color: "from-red-500 to-red-600" },
-    { id: "users", name: "User Management", description: "Équipe & rôles", icon: Users, path: "/settings/users", color: "from-green-500 to-green-600" },
-    { id: "billing", name: "Billing", description: "Paiements & factures", icon: CreditCard, path: "/settings/billing", color: "from-teal-500 to-teal-600" },
-    { id: "integrations", name: "Integrations", description: "Services tiers", icon: Link2, path: "/settings/integrations", color: "from-indigo-500 to-indigo-600" },
-    { id: "analytics", name: "Analytics", description: "Rapports & données", icon: BarChart3, path: "/settings/analytics", color: "from-cyan-500 to-cyan-600" },
-    { id: "emails", name: "Emails", description: "Modèles email", icon: Mail, path: "/settings/emails", color: "from-yellow-500 to-yellow-600" },
-    { id: "advanced", name: "Advanced", description: "Options avancées", icon: Settings, path: "/settings/advanced", color: "from-gray-500 to-gray-600" },
+    { id: "profile", name: "Profile", description: "Personal information", icon: User, path: "/settings/profile", color: "from-[var(--color-info,bg-blue-500)] to-[var(--color-info-dark,bg-blue-700)]", roles: ['client', 'worker', 'manager', 'owner', 'super_admin'] },
+    { id: "appearance", name: "Appearance", description: "Themes & fonts", icon: Palette, path: "/settings/appearance", color: "from-[var(--color-secondary)] to-[var(--color-secondary-dark)]", roles: ['client', 'worker', 'manager', 'owner', 'super_admin'] },
+    { id: "notifications", name: "Notifications", description: "Alerts & reminders", icon: Bell, path: "/settings/notifications", color: "from-[var(--color-warning)] to-[var(--color-warning-dark)]", roles: ['client', 'worker', 'manager', 'owner', 'super_admin'] },
+    { id: "security", name: "Security", description: "Passwords & 2FA", icon: Shield, path: "/settings/security", color: "from-[var(--color-error)] to-[var(--color-error-dark)]", roles: ['client', 'worker', 'manager', 'owner', 'super_admin'] },
+    { id: "users", name: "User Management", description: "Team & roles", icon: Users, path: "/settings/users", color: "from-[var(--color-success)] to-[var(--color-success-dark)]", roles: ['owner', 'super_admin'] },
+    { id: "billing", name: "Billing", description: "Payments & invoices", icon: CreditCard, path: "/settings/billing", color: "from-[var(--color-info,bg-blue-500)] opacity-80 to-[var(--color-info-dark,bg-blue-700)]", roles: ['owner', 'super_admin'] },
+    { id: "integrations", name: "Integrations", description: "Third-party services", icon: Link2, path: "/settings/integrations", color: "from-[var(--color-primary)] opacity-80 to-[var(--color-primary-dark)]", roles: ['manager', 'owner', 'super_admin'] },
+    { id: "analytics", name: "Analytics", description: "Reports & data", icon: BarChart3, path: "/settings/analytics", color: "from-[var(--color-info,bg-blue-500)] to-[var(--color-info-dark,bg-blue-700)]", roles: ['manager', 'owner', 'super_admin'] },
+    { id: "emails", name: "Emails", description: "Email templates", icon: Mail, path: "/settings/emails", color: "from-[var(--color-warning-light)] to-[var(--color-warning)]", roles: ['manager', 'owner', 'super_admin'] },
+    { id: "advanced", name: "Advanced", description: "Advanced options", icon: Settings, path: "/settings/advanced", color: "from-gray-500 to-gray-600", roles: ['owner', 'super_admin'] },
 ];
 
 interface SettingsLayoutProps {
@@ -47,76 +47,47 @@ interface SettingsLayoutProps {
 export default function SettingsLayout({ children, title, description }: SettingsLayoutProps) {
     const pathname = usePathname();
     const { theme } = useTheme();
-    const { isMobile } = useResponsive();
+    const { isMobile, isTablet, isDesktop } = useResponsive();
+    const { hasPermission } = useAuth();
     const [submenuCollapsed, setSubmenuCollapsed] = useState(false);
     const [mobileDropdownOpen, setMobileDropdownOpen] = useState(false);
 
     const isActive = (path: string) => pathname === path || pathname.startsWith(path + "/");
-    const activeItem = settingsMenuItems.find((item) => isActive(item.path)) || settingsMenuItems[0];
 
-    // Horizontal layout (tabs)
-    if (theme.submenuLayout === "horizontal" && !isMobile) {
+    // Filter menu items based on permissions
+    const visibleMenuItems = settingsMenuItems.filter(item =>
+        hasPermission(item.roles as UserRole[])
+    );
+
+    const activeItem = visibleMenuItems.find((item) => isActive(item.path)) ?? visibleMenuItems[0] ?? null;
+
+    // Mobile/Tablet dropdown - always forced when not desktop (checked first to avoid SSR mismatch)
+    if (!isDesktop) {
         return (
             <MainLayout>
                 <div className="space-y-4">
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                            <div>
-                                <h1 className="text-xl font-bold text-gray-900">{title}</h1>
-                                <p className="text-gray-500 text-xs">{description}</p>
-                            </div>
-                        </div>
-                        <nav className="flex overflow-x-auto hide-scrollbar">
-                            {settingsMenuItems.map((item) => {
-                                const Icon = item.icon;
-                                const active = isActive(item.path);
-                                return (
-                                    <Link
-                                        key={item.id}
-                                        href={item.path}
-                                        className={`flex items-center gap-2 px-4 py-3 border-b-2 whitespace-nowrap transition-all ${active
-                                                ? "border-purple-600 bg-purple-50 text-purple-700"
-                                                : "border-transparent hover:bg-gray-50 text-gray-600"
-                                            }`}
-                                    >
-                                        <Icon className="w-4 h-4" />
-                                        <span className="font-medium text-sm">{item.name}</span>
-                                    </Link>
-                                );
-                            })}
-                        </nav>
-                    </div>
-                    <div className="space-y-4">{children}</div>
-                </div>
-            </MainLayout>
-        );
-    }
-
-    // Mobile dropdown
-    if (isMobile) {
-        return (
-            <MainLayout>
-                <div className="space-y-4">
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
                         <button
                             onClick={() => setMobileDropdownOpen(!mobileDropdownOpen)}
                             className="w-full flex items-center justify-between px-4 py-3"
                         >
                             <div className="flex items-center gap-3">
-                                <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${activeItem.color} flex items-center justify-center`}>
-                                    <activeItem.icon className="w-4 h-4 text-white" />
-                                </div>
+                                {activeItem && (
+                                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${activeItem.color} flex items-center justify-center`}>
+                                        <activeItem.icon className="w-4 h-4 text-white" />
+                                    </div>
+                                )}
                                 <div className="text-left">
-                                    <p className="font-semibold text-gray-900 text-sm">{title}</p>
-                                    <p className="text-xs text-gray-500">{activeItem.name}</p>
+                                    <p className="font-semibold text-gray-900 dark:text-white text-sm">{title}</p>
+                                    <p className="text-xs text-gray-500">{activeItem?.name}</p>
                                 </div>
                             </div>
                             {mobileDropdownOpen ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
                         </button>
 
                         {mobileDropdownOpen && (
-                            <nav className="border-t border-gray-100 p-2 max-h-80 overflow-y-auto">
-                                {settingsMenuItems.map((item) => {
+                            <nav className="border-t border-gray-100 dark:border-gray-700 p-2 max-h-80 overflow-y-auto">
+                                {visibleMenuItems.map((item) => {
                                     const Icon = item.icon;
                                     const active = isActive(item.path);
                                     return (
@@ -124,7 +95,7 @@ export default function SettingsLayout({ children, title, description }: Setting
                                             key={item.id}
                                             href={item.path}
                                             onClick={() => setMobileDropdownOpen(false)}
-                                            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${active ? "bg-purple-50 text-purple-700" : "hover:bg-gray-50"
+                                            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${active ? "bg-[var(--color-primary-light)] text-[var(--color-primary)]" : "hover:bg-gray-50 dark:hover:bg-gray-700"
                                                 }`}
                                         >
                                             <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center`}>
@@ -143,17 +114,55 @@ export default function SettingsLayout({ children, title, description }: Setting
         );
     }
 
-    // Vertical layout (sidebar) - default
+    // Horizontal layout (tabs) - Only on Desktop if Horizontal theme is selected
+    if (theme.submenuLayout === "horizontal") {
+        return (
+            <MainLayout>
+                <div className="space-y-4">
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+                            <div>
+                                <h1 className="text-xl font-bold text-gray-900">{title}</h1>
+                                <p className="text-gray-500 text-xs">{description}</p>
+                            </div>
+                        </div>
+                        <nav className="flex overflow-x-auto hide-scrollbar">
+                            {visibleMenuItems.map((item) => {
+                                const Icon = item.icon;
+                                const active = isActive(item.path);
+                                return (
+                                    <Link
+                                        key={item.id}
+                                        href={item.path}
+                                        className={`flex items-center gap-2 px-4 py-3 border-b-2 whitespace-nowrap transition-all ${active
+                                            ? "border-[var(--color-primary)] bg-[var(--color-primary-light)] text-[var(--color-primary)]"
+                                            : "border-transparent hover:bg-gray-50 text-gray-600"
+                                            }`}
+                                    >
+                                        <Icon className="w-4 h-4" />
+                                        <span className="font-medium text-sm">{item.name}</span>
+                                    </Link>
+                                );
+                            })}
+                        </nav>
+                    </div>
+                    <div className="space-y-4">{children}</div>
+                </div>
+            </MainLayout>
+        );
+    }
+
+    // Vertical layout (sidebar) - default for desktop
     return (
         <MainLayout>
             <div className="flex gap-6 min-h-[calc(100vh-120px)]">
                 <aside className={`flex-shrink-0 transition-all duration-300 ${submenuCollapsed ? "w-16" : "w-72"}`}>
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden sticky top-6">
-                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-600 to-pink-600">
+                        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-secondary)]">
                             {!submenuCollapsed && (
                                 <div>
                                     <h2 className="text-sm font-bold text-white">Settings</h2>
-                                    <p className="text-purple-200 text-xs">Configuration</p>
+                                    <p className="text-white opacity-80 text-xs">Configuration</p>
                                 </div>
                             )}
                             <button
@@ -166,14 +175,14 @@ export default function SettingsLayout({ children, title, description }: Setting
 
                         <nav className="p-2 max-h-[calc(100vh-200px)] overflow-y-auto">
                             <ul className="space-y-1">
-                                {settingsMenuItems.map((item) => {
+                                {visibleMenuItems.map((item) => {
                                     const Icon = item.icon;
                                     const active = isActive(item.path);
                                     return (
                                         <li key={item.id}>
                                             <Link
                                                 href={item.path}
-                                                className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 group ${active ? "bg-purple-50 border border-purple-200" : "hover:bg-gray-50"
+                                                className={`flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 group ${active ? "bg-primary-light border border-color-primary/30" : "hover:bg-gray-50"
                                                     } ${submenuCollapsed ? "justify-center" : ""}`}
                                                 title={submenuCollapsed ? item.name : undefined}
                                             >
@@ -183,12 +192,12 @@ export default function SettingsLayout({ children, title, description }: Setting
                                                 {!submenuCollapsed && (
                                                     <>
                                                         <div className="flex-1 min-w-0">
-                                                            <p className={`text-sm font-medium truncate ${active ? "text-purple-700" : "text-gray-700"}`}>
+                                                            <p className={`text-sm font-medium truncate ${active ? "text-[var(--color-primary)]" : "text-gray-700"}`}>
                                                                 {item.name}
                                                             </p>
                                                             <p className="text-xs text-gray-400 truncate">{item.description}</p>
                                                         </div>
-                                                        {active && <ChevronRight className="w-4 h-4 text-purple-500 flex-shrink-0" />}
+                                                        {active && <ChevronRight className="w-4 h-4 text-[var(--color-primary)] flex-shrink-0" />}
                                                     </>
                                                 )}
                                             </Link>
