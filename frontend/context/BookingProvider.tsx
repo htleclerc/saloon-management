@@ -139,8 +139,13 @@ export function BookingProvider({ children }: { children: ReactNode }) {
     };
 
     const updateBookingWorkers = async (id: number, workerIds: number[]) => {
-        console.warn("updateBookingWorkers not fully implemented in service batch mode");
-        await loadBookings();
+        try {
+            await bookingService.setWorkers(id, workerIds);
+            await loadBookings();
+        } catch (error) {
+            console.error("Failed to update booking workers", error);
+            throw error;
+        }
     };
 
     const cancelBooking = async (id: number, reason?: string) => {

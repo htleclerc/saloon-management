@@ -102,13 +102,15 @@ export class BookingService extends BaseService {
             depositStatus
         });
 
-        // Add workers
+        // Add workers (the first one is the primary stylist, the others assist)
         booking.workerIds = [];
         if (data.workerIds && data.workerIds.length > 0) {
-            for (const workerId of data.workerIds) {
-                await this.provider.addWorkerToBooking(booking.id, workerId);
+            const uniqueWorkerIds = Array.from(new Set(data.workerIds));
+            for (const [index, workerId] of uniqueWorkerIds.entries()) {
+                await this.provider.addWorkerToBooking(booking.id, workerId, index === 0);
                 booking.workerIds.push(workerId);
             }
+            booking.primaryWorkerId = uniqueWorkerIds[0];
         }
 
         // Add services
@@ -137,13 +139,24 @@ export class BookingService extends BaseService {
      * Update booking. When `addonIds` is provided the add-on snapshots are rebuilt.
      */
     async update(id: number, data: Partial<Booking>): Promise<Booking> {
-        const { addonIds, addons: _ignoredSnapshots, ...rest } = data;
+        const { addonIds, addons: _ignoredSnapshots, workerIds, primaryWorkerId, serviceIds, ...rest } = data;
         void _ignoredSnapshots;
 
         const booking = await this.provider.updateBooking(id, {
             ...rest,
             updatedBy: this.getCurrentUser()
         });
+
+        // Team and services live in junction tables: sync them explicitly
+        if (workerIds !== undefined) {
+            await this.provider.setBookingWorkers(id, workerIds, primaryWorkerId);
+            booking.workerIds = Array.from(new Set(workerIds));
+            booking.primaryWorkerId = primaryWorkerId && booking.workerIds.includes(primaryWorkerId) ? primaryWorkerId : booking.workerIds[0];
+        }
+        if (serviceIds !== undefined) {
+            await this.syncServices(id, serviceIds);
+            booking.serviceIds = Array.from(new Set(serviceIds));
+        }
 
         if (addonIds !== undefined) {
             const resolved = await this.resolveAddons(addonIds);
@@ -176,6 +189,94 @@ export class BookingService extends BaseService {
      */
     async getAddons(bookingId: number) {
         return this.provider.getBookingAddons(bookingId);
+    }
+
+    /**
+     * Replace the team of a booking (shared services). The stylist booked first stays primary
+     * unless another primary is given. Newly added stylists must be free on that slot.
+     */
+    async setWorkers(bookingId: number, workerIds: number[], primaryWorkerId?: number): Promise<Booking> {
+        const booking = await this.provider.getBooking(bookingId);
+        if (!booking) throw new Error(`Booking ${bookingId} not found`);
+
+        const unique = Array.from(new Set(workerIds));
+        const currentIds = booking.workerIds || [];
+        const addedIds = unique.filter(id => !currentIds.includes(id));
+
+        if (addedIds.length > 0) {
+            const busy = await this.findBusyWorkers(booking.salonId, addedIds, booking.date, booking.time, booking.duration, bookingId);
+            if (busy.length > 0) {
+                const names = busy.map(w => w.name).join(', ');
+                throw new Error(`Already booked at this time: ${names}`);
+            }
+        }
+
+        const primary = primaryWorkerId && unique.includes(primaryWorkerId)
+            ? primaryWorkerId
+            : (booking.primaryWorkerId && unique.includes(booking.primaryWorkerId) ? booking.primaryWorkerId : unique[0]);
+
+        await this.provider.setBookingWorkers(bookingId, unique, primary);
+
+        const removedIds = currentIds.filter(id => !unique.includes(id));
+        if (addedIds.length > 0) {
+            await this.logInteraction('booking', bookingId, 'worker_added', `Workers ${addedIds.join(', ')} added`);
+        }
+        if (removedIds.length > 0) {
+            await this.logInteraction('booking', bookingId, 'worker_removed', `Workers ${removedIds.join(', ')} removed`);
+        }
+
+        const updated = await this.provider.getBooking(bookingId);
+        return updated ? { ...updated, workerIds: unique, primaryWorkerId: primary } : { ...booking, workerIds: unique, primaryWorkerId: primary };
+    }
+
+    /**
+     * Workers among `workerIds` who already have an overlapping booking on that slot
+     */
+    private async findBusyWorkers(
+        salonId: number,
+        workerIds: number[],
+        date: string,
+        time: string,
+        duration: number,
+        excludeBookingId?: number
+    ): Promise<SalonWorker[]> {
+        const dayBookings = await this.provider.getBookingsByDate(salonId, date);
+        const [hours, minutes] = time.split(':').map(Number);
+        const startMinutes = hours * 60 + minutes;
+        const endMinutes = startMinutes + duration;
+        const busy = new Map<number, SalonWorker>();
+
+        for (const other of dayBookings) {
+            if (other.id === excludeBookingId) continue;
+            if (other.status === 'Cancelled' || other.status === 'Closed') continue;
+
+            const [bHours, bMinutes] = other.time.split(':').map(Number);
+            const bStart = bHours * 60 + bMinutes;
+            const bEnd = bStart + other.duration;
+            const overlap = startMinutes < bEnd && endMinutes > bStart;
+            if (!overlap) continue;
+
+            const otherWorkers = await this.provider.getBookingWorkers(other.id);
+            for (const w of otherWorkers) {
+                if (workerIds.includes(w.id)) busy.set(w.id, w);
+            }
+        }
+
+        return Array.from(busy.values());
+    }
+
+    /**
+     * Make the booking_services junction match `serviceIds`
+     */
+    private async syncServices(bookingId: number, serviceIds: number[]): Promise<void> {
+        const unique = Array.from(new Set(serviceIds));
+        const current = (await this.provider.getBookingServices(bookingId)).map(s => s.id);
+        for (const id of current.filter(id => !unique.includes(id))) {
+            await this.provider.removeServiceFromBooking(bookingId, id);
+        }
+        for (const id of unique.filter(id => !current.includes(id))) {
+            await this.provider.addServiceToBooking(bookingId, id);
+        }
     }
 
     /**

@@ -82,6 +82,8 @@ export interface SalonSettings {
     depositValue?: number;
     /** Statements the client must accept before booking (intake rules) */
     bookingTerms?: string[];
+    /** When false, managers do not see income, expenses and reports (default true) */
+    managersCanViewFinances?: boolean;
     sendEmailConfirmations: boolean;
     sendSmsReminders: boolean;
     tipsEnabled: boolean;
@@ -349,6 +351,7 @@ export interface Booking {
     clientEmail?: string;  // Joined field from Client
     serviceIds?: number[]; // Junction field ids
     workerIds?: number[];  // Junction field ids
+    primaryWorkerId?: number; // Stylist booked first; others are assistants added by the manager
     addonIds?: number[];   // Selected add-on ids
     addons?: BookingAddon[]; // Add-on snapshots (name, price, duration at booking time)
     interactionHistory?: BookingInteraction[];  // Audit trail

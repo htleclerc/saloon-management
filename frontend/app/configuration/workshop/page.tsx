@@ -45,6 +45,7 @@ export default function WorkshopSettingsPage() {
     const [depositValue, setDepositValue] = useState("0");
     const [bookingTerms, setBookingTerms] = useState<string[]>([]);
     const [newTerm, setNewTerm] = useState("");
+    const [managersCanViewFinances, setManagersCanViewFinances] = useState(true);
     const logoInputRef = useRef<HTMLInputElement>(null);
 
     const MAX_LOGO_SIZE = 2 * 1024 * 1024; // 2MB
@@ -144,6 +145,7 @@ export default function WorkshopSettingsPage() {
                 setDepositType(salonSettings.depositType || "none");
                 setDepositValue(String(salonSettings.depositValue ?? 0));
                 setBookingTerms(salonSettings.bookingTerms || []);
+                setManagersCanViewFinances(salonSettings.managersCanViewFinances !== false);
             }
         } catch (error) {
             console.error("Failed to load settings:", error);
@@ -177,6 +179,7 @@ export default function WorkshopSettingsPage() {
                     depositType,
                     depositValue: Number(depositValue) || 0,
                     bookingTerms: bookingTerms.map(term => term.trim()).filter(Boolean),
+                    managersCanViewFinances,
                 });
             } catch (settingsError) {
                 console.warn("Could not save salon settings:", settingsError);
@@ -365,6 +368,29 @@ export default function WorkshopSettingsPage() {
                         </Button>
                     </div>
                 </div>
+            </Card>
+
+            {/* Team access */}
+            <Card>
+                <div className="flex items-center justify-between gap-4">
+                    <div>
+                        <h3 className="font-semibold text-gray-900 text-lg">{t("configuration.workshop.teamAccess.title")}</h3>
+                        <p className="text-xs text-gray-500 mt-1">{t("configuration.workshop.teamAccess.managersFinancesDesc")}</p>
+                    </div>
+                    <button
+                        type="button"
+                        role="switch"
+                        aria-checked={managersCanViewFinances}
+                        onClick={() => { if (!handleReadOnlyClick()) setManagersCanViewFinances(v => !v); }}
+                        disabled={!canModify}
+                        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${managersCanViewFinances ? 'bg-[var(--color-primary)]' : 'bg-gray-300'} disabled:opacity-50`}
+                    >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${managersCanViewFinances ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                </div>
+                <p className="text-sm text-gray-700 mt-3 font-medium">
+                    {managersCanViewFinances ? t("configuration.workshop.teamAccess.managersFinancesOn") : t("configuration.workshop.teamAccess.managersFinancesOff")}
+                </p>
             </Card>
 
             {/* Salon Logo */}

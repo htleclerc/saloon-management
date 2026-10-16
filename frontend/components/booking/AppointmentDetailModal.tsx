@@ -41,6 +41,10 @@ interface AppointmentDetailModalProps {
     userRole?: string;
     isAdminModified?: boolean;
     isAdmin?: boolean;
+    /** Salon stylists, to add an assistant on a shared booking */
+    workersList?: { id: number; name: string }[];
+    /** Replace the team of the booking (manager). Rejects with a message when a stylist is busy. */
+    onUpdateWorkers?: (id: number, workerIds: number[]) => Promise<void>;
 }
 
 export default function AppointmentDetailModal({
@@ -55,9 +59,14 @@ export default function AppointmentDetailModal({
     onRejectReschedule,
     userRole,
     isAdminModified = false,
-    isAdmin = false
+    isAdmin = false,
+    workersList = [],
+    onUpdateWorkers
 }: AppointmentDetailModalProps) {
     const [showFullHistory, setShowFullHistory] = useState(false);
+    const [workerToAdd, setWorkerToAdd] = useState<string>("");
+    const [teamBusy, setTeamBusy] = useState(false);
+    const [teamError, setTeamError] = useState<string | null>(null);
     const { isMobile } = useResponsive();
     const { t } = useTranslation();
     const { format: formatCurrency } = useCurrency();
@@ -183,15 +192,94 @@ export default function AppointmentDetailModal({
                                 )}
                             </div>
 
-                            {manageTeam.canView && (
-                                <button
-                                    onClick={() => onEdit(appointment, 3)}
-                                    className="flex items-center gap-2 text-xs font-bold text-[var(--color-primary)] hover:opacity-80 transition-opacity mt-3"
-                                >
-                                    <Users className="w-3.5 h-3.5" />
-                                    {t("appointments.manageTeam")}
-                                </button>
-                            )}
+                            {/* Team: booked stylist + assistants (shared long services) */}
+                            <div className="pt-3 border-t border-gray-100">
+                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                                    <Users className="w-3.5 h-3.5" /> {t("appointments.team.title")}
+                                </p>
+                                <div className="space-y-2 mt-2">
+                                    {(appointment.workerIds || []).length === 0 && (
+                                        <p className="text-sm text-gray-400 italic">{t("appointments.team.none")}</p>
+                                    )}
+                                    {(appointment.workerIds || []).map((wid: number) => {
+                                        const worker = workersList.find(w => w.id === wid);
+                                        const isPrimary = (appointment.primaryWorkerId ?? appointment.workerIds?.[0]) === wid;
+                                        return (
+                                            <div key={wid} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg gap-2">
+                                                <span className="font-medium text-gray-700 truncate">{worker?.name || `#${wid}`}</span>
+                                                <span className="flex items-center gap-2 shrink-0">
+                                                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${isPrimary ? 'bg-[var(--color-primary-light)] text-[var(--color-primary)]' : 'bg-gray-200 text-gray-600'}`}>
+                                                        {isPrimary ? t("appointments.team.primary") : t("appointments.team.assistant")}
+                                                    </span>
+                                                    {manageTeam.canView && onUpdateWorkers && !isPrimary && (
+                                                        <button
+                                                            type="button"
+                                                            disabled={teamBusy}
+                                                            onClick={async () => {
+                                                                setTeamError(null); setTeamBusy(true);
+                                                                try { await onUpdateWorkers(appointment.id, (appointment.workerIds || []).filter((id: number) => id !== wid)); }
+                                                                catch (e) { setTeamError(e instanceof Error ? e.message : String(e)); }
+                                                                finally { setTeamBusy(false); }
+                                                            }}
+                                                            className="text-gray-400 hover:text-red-500 transition-colors"
+                                                            title={t("appointments.team.remove")}
+                                                        >
+                                                            <X className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                {manageTeam.canView && onUpdateWorkers && (
+                                    <div className="mt-3 space-y-2">
+                                        <div className="flex items-center gap-2">
+                                            <select
+                                                value={workerToAdd}
+                                                onChange={(e) => setWorkerToAdd(e.target.value)}
+                                                disabled={teamBusy}
+                                                className="flex-1 p-2 text-sm bg-gray-50 rounded-lg border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)] outline-none"
+                                            >
+                                                <option value="">{t("appointments.team.selectWorker")}</option>
+                                                {workersList.filter(w => !(appointment.workerIds || []).includes(w.id)).map(w => (
+                                                    <option key={w.id} value={String(w.id)}>{w.name}</option>
+                                                ))}
+                                            </select>
+                                            <Button
+                                                size="sm"
+                                                variant="primary"
+                                                disabled={!workerToAdd || teamBusy}
+                                                onClick={async () => {
+                                                    setTeamError(null); setTeamBusy(true);
+                                                    try {
+                                                        await onUpdateWorkers(appointment.id, [...(appointment.workerIds || []), Number(workerToAdd)]);
+                                                        setWorkerToAdd("");
+                                                    } catch (e) {
+                                                        setTeamError(e instanceof Error ? e.message : String(e));
+                                                    } finally { setTeamBusy(false); }
+                                                }}
+                                            >
+                                                <Plus className="w-4 h-4" /> {t("appointments.team.add")}
+                                            </Button>
+                                        </div>
+                                        {teamError ? (
+                                            <p className="text-xs text-red-600 font-medium">{teamError}</p>
+                                        ) : (
+                                            <p className="text-[11px] text-gray-400">{t("appointments.team.busyHint")}</p>
+                                        )}
+                                    </div>
+                                )}
+                                {manageTeam.canView && !onUpdateWorkers && (
+                                    <button
+                                        onClick={() => onEdit(appointment, 3)}
+                                        className="flex items-center gap-2 text-xs font-bold text-[var(--color-primary)] hover:opacity-80 transition-opacity mt-3"
+                                    >
+                                        <Users className="w-3.5 h-3.5" />
+                                        {t("appointments.manageTeam")}
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
 

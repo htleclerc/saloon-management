@@ -904,6 +904,17 @@
       "demoPaid": "Demo mode: deposit recorded as paid.",
       "successReturn": "Thank you! Your deposit payment was received. The booking will be confirmed as soon as the payment is validated.",
       "cancelReturn": "Deposit payment cancelled. You can pay it later from your appointments."
+    },
+    "team": {
+      "title": "Stylists on this appointment",
+      "primary": "Booked stylist",
+      "assistant": "Assistant",
+      "add": "Add a stylist",
+      "selectWorker": "Choose a stylist...",
+      "remove": "Remove",
+      "none": "No stylist assigned yet (any available)",
+      "updated": "Team updated",
+      "busyHint": "A stylist already booked on that slot cannot be added."
     }
   },
   "booking": {
@@ -1716,6 +1727,12 @@
         "termsDesc": "Each statement is shown as a mandatory checkbox at the end of the booking (hair preparation, fees, location...).",
         "noTerms": "No statement yet.",
         "termPlaceholder": "e.g. My hair will be washed and blow dried before the appointment"
+      },
+      "teamAccess": {
+        "title": "Team access",
+        "managersFinancesDesc": "Choose whether managers see the money pages (income, expenses, reports) or only scheduling.",
+        "managersFinancesOn": "Managers can see income, expenses and reports.",
+        "managersFinancesOff": "Managers only see appointments, team, clients and services."
       }
     },
     "tips": {

@@ -394,6 +394,17 @@ export default function AppointmentsPage() {
         router.push(`/appointments/book?edit=${appointment.id}${stepParam}`);
     };
 
+    /** Manager adds or removes a stylist on a booking (shared long services) */
+    const handleUpdateWorkers = async (id: number, workerIds: number[]) => {
+        if (handleReadOnlyClick()) return;
+        const updated = await bookingService.setWorkers(id, workerIds);
+        setDetailModal(prev => prev.appointment && prev.appointment.id === id
+            ? { ...prev, appointment: { ...prev.appointment, workerIds: updated.workerIds, primaryWorkerId: updated.primaryWorkerId } }
+            : prev);
+        showToast(t("common.success"), t("appointments.team.updated"), "success");
+        refresh();
+    };
+
     const handleCancel = async (id: number) => {
         if (handleReadOnlyClick()) return;
         const confirmed = await confirm({
@@ -1031,6 +1042,8 @@ export default function AppointmentsPage() {
                     onApproveReschedule={approveRescheduleAction}
                     onRejectReschedule={rejectRescheduleAction}
                     servicesList={services}
+                    workersList={workers.map((w: { id: number; name: string }) => ({ id: w.id, name: w.name }))}
+                    onUpdateWorkers={handleUpdateWorkers}
                     isAdmin={isAdminOrManager}
                     userRole={user?.role}
                     isAdminModified={detailModal.appointment?.isAdminModified}

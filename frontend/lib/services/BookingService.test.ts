@@ -131,7 +131,7 @@ describe('BookingService', () => {
 
             expect(mockProvider.createBooking).toHaveBeenCalled();
             expect(result.id).toBe(100);
-            expect(mockProvider.addWorkerToBooking).toHaveBeenCalledWith(100, 1);
+            expect(mockProvider.addWorkerToBooking).toHaveBeenCalledWith(100, 1, true);
             expect(mockProvider.addServiceToBooking).toHaveBeenCalledTimes(2);
         });
 

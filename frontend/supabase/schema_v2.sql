@@ -100,6 +100,7 @@ CREATE TABLE salon_settings (
     deposit_type VARCHAR(10) NOT NULL DEFAULT 'none' CHECK (deposit_type IN ('none', 'fixed', 'percent')),
     deposit_value NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (deposit_value >= 0),
     booking_terms JSONB NOT NULL DEFAULT '[]'::jsonb,
+    managers_can_view_finances BOOLEAN NOT NULL DEFAULT TRUE, -- migrations/20261019_booking_team.sql
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -277,6 +278,7 @@ CREATE TABLE booking_services (
 CREATE TABLE booking_workers (
     booking_id BIGINT REFERENCES bookings(id) ON DELETE CASCADE,
     worker_id BIGINT REFERENCES workers(id) ON DELETE CASCADE,
+    is_primary BOOLEAN NOT NULL DEFAULT FALSE, -- stylist booked first (migrations/20261019_booking_team.sql)
     PRIMARY KEY (booking_id, worker_id)
 );
 
