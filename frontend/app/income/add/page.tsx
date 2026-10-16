@@ -322,7 +322,9 @@ function AddIncomeContent() {
             if (mappedServiceIds.length > 0) {
                 setSelectedServices(mappedServiceIds);
                 const total = mappedServiceIds.reduce((sum, id) => sum + Number(services.find(s => s.id === id)?.price || 0), 0);
-                setBaseAmount(total);
+                // Add-on snapshots selected on the booking (price frozen at booking time)
+                const addonTotal = (booking.addons || []).reduce((sum, a) => sum + Number(a.priceSnapshot || 0), 0);
+                setBaseAmount(Math.round((total + addonTotal) * 100) / 100);
             }
 
             // Always auto-populate workers on booking change

@@ -8,9 +8,9 @@
  * mode for the application (demo-local).
  */
 
-import { IDataProvider, DataMode, PaginatedResponse, BookingFilters, IncomeFilters, ExpenseFilters, Review, ReviewFilters, PromoCode, InteractionHistory, SalonComment, BookingCreateData, IncomeCreateData, IncomeWorkerShare, WorkerStats, ClientStats, ClientAnalytics, DashboardAnalytics, Salon, User, UserSalon, SalonSettings, SalonStats, ServiceCategory, Product, PaginationParams, BookingWithRelations, IncomeWithRelations, SalonWorker, SalaryPayment, PaymentStatusHistory, PaymentStatus, PayrollFilters } from '../types';
+import { IDataProvider, DataMode, PaginatedResponse, BookingFilters, IncomeFilters, ExpenseFilters, Review, ReviewFilters, PromoCode, InteractionHistory, SalonComment, BookingCreateData, IncomeCreateData, IncomeWorkerShare, WorkerStats, ClientStats, ClientAnalytics, DashboardAnalytics, Salon, User, UserSalon, SalonSettings, SalonStats, ServiceCategory, ServiceAddon, BookingAddon, Product, PaginationParams, BookingWithRelations, IncomeWithRelations, SalonWorker, SalaryPayment, PaymentStatusHistory, PaymentStatus, PayrollFilters } from '../types';
 import { Client, Service, Booking, Income, Expense, ExpenseCategory } from '@/types';
-import { INITIAL_SALONS, INITIAL_WORKERS, INITIAL_CLIENTS, INITIAL_SERVICES, INITIAL_SERVICE_CATEGORIES, INITIAL_EXPENSE_CATEGORIES, INITIAL_SALON_SETTINGS } from '../../constants/initialData';
+import { INITIAL_SALONS, INITIAL_WORKERS, INITIAL_CLIENTS, INITIAL_SERVICES, INITIAL_SERVICE_CATEGORIES, INITIAL_SERVICE_ADDONS, INITIAL_SERVICE_ADDON_LINKS, INITIAL_EXPENSE_CATEGORIES, INITIAL_SALON_SETTINGS } from '../../constants/initialData';
 
 const STORAGE_KEY = 'saloon-data';
 
@@ -27,6 +27,8 @@ interface LocalStorageData {
     promoCodes: PromoCode[];
     expenseCategories: ExpenseCategory[];
     serviceCategories: ServiceCategory[];
+    serviceAddons: ServiceAddon[];
+    serviceAddonLinks: { serviceId: number; addonId: number }[];
     salonSettings: SalonSettings[];
     tokens: any[];
     interactionHistory: InteractionHistory[];
@@ -85,6 +87,8 @@ export class LocalStorageProvider implements IDataProvider {
             promoCodes: INITIAL_PROMO_CODES || [],
             expenseCategories: INITIAL_EXPENSE_CATEGORIES,
             serviceCategories: INITIAL_SERVICE_CATEGORIES,
+            serviceAddons: INITIAL_SERVICE_ADDONS,
+            serviceAddonLinks: INITIAL_SERVICE_ADDON_LINKS,
             salonSettings: INITIAL_SALON_SETTINGS,
             tokens: [],
             interactionHistory: [],
@@ -274,6 +278,8 @@ export class LocalStorageProvider implements IDataProvider {
         if (booking) {
             booking.serviceIds = [];
             booking.workerIds = [];
+            booking.addonIds = [];
+            booking.addons = [];
             this.saveData(allData);
         }
     }
@@ -865,6 +871,72 @@ export class LocalStorageProvider implements IDataProvider {
         const booking = await this.getBooking(bookingId);
         if (!booking) return [];
         return this.getData().services.filter(s => (booking.serviceIds || []).includes(s.id));
+    }
+
+    // Service Add-ons
+    async getServiceAddons(salonId: number): Promise<ServiceAddon[]> {
+        return this.getData().serviceAddons
+            .filter(a => a.salonId === salonId)
+            .sort((a, b) => a.displayOrder - b.displayOrder || a.id - b.id);
+    }
+
+    async getServiceAddon(id: number): Promise<ServiceAddon | null> {
+        return this.getData().serviceAddons.find(a => a.id === id) || null;
+    }
+
+    async createServiceAddon(data: Omit<ServiceAddon, 'id' | 'createdAt' | 'updatedAt'>): Promise<ServiceAddon> {
+        const allData = this.getData();
+        const id = this.generateId(allData.serviceAddons);
+        const addon: ServiceAddon = { ...data, id, createdAt: new Date(), updatedAt: new Date() };
+        allData.serviceAddons.push(addon);
+        this.saveData(allData);
+        return addon;
+    }
+
+    async updateServiceAddon(id: number, updates: Partial<ServiceAddon>): Promise<ServiceAddon> {
+        const allData = this.getData();
+        const index = allData.serviceAddons.findIndex(a => a.id === id);
+        if (index === -1) throw new Error(`Service add-on with id ${id} not found`);
+        allData.serviceAddons[index] = { ...allData.serviceAddons[index], ...updates, updatedAt: new Date() };
+        this.saveData(allData);
+        return allData.serviceAddons[index];
+    }
+
+    async deleteServiceAddon(id: number): Promise<void> {
+        const allData = this.getData();
+        allData.serviceAddons = allData.serviceAddons.filter(a => a.id !== id);
+        allData.serviceAddonLinks = allData.serviceAddonLinks.filter(l => l.addonId !== id);
+        this.saveData(allData);
+    }
+
+    async getAddonsForService(serviceId: number): Promise<ServiceAddon[]> {
+        const allData = this.getData();
+        const addonIds = allData.serviceAddonLinks.filter(l => l.serviceId === serviceId).map(l => l.addonId);
+        return allData.serviceAddons
+            .filter(a => addonIds.includes(a.id))
+            .sort((a, b) => a.displayOrder - b.displayOrder || a.id - b.id);
+    }
+
+    async setAddonsForService(serviceId: number, addonIds: number[]): Promise<void> {
+        const allData = this.getData();
+        const unique = Array.from(new Set(addonIds));
+        allData.serviceAddonLinks = [
+            ...allData.serviceAddonLinks.filter(l => l.serviceId !== serviceId),
+            ...unique.map(addonId => ({ serviceId, addonId }))
+        ];
+        this.saveData(allData);
+    }
+
+    async getBookingAddons(bookingId: number): Promise<BookingAddon[]> {
+        const booking = await this.getBooking(bookingId);
+        return booking?.addons || [];
+    }
+
+    async setBookingAddons(bookingId: number, addons: BookingAddon[]): Promise<void> {
+        await this.updateBooking(bookingId, {
+            addons,
+            addonIds: addons.map(a => a.addonId)
+        });
     }
 
     async getIncomeWithRelations(id: number): Promise<IncomeWithRelations | null> {

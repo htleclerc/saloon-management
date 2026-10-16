@@ -1,67 +1,109 @@
 "use client";
 
+import { useEffect, useState, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import MainLayout from "@/components/layout/MainLayout";
 import Button from "@/components/ui/Button";
 import { ArrowLeft, Trash2 } from "lucide-react";
-import ServiceForm from "@/components/services/ServiceForm";
+import ServiceForm, { ServiceFormData } from "@/components/services/ServiceForm";
 import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 import { useTranslation } from "@/i18n";
 import { useToast } from "@/context/ToastProvider";
 import { useConfirm } from "@/context/ConfirmProvider";
+import { useAuth } from "@/context/AuthProvider";
+import { serviceService } from "@/lib/services";
+import type { Service, ServiceAddon, ServiceCategory } from "@/types";
 
-export default function EditServicePage() {
+function EditServiceContent() {
     const params = useParams();
     const router = useRouter();
     const { t } = useTranslation();
     const { showToast } = useToast();
     const { confirm: confirmAction } = useConfirm();
+    const { activeSalonId } = useAuth();
     const searchParams = useSearchParams();
-    const id = params.id as string;
+    const id = Number(params.id);
     const mode = (searchParams.get("mode") as "simple" | "advanced") || "advanced";
     const { handleReadOnlyClick } = useReadOnlyGuard();
 
-    // In a real app, fetch this from API
-    const initialData = {
-        name: "Box Braids",
-        description: "Traditional box braids with various sizes",
-        price: "120",
-        duration: "3-4 hours",
-        category: "Braiding",
-        status: "active",
-        image: "https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=400",
-        gallery: [
-            "https://images.unsplash.com/photo-1595476108410-d3923412705e?w=400",
-            "https://images.unsplash.com/photo-1560869713-7d0a29430803?w=400"
-        ]
-    };
+    const [service, setService] = useState<Service | null>(null);
+    const [linkedAddonIds, setLinkedAddonIds] = useState<number[]>([]);
+    const [addons, setAddons] = useState<ServiceAddon[]>([]);
+    const [categories, setCategories] = useState<ServiceCategory[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
 
-    const handleSubmit = async (data: any) => {
-        if (handleReadOnlyClick()) return;
+    useEffect(() => {
+        let cancelled = false;
+        const load = async () => {
+            if (!id) return;
+            setLoading(true);
+            try {
+                const found = await serviceService.getById(id);
+                if (!found) {
+                    showToast(t("common.error"), t("common.loadError"), "error");
+                    router.push("/services");
+                    return;
+                }
+                const salonId = Number(activeSalonId) || found.salonId;
+                const [salonAddons, linked, salonCategories] = await Promise.all([
+                    serviceService.getAddons(salonId),
+                    serviceService.getAddonsForService(id),
+                    serviceService.getCategories(salonId).catch(() => [] as ServiceCategory[]),
+                ]);
+                if (cancelled) return;
+                setService(found);
+                setAddons(salonAddons);
+                setLinkedAddonIds(linked.map(a => a.id));
+                setCategories(salonCategories);
+            } catch (err) {
+                console.error("Failed to load service", err);
+                if (!cancelled) showToast(t("common.error"), t("common.loadError"), "error");
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        };
+        load();
+        return () => { cancelled = true; };
+    }, [id, activeSalonId, router, showToast, t]);
+
+    const handleSubmit = async (data: ServiceFormData) => {
+        if (handleReadOnlyClick() || !service) return;
+        setSaving(true);
         try {
-            // In a real app, send to API via serviceService.update(id, data)
-            showToast(t("common.success"), t("dialogs.success"), "success");
+            await serviceService.update(service.id, {
+                name: data.name,
+                description: data.description || undefined,
+                price: data.price,
+                duration: data.duration,
+                categoryId: data.categoryId,
+                isActive: data.isActive,
+            });
+            await serviceService.setAddonsForService(service.id, data.addonIds);
+            showToast(t("common.success"), t("common.saveSuccess"), "success");
             router.push("/services");
         } catch (err) {
             console.error(err);
-            showToast(t("common.error"), t("errors.generic"), "error");
+            showToast(t("common.error"), err instanceof Error ? err.message : t("errors.generic"), "error");
+        } finally {
+            setSaving(false);
         }
     };
 
     const handleArchive = async () => {
-        if (handleReadOnlyClick()) return;
+        if (handleReadOnlyClick() || !service) return;
 
         const isConfirmed = await confirmAction({
-            title: t("common.delete"),
+            title: t("services.archiveService"),
             message: t("dialogs.confirmDelete"),
             type: 'error',
-            confirmText: t("common.delete"),
+            confirmText: t("common.archive"),
             cancelText: t("common.cancel")
         });
 
         if (isConfirmed) {
             try {
-                // In a real app, send to API (soft delete)
+                await serviceService.update(service.id, { isActive: false });
                 showToast(t("common.success"), t("services.archiveSuccess"), "success");
                 router.push("/services");
             } catch (err) {
@@ -82,24 +124,50 @@ export default function EditServicePage() {
                         </button>
                         <div>
                             <h1 className="text-3xl font-bold text-gray-900">{t("services.editService")}</h1>
-                            <p className="text-gray-500 mt-1">{t("services.editingId")}: #{id}</p>
+                            <p className="text-gray-500 mt-1">{service ? service.name : `${t("services.editingId")}: #${id}`}</p>
                         </div>
                     </div>
                     <ReadOnlyGuard>
-                        <Button variant="danger" size="md" onClick={handleArchive} className="rounded-xl px-6">
+                        <Button variant="danger" size="md" onClick={handleArchive} className="rounded-xl px-6" disabled={!service}>
                             <Trash2 className="w-5 h-5" />
                             {t("services.archiveService")}
                         </Button>
                     </ReadOnlyGuard>
                 </div>
 
-                <ServiceForm
-                    initialData={initialData}
-                    mode={mode}
-                    onSubmit={handleSubmit}
-                    onCancel={() => router.push("/services")}
-                />
+                {loading || !service ? (
+                    <div className="flex items-center justify-center py-24">
+                        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--color-primary)]"></div>
+                    </div>
+                ) : (
+                    <ServiceForm
+                        initialData={{
+                            name: service.name,
+                            description: service.description || "",
+                            price: Number(service.price),
+                            duration: Number(service.duration),
+                            categoryId: service.categoryId,
+                            isActive: service.isActive,
+                            gallery: [],
+                            addonIds: linkedAddonIds,
+                        }}
+                        mode={mode}
+                        categories={categories}
+                        addons={addons}
+                        saving={saving}
+                        onSubmit={handleSubmit}
+                        onCancel={() => router.push("/services")}
+                    />
+                )}
             </div>
         </MainLayout>
+    );
+}
+
+export default function EditServicePage() {
+    return (
+        <Suspense fallback={<div className="flex h-screen items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div></div>}>
+            <EditServiceContent />
+        </Suspense>
     );
 }

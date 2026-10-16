@@ -22,6 +22,7 @@ export const BookingCreateSchema = z.object({
     notes: z.string().optional(),
     workerIds: z.array(z.number().int().positive()),
     serviceIds: z.array(z.number().int().positive()).min(1, 'At least one service must be selected'),
+    addonIds: z.array(z.number().int().positive()).optional(),
     clientName: z.string().optional(),
     clientPhone: z.string().optional(),
     clientEmail: z.string().optional(),

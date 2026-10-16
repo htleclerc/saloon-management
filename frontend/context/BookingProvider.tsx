@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { Booking, BookingStatus, DayCapacity, BookingInteraction, BookingComment, BookingCreateData, SalonSettings } from "@/types";
 import { useAuth } from "./AuthProvider";
 import { bookingService, incomeService, salonService } from "@/lib/services";
+import { calculateTotalsFromSnapshots } from "@/lib/domain/rules/pricingRules";
 
 interface BookingContextType {
     bookings: Booking[];
@@ -285,10 +286,16 @@ export function BookingProvider({ children }: { children: ReactNode }) {
 
         try {
             await bookingService.updateStatus(id, 'Started');
+            // Draft income amount = services + add-on snapshots of the booking
+            const bookingServices = await bookingService.getServices(id).catch(() => []);
+            const addonSnapshots = booking.addons && booking.addons.length > 0
+                ? booking.addons
+                : await bookingService.getAddons(id).catch(() => []);
+            const totals = calculateTotalsFromSnapshots(bookingServices, addonSnapshots);
             await incomeService.create({
                 salonId: booking.salonId,
                 date: booking.date,
-                amount: 100,
+                amount: totals.totalPrice,
                 workerShares: booking.workerIds?.map(wid => ({ workerId: wid, percentage: 100 / (booking.workerIds?.length || 1) })) || [],
                 serviceIds: booking.serviceIds || [],
                 clientName: booking.clientName,

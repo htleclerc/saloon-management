@@ -12,8 +12,8 @@ import type {
     SalonWorker, WorkerStats,
     Client, ClientStats, ClientAnalytics,
     DashboardAnalytics,
-    ServiceCategory, Service, Product,
-    Booking, BookingWithRelations, BookingCreateData, BookingFilters,
+    ServiceCategory, Service, ServiceAddon, Product,
+    Booking, BookingWithRelations, BookingCreateData, BookingFilters, BookingAddon,
     Income, IncomeWithRelations, IncomeCreateData, IncomeWorkerShare, IncomeFilters,
     ExpenseCategory, Expense, ExpenseFilters,
     Review, ReviewFilters,
@@ -24,6 +24,30 @@ import type {
     // Payroll
     SalaryPayment, PaymentStatusHistory, PaymentStatus, PayrollFilters
 } from '@/types/index';
+
+/** Row shapes of the add-on tables (snake_case, as returned by Supabase) */
+interface ServiceAddonRow {
+    id: number;
+    salon_id: number;
+    name: string;
+    description: string | null;
+    extra_price: number | string | null;
+    extra_duration: number | null;
+    display_order: number | null;
+    is_active: boolean | null;
+    created_at: string;
+    updated_at: string;
+    created_by: string;
+    updated_by: string;
+}
+
+interface BookingAddonRow {
+    booking_id: number;
+    addon_id: number;
+    name: string;
+    price_snapshot: number | string | null;
+    duration_snapshot: number | null;
+}
 
 export class SupabaseProvider implements IDataProvider {
     readonly mode = 'demo-supabase' as const;
@@ -1374,7 +1398,8 @@ export class SupabaseProvider implements IDataProvider {
             *,
             client:clients(name),
             booking_services(service_id),
-            booking_workers(worker_id)
+            booking_workers(worker_id),
+            booking_addons(addon_id, name, price_snapshot, duration_snapshot)
         `, { count: 'exact' })
             .eq('salon_id', salonId);
 
@@ -1432,7 +1457,8 @@ export class SupabaseProvider implements IDataProvider {
             *,
             client:clients(name),
             booking_services(service_id),
-            booking_workers(worker_id)
+            booking_workers(worker_id),
+            booking_addons(addon_id, name, price_snapshot, duration_snapshot)
         `)
             .eq('id', id)
             .single();
@@ -1561,9 +1587,10 @@ export class SupabaseProvider implements IDataProvider {
     async clearBookingJunctions(bookingId: number): Promise<void> {
         const { error: sError } = await supabase.from('booking_services').delete().eq('booking_id', bookingId);
         const { error: wError } = await supabase.from('booking_workers').delete().eq('booking_id', bookingId);
+        const { error: aError } = await supabase.from('booking_addons').delete().eq('booking_id', bookingId);
 
-        if (sError || wError) {
-            throw new Error(`Failed to clear booking junctions: ${sError?.message || ''} ${wError?.message || ''}`);
+        if (sError || wError || aError) {
+            throw new Error(`Failed to clear booking junctions: ${sError?.message || ''} ${wError?.message || ''} ${aError?.message || ''}`);
         }
     }
 
@@ -1652,6 +1679,170 @@ export class SupabaseProvider implements IDataProvider {
         }
 
         return services;
+    }
+
+    // ============================================
+    // SERVICE ADD-ONS
+    // ============================================
+
+    async getServiceAddons(salonId: number): Promise<ServiceAddon[]> {
+        if (isNaN(salonId)) return [];
+
+        const { data, error } = await supabase
+            .from('service_addons')
+            .select('*')
+            .eq('salon_id', salonId)
+            .order('display_order', { ascending: true })
+            .order('id', { ascending: true });
+
+        if (error) throw new Error(`Failed to fetch service add-ons: ${error.message}`);
+        return (data || []).map(this.mapServiceAddonFromDB);
+    }
+
+    async getServiceAddon(id: number): Promise<ServiceAddon | null> {
+        const { data, error } = await supabase
+            .from('service_addons')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (error) return null;
+        return data ? this.mapServiceAddonFromDB(data) : null;
+    }
+
+    async createServiceAddon(data: Omit<ServiceAddon, 'id' | 'createdAt' | 'updatedAt'>): Promise<ServiceAddon> {
+        const { data: created, error } = await supabase
+            .from('service_addons')
+            .insert([this.mapServiceAddonToDB(data)])
+            .select()
+            .single();
+
+        if (error) throw new Error(`Failed to create service add-on: ${error.message}`);
+        return this.mapServiceAddonFromDB(created);
+    }
+
+    async updateServiceAddon(id: number, data: Partial<ServiceAddon>): Promise<ServiceAddon> {
+        const { data: updated, error } = await supabase
+            .from('service_addons')
+            .update(this.mapServiceAddonToDB(data))
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) throw new Error(`Failed to update service add-on: ${error.message}`);
+        return this.mapServiceAddonFromDB(updated);
+    }
+
+    async deleteServiceAddon(id: number): Promise<void> {
+        const { error } = await supabase
+            .from('service_addons')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw new Error(`Failed to delete service add-on: ${error.message}`);
+    }
+
+    async getAddonsForService(serviceId: number): Promise<ServiceAddon[]> {
+        const { data, error } = await supabase
+            .from('service_addon_links')
+            .select('addon:service_addons(*)')
+            .eq('service_id', serviceId);
+
+        if (error) throw new Error(`Failed to fetch service add-on links: ${error.message}`);
+
+        const rows = (data || []) as unknown as { addon: ServiceAddonRow | ServiceAddonRow[] | null }[];
+        return rows
+            .flatMap(row => Array.isArray(row.addon) ? row.addon : (row.addon ? [row.addon] : []))
+            .map(this.mapServiceAddonFromDB)
+            .sort((a: ServiceAddon, b: ServiceAddon) => a.displayOrder - b.displayOrder || a.id - b.id);
+    }
+
+    async setAddonsForService(serviceId: number, addonIds: number[]): Promise<void> {
+        const { error: delError } = await supabase
+            .from('service_addon_links')
+            .delete()
+            .eq('service_id', serviceId);
+
+        if (delError) throw new Error(`Failed to reset service add-on links: ${delError.message}`);
+
+        const unique = Array.from(new Set(addonIds));
+        if (unique.length === 0) return;
+
+        const { error } = await supabase
+            .from('service_addon_links')
+            .insert(unique.map(addonId => ({ service_id: serviceId, addon_id: addonId })));
+
+        if (error) throw new Error(`Failed to link add-ons to service: ${error.message}`);
+    }
+
+    async getBookingAddons(bookingId: number): Promise<BookingAddon[]> {
+        const { data, error } = await supabase
+            .from('booking_addons')
+            .select('*')
+            .eq('booking_id', bookingId);
+
+        if (error) throw new Error(`Failed to fetch booking add-ons: ${error.message}`);
+
+        return ((data || []) as BookingAddonRow[]).map((row) => ({
+            bookingId: row.booking_id,
+            addonId: row.addon_id,
+            name: row.name,
+            priceSnapshot: Number(row.price_snapshot) || 0,
+            durationSnapshot: Number(row.duration_snapshot) || 0
+        }));
+    }
+
+    async setBookingAddons(bookingId: number, addons: BookingAddon[]): Promise<void> {
+        const { error: delError } = await supabase
+            .from('booking_addons')
+            .delete()
+            .eq('booking_id', bookingId);
+
+        if (delError) throw new Error(`Failed to reset booking add-ons: ${delError.message}`);
+        if (addons.length === 0) return;
+
+        const { error } = await supabase
+            .from('booking_addons')
+            .insert(addons.map(a => ({
+                booking_id: bookingId,
+                addon_id: a.addonId,
+                name: a.name,
+                price_snapshot: a.priceSnapshot,
+                duration_snapshot: a.durationSnapshot
+            })));
+
+        if (error) throw new Error(`Failed to save booking add-ons: ${error.message}`);
+    }
+
+    private mapServiceAddonFromDB(db: ServiceAddonRow): ServiceAddon {
+        return {
+            id: db.id,
+            salonId: db.salon_id,
+            name: db.name,
+            description: db.description ?? undefined,
+            extraPrice: Number(db.extra_price) || 0,
+            extraDuration: Number(db.extra_duration) || 0,
+            displayOrder: db.display_order ?? 0,
+            isActive: db.is_active !== false,
+            createdAt: new Date(db.created_at),
+            updatedAt: new Date(db.updated_at),
+            createdBy: db.created_by,
+            updatedBy: db.updated_by
+        };
+    }
+
+    private mapServiceAddonToDB(addon: Partial<ServiceAddon>): Partial<ServiceAddonRow> {
+        const db: Partial<ServiceAddonRow> = {};
+        if (addon.salonId !== undefined) db.salon_id = addon.salonId;
+        if (addon.name !== undefined) db.name = addon.name;
+        if (addon.description !== undefined) db.description = addon.description;
+        if (addon.extraPrice !== undefined) db.extra_price = addon.extraPrice;
+        if (addon.extraDuration !== undefined) db.extra_duration = addon.extraDuration;
+        if (addon.displayOrder !== undefined) db.display_order = addon.displayOrder;
+        if (addon.isActive !== undefined) db.is_active = addon.isActive;
+        if (addon.createdBy !== undefined) db.created_by = addon.createdBy;
+        if (addon.updatedBy !== undefined) db.updated_by = addon.updatedBy;
+        return db;
     }
 
     private mapServiceCategoryFromDB(db: any): ServiceCategory {
@@ -1774,6 +1965,14 @@ export class SupabaseProvider implements IDataProvider {
             // These come from joined queries
             serviceIds: db.booking_services?.map((bs: any) => bs.service_id) || [],
             workerIds: db.booking_workers?.map((bw: any) => bw.worker_id) || [],
+            addonIds: db.booking_addons?.map((ba: BookingAddonRow) => ba.addon_id) || [],
+            addons: db.booking_addons?.map((ba: BookingAddonRow) => ({
+                bookingId: db.id,
+                addonId: ba.addon_id,
+                name: ba.name,
+                priceSnapshot: Number(ba.price_snapshot) || 0,
+                durationSnapshot: Number(ba.duration_snapshot) || 0
+            })) || [],
             createdAt: new Date(db.created_at),
             updatedAt: new Date(db.updated_at),
             isActive: db.is_active !== false,

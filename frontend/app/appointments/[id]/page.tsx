@@ -198,6 +198,19 @@ export default function AppointmentDetailPage() {
                                                 )}
                                             </div>
                                         </div>
+                                        {appointment.addons && appointment.addons.length > 0 && (
+                                            <div>
+                                                <p className="text-xs font-black text-gray-400 uppercase tracking-widest mb-3">{t("appointments.extras")}</p>
+                                                <div className="space-y-3">
+                                                    {appointment.addons.map((addon) => (
+                                                        <div key={addon.addonId} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                                                            <span className="font-bold text-gray-700">+ {addon.name}</span>
+                                                            <span className="font-black text-[var(--color-primary)]">+{formatCurrency(addon.priceSnapshot)}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </Card>

@@ -270,6 +270,37 @@ CREATE TABLE booking_workers (
     PRIMARY KEY (booking_id, worker_id)
 );
 
+-- Service add-ons (see migrations/20261017_service_addons.sql)
+CREATE TABLE service_addons (
+    id BIGSERIAL PRIMARY KEY,
+    salon_id BIGINT NOT NULL REFERENCES salons(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    extra_price DECIMAL(10,2) NOT NULL DEFAULT 0 CHECK (extra_price >= 0),
+    extra_duration INTEGER NOT NULL DEFAULT 0 CHECK (extra_duration >= 0), -- minutes
+    display_order INTEGER NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_by VARCHAR(100),
+    updated_by VARCHAR(100),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE service_addon_links (
+    service_id BIGINT NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+    addon_id BIGINT NOT NULL REFERENCES service_addons(id) ON DELETE CASCADE,
+    PRIMARY KEY (service_id, addon_id)
+);
+
+CREATE TABLE booking_addons (
+    booking_id BIGINT NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+    addon_id BIGINT NOT NULL REFERENCES service_addons(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    price_snapshot DECIMAL(10,2) NOT NULL DEFAULT 0,
+    duration_snapshot INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (booking_id, addon_id)
+);
+
 -- Financials
 CREATE TABLE incomes (
     id BIGSERIAL PRIMARY KEY,

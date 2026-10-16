@@ -5,11 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import { ArrowLeft, ArrowRight, Calendar, Clock, User, Check, X, Plus, Search, Scissors, Heart, AlertCircle, HelpCircle, ChevronRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Calendar, Clock, User, Check, X, Plus, Search, Scissors, Heart, AlertCircle, HelpCircle, ChevronRight, Layers } from "lucide-react";
 
 // Local services array removed in favor of ServiceProvider
 import { serviceService, salonService, workerService, clientService } from "@/lib/services";
-import type { Salon, SalonWorker, Client } from "@/types";
+import type { Salon, SalonWorker, Client, ServiceAddon } from "@/types";
+import { calculateBookingTotals, formatDurationMinutes } from "@/lib/domain/rules/pricingRules";
+import ServiceAddonPicker from "@/components/services/ServiceAddonPicker";
 
 interface DisplayWorker extends SalonWorker {
     rating: number;
@@ -46,6 +48,8 @@ function BookAppointmentContent() {
     const [selectedSalon, setSelectedSalon] = useState<any>(null);
     const [selectedServices, setSelectedServices] = useState<any[]>([]);
     const [selectedWorkers, setSelectedWorkers] = useState<any[]>([]);
+    const [availableAddons, setAvailableAddons] = useState<ServiceAddon[]>([]);
+    const [selectedAddonIds, setSelectedAddonIds] = useState<number[]>([]);
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [selectedTime, setSelectedTime] = useState("");
     const [anyProfessional, setAnyProfessional] = useState(true); // Default: any professional is selected
@@ -177,6 +181,45 @@ function BookAppointmentContent() {
 
     // Virtual "Other" Service ID for UI handling
     const OTHER_SERVICE_ID = 9999;
+
+    // Load the extras offered on the selected services; drop selections that are no longer offered
+    const selectedServiceKey = selectedServices
+        .map(s => s.id)
+        .filter(id => typeof id === 'number' && id !== OTHER_SERVICE_ID)
+        .sort((a, b) => a - b)
+        .join(',');
+
+    useEffect(() => {
+        const ids = selectedServiceKey ? selectedServiceKey.split(',').map(Number) : [];
+        let cancelled = false;
+        const load = ids.length === 0
+            ? Promise.resolve([] as ServiceAddon[])
+            : serviceService.getAddonsForServices(ids, true);
+        load
+            .then(addons => {
+                if (cancelled) return;
+                setAvailableAddons(addons);
+                setSelectedAddonIds(prev => prev.filter(id => addons.some(a => a.id === id)));
+            })
+            .catch(err => {
+                console.error("Failed to load service add-ons", err);
+                if (!cancelled) setAvailableAddons([]);
+            });
+        return () => { cancelled = true; };
+    }, [selectedServiceKey]);
+
+    const selectedAddons = useMemo(
+        () => availableAddons.filter(a => selectedAddonIds.includes(a.id)),
+        [availableAddons, selectedAddonIds]
+    );
+
+    // Live totals (services + extras). Custom "Other" service has no price/duration yet.
+    const totals = useMemo(() => calculateBookingTotals(
+        selectedServices.filter(s => typeof s.id === 'number' && s.id !== OTHER_SERVICE_ID),
+        selectedAddons
+    ), [selectedServices, selectedAddons]);
+    const hasCustomService = selectedServices.some(s => s.id === OTHER_SERVICE_ID);
+    const bookingDuration = totals.totalDuration > 0 ? totals.totalDuration : 60;
 
     // Derive favorites from booking history
     const favoriteSalonIds = useMemo(() => {
@@ -333,6 +376,7 @@ function BookAppointmentContent() {
 
                 const selectedWrks = workers.filter(w => (bookingToEdit.workerIds || []).includes(w.id));
                 setSelectedWorkers(selectedWrks);
+                setSelectedAddonIds(bookingToEdit.addonIds || []);
 
                 setSelectedDate(bookingToEdit.date);
                 setSelectedTime(bookingToEdit.time);
@@ -392,18 +436,7 @@ function BookAppointmentContent() {
 
     const handleSubmit = () => {
         if (handleReadOnlyClick()) return;
-        const totalDuration = selectedServices.reduce((sum, s) => {
-            let mins = 60;
-            if (s.duration) {
-                const durationStr = String(s.duration).toLowerCase();
-                if (durationStr.includes('hour')) {
-                    mins = (parseInt(durationStr) || 1) * 60;
-                } else {
-                    mins = parseInt(durationStr) || 60;
-                }
-            }
-            return sum + mins;
-        }, 0);
+        const totalDuration = bookingDuration;
 
         if (isEditMode) {
             const editId = searchParams.get("edit");
@@ -414,6 +447,7 @@ function BookAppointmentContent() {
                     clientName: clientInfo.name,
                     serviceIds: selectedServices.map(s => s.id),
                     workerIds: selectedWorkers.map(w => w.id),
+                    addonIds: selectedAddonIds,
                     date: selectedDate,
                     time: selectedTime,
                     duration: totalDuration,
@@ -453,6 +487,7 @@ function BookAppointmentContent() {
                         clientName: clientName,
                         serviceIds: selectedServices.map(s => s.id),
                         workerIds: selectedWorkers.map(w => w.id),
+                        addonIds: selectedAddonIds,
                         date: selectedDate,
                         time: selectedTime,
                         duration: totalDuration,
@@ -479,18 +514,7 @@ function BookAppointmentContent() {
         const editId = searchParams.get("edit");
         if (!editId || !isEditMode) return;
 
-        const totalDuration = selectedServices.reduce((sum, s) => {
-            let mins = 60;
-            if (s.duration) {
-                const durationStr = String(s.duration).toLowerCase();
-                if (durationStr.includes('hour')) {
-                    mins = (parseInt(durationStr) || 1) * 60;
-                } else {
-                    mins = parseInt(durationStr) || 60;
-                }
-            }
-            return sum + mins;
-        }, 0);
+        const totalDuration = bookingDuration;
 
         updateBooking(parseInt(editId), {
             salonId: selectedSalon?.id || urlSalonId || "tenant_1",
@@ -498,6 +522,7 @@ function BookAppointmentContent() {
             clientName: clientInfo.name,
             // Client email/phone are not stored on booking directly in this schema, assumed handled by backend or separate update
             serviceIds: selectedServices.map(s => s.id),
+            addonIds: selectedAddonIds,
             notes: serviceDetails, // Mapped custom details to notes
             workerIds: selectedWorkers.map(w => w.id),
             date: selectedDate,
@@ -897,6 +922,44 @@ function BookAppointmentContent() {
                                 <p className="text-sm text-gray-600 mb-3">Service not listed?</p>
                             </div>
                         </div>
+
+                        {/* Extras (add-ons) offered on the selected services */}
+                        {selectedServices.length > 0 && (
+                            <div className="mt-8 pt-6 border-t border-gray-100 space-y-4">
+                                <div className="flex items-start gap-3">
+                                    <div className="p-2 rounded-xl bg-[var(--color-primary-light)] text-[var(--color-primary)]">
+                                        <Layers className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-bold text-gray-900">{t('booking.extrasSelection.title')}</h3>
+                                        <p className="text-sm text-gray-500">{t('booking.extrasSelection.subtitle')}</p>
+                                    </div>
+                                </div>
+                                {availableAddons.length === 0 ? (
+                                    <p className="text-sm text-gray-400 pl-1">{t('booking.extrasSelection.none')}</p>
+                                ) : (
+                                    <ServiceAddonPicker
+                                        addons={availableAddons}
+                                        selectedIds={selectedAddonIds}
+                                        onChange={setSelectedAddonIds}
+                                    />
+                                )}
+
+                                {/* Live total */}
+                                <div className="flex items-center justify-between p-4 rounded-2xl bg-gray-50 border border-gray-100">
+                                    <div className="text-sm text-gray-600">
+                                        <p className="font-bold text-gray-900">{t('booking.summary.liveTotal')}</p>
+                                        <p className="flex items-center gap-1"><Clock className="w-4 h-4" /> {formatDurationMinutes(bookingDuration)}{hasCustomService && ' +'}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-2xl font-black text-[var(--color-primary)]">{formatCurrency(totals.totalPrice)}{hasCustomService && ' +'}</p>
+                                        {totals.addonPrice > 0 && (
+                                            <p className="text-xs text-gray-500">{t('booking.summary.basePrice')} {formatCurrency(totals.basePrice)} · {t('booking.summary.extrasPrice')} +{formatCurrency(totals.addonPrice)}</p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </Card>
                 )}
 
@@ -1062,14 +1125,32 @@ function BookAppointmentContent() {
                                     <p className="font-bold text-gray-900">{clientInfo.isAnonymous ? t('booking.clientSelection.anonymous') : clientInfo.name}</p>
                                 </div>
                                 <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 md:col-span-2">
-                                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('booking.summary.services')}</p>
-                                    <div className="flex flex-wrap gap-2">
+                                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">{t('booking.summary.services')}</p>
+                                    <ul className="space-y-1">
                                         {selectedServices.map(s => (
-                                            <span key={s.id} className="bg-white px-3 py-1 rounded-full border border-gray-200 text-sm font-medium shadow-sm">
-                                                {s.name}
-                                            </span>
+                                            <li key={s.id} className="flex items-center justify-between gap-3 text-sm">
+                                                <span className="font-medium text-gray-900">{s.name}</span>
+                                                <span className="text-gray-600 shrink-0">
+                                                    {typeof s.duration === 'number' ? formatDurationMinutes(s.duration) : s.duration} · {typeof s.price === 'number' ? formatCurrency(s.price) : s.price}
+                                                </span>
+                                            </li>
                                         ))}
-                                    </div>
+                                    </ul>
+                                </div>
+                                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 md:col-span-2">
+                                    <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">{t('booking.summary.extras')}</p>
+                                    {selectedAddons.length === 0 ? (
+                                        <p className="text-sm text-gray-400">{t('booking.summary.noExtras')}</p>
+                                    ) : (
+                                        <ul className="space-y-1">
+                                            {selectedAddons.map(a => (
+                                                <li key={a.id} className="flex items-center justify-between gap-3 text-sm">
+                                                    <span className="font-medium text-gray-900">{a.name}</span>
+                                                    <span className="text-gray-600 shrink-0">+{formatDurationMinutes(a.extraDuration)} · +{formatCurrency(a.extraPrice)}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
                                 </div>
                                 <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
                                     <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">{t('booking.summary.professional')}</p>
@@ -1092,25 +1173,17 @@ function BookAppointmentContent() {
                                 <div>
                                     <p className="text-sm font-medium text-[var(--color-primary)]">{t('booking.summary.totalDuration')}</p>
                                     <p className="text-2xl font-bold text-[var(--color-primary)]">
-                                        {selectedServices.reduce((acc, s) => {
-                                            let mins = 60;
-                                            if (s.duration) {
-                                                const durationStr = String(s.duration).toLowerCase();
-                                                if (durationStr.includes('hour')) {
-                                                    mins = (parseInt(durationStr) || 1) * 60;
-                                                } else {
-                                                    mins = parseInt(durationStr) || 60;
-                                                }
-                                            }
-                                            return acc + mins;
-                                        }, 0)} min
+                                        {formatDurationMinutes(bookingDuration)}{hasCustomService && ' +'}
                                     </p>
                                 </div>
                                 <div className="text-right">
                                     <p className="text-sm font-medium text-[var(--color-primary)]">{t('booking.summary.totalPrice')}</p>
                                     <p className="text-3xl font-bold text-[var(--color-primary)]">
-                                        {formatCurrency(selectedServices.reduce((acc, s) => acc + (Number(s.price) || 0), 0))}
+                                        {formatCurrency(totals.totalPrice)}{hasCustomService && ' +'}
                                     </p>
+                                    {totals.addonPrice > 0 && (
+                                        <p className="text-xs text-[var(--color-primary)]/80">{t('booking.summary.basePrice')} {formatCurrency(totals.basePrice)} · {t('booking.summary.extrasPrice')} +{formatCurrency(totals.addonPrice)}</p>
+                                    )}
                                 </div>
                             </div>
 

@@ -26,7 +26,10 @@ import { useTranslation } from "@/i18n";
 import { useCurrency } from "@/hooks/useCurrency";
 import { ReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 import HistoryModal, { HistoryEvent } from "@/components/ui/HistoryModal";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { serviceService } from "@/lib/services";
+import { formatDurationMinutes } from "@/lib/domain/rules/pricingRules";
+import type { ServiceAddon } from "@/types";
 import {
     AreaChart,
     Area,
@@ -91,6 +94,14 @@ export default function ServiceDetailPage() {
     const { t } = useTranslation();
     const { format: formatCurrency } = useCurrency();
     const [historyModalOpen, setHistoryModalOpen] = useState(false);
+    const [offeredAddons, setOfferedAddons] = useState<ServiceAddon[]>([]);
+
+    useEffect(() => {
+        if (!serviceId) return;
+        serviceService.getAddonsForService(serviceId, true)
+            .then(setOfferedAddons)
+            .catch(err => console.error("Failed to load service add-ons", err));
+    }, [serviceId]);
 
     // Find service (in real app, fetch from API)
     const service = services.find(s => s.id === serviceId) || services[0];
@@ -175,6 +186,29 @@ export default function ServiceDetailPage() {
                                     {['Protective Style', 'Low Maintenance', 'Long Lasting', 'Hydrating'].map(tag => (
                                         <span key={tag} className="px-3 py-1 bg-gray-100 text-gray-500 text-xs font-bold rounded-full uppercase tracking-wider">{tag}</span>
                                     ))}
+                                </div>
+
+                                {/* Extras offered on this service */}
+                                <div className="pt-4">
+                                    <h3 className="text-xl font-bold text-gray-900 mb-3">{t("services.addons.title")}</h3>
+                                    {offeredAddons.length === 0 ? (
+                                        <p className="text-sm text-gray-400">{t("services.addons.noneOffered")}</p>
+                                    ) : (
+                                        <ul className="space-y-2">
+                                            {offeredAddons.map(addon => (
+                                                <li key={addon.id} className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-gray-50 border border-gray-100">
+                                                    <div className="min-w-0">
+                                                        <p className="font-bold text-gray-900 truncate">{addon.name}</p>
+                                                        {addon.description && <p className="text-xs text-gray-500 line-clamp-1">{addon.description}</p>}
+                                                    </div>
+                                                    <div className="text-right shrink-0 text-sm">
+                                                        <p className="font-black text-[var(--color-primary)]">+{formatCurrency(addon.extraPrice)}</p>
+                                                        <p className="text-xs text-gray-500 flex items-center gap-1 justify-end"><Clock className="w-3 h-3" /> +{formatDurationMinutes(addon.extraDuration)}</p>
+                                                    </div>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
                                 </div>
                             </div>
                             <div className="space-y-6">

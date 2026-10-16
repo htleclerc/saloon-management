@@ -865,7 +865,8 @@
     "statusCancelled": "Cancelado",
     "statusPendingApproval": "Pendiente de aprobación",
     "statusRescheduled": "Reprogramado",
-    "statusClosed": "Cerrado"
+    "statusClosed": "Cerrado",
+    "extras": "Extras"
   },
   "booking": {
     "title": "Reservar Cita",
@@ -938,17 +939,38 @@
       "comments": "Comentarios",
       "addComment": "Añadir una nota...",
       "confirm": "Confirmar Reserva",
-      "update": "Actualizar Reserva"
+      "update": "Actualizar Reserva",
+      "extras": "Extras",
+      "noExtras": "Sin extras",
+      "basePrice": "Servicios",
+      "extrasPrice": "Extras",
+      "liveTotal": "Total actual"
+    },
+    "extrasSelection": {
+      "title": "Añadir extras",
+      "subtitle": "Opcional. Cada extra se suma al precio y a la duración.",
+      "none": "No hay extras disponibles para los servicios seleccionados",
+      "add": "Añadir",
+      "added": "Añadido",
+      "extra": "+ {{duration}} · + {{price}}"
     }
   },
   "calendar": {
-    "title": "Calendario",
-    "day": "Día",
-    "week": "Semana",
-    "month": "Mes",
-    "today": "Hoy",
-    "agenda": "Agenda",
-    "noAppointments": "No hay citas para este periodo"
+    "title": "Calendario Interactivo",
+    "subtitle": "Gestionar espacios, capacidad y sobrereservas",
+    "accessDenied": "Acceso Denegado",
+    "noPermission": "No tiene permiso para gestionar el calendario.",
+    "dayClosed": "Día Cerrado",
+    "closeDay": "Cerrar Día",
+    "newAppointment": "Nueva Cita",
+    "defaultCapacity": "Capacidad por Defecto",
+    "overbooking": "Sobrereserva",
+    "enabled": "Activado",
+    "disabled": "Desactivado",
+    "totalBookings": "Total Reservas",
+    "openSlot": "Abrir Espacio",
+    "closeSlot": "Cerrar Espacio",
+    "bookings": "Reservas ({{count}})"
   },
   "clients": {
     "title": "Clientes",
@@ -1093,7 +1115,22 @@
     "viewAudit": "Ver Registro de Auditoría Completo",
     "performance": "Rendimiento",
     "yourResults": "Sus resultados para este servicio",
-    "archive": "Archivar Servicio"
+    "archive": "Archivar Servicio",
+    "addons": {
+      "title": "Extras ofrecidos",
+      "subtitle": "Selecciona los extras que las clientas pueden añadir a este servicio",
+      "none": "Aún no hay extras en el catálogo.",
+      "manage": "Gestionar extras",
+      "selectedCount": "{{count}} extra(s) seleccionado(s)",
+      "noneOffered": "Ningún extra ofrecido en este servicio"
+    },
+    "durationMinutes": "Duración (minutos)",
+    "durationPlaceholder": "ej. 330 para 5h30",
+    "archiveService": "Archivar servicio",
+    "archiveSuccess": "Servicio archivado",
+    "editingId": "Editando servicio",
+    "advancedDesc": "Detalles completos, medios y extras",
+    "simpleDesc": "Solo nombre, precio y duración"
   },
   "expenses": {
     "title": "Gastos",
@@ -1686,6 +1723,24 @@
       "initialStock": "Stock inicial",
       "saveProduct": "Guardar producto",
       "productUpdated": "Producto actualizado con éxito"
+    },
+    "addons": {
+      "title": "Extras de servicio",
+      "subtitle": "Opciones que las clientas pueden añadir a un servicio: cada una suma un precio y una duración",
+      "newAddon": "Nuevo extra",
+      "editAddon": "Editar extra",
+      "noAddons": "Aún no hay extras. Crea tu primer extra (largo, lavado, color...)",
+      "name": "Nombre",
+      "namePlaceholder": "Largo hasta la espalda baja",
+      "description": "Descripción (opcional)",
+      "descriptionPlaceholder": "Se muestra a las clientas al elegir este extra",
+      "extraPrice": "Precio adicional ({{currency}})",
+      "extraDuration": "Tiempo adicional (minutos)",
+      "displayOrder": "Orden de visualización",
+      "save": "Guardar extra",
+      "deleteConfirm": "¿Eliminar este extra? Se quitará de todos los servicios que lo ofrecen.",
+      "linkHint": "Asocia los extras a un servicio desde la página de edición del servicio.",
+      "summary": "+{{price}} · +{{duration}}"
     }
   },
   "roles": {
@@ -2019,23 +2074,6 @@
     "sassBillingRevenue": "Facturación y Ingresos SaaS",
     "createdOn": "Creado el {{date}}",
     "perMonth": "/ mes"
-  },
-  "calendar": {
-    "title": "Calendario Interactivo",
-    "subtitle": "Gestionar espacios, capacidad y sobrereservas",
-    "accessDenied": "Acceso Denegado",
-    "noPermission": "No tiene permiso para gestionar el calendario.",
-    "dayClosed": "Día Cerrado",
-    "closeDay": "Cerrar Día",
-    "newAppointment": "Nueva Cita",
-    "defaultCapacity": "Capacidad por Defecto",
-    "overbooking": "Sobrereserva",
-    "enabled": "Activado",
-    "disabled": "Desactivado",
-    "totalBookings": "Total Reservas",
-    "openSlot": "Abrir Espacio",
-    "closeSlot": "Cerrar Espacio",
-    "bookings": "Reservas ({{count}})"
   },
   "appointmentDetail": {
     "title": "Detalles de la Cita",

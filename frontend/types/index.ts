@@ -232,6 +232,55 @@ export interface Service {
     updatedBy: string;
 }
 
+/**
+ * Service add-on (option): an extra the client can add to a service
+ * (e.g. "Lower back length", "Wash + blow dry").
+ * Defined once per salon, then attached to one or more services.
+ */
+export interface ServiceAddon {
+    id: number;
+    salonId: number;
+    name: string;
+    description?: string;
+    extraPrice: number;      // Added to the service price
+    extraDuration: number;   // Added to the service duration (minutes)
+    displayOrder: number;
+    isActive: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+    createdBy: string;
+    updatedBy: string;
+}
+
+/** Add-on selected on a booking, with price/duration frozen at booking time */
+export interface BookingAddon {
+    bookingId: number;
+    addonId: number;
+    name: string;
+    priceSnapshot: number;
+    durationSnapshot: number;
+}
+
+/** A single line of a booking quote (service or add-on) */
+export interface BookingQuoteLine {
+    kind: 'service' | 'addon';
+    id: number;
+    name: string;
+    price: number;
+    duration: number;
+}
+
+/** Totals computed for a set of services and add-ons */
+export interface BookingTotals {
+    lines: BookingQuoteLine[];
+    basePrice: number;
+    addonPrice: number;
+    totalPrice: number;
+    baseDuration: number;
+    addonDuration: number;
+    totalDuration: number;
+}
+
 export interface Product {
     id: number;
     salonId: number;
@@ -283,6 +332,8 @@ export interface Booking {
     clientEmail?: string;  // Joined field from Client
     serviceIds?: number[]; // Junction field ids
     workerIds?: number[];  // Junction field ids
+    addonIds?: number[];   // Selected add-on ids
+    addons?: BookingAddon[]; // Add-on snapshots (name, price, duration at booking time)
     interactionHistory?: BookingInteraction[];  // Audit trail
     comments?: BookingComment[];  // Internal staff comments
     createdAt: Date;
@@ -325,6 +376,7 @@ export interface BookingCreateData {
     notes?: string;
     workerIds: number[];  // Will create junction records
     serviceIds: number[];  // Will create junction records
+    addonIds?: number[];  // Selected add-ons (snapshots created from the catalog)
     clientName?: string;  // For new clients
     isSensitive?: boolean;  // Flag for conflicting bookings
     clientPhone?: string; // For new clients
