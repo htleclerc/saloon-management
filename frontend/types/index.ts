@@ -66,6 +66,9 @@ export interface Salon {
     updatedBy: string;
 }
 
+/** How the online booking deposit is computed */
+export type DepositType = 'none' | 'fixed' | 'percent';
+
 export interface SalonSettings {
     id: number;
     salonId: number;
@@ -73,6 +76,12 @@ export interface SalonSettings {
     bookingAdvanceDays: number;
     bookingSlotDuration: number;
     requireClientApproval: boolean;
+    /** Deposit required to confirm an online booking */
+    depositType?: DepositType;
+    /** Fixed amount (salon currency) or percentage of the total depending on depositType */
+    depositValue?: number;
+    /** Statements the client must accept before booking (intake rules) */
+    bookingTerms?: string[];
     sendEmailConfirmations: boolean;
     sendSmsReminders: boolean;
     tipsEnabled: boolean;
@@ -315,6 +324,9 @@ export type BookingStatus =
     | 'Rescheduled'
     | 'Closed';
 
+/** Deposit lifecycle on a booking */
+export type DepositStatus = 'none' | 'pending' | 'paid' | 'refunded' | 'failed';
+
 export interface Booking {
     id: number;
     salonId: number;
@@ -327,6 +339,11 @@ export interface Booking {
     notes?: string;
     incomeId?: number;
     isSensitive: boolean;  // Conflict warning
+    totalPrice?: number;        // Services + add-ons at booking time
+    depositAmount?: number;     // Deposit required (0 when none)
+    depositStatus?: DepositStatus;
+    depositReference?: string;  // Payment provider reference (checkout session, intent...)
+    termsAcceptedAt?: Date;     // When the client accepted the salon booking terms
     clientName?: string;   // Joined field
     clientPhone?: string;  // Joined field from Client
     clientEmail?: string;  // Joined field from Client
@@ -377,6 +394,11 @@ export interface BookingCreateData {
     workerIds: number[];  // Will create junction records
     serviceIds: number[];  // Will create junction records
     addonIds?: number[];  // Selected add-ons (snapshots created from the catalog)
+    collectDeposit?: boolean;  // Online booking by a client: apply the salon deposit rule
+    termsAccepted?: boolean;   // Client accepted the salon booking terms
+    totalPrice?: number;       // Filled by BookingService from services + add-ons
+    depositAmount?: number;    // Filled by BookingService from the salon rule
+    depositStatus?: DepositStatus;
     clientName?: string;  // For new clients
     isSensitive?: boolean;  // Flag for conflicting bookings
     clientPhone?: string; // For new clients

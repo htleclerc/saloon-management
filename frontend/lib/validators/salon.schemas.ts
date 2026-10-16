@@ -46,5 +46,15 @@ export const SalonCreateSchema = z.object({
 /** Salon update */
 export const SalonUpdateSchema = SalonCreateSchema.partial();
 
+/** Online booking settings (deposit rule and intake terms) */
+export const SalonBookingSettingsSchema = z.object({
+    depositType: z.enum(['none', 'fixed', 'percent']).optional(),
+    depositValue: z.number().min(0, 'Deposit value must be zero or positive').optional(),
+    bookingTerms: z.array(z.string().trim().min(1, 'A booking term cannot be empty').max(500)).max(20).optional(),
+}).refine(
+    (s) => s.depositType !== 'percent' || s.depositValue === undefined || s.depositValue <= 100,
+    { message: 'A percentage deposit cannot exceed 100', path: ['depositValue'] }
+);
+
 export type SalonDetailsInput = z.infer<typeof SalonDetailsSchema>;
 export type SalonCreateInput = z.infer<typeof SalonCreateSchema>;

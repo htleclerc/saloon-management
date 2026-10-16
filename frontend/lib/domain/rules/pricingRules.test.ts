@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calculateBookingTotals, calculateTotalsFromSnapshots, buildAddonSnapshots, formatDurationMinutes } from './pricingRules';
+import { calculateBookingTotals, calculateTotalsFromSnapshots, buildAddonSnapshots, formatDurationMinutes, calculateDeposit } from './pricingRules';
 
 describe('pricingRules', () => {
     const knotlessMedium = { id: 1, name: 'Knotless - Medium', price: 240, duration: 330 };
@@ -59,6 +59,25 @@ describe('pricingRules', () => {
             const totals = calculateTotalsFromSnapshots([knotlessMedium], snapshots);
             expect(totals.totalPrice).toBe(330);
             expect(totals.totalDuration).toBe(540);
+        });
+    });
+
+    describe('calculateDeposit', () => {
+        it('returns 0 when no rule or rule none', () => {
+            expect(calculateDeposit(300, null)).toBe(0);
+            expect(calculateDeposit(300, { depositType: 'none', depositValue: 50 })).toBe(0);
+            expect(calculateDeposit(0, { depositType: 'fixed', depositValue: 50 })).toBe(0);
+        });
+
+        it('applies a fixed amount capped at the total', () => {
+            expect(calculateDeposit(300, { depositType: 'fixed', depositValue: 50 })).toBe(50);
+            expect(calculateDeposit(30, { depositType: 'fixed', depositValue: 50 })).toBe(30);
+        });
+
+        it('applies a percentage of the total, capped at 100 %', () => {
+            expect(calculateDeposit(330, { depositType: 'percent', depositValue: 25 })).toBe(82.5);
+            expect(calculateDeposit(330, { depositType: 'percent', depositValue: 150 })).toBe(330);
+            expect(calculateDeposit(99.99, { depositType: 'percent', depositValue: 33 })).toBe(33);
         });
     });
 

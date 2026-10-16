@@ -7,7 +7,7 @@
 import { BaseService } from './BaseService';
 import type { Booking, BookingWithRelations, BookingCreateData, BookingFilters, BookingTotals, SalonWorker, Service, ServiceAddon, PaginatedResponse } from '@/types';
 import { BookingCreateSchema } from '@/lib/validators';
-import { calculateBookingTotals, buildAddonSnapshots } from '@/lib/domain/rules/pricingRules';
+import { calculateBookingTotals, buildAddonSnapshots, calculateDeposit } from '@/lib/domain/rules/pricingRules';
 
 export class BookingService extends BaseService {
     /**
@@ -80,11 +80,26 @@ export class BookingService extends BaseService {
             data.duration
         );
 
+        // Price snapshot and deposit rule (online booking by a client)
+        let totalPrice = data.totalPrice;
+        let depositAmount = 0;
+        if (data.collectDeposit) {
+            if (totalPrice === undefined) {
+                totalPrice = (await this.computeTotals(data.serviceIds, data.addonIds || [])).totalPrice;
+            }
+            const settings = await this.provider.getSalonSettings(data.salonId);
+            depositAmount = calculateDeposit(totalPrice, settings);
+        }
+        const depositStatus = depositAmount > 0 ? 'pending' : 'none';
+
         // Create booking
         const booking = await this.provider.createBooking({
             ...data,
             status: data.status || 'Pending',
-            isSensitive: hasConflict
+            isSensitive: hasConflict,
+            totalPrice,
+            depositAmount,
+            depositStatus
         });
 
         // Add workers
@@ -161,6 +176,24 @@ export class BookingService extends BaseService {
      */
     async getAddons(bookingId: number) {
         return this.provider.getBookingAddons(bookingId);
+    }
+
+    /**
+     * Record the deposit outcome. A paid deposit confirms a pending booking.
+     */
+    async markDeposit(id: number, status: 'paid' | 'failed' | 'refunded', reference?: string): Promise<Booking> {
+        const current = await this.provider.getBooking(id);
+        const updates: Partial<Booking> = {
+            depositStatus: status,
+            depositReference: reference ?? current?.depositReference,
+            updatedBy: this.getCurrentUser()
+        };
+        if (status === 'paid' && current && (current.status === 'Pending' || current.status === 'Created')) {
+            updates.status = 'Confirmed';
+        }
+        const booking = await this.provider.updateBooking(id, updates);
+        await this.logInteraction('booking', id, `deposit_${status}`, reference ? `Reference ${reference}` : undefined);
+        return booking;
     }
 
     /**

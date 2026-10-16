@@ -6,7 +6,7 @@
 
 import { BaseService } from './BaseService';
 import type { Salon, SalonSettings, SalonStats } from '@/types';
-import { SalonCreateSchema } from '@/lib/validators';
+import { SalonCreateSchema, SalonBookingSettingsSchema } from '@/lib/validators';
 
 export class SalonService extends BaseService {
     /**
@@ -65,6 +65,15 @@ export class SalonService extends BaseService {
      * Update salon settings
      */
     async updateSettings(salonId: number, data: Partial<SalonSettings>): Promise<SalonSettings> {
+        // Zod validation of the online booking rules (deposit, terms) when present
+        if (data.depositType !== undefined || data.depositValue !== undefined || data.bookingTerms !== undefined) {
+            SalonBookingSettingsSchema.parse({
+                depositType: data.depositType,
+                depositValue: data.depositValue,
+                bookingTerms: data.bookingTerms,
+            });
+        }
+
         const settings = await this.provider.updateSalonSettings(salonId, data);
         await this.logInteraction('salon_settings', salonId, 'updated');
         return settings;

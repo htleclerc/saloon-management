@@ -6,7 +6,7 @@
  * (server side of the UI) and by the booking page for live totals.
  */
 
-import type { BookingAddon, BookingQuoteLine, BookingTotals, Service, ServiceAddon } from '@/types';
+import type { BookingAddon, BookingQuoteLine, BookingTotals, DepositType, Service, ServiceAddon } from '@/types';
 
 export type PriceableService = Pick<Service, 'id' | 'name' | 'price' | 'duration'>;
 export type PriceableAddon = Pick<ServiceAddon, 'id' | 'name' | 'extraPrice' | 'extraDuration'>;
@@ -88,6 +88,24 @@ export const buildAddonSnapshots = (bookingId: number, addons: PriceableAddon[])
         priceSnapshot: toNumber(a.extraPrice),
         durationSnapshot: Math.max(0, Math.round(toNumber(a.extraDuration)))
     }));
+};
+
+/**
+ * Deposit required for a booking according to the salon rule.
+ * - 'fixed'   : the configured amount, capped at the total
+ * - 'percent' : percentage of the total (0-100)
+ * - 'none'    : 0
+ */
+export const calculateDeposit = (
+    totalPrice: number,
+    rule: { depositType?: DepositType | null; depositValue?: number | null } | null | undefined
+): number => {
+    const total = Math.max(0, toNumber(totalPrice));
+    if (!rule || !rule.depositType || rule.depositType === 'none' || total === 0) return 0;
+    const value = Math.max(0, toNumber(rule.depositValue));
+    if (rule.depositType === 'fixed') return round2(Math.min(value, total));
+    const pct = Math.min(100, value);
+    return round2((total * pct) / 100);
 };
 
 /**

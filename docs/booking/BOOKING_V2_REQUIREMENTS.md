@@ -11,7 +11,7 @@
 | Lot | Contenu | Statut |
 |-----|---------|--------|
 | 1 | Add-ons (catalogue par salon, rattachement aux prestations, étape extras du booking, totaux prix + durée, snapshots sur la réservation, reprise dans le revenu) | ✅ Livré |
-| 2 | Parcours cliente multi-salons, acompte, cases d'admission | ⏳ |
+| 2 | Parcours cliente multi-salons (salons listés avec ville et adresse, salon unique auto-sélectionné, étape styliste ouverte aux clientes), acompte fixe ou pourcentage configuré par salon et payé via Stripe Checkout (webhook qui confirme la réservation, simulation en mode démo), mentions obligatoires à accepter | ✅ Livré |
 | 3 | Manager : seconde styliste, répartition, planning, droits finances | ⏳ |
 | 4 | Confort (liste d'attente, indisponibilités, catalogue photos, import Acuity) | ⏸️ |
 

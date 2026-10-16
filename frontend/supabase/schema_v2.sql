@@ -96,6 +96,10 @@ CREATE TABLE salon_settings (
     tips_distribution_rule VARCHAR(50) DEFAULT 'EQUAL_ALL',
     default_worker_share_pct INTEGER DEFAULT 40,
     opening_hours JSONB DEFAULT '[]'::jsonb,
+    -- Online booking deposit rule and intake terms (migrations/20261018_booking_deposit.sql)
+    deposit_type VARCHAR(10) NOT NULL DEFAULT 'none' CHECK (deposit_type IN ('none', 'fixed', 'percent')),
+    deposit_value NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (deposit_value >= 0),
+    booking_terms JSONB NOT NULL DEFAULT '[]'::jsonb,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -250,6 +254,12 @@ CREATE TABLE bookings (
     notes TEXT,
     income_id BIGINT, -- Will be set after payment
     is_sensitive BOOLEAN DEFAULT FALSE,
+    -- Price snapshot and deposit tracking (migrations/20261018_booking_deposit.sql)
+    total_price NUMERIC(10,2),
+    deposit_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+    deposit_status VARCHAR(20) NOT NULL DEFAULT 'none' CHECK (deposit_status IN ('none', 'pending', 'paid', 'refunded', 'failed')),
+    deposit_reference TEXT,
+    terms_accepted_at TIMESTAMPTZ,
     created_by VARCHAR(100),
     updated_by VARCHAR(100),
     is_active BOOLEAN DEFAULT TRUE,

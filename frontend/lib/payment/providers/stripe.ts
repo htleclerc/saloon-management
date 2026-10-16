@@ -10,6 +10,7 @@ import type {
     IPaymentProvider,
     CheckoutParams,
     CheckoutResult,
+    OneTimeCheckoutParams,
     PortalResult,
     CreateCustomerParams,
     PaymentMethodInfo,
@@ -86,6 +87,50 @@ export class StripeProvider implements IPaymentProvider {
         }
 
         const session = await this.stripe.checkout.sessions.create(sessionParams);
+
+        return {
+            url: session.url!,
+            sessionId: session.id,
+        };
+    }
+
+    /**
+     * One-time payment (booking deposit). The booking id travels in the session metadata
+     * and comes back in the checkout.session.completed webhook.
+     */
+    async createOneTimeCheckout(params: OneTimeCheckoutParams): Promise<CheckoutResult> {
+        const zeroDecimal = ['JPY', 'KRW', 'XOF', 'XAF', 'CLP', 'VND', 'UGX', 'RWF', 'GNF', 'BIF', 'DJF', 'KMF', 'MGA', 'PYG', 'VUV', 'XPF'];
+        const currency = params.currency.toLowerCase();
+        const unitAmount = zeroDecimal.includes(currency.toUpperCase())
+            ? Math.round(params.amount)
+            : Math.round(params.amount * 100);
+
+        const session = await this.stripe.checkout.sessions.create({
+            mode: 'payment',
+            line_items: [{
+                quantity: 1,
+                price_data: {
+                    currency,
+                    unit_amount: unitAmount,
+                    product_data: { name: params.description },
+                },
+            }],
+            customer_email: params.customerEmail,
+            success_url: params.successUrl,
+            cancel_url: params.cancelUrl,
+            metadata: {
+                kind: 'booking_deposit',
+                salon_id: String(params.salonId),
+                booking_id: String(params.bookingId),
+            },
+            payment_intent_data: {
+                metadata: {
+                    kind: 'booking_deposit',
+                    salon_id: String(params.salonId),
+                    booking_id: String(params.bookingId),
+                },
+            },
+        });
 
         return {
             url: session.url!,
@@ -200,15 +245,61 @@ export class StripeProvider implements IPaymentProvider {
         const handlers: Record<string, (data: Stripe.Event.Data.Object) => WebhookResult> = {
             'checkout.session.completed': (data) => {
                 const session = data as Stripe.Checkout.Session;
+                const salonId = session.metadata?.salon_id ? Number(session.metadata.salon_id) : undefined;
+
+                // Booking deposit (one-time payment)
+                if (session.metadata?.kind === 'booking_deposit' && session.metadata.booking_id) {
+                    return {
+                        handled: true,
+                        event: 'checkout.session.completed',
+                        salonId,
+                        action: session.payment_status === 'paid' ? 'booking_deposit_paid' : 'booking_deposit_pending',
+                        data: {
+                            sessionId: session.id,
+                            bookingId: Number(session.metadata.booking_id),
+                            amountTotal: (session.amount_total || 0) / 100,
+                            paymentStatus: session.payment_status,
+                        },
+                    };
+                }
+
                 return {
                     handled: true,
                     event: 'checkout.session.completed',
-                    salonId: session.metadata?.salon_id ? Number(session.metadata.salon_id) : undefined,
+                    salonId,
                     subscriptionId: typeof session.subscription === 'string' ? session.subscription : undefined,
                     action: 'checkout_completed',
                     data: {
                         sessionId: session.id,
                         planId: session.metadata?.plan_id,
+                    },
+                };
+            },
+
+            'checkout.session.async_payment_succeeded': (data) => {
+                const session = data as Stripe.Checkout.Session;
+                return {
+                    handled: session.metadata?.kind === 'booking_deposit',
+                    event: 'checkout.session.async_payment_succeeded',
+                    salonId: session.metadata?.salon_id ? Number(session.metadata.salon_id) : undefined,
+                    action: 'booking_deposit_paid',
+                    data: {
+                        sessionId: session.id,
+                        bookingId: session.metadata?.booking_id ? Number(session.metadata.booking_id) : undefined,
+                    },
+                };
+            },
+
+            'checkout.session.async_payment_failed': (data) => {
+                const session = data as Stripe.Checkout.Session;
+                return {
+                    handled: session.metadata?.kind === 'booking_deposit',
+                    event: 'checkout.session.async_payment_failed',
+                    salonId: session.metadata?.salon_id ? Number(session.metadata.salon_id) : undefined,
+                    action: 'booking_deposit_failed',
+                    data: {
+                        sessionId: session.id,
+                        bookingId: session.metadata?.booking_id ? Number(session.metadata.booking_id) : undefined,
                     },
                 };
             },

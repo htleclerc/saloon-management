@@ -892,7 +892,19 @@
     "statusPendingApproval": "En attente d'approbation",
     "statusRescheduled": "Reporté",
     "statusClosed": "Clôturé",
-    "extras": "Extras"
+    "extras": "Extras",
+    "deposit": {
+      "label": "Acompte",
+      "none": "Sans acompte",
+      "pending": "Acompte à payer",
+      "paid": "Acompte payé",
+      "failed": "Acompte échoué",
+      "refunded": "Acompte remboursé",
+      "pay": "Payer l'acompte",
+      "demoPaid": "Mode démo : acompte enregistré comme payé.",
+      "successReturn": "Merci ! Votre paiement d'acompte a été reçu. La réservation sera confirmée dès validation du paiement.",
+      "cancelReturn": "Paiement de l'acompte annulé. Vous pourrez le régler plus tard depuis vos rendez-vous."
+    }
   },
   "booking": {
     "title": "Réserver un rendez-vous",
@@ -979,6 +991,19 @@
       "add": "Ajouter",
       "added": "Ajouté",
       "extra": "+ {{duration}} · + {{price}}"
+    },
+    "deposit": {
+      "title": "Acompte demandé : {{amount}}",
+      "percentDesc": "Ce salon demande {{percent}} % du total ({{total}}) pour confirmer une réservation en ligne.",
+      "fixedDesc": "Ce salon demande un acompte fixe pour confirmer une réservation en ligne (total {{total}}).",
+      "balanceNote": "Le solde de {{balance}} est réglé au salon.",
+      "confirmAndPay": "Confirmer et payer l'acompte {{amount}}",
+      "demoPaid": "Mode démo : acompte de {{amount}} enregistré comme payé, votre réservation est confirmée.",
+      "paymentUnavailable": "Le paiement en ligne n'est pas disponible pour le moment. Votre réservation est enregistrée en attente de l'acompte."
+    },
+    "terms": {
+      "title": "Avant de réserver, merci de confirmer :",
+      "required": "Toutes les mentions doivent être acceptées pour continuer."
     }
   },
   "calendar": {
@@ -2220,7 +2245,22 @@
       "settingsLoadError": "Échec du chargement des paramètres",
       "settingsSaveError": "Échec de l'enregistrement des paramètres",
       "logoAndColorsApplied": "Logo uploadé et couleurs du thème extraites automatiquement !",
-      "noSalonSelected": "Aucun salon sélectionné"
+      "noSalonSelected": "Aucun salon sélectionné",
+      "onlineBooking": {
+        "title": "Réservation en ligne",
+        "subtitle": "Acompte demandé aux clientes et mentions à accepter avant de réserver",
+        "depositType": "Acompte",
+        "depositNone": "Pas d'acompte",
+        "depositFixed": "Montant fixe ({{currency}})",
+        "depositPercent": "Pourcentage du total",
+        "depositValuePercent": "Pourcentage (0-100)",
+        "depositValueFixed": "Montant ({{currency}})",
+        "depositHint": "Appliqué aux réservations faites en ligne par les clientes. Le solde est réglé au salon.",
+        "terms": "Mentions à accepter",
+        "termsDesc": "Chaque mention est affichée comme une case obligatoire à la fin de la réservation (préparation des cheveux, frais, lieu...).",
+        "noTerms": "Aucune mention pour le moment.",
+        "termPlaceholder": "ex. Mes cheveux seront lavés et séchés avant le rendez-vous"
+      }
     },
     "tips": {
       "title": "Configuration des pourboires",

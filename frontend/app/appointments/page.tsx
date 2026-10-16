@@ -5,7 +5,9 @@ import Link from "next/link";
 import MainLayout from "@/components/layout/MainLayout";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import { Calendar, Clock, User, Plus, Search, Eye, Edit, Trash2, Check, AlertCircle, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download, FileText, CheckSquare, Square, X } from "lucide-react";
+import { Calendar, Clock, User, Plus, Search, Eye, Edit, Trash2, Check, AlertCircle, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Download, FileText, CheckSquare, Square, X, CreditCard } from "lucide-react";
+import { requestDepositCheckout } from "@/lib/payment/depositClient";
+import { useDataMode } from "@/context/DataModeProvider";
 import { exportToCSV, exportToPDF, sortData, SortConfig, SortDirection, getNextSortDirection, ExportColumn } from "@/lib/export";
 import { useKpiCardStyle } from "@/hooks/useKpiCardStyle";
 import { useAuth, RequirePermission } from "@/context/AuthProvider";
@@ -36,6 +38,8 @@ type AppointmentUI = {
     duration: number;
     totalPrice: string;
     status: string;
+    depositAmount: number;
+    depositStatus: string;
     isAdminModified: boolean;
 };
 
@@ -49,6 +53,63 @@ export default function AppointmentsPage() {
     const router = useRouter();
     const { t } = useTranslation();
     const { format: formatCurrency } = useCurrency();
+    const { mode: dataMode } = useDataMode();
+    const [payingDepositId, setPayingDepositId] = useState<number | null>(null);
+
+    const getDepositColor = (status: string) => {
+        switch (status) {
+            case 'paid': return 'bg-green-100 text-green-700';
+            case 'pending': return 'bg-amber-100 text-amber-700';
+            case 'failed': return 'bg-red-100 text-red-700';
+            case 'refunded': return 'bg-gray-100 text-gray-600';
+            default: return 'bg-gray-100 text-gray-500';
+        }
+    };
+
+    /** Client pays (or re-tries) the deposit of a booking */
+    const payDeposit = async (bookingId: number) => {
+        setPayingDepositId(bookingId);
+        try {
+            if (dataMode === 'demo-local') {
+                await bookingService.markDeposit(bookingId, 'paid', 'DEMO');
+                showToast(t("common.success"), t("appointments.deposit.demoPaid"), "success");
+                refresh();
+                return;
+            }
+            const result = await requestDepositCheckout(bookingId);
+            if (result.kind === 'redirect') {
+                window.location.href = result.url;
+                return;
+            }
+            if (result.kind === 'demo') {
+                await bookingService.markDeposit(bookingId, 'paid', 'DEMO');
+                showToast(t("common.success"), t("appointments.deposit.demoPaid"), "success");
+                refresh();
+                return;
+            }
+            showToast(t("common.error"), result.message, "error");
+        } finally {
+            setPayingDepositId(null);
+        }
+    };
+
+    // Feedback after returning from the deposit checkout (?deposit=success|cancel)
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const params = new URLSearchParams(window.location.search);
+        const outcome = params.get('deposit');
+        if (!outcome) return;
+        if (outcome === 'success') {
+            showToast(t("common.success"), t("appointments.deposit.successReturn"), "success");
+        } else if (outcome === 'cancel') {
+            showToast(t("common.info"), t("appointments.deposit.cancelReturn"), "info");
+        }
+        params.delete('deposit');
+        params.delete('bookingId');
+        const query = params.toString();
+        window.history.replaceState(null, '', `${window.location.pathname}${query ? `?${query}` : ''}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
     const [detailModal, setDetailModal] = useState<{ open: boolean; appointment: any | null }>({ open: false, appointment: null });
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("All");
@@ -115,7 +176,10 @@ export default function AppointmentsPage() {
 
                 // Calculate price if not in booking (mock logic was sum services)
                 // In generic booking model, it might be stored, but let's calc for display if needed or use b.totalPrice if available (Booking has no price field? Check types. Booking has no price field, but Income has. UI shows price. Let's calc from service sum).
-                const totalPrice = (b.serviceIds || []).reduce((sum: number, id: number) => sum + (servicesData.find(s => s.id === id)?.price || 0), 0);
+                const servicesPrice = (b.serviceIds || []).reduce((sum: number, id: number) => sum + (servicesData.find(s => s.id === id)?.price || 0), 0);
+                const addonsPrice = (b.addons || []).reduce((sum: number, a: { priceSnapshot?: number }) => sum + (Number(a.priceSnapshot) || 0), 0);
+                // Prefer the price frozen at booking time (services + add-ons), fall back to the catalog sum
+                const totalPrice = typeof b.totalPrice === 'number' && b.totalPrice > 0 ? b.totalPrice : servicesPrice + addonsPrice;
 
                 const isAdminModified = (b.interactionHistory || []).some((i: any) =>
                     (i.action.toLowerCase().includes('edit') || i.action.toLowerCase().includes('update') || i.action.toLowerCase().includes('modify')) &&
@@ -136,6 +200,8 @@ export default function AppointmentsPage() {
                     duration: b.duration,
                     totalPrice: formatCurrency(totalPrice),
                     status: b.status,
+                    depositAmount: Number(b.depositAmount) || 0,
+                    depositStatus: (b.depositStatus || 'none') as string,
                     isAdminModified,
                     // keep raw for actions
                     raw: b
@@ -614,8 +680,15 @@ export default function AppointmentsPage() {
                                         </button>
                                         <span className="text-xs font-mono text-gray-500">{apt.displayId}</span>
                                     </div>
-                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusColor(apt.status)}`}>
-                                        {getBookingStatusLabel(apt.status, t)}
+                                    <span className="flex flex-col items-end gap-1">
+                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusColor(apt.status)}`}>
+                                            {getBookingStatusLabel(apt.status, t)}
+                                        </span>
+                                        {apt.depositStatus !== 'none' && (
+                                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${getDepositColor(apt.depositStatus)}`}>
+                                                {t(`appointments.deposit.${apt.depositStatus}`)} · {formatCurrency(apt.depositAmount)}
+                                            </span>
+                                        )}
                                     </span>
                                 </div>
 
@@ -663,6 +736,19 @@ export default function AppointmentsPage() {
                                                     title={t("appointments.reject")}
                                                 >
                                                     <X className="w-5 h-5" />
+                                                </Button>
+                                            )}
+                                            {isClient && (apt.depositStatus === 'pending' || apt.depositStatus === 'failed') && (
+                                                <Button
+                                                    variant="primary"
+                                                    size="sm"
+                                                    onClick={() => payDeposit(apt.id)}
+                                                    disabled={payingDepositId === apt.id}
+                                                    className="h-10 px-3 flex items-center justify-center gap-1 shadow-sm"
+                                                    title={t("appointments.deposit.pay")}
+                                                >
+                                                    <CreditCard className="w-4 h-4" />
+                                                    <span className="text-xs font-bold">{formatCurrency(apt.depositAmount)}</span>
                                                 </Button>
                                             )}
                                             <Button
@@ -805,9 +891,16 @@ export default function AppointmentsPage() {
                                         <td className="px-6 py-4 text-sm text-gray-700">{apt.duration} {t("appointments.durationUnit")}</td>
                                         <td className="px-6 py-4 text-sm font-bold text-gray-900">{apt.totalPrice}</td>
                                         <td className="px-6 py-4">
-                                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(apt.status)}`}>
-                                                {getBookingStatusLabel(apt.status, t)}
-                                            </span>
+                                            <div className="flex flex-col gap-1 items-start">
+                                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(apt.status)}`}>
+                                                    {getBookingStatusLabel(apt.status, t)}
+                                                </span>
+                                                {apt.depositStatus !== 'none' && (
+                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${getDepositColor(apt.depositStatus)}`} title={t("appointments.deposit.label")}>
+                                                        {t(`appointments.deposit.${apt.depositStatus}`)} · {formatCurrency(apt.depositAmount)}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                                             <div className="flex items-center justify-center gap-2">
@@ -843,6 +936,19 @@ export default function AppointmentsPage() {
                                                         title={t("appointments.reject")}
                                                     >
                                                         <X className="w-5 h-5" />
+                                                    </Button>
+                                                )}
+                                                {isClient && (apt.depositStatus === 'pending' || apt.depositStatus === 'failed') && (
+                                                    <Button
+                                                        variant="primary"
+                                                        size="sm"
+                                                        onClick={() => { if (!handleReadOnlyClick()) payDeposit(apt.id) }}
+                                                        disabled={payingDepositId === apt.id}
+                                                        className="h-10 px-3 flex items-center justify-center gap-1 shadow-sm"
+                                                        title={t("appointments.deposit.pay")}
+                                                    >
+                                                        <CreditCard className="w-4 h-4" />
+                                                        <span className="text-xs font-bold">{t("appointments.deposit.pay")}</span>
                                                     </Button>
                                                 )}
                                                 <Button

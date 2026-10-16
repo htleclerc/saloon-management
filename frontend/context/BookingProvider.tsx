@@ -9,7 +9,7 @@ import { calculateTotalsFromSnapshots } from "@/lib/domain/rules/pricingRules";
 interface BookingContextType {
     bookings: Booking[];
     dayCapacities: Record<string, DayCapacity>;
-    addBooking: (booking: BookingCreateData) => Promise<void>;
+    addBooking: (booking: BookingCreateData) => Promise<Booking>;
     updateBookingStatus: (id: number, status: BookingStatus, comment?: string) => Promise<void>;
     updateBookingWorkers: (id: number, workerIds: number[]) => Promise<void>;
     cancelBooking: (id: number, reason?: string) => Promise<void>;
@@ -118,10 +118,11 @@ export function BookingProvider({ children }: { children: ReactNode }) {
         return () => clearInterval(interval);
     }, [mounted]);
 
-    const addBooking = async (bookingData: BookingCreateData) => {
+    const addBooking = async (bookingData: BookingCreateData): Promise<Booking> => {
         try {
-            await bookingService.create(bookingData);
+            const created = await bookingService.create(bookingData);
             await loadBookings();
+            return created;
         } catch (error) {
             console.error("Failed to create booking", error);
             throw error;
