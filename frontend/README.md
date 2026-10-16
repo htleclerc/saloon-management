@@ -1,36 +1,81 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Saloon Management - Frontend
 
-## Getting Started
+Application Next.js 16 (App Router) de gestion de salons de coiffure / tressage, multi-tenant, adossée à Supabase.
 
-First, run the development server:
+Pour le contexte complet (architecture, modes de données, rôles, avancement), lire [../CONTEXT.md](../CONTEXT.md). Pour les conventions de code, lire [../AGENT.md](../AGENT.md).
+
+## Prérequis
+
+- Node.js 20+
+- Un projet Supabase (ou le mode `demo-local` qui fonctionne sans backend)
+
+## Installation
 
 ```bash
+npm install
+cp .env.example .env.local   # puis renseigner les variables
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+L'application est disponible sur [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Variables d'environnement
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variable | Rôle |
+|----------|------|
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Client Supabase navigateur |
+| `SUPABASE_SERVICE_ROLE_KEY` | Client admin côté serveur (routes API) |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_ENTERPRISE` | Abonnements Stripe |
+| `NEXT_PUBLIC_STRIPE_PRICE_PRO`, `NEXT_PUBLIC_STRIPE_PRICE_ENTERPRISE` | Identifiants de prix exposés au client |
+| `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET` | Paiement PayPal |
+| `MOBILEMONEY_API_KEY` | Paiement Mobile Money |
+| `PAYMENT_PROVIDERS` | Liste des fournisseurs activés |
+| `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME` | Emails transactionnels |
 
-## Learn More
+Sans variables Supabase, utiliser le mode `demo-local` (ModeSwitcher dans l'interface ou cookie `workshop-demo-active`).
 
-To learn more about Next.js, take a look at the following resources:
+## Scripts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run dev            # Serveur de développement
+npm run build          # Build production
+npm run start          # Serveur production
+npm run lint           # ESLint
+npm run lint:fix       # ESLint avec correction
+npm run type-check     # Vérification TypeScript
+npm run format         # Prettier
+npm run test           # Tests unitaires (Vitest)
+npm run test:watch     # Tests en mode watch
+npm run test:coverage  # Couverture
+npm run test:e2e       # Tests E2E (Playwright, nécessite le serveur sur :3000)
+npm run test:e2e:ui    # Playwright en mode UI
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Structure
 
-## Deploy on Vercel
+```
+app/          Pages et routes API (App Router)
+components/   Composants UI, layouts, gardes RBAC
+context/      Providers React (Auth, Theme, DataMode, Booking, Notification, ...)
+hooks/        Hooks personnalisés
+i18n/         Traductions EN / FR / ES
+lib/          Services métier, providers de données, permissions, paiement, email
+supabase/     Schéma SQL, policies RLS, vues, seeds, migrations
+types/        Types TypeScript centralisés
+e2e/          Tests Playwright
+middleware.ts Protection des routes
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Base de données
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Le schéma de référence est `supabase/schema_v2.sql`, complété par `policies_v2.sql`, `views_v2.sql` et les fichiers datés de `supabase/migrations/`. Les seeds `seed_v2.sql` et `seed_lyon.sql` fournissent des données de démonstration. Le script `cleanup_script.sql` purge les données démo de plus de 7 jours.
+
+## Modes de données
+
+| Mode | Stockage | Usage |
+|------|----------|-------|
+| `demo-local` | localStorage | Développement sans backend |
+| `demo-supabase` | Supabase, données purgées après 7 jours | Démos publiques |
+| `normal` | Supabase avec authentification | Production |
+
+Le mode est géré par `context/DataModeProvider.tsx` et `lib/providers/StorageProviderFactory.ts`.

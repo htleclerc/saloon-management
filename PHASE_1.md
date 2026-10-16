@@ -1,6 +1,7 @@
 # PHASE 1 - Frontend Providers Architecture
 
-> **Contexte Agent** : À lire avec [CONTEXT.md](file:///c:/Users/lecle/Workspace/saloon-management/CONTEXT.md) avant de démarrer
+> **Statut : ✅ TERMINÉE** (providers, DataModeProvider, ServiceFactory, services et règles métier en place dans `frontend/lib/`). Document conservé comme historique ; les cases non cochées ne reflètent pas l'état du code. Voir [CONTEXT.md](CONTEXT.md).
+> **Contexte Agent** : À lire avec [CONTEXT.md](CONTEXT.md) avant de démarrer
 
 ---
 
@@ -13,9 +14,9 @@ Créer l'architecture de providers flexible permettant de switcher entre 3 modes
 ## 📋 Prérequis
 
 ### À Lire Avant de Commencer
-1. ✅ [CONTEXT.md](file:///c:/Users/lecle/Workspace/saloon-management/CONTEXT.md) - Contexte global du projet
-2. ✅ [AGENT.md](file:///c:/Users/lecle/Workspace/saloon-management/AGENT.md) - Conventions actuelles
-3. ✅ [implementation_plan.md](file:///c:/Users/lecle/.gemini/antigravity/brain/d7f8c1ac-84d4-4922-a475-886faf2f608e/implementation_plan.md) - Détails Phase 1
+1. ✅ [CONTEXT.md](CONTEXT.md) - Contexte global du projet
+2. ✅ [AGENT.md](AGENT.md) - Conventions actuelles
+3. ✅ `implementation_plan.md` (plan local Antigravity, non versionné) - Détails Phase 1
 
 ### Connaissances Requises
 - TypeScript strict mode
@@ -423,4 +424,4 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 ---
 
-**Dernière mise à jour** : 2026-01-18
+**Dernière mise à jour** : 2026-10-16

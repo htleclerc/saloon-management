@@ -1,7 +1,24 @@
 # PHASE IA - Booster Intelligence Artificielle
 
+> **Statut : ⚠️ PARTIELLE** — contexte et route API en place sous forme de stubs, aucun LLM branché.
 > **Philosophie** : L'IA est un **boost**, pas une nécessité. Le système doit être 100% fonctionnel sans elle.
-> **Contexte Agent** : À lire avec [CONTEXT.md](file:///c:/Users/lecle/Workspace/saloon-management/CONTEXT.md)
+> **Contexte Agent** : À lire avec [CONTEXT.md](CONTEXT.md)
+
+---
+
+## 📊 État Actuel (2026-10-16)
+
+| Élément | Fichier | Statut |
+|---------|---------|--------|
+| Contexte IA (config, features, stats) | `frontend/context/AIProvider.tsx` | ✅ Existe, `data: any` à typer |
+| Route de commande | `frontend/app/api/ai/command/route.ts` | ⚠️ Stub : réponses simulées, délai artificiel |
+| Page de réglages IA | `frontend/app/settings/ai/` | ✅ Existe |
+| Composants IA | `frontend/components/ai/` | ✅ Existe |
+| Proxy backend Go | — | ❌ Abandonné avec la Phase 5 |
+| Appel réel à un LLM | — | ❌ Non implémenté |
+
+### Choix d'implémentation à venir
+Le proxy IA prévu en Go est remplacé par la **route API Next.js** existante. Les clés API restent côté serveur (variables d'environnement), le frontend n'appelle jamais un fournisseur directement.
 
 ---
 
@@ -31,10 +48,10 @@ Intégrer une couche d'intelligence artificielle transversale qui simplifie la g
 
 ## 📦 Livrables de cette Phase
 
-### 1. Infrastructure IA (Backend Go)
-- [ ] `internal/infrastructure/ai/` : Client générique supportant plusieurs fournisseurs (OpenAI, Anthropic, Google).
-- [ ] `internal/infrastructure/ai/factory.go` : Pour switcher de modèle à la volée.
-- [ ] Endpoint `/api/v1/ai/chat` : Interface de commande en langage naturel.
+### 1. Infrastructure IA (Route API Next.js)
+- [ ] `frontend/lib/ai/` : Client générique supportant plusieurs fournisseurs (OpenAI, Anthropic, Google).
+- [ ] `frontend/lib/ai/factory.ts` : Pour switcher de modèle à la volée.
+- [ ] Route `/api/ai/command` : Interface de commande en langage naturel.
 
 ### 2. UI IA (Frontend)
 - [ ] `frontend/context/AIContext.tsx` : Gère le statut de l'IA (active/inactive), les erreurs de tokens et le modèle choisi.
@@ -96,16 +113,18 @@ export const useAI = () => {
 };
 ```
 
-### Étape IA.2 : Le Proxy IA (Backend Go)
+### Étape IA.2 : Le Proxy IA (Route API Next.js)
 
-#### Structure : `backend/internal/infrastructure/ai/`
-L'interface `LLMClient` définit les méthodes communes (GenerateText, ParseSchema).
+> Initialement prévu en Go (`backend/internal/infrastructure/ai/`). Le backend Go ayant été abandonné, le proxy vit dans `frontend/app/api/ai/command/route.ts`.
 
-```go
-type LLMProvider interface {
-    Chat(ctx context.Context, prompt string) (string, error)
+```typescript
+interface LLMProvider {
+    chat(prompt: string, options?: { model?: string }): Promise<string>;
+    parseSchema<T>(prompt: string, schema: z.ZodSchema<T>): Promise<T>;
 }
 ```
+
+Une implémentation par fournisseur (OpenAI, Anthropic, Google, Ollama) et une factory choisie par la configuration du salon.
 
 ---
 
@@ -126,5 +145,5 @@ type LLMProvider interface {
 
 ---
 
-**Dernière mise à jour** : 2026-01-18
-**Phase active** : S'intercale entre la Phase 1 et 2 (Init core IA).
+**Dernière mise à jour** : 2026-10-16
+**Phase active** : En attente. Prérequis : Phase 6 (tests) avancée et choix du fournisseur LLM.

@@ -1,6 +1,7 @@
 # PHASE 2 - Mode Démo localStorage
 
-> **Contexte Agent** : À lire avec [CONTEXT.md](file:///c:/Users/lecle/Workspace/saloon-management/CONTEXT.md) et [PHASE_1.md](file:///c:/Users/lecle/Workspace/saloon-management/PHASE_1.md) avant de démarrer
+> **Statut : ✅ TERMINÉE** (`LocalStorageProvider`, `ModeSwitcher`, données initiales). Voir [CONTEXT.md](CONTEXT.md).
+> **Contexte Agent** : À lire avec [CONTEXT.md](CONTEXT.md) et [PHASE_1.md](PHASE_1.md) avant de démarrer
 
 ---
 
@@ -407,4 +408,4 @@ export default function TeamPage() {
 
 ---
 
-**Dernière mise à jour** : 2026-01-18
+**Dernière mise à jour** : 2026-10-16

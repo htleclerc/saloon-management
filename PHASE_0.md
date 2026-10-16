@@ -1,6 +1,7 @@
 # PHASE 0 - Audit & Mockup Fonctionnel
 
-> **Contexte Agent** : Phase préparatoire avant refactoring. À lire avec [CONTEXT.md](file:///c:/Users/lecle/Workspace/saloon-management/CONTEXT.md)
+> **Statut : ✅ TERMINÉE** (mockup fonctionnel livré, puis dépassé par les versions 1.0 → 1.2). Document conservé comme historique ; les cases non cochées ne reflètent pas l'état du code. Voir [CONTEXT.md](CONTEXT.md).
+> **Contexte Agent** : Phase préparatoire avant refactoring. À lire avec [CONTEXT.md](CONTEXT.md)
 
 ---
 
@@ -19,8 +20,8 @@
 ## 📋 Prérequis
 
 ### À Lire Avant
-1. ✅ [CONTEXT.md](file:///c:/Users/lecle/Workspace/saloon-management/CONTEXT.md)
-2. ✅ [AGENT.md](file:///c:/Users/lecle/Workspace/saloon-management/AGENT.md)
+1. ✅ [CONTEXT.md](CONTEXT.md)
+2. ✅ [AGENT.md](AGENT.md)
 3. ✅ Parcourir l'UI existante dans le navigateur
 
 ### Projet Actuel
@@ -512,4 +513,4 @@ export default function TeamPage() {
 
 ---
 
-**Dernière mise à jour** : 2026-01-18
+**Dernière mise à jour** : 2026-10-16
