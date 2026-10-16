@@ -1,6 +1,7 @@
 # PHASE 3 - Infrastructure Locale (Docker)
 
-> **Contexte Agent** : À lire avec [CONTEXT.md](file:///c:/Users/lecle/Workspace/saloon-management/CONTEXT.md)
+> **Statut : ✅ LIVRÉE** — `docker-compose.dev.yml` fournit PostgreSQL, Redis, Keycloak et Mailpit. ⚠️ Keycloak et Redis ne sont pas utilisés par l'application (auth = Supabase, voir PHASE_5.md). Voir [CONTEXT.md](CONTEXT.md).
+> **Contexte Agent** : À lire avec [CONTEXT.md](CONTEXT.md)
 
 ---
 
@@ -21,6 +22,6 @@ Setup environnement de développement complet avec Docker Compose : PostgreSQL, 
 
 ## 📝 Implémentation (Résumé)
 
-Voir [implementation_plan.md](file:///c:/Users/lecle/.gemini/antigravity/brain/d7f8c1ac-84d4-4922-a475-886faf2f608e/implementation_plan.md) Phase 3 pour détails complets.
+Voir `implementation_plan.md` (plan local Antigravity, non versionné) Phase 3 pour détails complets.
 
-**Dernière mise à jour** : 2026-01-18
+**Dernière mise à jour** : 2026-10-16

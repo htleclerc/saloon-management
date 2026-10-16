@@ -14,7 +14,7 @@ Créer une **formation complète** en documentant le développement réel de ce 
 ## 📚 Structure de la Formation
 
 ### Module 0 : Préparation & Vision
-**Statut** : ⏸️ À créer après Phase 0
+**Statut** : ⏸️ À rédiger (code prêt)
 
 **Contenu** :
 - [ ] Introduction : Qu'est-ce qu'un SaaS multi-tenant ?
@@ -30,7 +30,7 @@ Créer une **formation complète** en documentant le développement réel de ce 
 ---
 
 ### Module 1 : UI/UX et Mockup Fonctionnel
-**Statut** : ⏳ En cours (Phase 0)
+**Statut** : ⏸️ À rédiger (Phase 0 terminée)
 
 **Contenu** :
 - [ ] Design System avec Tailwind CSS
@@ -59,7 +59,7 @@ Créer une **formation complète** en documentant le développement réel de ce 
 ---
 
 ### Module 2 : Architecture Provider Pattern
-**Statut** : ⏸️ À créer (Phase 1)
+**Statut** : ⏸️ À rédiger (Phase 1 terminée)
 
 **Contenu** :
 - [ ] **MCD : Passer des types Frontend au modèle de données SQL**
@@ -88,7 +88,7 @@ Créer une **formation complète** en documentant le développement réel de ce 
 ---
 
 ### Module 3 : Stockage Local & Persistance
-**Statut** : ⏸️ À créer (Phase 2)
+**Statut** : ⏸️ À rédiger (Phase 2 terminée)
 
 **Contenu** :
 - [ ] localStorage API
@@ -112,7 +112,7 @@ Créer une **formation complète** en documentant le développement réel de ce 
 ---
 
 ### Module 4 : Backend as a Service (Supabase)
-**Statut** : ⏸️ À créer (Phase 4)
+**Statut** : ⏸️ À rédiger (Phase 4 terminée, Supabase = backend principal)
 
 **Contenu** :
 - [ ] Qu'est-ce que Supabase ?
@@ -139,7 +139,7 @@ Créer une **formation complète** en documentant le développement réel de ce 
 ---
 
 ### Module 5 : Backend Go - API REST
-**Statut** : ⏸️ À créer (Phase 5)
+**Statut** : ❌ Annulé (Phase 5 abandonnée, voir PHASE_5.md). À remplacer par un module « Routes API Next.js, paiement Stripe et emails »
 
 **Contenu** :
 - [ ] Pourquoi Go pour un backend ?
@@ -167,8 +167,8 @@ Créer une **formation complète** en documentant le développement réel de ce 
 
 ---
 
-### Module 6 : Authentification & RBAC (Keycloak)
-**Statut** : ⏸️ À créer (Phase 3+)
+### Module 6 : Authentification & RBAC (Supabase Auth)
+**Statut** : ⏸️ À rédiger — Keycloak remplacé par Supabase Auth + `lib/permissions.ts`
 
 **Contenu** :
 - [ ] Identity Provider (IdP) concept
@@ -417,7 +417,7 @@ Après chaque phase :
 
 ---
 
-**Dernière mise à jour** : 2026-01-18
-**Modules complétés** : 0/10
+**Dernière mise à jour** : 2026-10-16
+**Modules complétés** : 0/10 (code des modules 1 à 4 et 6 disponible, rédaction à faire)
 **Assets créés** : 0
-**Phase actuelle** : Phase 0 (UI Mockup)
+**Phase actuelle** : Phase 6 (Tests & Intégration)

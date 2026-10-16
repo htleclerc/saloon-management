@@ -1,41 +1,47 @@
 # CONTEXT.md - Contexte Global du Projet
 
-> **Fichier de référence centrale** : À lire au début de chaque session agent, quelle que soit la phase
+> **Fichier de référence centrale** : À lire au début de chaque session agent, quelle que soit la tâche.
+> Ce document décrit l'état **réel** du code, pas le plan initial. Les fichiers `PHASE_*.md` sont conservés comme historique.
 
 ---
 
 ## 📋 Informations Projet
 
 ### Identité
-- **Nom** : Saloon Management System
-- **Type** : Application Web SaaS Multi-Mode
-- **Version Actuelle** : MVP V1 (en développement)
-- **Statut** : Phase de développement initial
+- **Nom** : Saloon Management System (nom d'affichage : Workshop Manager / BraidHub)
+- **Type** : Application Web SaaS multi-tenant de gestion de salons (coiffure, tressage, ateliers)
+- **Version Actuelle** : 1.2.0
+- **Statut** : Produit fonctionnel en consolidation (qualité, tests, documentation)
 
-### Stack Technique
+### Stack Technique (réelle)
 
 #### Frontend
-- **Framework** : Next.js 14 (App Router)
+- **Framework** : Next.js 16.1 (App Router) + React 19.2
 - **Langage** : TypeScript 5 (strict mode)
-- **Styling** : TailwindCSS 4
-- **État** : Context API (pas de Redux/Zustand pour MVP)
-- **Icons** : Lucide React
-- **Charts** : Recharts
-- **i18n** : Custom (EN, FR, ES)
+- **Styling** : Tailwind CSS 4
+- **État** : React Context API (9 providers, pas de Redux/Zustand)
+- **Validation** : Zod 4
+- **UI** : Lucide React (icônes), Recharts 3 (graphiques)
+- **Utilitaires** : date-fns 4, jsPDF (PDF), PapaParse (CSV), qrcode.react
+- **i18n** : maison, 3 langues (EN par défaut, FR, ES), ~2 300 clés par langue
 
-#### Backend (V1 - Mode Normal)
-- **Langage** : Go 1.21+
-- **Framework** : Gin
-- **Database** : PostgreSQL 15
-- **Cache** : Redis 7
-- **Auth** : Keycloak (IdP complet)
+#### Backend / Données
+- **Supabase** : PostgreSQL + Auth + Storage + RLS. C'est le backend de production.
+  - Client navigateur, client serveur et client admin dans `frontend/lib/supabase/`
+  - Session gérée par `@supabase/ssr` dans `frontend/middleware.ts`
+- **API Routes Next.js** (`frontend/app/api/`) : paiement, emails, invitations, IA (stub)
+- **Paiement** : Stripe (abonnements, webhooks, portail), PayPal, Mobile Money
+- **Emails** : Brevo (transactionnels, templates dans `frontend/lib/email/`)
 
 #### Infrastructure
-- **Dev** : Docker Compose
-- **Prod** : VPS Hostinger + Docker Compose
-- **CI/CD** : Jenkins (V2)
-- **Monitoring** : Prometheus + Grafana (V2)
-- **Logging** : Splunk (V2)
+- **Dev** : Docker Compose (`docker-compose.dev.yml`) avec PostgreSQL 16, Redis 7, Keycloak 24, Mailpit
+  - ⚠️ Keycloak et Redis sont provisionnés mais **non utilisés** par le frontend actuel (auth = Supabase)
+- **Prod** : à définir (Vercel ou VPS + Docker)
+- **CI/CD, Monitoring, Logging** : non mis en place
+
+#### Tests
+- **Unitaires** : Vitest + Testing Library + jsdom (`npm run test`)
+- **E2E** : Playwright (`npm run test:e2e`), 1 test smoke
 
 ---
 
@@ -43,46 +49,131 @@
 
 ### Modes de Données (3 modes)
 
+Le type `DataMode` (`frontend/lib/providers/types.ts`) définit :
+
+| Mode | Stockage | Usage | Auth |
+|------|----------|-------|------|
+| `demo-local` | localStorage navigateur | Dev local, démo hors-ligne | Cookie `workshop-demo-active` |
+| `demo-supabase` | Supabase (tables partagées) | Démos publiques, cleanup auto 7 jours (`supabase/cleanup_script.sql`) | Cookie démo |
+| `normal` | Supabase (données réelles) | Clients réels | Supabase Auth obligatoire |
+
 ```
-┌─────────────────────────────────────────────────────────┐
-│                   FRONTEND (Next.js)                    │
-│  ┌──────────────────────────────────────────────────┐  │
-│  │  DataModeProvider (Context)                      │  │
-│  └──────────────┬───────────────────────────────────┘  │
-│                 │                                       │
-│     ┌───────────┼───────────┐                          │
-│     │           │           │                          │
-│ ┌───▼────┐  ┌───▼────┐  ┌──▼─────┐                    │
-│ │ Local  │  │Supabase│  │Go API  │                    │
-│ │Provider│  │Provider│  │Provider│                    │
-│ └────────┘  └────────┘  └────┬───┘                    │
-└──────────────────────────────┼────────────────────────┘
-                               │
-                    ┌──────────▼──────────┐
-                    │  Backend Go/Gin     │
-                    │  + PostgreSQL       │
-                    │  + Redis            │
-                    │  + Keycloak         │
-                    └─────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│                   FRONTEND (Next.js)                     │
+│  ┌────────────────────────────────────────────────────┐ │
+│  │  DataModeProvider (Context) → ServiceFactory       │ │
+│  └──────────────┬─────────────────────────────────────┘ │
+│                 │                                        │
+│     ┌───────────┴───────────┐                            │
+│     │                       │                            │
+│ ┌───▼──────────┐    ┌───────▼────────┐                   │
+│ │ LocalStorage │    │   Supabase     │                   │
+│ │  Provider    │    │   Provider     │                   │
+│ └──────────────┘    └───────┬────────┘                   │
+└─────────────────────────────┼────────────────────────────┘
+                              │
+                   ┌──────────▼──────────┐
+                   │  Supabase Cloud     │
+                   │  PostgreSQL + RLS   │
+                   │  Auth + Storage     │
+                   └─────────────────────┘
 ```
 
-#### 1. Mode Démo - localStorage (dev/test)
-- **Usage** : Développement local uniquement
-- **Stockage** : localStorage navigateur
-- **Persistance** : Tant que le cache n'est pas vidé
-- **Désactivé en prod** : Automatiquement
+Le backend Go/Gin prévu initialement (Phase 5) **n'a pas été développé**. Supabase tient lieu de backend. Voir « Décisions Architecturales ».
 
-#### 2. Mode Démo - Supabase (production démo)
-- **Usage** : Démos publiques, tests utilisateurs
-- **Stockage** : Supabase PostgreSQL
-- **Cleanup** : Automatique après 7 jours
-- **RLS** : Public (pas d'auth requise)
+---
 
-#### 3. Mode Normal - Go API (production)
-- **Usage** : Clients payants, données réelles
-- **Stockage** : PostgreSQL (persistent)
-- **Auth** : Keycloak obligatoire (JWT + RBAC)
-- **Cache** : Redis pour performances
+## 🏗️ Architecture Frontend
+
+```
+frontend/
+├── app/                      # Next.js App Router (~80 pages)
+│   ├── api/                  # Routes API (payment, email, team/invite, ai, download)
+│   ├── auth/                 # callback, logout, reset-password
+│   ├── login/, onboarding/   # Authentification et inscription salon
+│   ├── dashboard/, daily/    # Tableaux de bord
+│   ├── team/                 # Workers : liste, ajout, détail, paie, planning, performance
+│   ├── clients/, services/   # CRUD clients et prestations
+│   ├── appointments/, calendar/, approvals/   # Rendez-vous
+│   ├── income/, expenses/, reports/           # Finances et rapports
+│   ├── configuration/        # Atelier, inventaire, promos, pourboires
+│   ├── settings/             # Profil, sécurité, users, billing, IA, intégrations...
+│   ├── superadmin/, admin/   # Pilotage multi-salons et plans
+│   └── salons/, client/      # Espace client (découverte, favoris, factures)
+├── components/
+│   ├── layout/               # Header, Sidebar, layouts
+│   ├── ui/                   # Button, Card, StatCard, modales, Toast, ModeSwitcher
+│   ├── guards/               # RequirePermission et gardes de rôle
+│   ├── booking/, dashboard/, services/, admin/, superadmin/, onboarding/, ai/, auth/
+├── context/                  # Auth, Theme, DataMode, Booking, Notification,
+│                             # Onboarding, AI, Toast, Confirm
+├── hooks/                    # useCurrency, usePayment, useReadOnlyMode, useServices...
+├── i18n/                     # index.tsx + translations/{en,fr,es}.json
+├── lib/
+│   ├── providers/            # StorageProviderFactory, LocalStorageProvider, SupabaseProvider
+│   ├── services/             # ~20 services métier + ServiceFactory + tests
+│   ├── domain/rules/         # Règles de gestion centralisées
+│   ├── permissions.ts        # RBAC par action et par statut
+│   ├── payment/              # Stripe, PayPal, MobileMoney
+│   ├── email/                # Brevo + templates
+│   ├── supabase/             # Clients Supabase (client, server, admin, middleware)
+│   ├── validators/, utils/, constants/, mock/
+├── supabase/                 # schema_v2.sql, policies_v2.sql, views_v2.sql, seeds, migrations/
+├── e2e/                      # Tests Playwright
+├── middleware.ts             # Protection des routes (session Supabase ou cookie démo)
+└── types/                    # Types centralisés (index.ts, payment.ts, email.ts)
+```
+
+### Modèle de Données (Supabase, `schema_v2.sql`)
+22 tables : `users`, `salons`, `user_salons`, `salon_settings`, `workers`, `clients`,
+`service_categories`, `services`, `products`, `promo_codes`, `bookings`, `booking_services`,
+`booking_workers`, `incomes`, `income_worker_shares`, `income_services`, `income_products`,
+`expense_categories`, `expenses`, `reviews`, `interaction_history`, `salon_comments`.
+Migrations complémentaires dans `frontend/supabase/migrations/` (notifications, paie, historique de paiements, préférences de notification, auth_id).
+
+---
+
+## 🔐 Sécurité & Authentification
+
+- **Auth** : Supabase Auth (email/mot de passe, reset, callback OAuth). Keycloak n'est pas utilisé.
+- **Protection des routes** : `frontend/middleware.ts`. Routes publiques : `/login`, `/auth/*`, `/onboarding`, `/downloads/invoice`, `/salons/discover`.
+- **Rôles** (`UserRole` dans `frontend/types/index.ts`) :
+  ```
+  super_admin > owner > manager > worker > client
+  ```
+  Il n'y a **pas** de rôle `admin` dans le code.
+- **RBAC** : `frontend/lib/permissions.ts` définit, par domaine (booking, income, service, expense), les rôles et statuts autorisés pour chaque action. Toujours passer par ces règles, jamais par des conditions en dur.
+- **Mode lecture seule** : hook `useReadOnlyMode`.
+- **Abonnements** (`SubscriptionPlan`) : `free`, `starter`, `pro`, `enterprise`, `custom`.
+
+---
+
+## 🎯 Fonctionnalités Implémentées
+
+- ✅ Dashboard KPI, vue journalière, dashboard avancé
+- ✅ Équipe : CRUD workers (simple et avancé), détail, planning, performance, feedback, paie, revenus
+- ✅ Clients : CRUD, fiche client
+- ✅ Prestations : CRUD, catégories, historique
+- ✅ Rendez-vous : réservation, calendrier, approbations, statuts (Created → Closed)
+- ✅ Revenus : saisie, parts worker, pourboires, factures, notes
+- ✅ Dépenses : CRUD par catégorie
+- ✅ Rapports : filtres de période, exports CSV/PDF
+- ✅ Configuration : atelier, inventaire, codes promo, pourboires
+- ✅ Paramètres : profil, sécurité, users, apparence, notifications, emails, intégrations, analytics, IA, billing
+- ✅ Abonnements : checkout Stripe/PayPal, portail, webhooks, factures
+- ✅ Super-admin : salons, users, plans, billing, analytics, support
+- ✅ Onboarding salon, invitations d'équipe par email (Brevo)
+- ✅ i18n EN/FR/ES, dark mode, responsive, multi-devise
+- ✅ 3 modes de données avec ModeSwitcher et bannière démo
+
+### Partiel / À faire
+- ⚠️ IA : `AIProvider` et route `/api/ai/command` existent mais sont des **stubs** (aucun LLM branché)
+- ⚠️ Tests E2E : un seul test smoke, avec un chemin local en dur à corriger
+- ⚠️ Couverture unitaire : services bien couverts, pages et composants peu couverts
+- [ ] Déploiement production documenté
+- [ ] CI/CD (lint + type-check + tests sur PR)
+- [ ] Monitoring / logging
+- [ ] Consolidation des policies RLS (plusieurs migrations correctives successives sur `payment_history`)
 
 ---
 
@@ -92,16 +183,20 @@
 
 ✅ **TOUJOURS**
 - TypeScript strict mode (pas d'`any`)
-- Validation inputs avec Zod
-- Tests pour nouveau code
+- Validation des inputs avec Zod
+- Passer par les services (`lib/services`) et les règles (`lib/permissions.ts`, `lib/domain/rules`)
+- Tests pour tout nouveau service ou règle métier
 - Commits atomiques (Conventional Commits)
-- Lire code existant avant d'écrire
+- Lire le code existant avant d'écrire
+- Code, variables, fichiers et commits **en anglais** ; textes affichés via i18n (jamais en dur)
 
 ❌ **JAMAIS**
 - Utiliser `any` en TypeScript
-- Committer des secrets
-- Ignorer erreurs TypeScript/ESLint
+- Committer des secrets (`.env*` est ignoré)
+- Ignorer les erreurs TypeScript/ESLint
 - Push direct sur main
+- Appeler Supabase directement depuis une page (passer par un service)
+- Coder des couleurs ou des données en dur dans les pages
 
 ### Conventions Nommage
 
@@ -112,287 +207,106 @@
 | Classes/Types | PascalCase | `UserService` |
 | Composants | PascalCase | `UserProfile.tsx` |
 | Hooks | camelCase + use | `useAuth()` |
+| Services | PascalCase + Service | `WorkerService.ts` |
 
 ### Git Commits
 ```
 type(scope): description
 
 Types: feat, fix, docs, style, refactor, test, chore
-Scope: frontend, backend, infra, docs
+Scope: frontend, supabase, infra, docs, <module> (team, income, billing...)
 ```
 
 ---
 
-## 🏗️ Architecture Actuelle
+## 🔧 Commandes (dans `frontend/`)
 
-### Structure Frontend
-
-```
-frontend/
-├── app/              # Next.js App Router
-│   ├── page.tsx     # Dashboard
-│   ├── team/        # Workers management
-│   ├── clients/     # Clients management
-│   ├── income/      # Revenue tracking
-│   └── settings/    # Settings
-├── components/
-│   ├── layout/      # Header, Sidebar, MainLayout
-│   ├── ui/          # Button, Card, StatCard
-│   └── dashboard/   # ClientDashboard
-├── context/
-│   ├── AuthProvider.tsx     # Auth + RBAC
-│   ├── ThemeProvider.tsx    # Theme + Responsive
-│   └── DataModeProvider.tsx # Mode switching (NEW)
-├── lib/
-│   ├── providers/   # Data providers (NEW)
-│   ├── services/    # Business logic (NEW)
-│   └── export.ts    # CSV/PDF utils
-├── types/           # Types centralisés
-└── i18n/            # Traductions (EN, FR, ES)
+```bash
+npm run dev            # Développement (port 3000)
+npm run build          # Build production
+npm run lint           # ESLint
+npm run type-check     # tsc --noEmit
+npm run test           # Vitest
+npm run test:coverage  # Vitest + couverture
+npm run test:e2e       # Playwright
 ```
 
-### Structure Backend (À créer)
+Infra locale (racine) : `docker-compose -f docker-compose.dev.yml --env-file .env.docker up -d`
 
-```
-backend/
-├── cmd/api/                # Entry point
-├── internal/
-│   ├── config/            # Configuration
-│   ├── domain/            # Business logic
-│   ├── application/       # Handlers, middleware
-│   └── infrastructure/    # DB, Redis, Keycloak
-└── deployments/           # Docker, scripts
-```
-
----
-
-## 🎯 Fonctionnalités Principales
-
-### Actuellement Implémentées
-- ✅ Dashboard KPI
-- ✅ Workers list & detail
-- ✅ Clients management
-- ✅ Income tracking (basique)
-- ✅ Reports & exports (CSV/PDF)
-- ✅ i18n (EN, FR, ES)
-- ✅ RBAC basique (rôles hardcodés)
-- ✅ Dark mode
-- ✅ Responsive design
-
-### À Implémenter (MVP V1)
-- [ ] Architecture providers (Phase 1)
-- [ ] Mode démo localStorage (Phase 2)
-- [ ] Infrastructure Docker (Phase 3)
-- [ ] Mode démo Supabase (Phase 4)
-- [ ] Backend Go API (Phase 5)
-- [ ] Tests E2E (Phase 6)
-
-### V2 Post-MVP
-- [ ] Nginx + SSL
-- [ ] Jenkins CI/CD
-- [ ] Prometheus/Grafana
-- [ ] Splunk logging
-- [ ] RBAC complet
-
----
-
-## 🔐 Sécurité & Authentification
-
-### Keycloak Setup (À venir)
-- **Realm** : saloon-management
-- **Clients** : saloon-frontend (Public), saloon-backend (Confidential)
-- **Rôles** : super_admin, admin, owner, manager, worker, client
-- **Flow** : Authorization Code + PKCE
-- **Tokens** : JWT avec refresh rotation
-
-### RBAC Hiérarchie
-```
-super_admin > admin > owner > manager > worker > client
-```
-
----
-
-## 📦 Dépendances Importantes
-
-### Frontend (package.json)
-```json
-{
-  "dependencies": {
-    "next": "16.1.1",
-    "react": "19.2.3",
-    "tailwindcss": "^4",
-    "date-fns": "^4.1.0",
-    "lucide-react": "^0.562.0",
-    "recharts": "^3.6.0",
-    "@supabase/supabase-js": "^2.39.0", // À ajouter
-    "zod": "^3.22.4"  // À ajouter
-  }
-}
-```
-
-### Backend (go.mod - À créer)
-```
-github.com/gin-gonic/gin
-gorm.io/gorm
-github.com/go-redis/redis/v8
-github.com/Nerzal/gocloak/v13
-```
+### Variables d'environnement attendues
+`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`,
+`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PRO`, `STRIPE_PRICE_ENTERPRISE`,
+`NEXT_PUBLIC_STRIPE_PRICE_PRO`, `NEXT_PUBLIC_STRIPE_PRICE_ENTERPRISE`,
+`PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `MOBILEMONEY_API_KEY`, `PAYMENT_PROVIDERS`,
+`BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME`.
 
 ---
 
 ## 📚 Documentation de Référence
 
-### Toujours Consulter
-1. **[AGENT.md](file:///c:/Users/lecle/Workspace/saloon-management/AGENT.md)** - Conventions projet actuelles
-2. **[ENTERPRISE_STANDARDS.md](file:///c:/Users/lecle/Workspace/saloon-management/startup-package/docs/standards/ENTERPRISE_STANDARDS.md)** - Standards enterprise
-3. **[DOCUMENTATION.md](file:///c:/Users/lecle/Workspace/saloon-management/DOCUMENTATION.md)** - Build in Public & Formation
-4. **[task.md](file:///c:/Users/lecle/.gemini/antigravity/brain/d7f8c1ac-84d4-4922-a475-886faf2f608e/task.md)** - Checklist MVP
-5. **[implementation_plan.md](file:///c:/Users/lecle/.gemini/antigravity/brain/d7f8c1ac-84d4-4922-a475-886faf2f608e/implementation_plan.md)** - Plan détaillé MVP
-6. **[implementation_plan_v2.md](file:///c:/Users/lecle/.gemini/antigravity/brain/d7f8c1ac-84d4-4922-a475-886faf2f608e/implementation_plan_v2.md)** - Plan V2 post-MVP
+1. **[AGENT.md](AGENT.md)** - Conventions et patterns de code
+2. **[CLAUDE.md](CLAUDE.md)** - Résumé des règles pour l'agent
+3. **[docs/PROCESS_QUALITY.md](docs/PROCESS_QUALITY.md)** - Questionnaire RG et canevas feature
+4. **[docs/adr/](docs/adr/)** - Décisions d'architecture
+5. **[README_INFRA.md](README_INFRA.md)** - Infra Docker locale
+6. **[DOCUMENTATION.md](DOCUMENTATION.md)** - Formation Build in Public
+7. **[startup-package/](startup-package/README.md)** - Bonnes pratiques génériques
+8. **`PHASE_0.md` → `PHASE_6.md`, `PHASE_IA.md`** - Historique du plan MVP
 
 ---
 
-## 🚀 Timeline & Avancement
+## 🚀 Avancement
 
-### MVP V1 : 1 Semaine
-| Jour | Phase | Statut |
-|------|-------|--------|
-| 0.5  | Phase 0 : Mockup Fonctionnel | ⏳ En cours |
-| 1-2  | Phase 1 : Providers | ⏸️ À venir |
-| 2.5  | Phase IA : Booster Intelligence | ⏸️ À venir |
-| 3    | Phase 2 : localStorage | ⏸️ À venir |
-| 3    | Phase 3 : Infra Docker | ⏸️ À venir |
-| 4    | Phase 4 : Supabase | ⏸️ À venir |
-| 5-6  | Phase 5 : Backend Go | ⏸️ À venir |
-| 7    | Phase 6 : Tests E2E | ⏸️ À venir |
+| Phase | Contenu | Statut |
+|-------|---------|--------|
+| 0 | Mockup fonctionnel | ✅ Terminée |
+| 1 | Architecture providers / services | ✅ Terminée |
+| 2 | Mode démo localStorage | ✅ Terminée |
+| 3 | Infra Docker locale | ✅ Livrée (Keycloak/Redis non branchés) |
+| 4 | Mode démo Supabase | ✅ Terminée |
+| IA | Booster intelligence | ⚠️ Stubs uniquement |
+| 5 | Backend Go API | ❌ Abandonnée au profit de Supabase |
+| 6 | Tests E2E et intégration | ⏳ Démarrée (smoke test) |
+| Hors plan | Paiement, emails, paie, super-admin, onboarding | ✅ Livrées (v1.0 → v1.2) |
 
-### V2 : 3-4 Semaines
-- Semaine 1 : Nginx + SSL
-- Semaine 2 : Jenkins CI/CD  
-- Semaine 3 : Monitoring
-- Semaine 4 : RBAC complet + Tests
-
-### 📹 Build in Public : Documentation Temps Réel
-- **Objectif** : Créer une formation "SaaS Multi-Tenant de A à Z"
-- **Format** : Articles (Medium) + Vidéos (YouTube) + Code (GitHub)
-- **Workflow** : Après chaque phase → Publier documentation
-- **Détails** : Voir [DOCUMENTATION.md](file:///c:/Users/lecle/Workspace/saloon-management/DOCUMENTATION.md)
+### Prochaines étapes recommandées
+1. Tests E2E des parcours critiques (login, booking, income, billing)
+2. CI (GitHub Actions) : lint, type-check, test
+3. Consolidation RLS et nettoyage des migrations correctives
+4. Guide de déploiement production
+5. Branchement d'un vrai LLM derrière `/api/ai/command` (optionnel)
 
 ---
 
-## 🎯 Objectifs par Phase
+## 💡 Décisions Architecturales
 
-### Phase 0 : Mockup Fonctionnel (CURRENT)
-**Objectif** : Auditer l'UI et implémenter toutes les actions manquantes avec stubs
-**Livrables** :
-- Audit complet (AUDIT_PHASE_0.md)
-- Stubs API (à remplir Phase 5)
-- Actions locales (workers, clients)
-- Modales et formulaires fonctionnels
-- Aucun bouton sans action
-
-### Phase 1 : Frontend Providers
-**Objectif** : Architecture provider flexible et formalisation du MCD
-**Livrables** :
-- MCD validé (basé sur l'UI)
-- Types & interfaces providers
-- DataModeProvider context
-- Factory pattern
-- Services métier (Worker, Client, Booking)
-
-### Phase IA : Booster Intelligence (NOUVEAU)
-**Objectif** : Couche d'intelligence optionnelle et modulaire
-**Livrables** :
-- AIProvider (Frontend) pour gestion statut/modèles
-- Proxy IA Backend (Go) supportant multiples providers
-- Assistant de commande (Smart Add, Analytics)
-- Système de fallback (le SaaS fonctionne sans IA)
-
-### Phase 2 : Mode Démo localStorage
-**Objectif** : Mode démo local fonctionnel
-**Livrables** :
-- LocalStorage provider
-- CRUD Workers complet
-- CRUD Clients complet
-- UI mode switcher
-
-### Phase 3 : Infrastructure Locale
-**Objectif** : Environnement dev complet avec Docker
-**Livrables** :
-- docker-compose.dev.yml
-- PostgreSQL, Redis, Keycloak
-- Scripts d'initialisation
-- Documentation setup
-
-### Phase 4 : Mode Démo Supabase
-**Objectif** : Mode démo cloud avec cleanup auto
-**Livrables** :
-- Projet Supabase configuré
-- Schéma SQL + RLS
-- Supabase provider
-- Script cleanup (7 jours)
-
-### Phase 5 : Backend Go API
-**Objectif** : API REST complète en Go
-**Livrables** :
-- Structure Clean Architecture
-- CRUD Workers, Clients, Bookings
-- Auth Keycloak (middleware)
-- Cache Redis
-- Tests unitaires
-
-### Phase 6 : Tests & Integration
-**Objectif** : Tests E2E et validation complète
-**Livrables** :
-- Tests E2E (3 modes)
-- Documentation utilisateur
-- Guide déploiement
-- MVP livrable
-
----
-
-## 💡 Notes Importantes
-
-### Décisions Architecturales
-1. **Pas de Kubernetes pour MVP** : Docker Compose suffit (simplicité)
-2. **Supabase pour démo cloud** : Plus simple que backend dédié pour demos
-3. **Keycloak obligatoire** : Solution IdP professionnelle (SSO, RBAC)
-4. **Go pour backend** : Performance + typage natif
-5. **Context API pour state** : Pas de Redux/Zustand avant nécessité réelle
+1. **Supabase comme backend** : le backend Go/Gin + Keycloak + Redis prévu en Phase 5 a été abandonné. Supabase couvre auth, base, storage et RLS avec un coût de maintenance bien plus faible. Un backend dédié ne sera envisagé que si Supabase devient limitant (logique métier lourde, intégrations serveur).
+2. **Pas de Kubernetes** : Docker Compose suffit.
+3. **Context API pour l'état** : pas de Redux/Zustand tant que ce n'est pas nécessaire.
+4. **Services + Providers** : toute la logique de données passe par `lib/services`, qui s'appuie sur le provider du mode actif. Les pages ne connaissent pas Supabase.
+5. **IA optionnelle** : le produit doit fonctionner à 100 % sans IA (Null Object / feature toggles).
+6. **Agent IA de développement** : voir `docs/adr/001-agent-integration.md`.
 
 ### Points d'Attention
-- Mode demo-local **désactivé en prod** automatiquement
-- Cleanup Supabase nécessite **cron externe** (Vercel Cron ou GitHub Actions)
-- RBAC simplifié en MVP, complet en V2
-- Tests > 80% coverage reporté en V2
-- Monitoring basique (logs console) en MVP, Prometheus/Grafana en V2
+- Le mode `demo-local` doit rester désactivé en production.
+- Le cleanup Supabase démo nécessite un cron externe (Supabase cron ou GitHub Actions).
+- Le fichier `README_INFRA.md` décrit une infra Docker partiellement utilisée.
 
 ---
 
 ## 📞 Utilisation de ce Fichier
 
-### Pour un Agent Démarrant une Phase
-1. **TOUJOURS** lire ce fichier en premier
-2. Lire le fichier de phase spécifique (ex: `PHASE_1.md`)
-3. Vérifier `task.md` pour l'avancement global
-4. Commencer le travail en restant cohérent avec l'existant
+### Pour un Agent Démarrant une Tâche
+1. **TOUJOURS** lire ce fichier en premier, puis `AGENT.md`
+2. Lire `docs/PROCESS_QUALITY.md` avant toute nouvelle fonctionnalité
+3. Rester cohérent avec les services et règles existants
 
 ### Mise à Jour de ce Fichier
-
-⚠️ **Mettre à jour** quand :
-- Changement de phase active
-- Décision architecturale importante
-- Dépendance ajoutée/supprimée
-- Stack technique modifiée
-
-✅ **Ne PAS mettre à jour** pour :
-- Détails d'implémentation spécifiques
-- Code snippets
-- Bugs fixes
-- Features mineures
+⚠️ **Mettre à jour** quand : décision architecturale, dépendance majeure ajoutée/supprimée, nouveau module fonctionnel, changement de statut d'une phase.
+✅ **Ne PAS mettre à jour** pour : détails d'implémentation, bug fixes, features mineures.
 
 ---
 
-**Dernière mise à jour** : 2026-01-18
-**Phase active** : Phase 0 - Mockup Fonctionnel
-**Version** : MVP V1 (Semaine 1)
+**Dernière mise à jour** : 2026-10-16
+**Version applicative** : 1.2.0
+**Statut** : Consolidation (tests, CI, déploiement)

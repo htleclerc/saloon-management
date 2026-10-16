@@ -2,6 +2,8 @@
 
 This directory contains the infrastructure configuration for the Saloon Management development environment.
 
+> ⚠️ **État d'usage (2026-10-16)** : l'application utilise **Supabase** pour l'authentification et les données. Keycloak et Redis sont provisionnés par ce compose mais ne sont pas branchés au frontend. Mailpit reste utile pour tester les emails en local. Voir [PHASE_5.md](PHASE_5.md) et [CONTEXT.md](CONTEXT.md).
+
 ## Services Included
 - **PostgreSQL 16**: Primary database.
 - **Redis 7**: Cache and session management.
@@ -25,7 +27,7 @@ docker-compose -f docker-compose.dev.yml --env-file .env.docker up -d
 ```
 
 ## Management URLs
-- **Keycloak Admin Console**: [http://localhost:8080](http://localhost:8080)
+- **Keycloak Admin Console**: port défini par `KEYCLOAK_PORT` dans `.env.docker` (voir `docker-compose.dev.yml`)
   - User: `admin`
   - Password: `admin` (configured in `.env.docker`)
 - **Mailpit (Email UI)**: [http://localhost:8025](http://localhost:8025)
