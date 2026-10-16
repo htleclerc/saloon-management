@@ -14,7 +14,7 @@ import { ReadOnlyGuard, useReadOnlyGuard } from "@/components/guards/ReadOnlyGua
 import { useCurrency } from "@/hooks/useCurrency";
 import { salonService } from "@/lib/services/SalonService";
 import { storageService } from "@/lib/services/StorageService";
-import type { SalonSettings } from "@/types";
+import type { SalonSettings, DepositType } from "@/types";
 
 const defaultServices = [
     { name: "Box Braids", duration: "3-4 hours", price: 120 },
@@ -41,6 +41,10 @@ export default function WorkshopSettingsPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [isUploadingLogo, setIsUploadingLogo] = useState(false);
     const [settings, setSettings] = useState<SalonSettings | null>(null);
+    const [depositType, setDepositType] = useState<DepositType>("none");
+    const [depositValue, setDepositValue] = useState("0");
+    const [bookingTerms, setBookingTerms] = useState<string[]>([]);
+    const [newTerm, setNewTerm] = useState("");
     const logoInputRef = useRef<HTMLInputElement>(null);
 
     const MAX_LOGO_SIZE = 2 * 1024 * 1024; // 2MB
@@ -137,6 +141,9 @@ export default function WorkshopSettingsPage() {
             if (salonSettings) {
                 setTaxRate(salonSettings.vatRate?.toString() || "20");
                 setSettings(salonSettings);
+                setDepositType(salonSettings.depositType || "none");
+                setDepositValue(String(salonSettings.depositValue ?? 0));
+                setBookingTerms(salonSettings.bookingTerms || []);
             }
         } catch (error) {
             console.error("Failed to load settings:", error);
@@ -167,9 +174,14 @@ export default function WorkshopSettingsPage() {
             try {
                 await salonService.updateSettings(salonId, {
                     vatRate: Number(taxRate),
+                    depositType,
+                    depositValue: Number(depositValue) || 0,
+                    bookingTerms: bookingTerms.map(term => term.trim()).filter(Boolean),
                 });
             } catch (settingsError) {
-                console.warn("Could not save VAT rate (column may not exist yet):", settingsError);
+                console.warn("Could not save salon settings:", settingsError);
+                showToast(t("common.error"), settingsError instanceof Error ? settingsError.message : t("configuration.workshop.settingsSaveError"), "error");
+                return;
             }
 
             showToast(t("common.success"), t("configuration.workshop.settingsSaved"), "success");
@@ -252,6 +264,105 @@ export default function WorkshopSettingsPage() {
                                 className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
                             />
                         </div>
+                    </div>
+                </div>
+            </Card>
+
+            {/* Online booking rules: deposit and terms */}
+            <Card>
+                <h3 className="font-semibold text-gray-900 text-lg mb-1">{t("configuration.workshop.onlineBooking.title")}</h3>
+                <p className="text-xs text-gray-500 mb-4">{t("configuration.workshop.onlineBooking.subtitle")}</p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">{t("configuration.workshop.onlineBooking.depositType")}</label>
+                        <select
+                            value={depositType}
+                            onChange={(e) => setDepositType(e.target.value as DepositType)}
+                            disabled={!canModify}
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-white disabled:opacity-50"
+                        >
+                            <option value="none">{t("configuration.workshop.onlineBooking.depositNone")}</option>
+                            <option value="fixed">{t("configuration.workshop.onlineBooking.depositFixed", { currency })}</option>
+                            <option value="percent">{t("configuration.workshop.onlineBooking.depositPercent")}</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            {depositType === 'percent'
+                                ? t("configuration.workshop.onlineBooking.depositValuePercent")
+                                : t("configuration.workshop.onlineBooking.depositValueFixed", { currency })}
+                        </label>
+                        <input
+                            type="number"
+                            min={0}
+                            max={depositType === 'percent' ? 100 : undefined}
+                            step={depositType === 'percent' ? 1 : 0.01}
+                            value={depositValue}
+                            onChange={(e) => setDepositValue(e.target.value)}
+                            readOnly={!canModify || depositType === 'none'}
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm disabled:opacity-50"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">{t("configuration.workshop.onlineBooking.depositHint")}</p>
+                    </div>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t("configuration.workshop.onlineBooking.terms")}</label>
+                    <p className="text-xs text-gray-500 mb-3">{t("configuration.workshop.onlineBooking.termsDesc")}</p>
+                    <div className="space-y-2 mb-3">
+                        {bookingTerms.map((term, idx) => (
+                            <div key={idx} className="flex items-start gap-2">
+                                <input
+                                    type="text"
+                                    value={term}
+                                    onChange={(e) => setBookingTerms(prev => prev.map((v, i) => (i === idx ? e.target.value : v)))}
+                                    readOnly={!canModify}
+                                    maxLength={500}
+                                    className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                                />
+                                <ReadOnlyGuard>
+                                    <button
+                                        type="button"
+                                        onClick={() => setBookingTerms(prev => prev.filter((_, i) => i !== idx))}
+                                        className="p-2.5 text-gray-400 hover:text-red-500 transition-colors"
+                                        aria-label={t("common.delete")}
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </ReadOnlyGuard>
+                            </div>
+                        ))}
+                        {bookingTerms.length === 0 && (
+                            <p className="text-sm text-gray-400 italic">{t("configuration.workshop.onlineBooking.noTerms")}</p>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="text"
+                            value={newTerm}
+                            onChange={(e) => setNewTerm(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && newTerm.trim()) {
+                                    e.preventDefault();
+                                    setBookingTerms(prev => [...prev, newTerm.trim()]);
+                                    setNewTerm("");
+                                }
+                            }}
+                            readOnly={!canModify}
+                            maxLength={500}
+                            placeholder={t("configuration.workshop.onlineBooking.termPlaceholder")}
+                            className="flex-1 px-4 py-2.5 border border-dashed border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                        />
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={!canModify || !newTerm.trim() || bookingTerms.length >= 20}
+                            onClick={() => { setBookingTerms(prev => [...prev, newTerm.trim()]); setNewTerm(""); }}
+                        >
+                            <Plus className="w-4 h-4" />
+                        </Button>
                     </div>
                 </div>
             </Card>

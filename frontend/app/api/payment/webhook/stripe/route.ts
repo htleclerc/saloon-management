@@ -56,6 +56,37 @@ export async function POST(request: NextRequest) {
                 payload: parsed,
             });
 
+            // Booking deposit outcome — confirm the booking once the deposit is paid
+            if (result.handled && (result.action === 'booking_deposit_paid' || result.action === 'booking_deposit_failed') && result.data?.bookingId) {
+                const bookingId = Number(result.data.bookingId);
+                const paid = result.action === 'booking_deposit_paid';
+                const { data: booking } = await admin
+                    .from('bookings')
+                    .select('id, status')
+                    .eq('id', bookingId)
+                    .single();
+
+                if (booking) {
+                    const updates: Record<string, unknown> = {
+                        deposit_status: paid ? 'paid' : 'failed',
+                        deposit_reference: result.data.sessionId as string,
+                    };
+                    if (paid && (booking.status === 'Pending' || booking.status === 'Created')) {
+                        updates.status = 'Confirmed';
+                    }
+                    await admin.from('bookings').update(updates).eq('id', bookingId);
+                    const { error: histError } = await admin.from('interaction_history').insert({
+                        salon_id: result.salonId || null,
+                        entity_type: 'booking',
+                        entity_id: bookingId,
+                        action: paid ? 'deposit_paid' : 'deposit_failed',
+                        user_code: 'STRIPE',
+                        comment: `Checkout session ${result.data.sessionId}`,
+                    });
+                    if (histError) console.warn('Could not log deposit history:', histError.message);
+                }
+            }
+
             // Handle subscription changes — update salon subscription status
             if (result.handled && result.salonId) {
                 if (result.action === 'checkout_completed' && result.data?.planId) {

@@ -407,6 +407,13 @@ export const INITIAL_SALON_SETTINGS: SalonSettings[] = [
         tipsEnabled: true,
         tipsDistributionRule: 'EQUAL_ALL',
         defaultWorkerSharePct: 40,
+        depositType: 'percent',
+        depositValue: 25,
+        bookingTerms: [
+            'My hair will be freshly washed and blow dried, with no oil or leave-in conditioner.',
+            'I understand that if my hair is not blown out, a $20 fee will be charged.',
+            'I understand I am responsible for booking the correct location.',
+        ],
         openingHours: [
             { day: 'monday', isOpen: true, openTime: '09:00', closeTime: '19:00' },
             { day: 'tuesday', isOpen: true, openTime: '09:00', closeTime: '19:00' },

@@ -36,6 +36,26 @@ export interface IPaymentProvider {
 
     /** Create a customer in the provider's system */
     createCustomer(params: CreateCustomerParams): Promise<string>;
+
+    /** Create a one-time payment checkout (e.g. booking deposit). Optional: not every provider supports it. */
+    createOneTimeCheckout?(params: OneTimeCheckoutParams): Promise<CheckoutResult>;
+}
+
+// ============================================================
+// ONE-TIME PAYMENT (booking deposit)
+// ============================================================
+
+export interface OneTimeCheckoutParams {
+    salonId: number;
+    bookingId: number;
+    /** Amount in major currency units (e.g. 67.5 for $67.50) */
+    amount: number;
+    /** ISO currency code (e.g. USD, EUR) */
+    currency: string;
+    description: string;
+    customerEmail?: string;
+    successUrl: string;
+    cancelUrl: string;
 }
 
 // ============================================================

@@ -9,9 +9,12 @@ import { ArrowLeft, ArrowRight, Calendar, Clock, User, Check, X, Plus, Search, S
 
 // Local services array removed in favor of ServiceProvider
 import { serviceService, salonService, workerService, clientService } from "@/lib/services";
-import type { Salon, SalonWorker, Client, ServiceAddon } from "@/types";
-import { calculateBookingTotals, formatDurationMinutes } from "@/lib/domain/rules/pricingRules";
+import type { Salon, SalonWorker, Client, ServiceAddon, SalonSettings, Booking } from "@/types";
+import { calculateBookingTotals, calculateDeposit, formatDurationMinutes } from "@/lib/domain/rules/pricingRules";
 import ServiceAddonPicker from "@/components/services/ServiceAddonPicker";
+import { bookingService } from "@/lib/services";
+import { useDataMode } from "@/context/DataModeProvider";
+import { requestDepositCheckout } from "@/lib/payment/depositClient";
 
 interface DisplayWorker extends SalonWorker {
     rating: number;
@@ -50,6 +53,10 @@ function BookAppointmentContent() {
     const [selectedWorkers, setSelectedWorkers] = useState<any[]>([]);
     const [availableAddons, setAvailableAddons] = useState<ServiceAddon[]>([]);
     const [selectedAddonIds, setSelectedAddonIds] = useState<number[]>([]);
+    const [salonSettings, setSalonSettings] = useState<SalonSettings | null>(null);
+    const [acceptedTerms, setAcceptedTerms] = useState<boolean[]>([]);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const { mode: dataMode } = useDataMode();
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [selectedTime, setSelectedTime] = useState("");
     const [anyProfessional, setAnyProfessional] = useState(true); // Default: any professional is selected
@@ -221,6 +228,57 @@ function BookAppointmentContent() {
     const hasCustomService = selectedServices.some(s => s.id === OTHER_SERVICE_ID);
     const bookingDuration = totals.totalDuration > 0 ? totals.totalDuration : 60;
 
+    // Salon booking rules (deposit, terms) for the selected salon
+    const selectedSalonId = selectedSalon?.id ? Number(selectedSalon.id) : 0;
+    useEffect(() => {
+        let cancelled = false;
+        const load = selectedSalonId
+            ? salonService.getSettings(selectedSalonId)
+            : Promise.resolve(null as SalonSettings | null);
+        load
+            .then(settings => {
+                if (cancelled) return;
+                setSalonSettings(settings);
+                setAcceptedTerms((settings?.bookingTerms || []).map(() => false));
+            })
+            .catch(err => {
+                console.error("Failed to load salon settings", err);
+                if (!cancelled) setSalonSettings(null);
+            });
+        return () => { cancelled = true; };
+    }, [selectedSalonId]);
+
+    const bookingTerms = useMemo(() => salonSettings?.bookingTerms || [], [salonSettings]);
+    const allTermsAccepted = bookingTerms.length === 0 || bookingTerms.every((_, i) => acceptedTerms[i]);
+    // Deposit applies to online bookings made by the client
+    const depositAmount = isClient && !isEditMode ? calculateDeposit(totals.totalPrice, salonSettings) : 0;
+
+    /**
+     * Start the deposit payment for a freshly created booking.
+     * Demo data mode (localStorage) simulates a paid deposit; otherwise a checkout session is requested.
+     */
+    const startDepositPayment = async (booking: Booking) => {
+        if (dataMode === 'demo-local') {
+            await bookingService.markDeposit(booking.id, 'paid', 'DEMO');
+            showToast(t("common.success"), t("booking.deposit.demoPaid", { amount: formatCurrency(depositAmount) }), "success");
+            router.push("/appointments");
+            return;
+        }
+        const result = await requestDepositCheckout(booking.id);
+        if (result.kind === 'redirect') {
+            window.location.href = result.url;
+            return;
+        }
+        if (result.kind === 'demo') {
+            await bookingService.markDeposit(booking.id, 'paid', 'DEMO');
+            showToast(t("common.success"), t("booking.deposit.demoPaid", { amount: formatCurrency(depositAmount) }), "success");
+            router.push("/appointments");
+            return;
+        }
+        showToast(t("common.warning"), result.message || t("booking.deposit.paymentUnavailable"), "warning");
+        router.push("/appointments");
+    };
+
     // Derive favorites from booking history
     const favoriteSalonIds = useMemo(() => {
         return Array.from(new Set(bookings
@@ -309,17 +367,15 @@ function BookAppointmentContent() {
         );
     }, [clientSearch, existingClients]);
 
-    // Automatic salon selection for admins
+    // Automatic salon selection for admins, and for clients when the owner has a single salon
     useEffect(() => {
-        if (isAdmin && !selectedSalon && salons.length > 0) {
+        if (!selectedSalon && salons.length > 0 && (isAdmin || (isClient && salons.length === 1))) {
             setSelectedSalon(salons[0]);
         }
-    }, [isAdmin, selectedSalon, salons]);
+    }, [isAdmin, isClient, selectedSalon, salons]);
 
     const handleNext = () => {
-        if (step === 2 && isClient) {
-            setStep(4); // Skip Workers for clients
-        } else if (step === 0 && !isClient) {
+        if (step === 0 && !isClient) {
             setStep(2); // Skip Salon for Admin/Workers
         } else if (step < 5) {
             setStep(step + 1);
@@ -327,9 +383,7 @@ function BookAppointmentContent() {
     };
 
     const handleBack = () => {
-        if (step === 4 && isClient) {
-            setStep(2); // Skip Workers for clients
-        } else if (step === 2 && !isClient) {
+        if (step === 2 && !isClient) {
             setStep(0); // Skip Salon back to Client for Admin
         } else if (step > (isClient ? 1 : 0)) {
             setStep(step - 1);
@@ -429,7 +483,7 @@ function BookAppointmentContent() {
             case 2: return selectedServices.length > 0 && (selectedServices.find(s => s.id === 7) ? serviceDetails.trim() !== "" : true);
             case 3: return anyProfessional || selectedWorkers.length > 0; // "Any Professional" is a valid choice
             case 4: return selectedDate !== "" && selectedTime !== "";
-            case 5: return true;
+            case 5: return !isSubmitting && (!isClient || isEditMode || allTermsAccepted);
             default: return false;
         }
     };
@@ -481,7 +535,8 @@ function BookAppointmentContent() {
                 }
 
                 try {
-                    await addBooking({
+                    setIsSubmitting(true);
+                    const created = await addBooking({
                         salonId: Number(selectedSalon?.id || urlSalonId || 1),
                         clientId: clientId,
                         clientName: clientName,
@@ -492,13 +547,22 @@ function BookAppointmentContent() {
                         time: selectedTime,
                         duration: totalDuration,
                         status: (isClient ? 'Pending' : 'Confirmed') as BookingStatus,
-                        notes: bookingComment || undefined
+                        notes: bookingComment || undefined,
+                        totalPrice: hasCustomService ? undefined : totals.totalPrice,
+                        collectDeposit: isClient,
+                        termsAccepted: isClient && bookingTerms.length > 0
                     });
                     showToast(t("common.success"), t("booking.createSuccess"), "success");
+                    if (isClient && (created.depositAmount || 0) > 0) {
+                        await startDepositPayment(created);
+                        return;
+                    }
                     router.push("/appointments");
                 } catch (err: any) {
                     console.error("Failed to create booking:", err);
                     showToast(t("common.error"), err.message || t("booking.clientCreateFailed"), "error");
+                } finally {
+                    setIsSubmitting(false);
                 }
             };
 
@@ -576,7 +640,7 @@ function BookAppointmentContent() {
                             { num: 0, label: t('booking.steps.client'), roles: ['super_admin', 'manager', 'worker'] },
                             { num: 1, label: t('booking.steps.salon'), roles: ['client'] }, // Admin skips salon selection
                             { num: 2, label: t('booking.steps.services') },
-                            { num: 3, label: t('booking.steps.workers'), roles: ['super_admin', 'manager', 'worker'] },
+                            { num: 3, label: t('booking.steps.workers') },
                             { num: 4, label: t('booking.steps.schedule') },
                             { num: 5, label: t('booking.steps.summary') }
                         ].filter(s => !s.roles || s.roles.includes(user?.role || '')).map((s, idx, arr) => (
@@ -826,6 +890,11 @@ function BookAppointmentContent() {
                                                 <h3 className="font-bold text-gray-900">{salon.name}</h3>
                                                 {isFavorite && <span className="text-[10px] bg-secondary-light text-color-secondary px-1.5 py-0.5 rounded-full font-bold uppercase tracking-tighter">Fav</span>}
                                             </div>
+                                            {(salon.city || salon.address) && (
+                                                <p className="text-sm text-gray-700 mt-1 font-medium">
+                                                    {salon.city}{salon.city && salon.address ? ' · ' : ''}{salon.address}
+                                                </p>
+                                            )}
                                             <p className="text-xs text-gray-500 mt-1">{isFavorite ? t('booking.salonSelection.yourFavorite') : t('booking.salonSelection.clickToSelect')}</p>
                                         </div>
                                     );
@@ -1187,6 +1256,41 @@ function BookAppointmentContent() {
                                 </div>
                             </div>
 
+                            {/* Deposit required for online bookings */}
+                            {isClient && !isEditMode && depositAmount > 0 && (
+                                <div className="p-5 rounded-xl border border-amber-200 bg-amber-50 flex items-start gap-3">
+                                    <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                                    <div className="text-sm text-amber-900">
+                                        <p className="font-bold">{t('booking.deposit.title', { amount: formatCurrency(depositAmount) })}</p>
+                                        <p className="mt-1">
+                                            {salonSettings?.depositType === 'percent'
+                                                ? t('booking.deposit.percentDesc', { percent: salonSettings.depositValue ?? 0, total: formatCurrency(totals.totalPrice) })
+                                                : t('booking.deposit.fixedDesc', { total: formatCurrency(totals.totalPrice) })}
+                                        </p>
+                                        <p className="mt-1 text-amber-800/80">{t('booking.deposit.balanceNote', { balance: formatCurrency(Math.max(0, totals.totalPrice - depositAmount)) })}</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Salon terms to accept */}
+                            {isClient && !isEditMode && bookingTerms.length > 0 && (
+                                <div className="space-y-3">
+                                    <p className="text-sm font-bold text-gray-700">{t('booking.terms.title')}</p>
+                                    {bookingTerms.map((term, idx) => (
+                                        <label key={idx} className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${acceptedTerms[idx] ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)]' : 'border-gray-200 bg-white hover:bg-gray-50'}`}>
+                                            <input
+                                                type="checkbox"
+                                                checked={!!acceptedTerms[idx]}
+                                                onChange={(e) => setAcceptedTerms(prev => prev.map((v, i) => (i === idx ? e.target.checked : v)))}
+                                                className="mt-0.5 w-5 h-5 rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+                                            />
+                                            <span className="text-sm text-gray-800">{term} <span className="text-red-500">*</span></span>
+                                        </label>
+                                    ))}
+                                    {!allTermsAccepted && <p className="text-xs text-gray-500">{t('booking.terms.required')}</p>}
+                                </div>
+                            )}
+
                             {/* Notes */}
                             <div>
                                 <label className="block text-sm font-bold text-gray-700 mb-2">{t('booking.summary.comments')}</label>
@@ -1217,7 +1321,11 @@ function BookAppointmentContent() {
                         onClick={step === 5 ? handleSubmit : handleNext}
                         disabled={!canProceed()}
                     >
-                        {step === 5 ? (isEditMode ? t('booking.summary.update') : t('booking.summary.confirm')) : t('common.continue')}
+                        {step === 5
+                            ? (isEditMode
+                                ? t('booking.summary.update')
+                                : (isClient && depositAmount > 0 ? t('booking.deposit.confirmAndPay', { amount: formatCurrency(depositAmount) }) : t('booking.summary.confirm')))
+                            : t('common.continue')}
                         {step !== 5 && <ArrowRight className="w-4 h-4 ml-2" />}
                     </Button>
                 </div>

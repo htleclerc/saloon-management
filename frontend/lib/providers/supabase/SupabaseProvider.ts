@@ -929,6 +929,9 @@ export class SupabaseProvider implements IDataProvider {
             openingHours: db.opening_hours || [],
             customPermissions: db.custom_permissions || null,
             emailConfig: db.email_config || null,
+            depositType: db.deposit_type || 'none',
+            depositValue: Number(db.deposit_value) || 0,
+            bookingTerms: Array.isArray(db.booking_terms) ? db.booking_terms : [],
             createdAt: new Date(db.created_at),
             updatedAt: new Date(db.updated_at)
         };
@@ -950,6 +953,9 @@ export class SupabaseProvider implements IDataProvider {
         if (settings.openingHours !== undefined) db.opening_hours = settings.openingHours;
         if (settings.customPermissions !== undefined) db.custom_permissions = settings.customPermissions;
         if (settings.emailConfig !== undefined) db.email_config = settings.emailConfig;
+        if (settings.depositType !== undefined) db.deposit_type = settings.depositType;
+        if (settings.depositValue !== undefined) db.deposit_value = settings.depositValue;
+        if (settings.bookingTerms !== undefined) db.booking_terms = settings.bookingTerms;
         return db;
     }
 
@@ -1560,7 +1566,11 @@ export class SupabaseProvider implements IDataProvider {
                 duration: data.duration,
                 status: data.status || 'Pending',
                 notes: data.notes,
-                is_sensitive: false
+                is_sensitive: data.isSensitive ?? false,
+                total_price: data.totalPrice ?? null,
+                deposit_amount: data.depositAmount ?? 0,
+                deposit_status: data.depositStatus ?? 'none',
+                terms_accepted_at: data.termsAccepted ? new Date().toISOString() : null
             }])
             .select(`
                 *,
@@ -1963,6 +1973,11 @@ export class SupabaseProvider implements IDataProvider {
             notes: db.notes,
             incomeId: db.incomes && db.incomes.length > 0 ? db.incomes[0].id : undefined,
             isSensitive: db.is_sensitive || false,
+            totalPrice: db.total_price !== null && db.total_price !== undefined ? Number(db.total_price) : undefined,
+            depositAmount: Number(db.deposit_amount) || 0,
+            depositStatus: db.deposit_status || 'none',
+            depositReference: db.deposit_reference || undefined,
+            termsAcceptedAt: db.terms_accepted_at ? new Date(db.terms_accepted_at) : undefined,
             // These come from joined queries
             serviceIds: db.booking_services?.map((bs: any) => bs.service_id) || [],
             workerIds: db.booking_workers?.map((bw: any) => bw.worker_id) || [],
@@ -1992,6 +2007,11 @@ export class SupabaseProvider implements IDataProvider {
         if (booking.status !== undefined) db.status = booking.status;
         if (booking.notes !== undefined) db.notes = booking.notes;
         if (booking.isSensitive !== undefined) db.is_sensitive = booking.isSensitive;
+        if (booking.totalPrice !== undefined) db.total_price = booking.totalPrice;
+        if (booking.depositAmount !== undefined) db.deposit_amount = booking.depositAmount;
+        if (booking.depositStatus !== undefined) db.deposit_status = booking.depositStatus;
+        if (booking.depositReference !== undefined) db.deposit_reference = booking.depositReference;
+        if (booking.termsAcceptedAt !== undefined) db.terms_accepted_at = booking.termsAcceptedAt;
         if (booking.isActive !== undefined) db.is_active = booking.isActive;
         if (booking.createdBy !== undefined) db.created_by = booking.createdBy;
         if (booking.updatedBy !== undefined) db.updated_by = booking.updatedBy;

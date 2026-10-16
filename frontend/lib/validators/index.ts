@@ -25,6 +25,7 @@ export {
     SalonDetailsSchema,
     SalonCreateSchema,
     SalonUpdateSchema,
+    SalonBookingSettingsSchema,
     type SalonDetailsInput,
     type SalonCreateInput,
 } from './salon.schemas';

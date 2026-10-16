@@ -890,7 +890,19 @@
     "statusPendingApproval": "Pendiente de aprobación",
     "statusRescheduled": "Reprogramado",
     "statusClosed": "Cerrado",
-    "extras": "Extras"
+    "extras": "Extras",
+    "deposit": {
+      "label": "Depósito",
+      "none": "Sin depósito",
+      "pending": "Depósito pendiente",
+      "paid": "Depósito pagado",
+      "failed": "Depósito fallido",
+      "refunded": "Depósito reembolsado",
+      "pay": "Pagar depósito",
+      "demoPaid": "Modo demo: depósito registrado como pagado.",
+      "successReturn": "¡Gracias! Recibimos el pago de tu depósito. La reserva se confirmará en cuanto se valide el pago.",
+      "cancelReturn": "Pago del depósito cancelado. Puedes pagarlo más tarde desde tus citas."
+    }
   },
   "booking": {
     "title": "Reservar Cita",
@@ -977,6 +989,19 @@
       "add": "Añadir",
       "added": "Añadido",
       "extra": "+ {{duration}} · + {{price}}"
+    },
+    "deposit": {
+      "title": "Depósito requerido: {{amount}}",
+      "percentDesc": "Este salón pide el {{percent}}% del total ({{total}}) para confirmar una reserva en línea.",
+      "fixedDesc": "Este salón pide un depósito fijo para confirmar una reserva en línea (total {{total}}).",
+      "balanceNote": "El saldo de {{balance}} se paga en el salón.",
+      "confirmAndPay": "Confirmar y pagar depósito {{amount}}",
+      "demoPaid": "Modo demo: depósito de {{amount}} registrado como pagado, tu reserva está confirmada.",
+      "paymentUnavailable": "El pago en línea no está disponible ahora. Tu reserva queda guardada en espera del depósito."
+    },
+    "terms": {
+      "title": "Antes de reservar, confirma:",
+      "required": "Debes aceptar todas las condiciones para continuar."
     }
   },
   "calendar": {
@@ -1674,7 +1699,22 @@
       "settingsLoadError": "Error al cargar los ajustes",
       "settingsSaveError": "Error al guardar los ajustes",
       "logoAndColorsApplied": "Logo subido y colores del tema extraídos automáticamente!",
-      "noSalonSelected": "Ningún salón seleccionado"
+      "noSalonSelected": "Ningún salón seleccionado",
+      "onlineBooking": {
+        "title": "Reserva en línea",
+        "subtitle": "Depósito exigido a las clientas y condiciones que deben aceptar antes de reservar",
+        "depositType": "Depósito",
+        "depositNone": "Sin depósito",
+        "depositFixed": "Monto fijo ({{currency}})",
+        "depositPercent": "Porcentaje del total",
+        "depositValuePercent": "Porcentaje (0-100)",
+        "depositValueFixed": "Monto ({{currency}})",
+        "depositHint": "Se aplica a las reservas hechas en línea por las clientas. El saldo se paga en el salón.",
+        "terms": "Condiciones a aceptar",
+        "termsDesc": "Cada condición se muestra como una casilla obligatoria al final de la reserva (preparación del cabello, cargos, ubicación...).",
+        "noTerms": "Aún no hay condiciones.",
+        "termPlaceholder": "ej. Mi cabello estará lavado y secado antes de la cita"
+      }
     },
     "tips": {
       "title": "Configuración de propinas",

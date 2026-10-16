@@ -916,7 +916,19 @@
     "statusPendingApproval": "Pending Approval",
     "statusRescheduled": "Rescheduled",
     "statusClosed": "Closed",
-    "extras": "Extras"
+    "extras": "Extras",
+    "deposit": {
+      "label": "Deposit",
+      "none": "No deposit",
+      "pending": "Deposit due",
+      "paid": "Deposit paid",
+      "failed": "Deposit failed",
+      "refunded": "Deposit refunded",
+      "pay": "Pay deposit",
+      "demoPaid": "Demo mode: deposit recorded as paid.",
+      "successReturn": "Thank you! Your deposit payment was received. The booking will be confirmed as soon as the payment is validated.",
+      "cancelReturn": "Deposit payment cancelled. You can pay it later from your appointments."
+    }
   },
   "booking": {
     "title": "Book Appointment",
@@ -1003,6 +1015,19 @@
       "add": "Add",
       "added": "Added",
       "extra": "+ {{duration}} · + {{price}}"
+    },
+    "deposit": {
+      "title": "Deposit required: {{amount}}",
+      "percentDesc": "This salon asks for {{percent}}% of the total ({{total}}) to confirm an online booking.",
+      "fixedDesc": "This salon asks for a fixed deposit to confirm an online booking (total {{total}}).",
+      "balanceNote": "The balance of {{balance}} is paid at the salon.",
+      "confirmAndPay": "Confirm & pay deposit {{amount}}",
+      "demoPaid": "Demo mode: deposit of {{amount}} recorded as paid, your booking is confirmed.",
+      "paymentUnavailable": "Online payment is not available right now. Your booking is saved and awaits the deposit."
+    },
+    "terms": {
+      "title": "Before booking, please confirm:",
+      "required": "All statements must be accepted to continue."
     }
   },
   "calendar": {
@@ -1700,7 +1725,22 @@
       "settingsLoadError": "Failed to load settings",
       "settingsSaveError": "Failed to save settings",
       "logoAndColorsApplied": "Logo uploaded and theme colors extracted automatically!",
-      "noSalonSelected": "No salon selected"
+      "noSalonSelected": "No salon selected",
+      "onlineBooking": {
+        "title": "Online booking",
+        "subtitle": "Deposit required from clients and statements they must accept before booking",
+        "depositType": "Deposit",
+        "depositNone": "No deposit",
+        "depositFixed": "Fixed amount ({{currency}})",
+        "depositPercent": "Percentage of the total",
+        "depositValuePercent": "Percentage (0-100)",
+        "depositValueFixed": "Amount ({{currency}})",
+        "depositHint": "Applied to bookings made online by clients. The balance is paid at the salon.",
+        "terms": "Booking terms",
+        "termsDesc": "Each statement is shown as a mandatory checkbox at the end of the booking (hair preparation, fees, location...).",
+        "noTerms": "No statement yet.",
+        "termPlaceholder": "e.g. My hair will be washed and blow dried before the appointment"
+      }
     },
     "tips": {
       "title": "Tips Configuration",
