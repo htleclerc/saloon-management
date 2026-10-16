@@ -902,6 +902,17 @@
       "demoPaid": "Modo demo: depósito registrado como pagado.",
       "successReturn": "¡Gracias! Recibimos el pago de tu depósito. La reserva se confirmará en cuanto se valide el pago.",
       "cancelReturn": "Pago del depósito cancelado. Puedes pagarlo más tarde desde tus citas."
+    },
+    "team": {
+      "title": "Estilistas en esta cita",
+      "primary": "Estilista reservada",
+      "assistant": "Asistente",
+      "add": "Añadir una estilista",
+      "selectWorker": "Elegir una estilista...",
+      "remove": "Quitar",
+      "none": "Ninguna estilista asignada (cualquiera)",
+      "updated": "Equipo actualizado",
+      "busyHint": "No se puede añadir una estilista ya reservada en ese horario."
     }
   },
   "booking": {
@@ -1714,6 +1725,12 @@
         "termsDesc": "Cada condición se muestra como una casilla obligatoria al final de la reserva (preparación del cabello, cargos, ubicación...).",
         "noTerms": "Aún no hay condiciones.",
         "termPlaceholder": "ej. Mi cabello estará lavado y secado antes de la cita"
+      },
+      "teamAccess": {
+        "title": "Acceso del equipo",
+        "managersFinancesDesc": "Elige si los managers ven las páginas financieras (ingresos, gastos, informes) o solo la agenda.",
+        "managersFinancesOn": "Los managers ven ingresos, gastos e informes.",
+        "managersFinancesOff": "Los managers solo ven citas, equipo, clientas y servicios."
       }
     },
     "tips": {

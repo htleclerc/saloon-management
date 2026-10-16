@@ -409,6 +409,7 @@ export const INITIAL_SALON_SETTINGS: SalonSettings[] = [
         defaultWorkerSharePct: 40,
         depositType: 'percent',
         depositValue: 25,
+        managersCanViewFinances: true,
         bookingTerms: [
             'My hair will be freshly washed and blow dried, with no oil or leave-in conditioner.',
             'I understand that if my hair is not blown out, a $20 fee will be charged.',

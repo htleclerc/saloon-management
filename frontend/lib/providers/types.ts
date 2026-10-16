@@ -181,9 +181,11 @@ export interface IDataProvider {
     deleteBooking(id: number): Promise<void>;
 
     // Booking-Worker Junction
-    addWorkerToBooking(bookingId: number, workerId: number): Promise<void>;
+    addWorkerToBooking(bookingId: number, workerId: number, isPrimary?: boolean): Promise<void>;
     removeWorkerFromBooking(bookingId: number, workerId: number): Promise<void>;
     getBookingWorkers(bookingId: number): Promise<SalonWorker[]>;
+    /** Replace the whole team of a booking; the primary stylist defaults to the first id */
+    setBookingWorkers(bookingId: number, workerIds: number[], primaryWorkerId?: number): Promise<void>;
 
     // Booking-Service Junction
     addServiceToBooking(bookingId: number, serviceId: number): Promise<void>;

@@ -833,18 +833,28 @@ export class LocalStorageProvider implements IDataProvider {
         return this.getData().bookings.filter(b => b.salonId === salonId && b.date === date);
     }
 
-    async addWorkerToBooking(bookingId: number, workerId: number): Promise<void> {
+    async addWorkerToBooking(bookingId: number, workerId: number, isPrimary?: boolean): Promise<void> {
         const booking = await this.getBooking(bookingId);
         if (!booking) throw new Error(`Booking ${bookingId} not found`);
         const workerIds = Array.from(new Set([...(booking.workerIds || []), workerId]));
-        await this.updateBooking(bookingId, { workerIds });
+        const primaryWorkerId = isPrimary || !booking.primaryWorkerId ? (isPrimary ? workerId : workerIds[0]) : booking.primaryWorkerId;
+        await this.updateBooking(bookingId, { workerIds, primaryWorkerId });
     }
 
     async removeWorkerFromBooking(bookingId: number, workerId: number): Promise<void> {
         const booking = await this.getBooking(bookingId);
         if (!booking) throw new Error(`Booking ${bookingId} not found`);
         const workerIds = (booking.workerIds || []).filter(id => id !== workerId);
-        await this.updateBooking(bookingId, { workerIds });
+        const primaryWorkerId = booking.primaryWorkerId === workerId ? workerIds[0] : booking.primaryWorkerId;
+        await this.updateBooking(bookingId, { workerIds, primaryWorkerId });
+    }
+
+    async setBookingWorkers(bookingId: number, workerIds: number[], primaryWorkerId?: number): Promise<void> {
+        const booking = await this.getBooking(bookingId);
+        if (!booking) throw new Error(`Booking ${bookingId} not found`);
+        const unique = Array.from(new Set(workerIds));
+        const primary = primaryWorkerId && unique.includes(primaryWorkerId) ? primaryWorkerId : unique[0];
+        await this.updateBooking(bookingId, { workerIds: unique, primaryWorkerId: primary });
     }
 
     async getBookingWorkers(bookingId: number): Promise<SalonWorker[]> {

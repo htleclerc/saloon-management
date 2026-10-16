@@ -12,7 +12,7 @@
 |-----|---------|--------|
 | 1 | Add-ons (catalogue par salon, rattachement aux prestations, étape extras du booking, totaux prix + durée, snapshots sur la réservation, reprise dans le revenu) | ✅ Livré |
 | 2 | Parcours cliente multi-salons (salons listés avec ville et adresse, salon unique auto-sélectionné, étape styliste ouverte aux clientes), acompte fixe ou pourcentage configuré par salon et payé via Stripe Checkout (webhook qui confirme la réservation, simulation en mode démo), mentions obligatoires à accepter | ✅ Livré |
-| 3 | Manager : seconde styliste, répartition, planning, droits finances | ⏳ |
+| 3 | Manager : seconde styliste ajoutée depuis le détail du rendez-vous (styliste réservée = principale, vérification de disponibilité), synchronisation réelle des équipes et prestations sur Supabase, paramètre « les managers voient les finances » appliqué au menu | ✅ Livré (planning styliste et notification à l'ajout restent à faire) |
 | 4 | Confort (liste d'attente, indisponibilités, catalogue photos, import Acuity) | ⏸️ |
 
 Décisions prises avec le propriétaire du projet (2026-10-16) : add-ons définis par salon et rattachés aux prestations ; acompte configurable en montant fixe ou en pourcentage ; le pourcentage de partage styliste / salon existe déjà (`sharingKey`, `income_worker_shares`) et n'est pas redéveloppé.

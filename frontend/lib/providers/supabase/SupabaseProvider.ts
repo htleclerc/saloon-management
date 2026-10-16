@@ -51,6 +51,11 @@ interface BookingAddonRow {
     duration_snapshot: number | null;
 }
 
+interface BookingWorkerRow {
+    worker_id: number;
+    is_primary?: boolean | null;
+}
+
 export class SupabaseProvider implements IDataProvider {
     readonly mode = 'demo-supabase' as const;
     readonly isDemo = true;
@@ -932,6 +937,7 @@ export class SupabaseProvider implements IDataProvider {
             depositType: db.deposit_type || 'none',
             depositValue: Number(db.deposit_value) || 0,
             bookingTerms: Array.isArray(db.booking_terms) ? db.booking_terms : [],
+            managersCanViewFinances: db.managers_can_view_finances !== false,
             createdAt: new Date(db.created_at),
             updatedAt: new Date(db.updated_at)
         };
@@ -956,6 +962,7 @@ export class SupabaseProvider implements IDataProvider {
         if (settings.depositType !== undefined) db.deposit_type = settings.depositType;
         if (settings.depositValue !== undefined) db.deposit_value = settings.depositValue;
         if (settings.bookingTerms !== undefined) db.booking_terms = settings.bookingTerms;
+        if (settings.managersCanViewFinances !== undefined) db.managers_can_view_finances = settings.managersCanViewFinances;
         return db;
     }
 
@@ -1405,7 +1412,7 @@ export class SupabaseProvider implements IDataProvider {
             *,
             client:clients(name),
             booking_services(service_id),
-            booking_workers(worker_id),
+            booking_workers(worker_id, is_primary),
             booking_addons(addon_id, name, price_snapshot, duration_snapshot)
         `, { count: 'exact' })
             .eq('salon_id', salonId);
@@ -1464,7 +1471,7 @@ export class SupabaseProvider implements IDataProvider {
             *,
             client:clients(name),
             booking_services(service_id),
-            booking_workers(worker_id),
+            booking_workers(worker_id, is_primary),
             booking_addons(addon_id, name, price_snapshot, duration_snapshot)
         `)
             .eq('id', id)
@@ -1615,12 +1622,30 @@ export class SupabaseProvider implements IDataProvider {
     }
 
     // Booking-Worker Junction
-    async addWorkerToBooking(bookingId: number, workerId: number): Promise<void> {
+    async addWorkerToBooking(bookingId: number, workerId: number, isPrimary = false): Promise<void> {
         const { error } = await supabase
             .from('booking_workers')
-            .insert([{ booking_id: bookingId, worker_id: workerId }]);
+            .insert([{ booking_id: bookingId, worker_id: workerId, is_primary: isPrimary }]);
 
         if (error) throw new Error(`Failed to add worker to booking: ${error.message}`);
+    }
+
+    async setBookingWorkers(bookingId: number, workerIds: number[], primaryWorkerId?: number): Promise<void> {
+        const unique = Array.from(new Set(workerIds));
+        const primary = primaryWorkerId && unique.includes(primaryWorkerId) ? primaryWorkerId : unique[0];
+
+        const { error: delError } = await supabase
+            .from('booking_workers')
+            .delete()
+            .eq('booking_id', bookingId);
+        if (delError) throw new Error(`Failed to reset booking workers: ${delError.message}`);
+
+        if (unique.length === 0) return;
+
+        const { error } = await supabase
+            .from('booking_workers')
+            .insert(unique.map(workerId => ({ booking_id: bookingId, worker_id: workerId, is_primary: workerId === primary })));
+        if (error) throw new Error(`Failed to assign booking workers: ${error.message}`);
     }
 
     async removeWorkerFromBooking(bookingId: number, workerId: number): Promise<void> {
@@ -1980,7 +2005,10 @@ export class SupabaseProvider implements IDataProvider {
             termsAcceptedAt: db.terms_accepted_at ? new Date(db.terms_accepted_at) : undefined,
             // These come from joined queries
             serviceIds: db.booking_services?.map((bs: any) => bs.service_id) || [],
-            workerIds: db.booking_workers?.map((bw: any) => bw.worker_id) || [],
+            workerIds: db.booking_workers?.map((bw: BookingWorkerRow) => bw.worker_id) || [],
+            primaryWorkerId: db.booking_workers?.find((bw: BookingWorkerRow) => bw.is_primary)?.worker_id
+                ?? db.booking_workers?.[0]?.worker_id
+                ?? undefined,
             addonIds: db.booking_addons?.map((ba: BookingAddonRow) => ba.addon_id) || [],
             addons: db.booking_addons?.map((ba: BookingAddonRow) => ({
                 bookingId: db.id,

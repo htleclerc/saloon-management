@@ -928,6 +928,17 @@
       "demoPaid": "Mode démo : acompte enregistré comme payé.",
       "successReturn": "Merci ! Votre paiement d'acompte a été reçu. La réservation sera confirmée dès validation du paiement.",
       "cancelReturn": "Paiement de l'acompte annulé. Vous pourrez le régler plus tard depuis vos rendez-vous."
+    },
+    "team": {
+      "title": "Stylistes sur ce rendez-vous",
+      "primary": "Styliste réservée",
+      "assistant": "Assistante",
+      "add": "Ajouter une styliste",
+      "selectWorker": "Choisir une styliste...",
+      "remove": "Retirer",
+      "none": "Aucune styliste affectée (n'importe qui)",
+      "updated": "Équipe mise à jour",
+      "busyHint": "Une styliste déjà réservée sur ce créneau ne peut pas être ajoutée."
     }
   },
   "booking": {
@@ -2298,6 +2309,12 @@
         "termsDesc": "Chaque mention est affichée comme une case obligatoire à la fin de la réservation (préparation des cheveux, frais, lieu...).",
         "noTerms": "Aucune mention pour le moment.",
         "termPlaceholder": "ex. Mes cheveux seront lavés et séchés avant le rendez-vous"
+      },
+      "teamAccess": {
+        "title": "Accès de l'équipe",
+        "managersFinancesDesc": "Choisissez si les managers voient les pages financières (revenus, dépenses, rapports) ou seulement le planning.",
+        "managersFinancesOn": "Les managers voient les revenus, les dépenses et les rapports.",
+        "managersFinancesOff": "Les managers ne voient que les rendez-vous, l'équipe, les clientes et les prestations."
       }
     },
     "tips": {

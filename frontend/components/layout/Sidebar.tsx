@@ -37,6 +37,9 @@ import {
     MessageCircle,
 } from "lucide-react";
 
+/** Money pages hidden from managers when the salon disables their finance access */
+const FINANCE_PATHS = ['/income', '/expenses', '/reports'];
+
 const menuItems = [
     { nameKey: "nav.dashboard", icon: LayoutDashboard, path: "/" },
     { nameKey: "nav.daily", icon: TrendingUp, path: "/daily", roles: ['manager', 'super_admin', 'worker'] },
@@ -70,6 +73,7 @@ const superAdminMenuItems = [
 ];
 
 import { useAuth } from "@/context/AuthProvider";
+import { salonService } from "@/lib/services/SalonService";
 
 
 export default function Sidebar() {
@@ -98,7 +102,24 @@ export default function Sidebar() {
     // - Super admin on other routes (viewing salon): SHOW REGULAR MENU
     // - Regular users: SHOW REGULAR MENU
     const isSuperAdminRoute = pathname.startsWith('/superadmin');
-    const activeMenuItems = (isSuperAdmin && isSuperAdminRoute) ? superAdminMenuItems : menuItems;
+
+    // Managers may be restricted from the money pages by the salon owner (salon setting)
+    const { user: sidebarUser, activeSalonId: sidebarSalonId } = useAuth();
+    const [managersCanViewFinances, setManagersCanViewFinances] = useState(true);
+    useEffect(() => {
+        if (!sidebarSalonId || sidebarUser?.role !== 'manager') return;
+        let cancelled = false;
+        salonService.getSettings(Number(sidebarSalonId))
+            .then(settings => { if (!cancelled) setManagersCanViewFinances(settings?.managersCanViewFinances !== false); })
+            .catch(() => { /* keep default (visible) */ });
+        return () => { cancelled = true; };
+    }, [sidebarSalonId, sidebarUser?.role]);
+    const hideFinance = sidebarUser?.role === 'manager' && !managersCanViewFinances;
+
+    const baseMenuItems = (isSuperAdmin && isSuperAdminRoute) ? superAdminMenuItems : menuItems;
+    const activeMenuItems = hideFinance
+        ? baseMenuItems.filter(item => !FINANCE_PATHS.includes(item.path))
+        : baseMenuItems;
 
     // Dynamic gradient style using CSS variables (respects custom override)
     const sidebarGradient = {
