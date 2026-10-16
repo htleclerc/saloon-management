@@ -1,0 +1,65 @@
+===== audio_1.pcm (dur=111s) =====
+[   0.1 ->   11.1] Ok, voilà, donc je t'envoie le lien. Quand tu rentres dans le Nord-Pest, tu vas voir déjà le style et la taille du style.
+[  11.1 ->   18.1] La taille du style, donc maintenant on sélectionne le style. Quand tu sélectionnes le style,
+[  18.1 ->   25.1] elles ont la possibilité d'ajouter, de choisir d'abord la styliste.
+[  25.1 ->   29.1] Et tu verras que comme j'ai deux locations, ça n'est...
+[  29.1 ->   34.1] Bon, j'ai vu que avant de commencer par sélectionner dans ton truc,
+[  34.1 ->   38.1] tu avais déjà de la partie sélectionner votre salon, tu vois.
+[  38.1 ->   45.1] Donc j'imagine que moi, la plateforme, j'ouvre juste les deux salons et elles vont choisir.
+[  45.1 ->   55.1] Mais est-ce qu'elles doivent taper la location, le salon?
+[  55.1 ->   58.1] Parce que des fois, peut-être, elles ne savent pas.
+[  58.1 ->   64.1] Donc dans le moment, ça devrait montrer directement les salons disponibles à chercher.
+[  64.1 ->   68.1] Ça va montrer Kelly et puis Houston. Tu vois, Kelly et Houston.
+[  68.1 ->   72.1] Donc j'ai mon premier salon et le deuxième salon.
+[  72.1 ->   78.1] Et une fois qu'elles rentrent dedans, maintenant, ils vont sélectionner le service
+[  78.1 ->   82.1] et ils vont sélectionner, ajouter les extras.
+[  82.1 ->   89.1] C'est-à-dire longueur ou tout les extras qu'on peut ajouter sur un style, tu vois.
+[  89.1 ->   94.1] Et ils verront le prix total déjà du style qu'elles vont payer.
+[  94.1 ->   98.1] Et moi, je requeste un deposit.
+[  98.1 ->  106.1] En tout cas, tu verras quand tu rentres dedans, tu vas un peu faire ton tour, quoi,
+[ 106.1 ->  111.1] et voir un peu ce qui est là. Voilà.
+===== audio_3.pcm (dur=128s) =====
+[   0.2 ->   10.7] Maintenant, la partie manager, j'ai vu que ça montre aussi des revenus et tout ça, mais
+[  10.7 ->   18.8] les managers n'ont pas assez assez d'informations, par contre. Bon, I guess, si je ne leur donne
+[  18.8 ->   25.6] pas l'accès au côté manager, ils n'auront pas l'accès. Les managers, ils ont accès
+[  25.6 ->   36.9] plus à l'emploi du temps. Elles sélectionnent l'emploi du temps et puis elles font l'emploi
+[  36.9 ->   42.5] du temps, elles même elles envoient ça au stylist. Elles créent un groupe et elles
+[  42.5 ->   49.1] envoient ça au stylist. Maintenant, j'ai vu qu'il y a aussi la partie employée, c'est-à-dire
+[  49.1 ->   56.1] quelqu'un, ils vont là-bas, ils voient directement leur emploi du temps. Maintenant,
+[  56.1 ->   68.2] là-haut, chez moi, là-haut, il y a un petit hic, c'est quoi ? Tu vois, des fois, il
+[  68.2 ->   74.3] y a des styles où on partage, tu vois, elles veulent faire ça à deux, parce
+[  74.3 ->   81.9] que peut-être le style, ça prend peut-être dix heures de temps et ça demande avoir deux
+[  81.9 ->   91.3] stylistes. Donc, les managers s'occupent de répatir ou de désigner la styliste qui
+[  91.3 ->   98.0] va travailler avec la styliste principale, celle qui a été réservée en premier temps,
+[  98.0 ->  107.9] tu vois. Donc, je ne sais pas s'il y a aussi la possibilité d'avoir, de faire des modifications,
+[ 107.9 ->  115.3] c'est-à-dire que le manager fasse des modifications pour voir ce qui, tu sais,
+[ 115.3 ->  124.4] faire des modifications par rapport à ceux ou celles qui vont partager. Tu vois ce que je
+[ 124.4 ->  127.8] dis. Voilà, donc, voilà encore ce point. Merci.
+===== audio_4.pcm (dur=96s) =====
+[   0.9 ->   12.7] Voilà, c'est le lien que j'ai envoyé là, le site là, c'est l'un des sites les plus populaires
+[  12.7 ->   23.0] que tout le monde utilise, presque tout le monde utilise ici au States, tu vois, Acuity là, c'est très très populaire.
+[  23.0 ->   29.8] Voilà, il y a ça, il y a aussi Bootski, voilà, il y en a quelques-uns.
+[  30.0 ->   33.0] Donc je peux peut-être voir un peu déjà à côté Appointment.
+[  34.4 ->   44.2] Excuse-moi. Voilà, et il y a aussi Square, que beaucoup utilisent aussi pour faire ce truc quoi,
+[  44.2 ->   56.2] pour faire ce genre d'application que tu envoies là, où ça a la possibilité de faire ton revenu,
+[  57.0 ->   62.0] tout ça là, je pense que Square aussi a ça, je pense, mais pas de façon détaillée comme la tienne.
+[  62.0 ->   66.0] Voilà, c'est vraiment très bien, j'aime beaucoup.
+[  69.0 ->   74.0] C'est ça, Pick Up, ça c'est vraiment très bien, très génial.
+[  74.0 ->   84.5] Mais là, côté Income, tu connais mes trucs là, donc je sais pas, par rapport au pourcentage et tout,
+[  85.2 ->   93.2] je pense que tu pourras mettre ça à l'intérieur, tu pourras insérer ça, si c'est par rapport au pourcentage.
+[  93.2 ->   95.2] Voilà.
+===== audio_5.pcm (dur=212s) =====
+[   0.0 ->   17.5] Il y a beaucoup d'informations dans un même truc, c'est intéressant, c'est très intéressant.
+[  17.5 ->   35.5] La partie qui peut-être a besoin de changement, c'est quoi ? Au niveau de l'appointement des services,
+[  35.5 ->   58.5] moi, le système que j'utilise, quand je sélecte mon rendez-vous, quand je sélecte, par exemple, un service, il y a aussi la possibilité d'ajouter des add-ons.
+[  58.5 ->   73.5] Add-ons, c'est-à-dire quoi ? Si par exemple, le style, l'initial, c'est Boss Wave, on dit soutien, le add-on va dire lower back.
+[  74.5 ->   99.5] On sélectionne un autre box qui dit, ok, lower back, et c'est 30 dollars de plus, il y a le prix quoi, 30 dollars de plus, et on peut ajouter encore, parce qu'il y a plusieurs longueurs, il y a lower, il y a peut-être quatre longueurs, tu vois, et ces différents prix qui s'ajoutent au prix initial, tu vois,
+[  99.5 ->  108.5] parce qu'on ne veut pas mettre chaque service avec différents prix, ça sera trop long parce que j'ai beaucoup de services, tu comprends.
+[ 108.5 ->  121.5] Donc peut-être ce que je vais faire, je vais t'envoyer mon lien de Bookini pour que tu puisses regarder à peu près les services et tu vas faire comme si tu as un client et tu verras ce que j'utilise.
+[ 121.5 ->  144.5] Donc tu choisis certains styles et tu verras, si tu choisis par exemple Nautilus, c'est plus facile à comprendre, tu choisis Nautilus, tu verras qu'il y a Nautilus soutien, il y a déjà moyen, petit moyen, gros, vraiment jumbo, tu vois.
+[ 144.5 ->  154.5] Donc quand tu prends par exemple le moyen, dans le moyen, je mets déjà les détails et dans ce que vous avez mis ici le côté service, il y a les détails de ce que je propose, de services,
+[ 154.5 ->  163.5] mais il doit y avoir une partie où tu dois sélectionner le lower back, tu dois sélectionner d'autres longueurs,
+[ 163.5 ->  179.5] et la longueur, on ajoute encore, on met le prix et on met aussi combien de temps, ça va prendre un peu plus le temps que la base en fait, tu vois ce que je dis.
+[ 179.5 ->  189.5] Voilà, donc ce sont trois trucs que tu peux peut-être rajouter, donc je t'envoie le lien là et tu regardes dessus rapidement.
+[ 189.5 ->  201.5] Maintenant, je veux voir si j'ai la possibilité peut-être de créer un truc manager, tu as accès à ça, puis après je change les informations.
+[ 201.5 ->  210.5] En tout cas, je vais aller, mais déjà je t'envoie quand même le lien, là tu as une idée un peu de ce que les créateurs voient, tu vas comprendre.
