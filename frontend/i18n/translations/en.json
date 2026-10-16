@@ -1757,6 +1757,14 @@
         "managersFinancesDesc": "Choose whether managers see the money pages (income, expenses, reports) or only scheduling.",
         "managersFinancesOn": "Managers can see income, expenses and reports.",
         "managersFinancesOff": "Managers only see appointments, team, clients and services."
+      },
+      "publicLink": {
+        "title": "Your public booking link",
+        "subtitle": "Share this link on Instagram, WhatsApp or your website. Clients book without creating an account.",
+        "copy": "Copy link",
+        "copied": "Link copied",
+        "open": "Open the page",
+        "qrHint": "Scan to open the booking page"
       }
     },
     "tips": {
@@ -2454,5 +2462,57 @@
     "incomeCancelledMsg": "Income #{{id}} has been cancelled.",
     "newCommentTitle": "New Comment",
     "newCommentMsg": "New comment on Income #{{id}}"
+  },
+  "publicBooking": {
+    "notFound": "This booking page does not exist.",
+    "disabled": "Online booking is not available for this salon at the moment. Please call to book.",
+    "steps": {
+      "services": "Services",
+      "extras": "Extras",
+      "stylist": "Stylist",
+      "schedule": "Date & time",
+      "details": "Your details",
+      "done": "Done"
+    },
+    "selectServices": "Choose your service(s)",
+    "noServices": "No service available online yet.",
+    "otherServices": "Other services",
+    "addExtras": "Add extras",
+    "extrasHint": "Optional. Each extra adds to the price and the duration.",
+    "selectStylist": "Choose your stylist",
+    "anyStylist": "Any stylist",
+    "anyStylistHint": "First available",
+    "selectDateTime": "Choose a date and time",
+    "date": "Date",
+    "morning": "Morning",
+    "afternoon": "Afternoon",
+    "closedDay": "The salon is closed on this day. Please pick another date.",
+    "noSlot": "No slot left on this day for this duration. Please pick another date.",
+    "yourDetails": "Your details",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "phone": "Phone",
+    "email": "Email",
+    "notes": "Notes for the salon (optional)",
+    "summary": "Your appointment",
+    "total": "Total",
+    "currentTotal": "Total",
+    "confirm": "Confirm booking",
+    "confirmAndPay": "Confirm & pay deposit {{amount}}",
+    "depositDue": "Deposit of {{amount}} required to confirm.",
+    "depositHint": "The balance of {{balance}} is paid at the salon.",
+    "errors": {
+      "generic": "Something went wrong. Please try again."
+    },
+    "done": {
+      "title": "Booking received!",
+      "pending": "The salon will confirm your appointment shortly. Keep your phone nearby.",
+      "depositReceived": "Thank you, your deposit payment was received.",
+      "depositCancelled": "Deposit payment cancelled",
+      "depositCancelledHint": "Your booking is saved but not confirmed until the deposit is paid. Contact the salon to pay it.",
+      "depositDemo": "Demo mode: the deposit of {{amount}} is simulated.",
+      "depositLater": "A deposit of {{amount}} is due; the salon will contact you to collect it.",
+      "bookAnother": "Book another appointment"
+    }
   }
 }

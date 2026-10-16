@@ -3,7 +3,8 @@
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import { useState, useEffect, useRef } from "react";
-import { Save, Plus, Trash2, Store, ArrowRight, Sparkles, FileText, Clock, Upload, ImagePlus, Loader2 } from "lucide-react";
+import { Save, Plus, Trash2, Store, ArrowRight, Sparkles, FileText, Clock, Upload, ImagePlus, Loader2, Link2, Copy, Check, ExternalLink } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { useAuth } from "@/context/AuthProvider";
 import { extractDominantColors } from "@/lib/utils/colorExtraction";
 import { useToast } from "@/context/ToastProvider";
@@ -46,6 +47,9 @@ export default function WorkshopSettingsPage() {
     const [bookingTerms, setBookingTerms] = useState<string[]>([]);
     const [newTerm, setNewTerm] = useState("");
     const [managersCanViewFinances, setManagersCanViewFinances] = useState(true);
+    const [salonSlug, setSalonSlug] = useState("");
+    const [linkCopied, setLinkCopied] = useState(false);
+    const publicBookingUrl = salonSlug && typeof window !== 'undefined' ? `${window.location.origin}/book/${salonSlug}` : "";
     const logoInputRef = useRef<HTMLInputElement>(null);
 
     const MAX_LOGO_SIZE = 2 * 1024 * 1024; // 2MB
@@ -137,6 +141,7 @@ export default function WorkshopSettingsPage() {
                 setBusinessAddress(salon.address || "");
                 setBusinessPhone(salon.phone || "");
                 setCurrency(salon.currency || "EUR");
+                setSalonSlug(salon.slug || "");
             }
 
             if (salonSettings) {
@@ -270,6 +275,54 @@ export default function WorkshopSettingsPage() {
                     </div>
                 </div>
             </Card>
+
+            {/* Public booking link */}
+            {publicBookingUrl && (
+                <Card>
+                    <div className="flex flex-col md:flex-row gap-6 md:items-center">
+                        <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-gray-900 text-lg mb-1 flex items-center gap-2"><Link2 className="w-5 h-5 text-[var(--color-primary)]" /> {t("configuration.workshop.publicLink.title")}</h3>
+                            <p className="text-xs text-gray-500 mb-4">{t("configuration.workshop.publicLink.subtitle")}</p>
+                            <div className="flex flex-col sm:flex-row gap-2">
+                                <input
+                                    type="text"
+                                    readOnly
+                                    value={publicBookingUrl}
+                                    onFocus={(e) => e.target.select()}
+                                    className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl bg-gray-50 text-sm font-mono text-gray-800"
+                                    data-testid="public-booking-url"
+                                />
+                                <Button
+                                    type="button"
+                                    variant="primary"
+                                    size="sm"
+                                    onClick={async () => {
+                                        try {
+                                            await navigator.clipboard.writeText(publicBookingUrl);
+                                            setLinkCopied(true);
+                                            setTimeout(() => setLinkCopied(false), 2000);
+                                        } catch {
+                                            showToast(t("common.error"), t("errors.generic"), "error");
+                                        }
+                                    }}
+                                >
+                                    {linkCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                                    <span className="ml-1">{linkCopied ? t("configuration.workshop.publicLink.copied") : t("configuration.workshop.publicLink.copy")}</span>
+                                </Button>
+                                <a href={publicBookingUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-1 px-4 py-2.5 rounded-xl border border-gray-300 text-sm font-bold text-gray-700 hover:bg-gray-50">
+                                    <ExternalLink className="w-4 h-4" /> {t("configuration.workshop.publicLink.open")}
+                                </a>
+                            </div>
+                        </div>
+                        <div className="flex flex-col items-center gap-2 shrink-0">
+                            <div className="p-3 bg-white rounded-2xl border border-gray-200">
+                                <QRCodeSVG value={publicBookingUrl} size={112} />
+                            </div>
+                            <p className="text-[11px] text-gray-500">{t("configuration.workshop.publicLink.qrHint")}</p>
+                        </div>
+                    </div>
+                </Card>
+            )}
 
             {/* Online booking rules: deposit and terms */}
             <Card>

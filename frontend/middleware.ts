@@ -12,6 +12,7 @@ const PUBLIC_ROUTES = [
     '/onboarding',
     '/downloads/invoice',
     '/salons/discover',
+    '/book', // public booking page of a salon: /book/[slug]
 ];
 
 function isPublicRoute(pathname: string): boolean {

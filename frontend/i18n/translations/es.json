@@ -1731,6 +1731,14 @@
         "managersFinancesDesc": "Elige si los managers ven las páginas financieras (ingresos, gastos, informes) o solo la agenda.",
         "managersFinancesOn": "Los managers ven ingresos, gastos e informes.",
         "managersFinancesOff": "Los managers solo ven citas, equipo, clientas y servicios."
+      },
+      "publicLink": {
+        "title": "Tu enlace público de reservas",
+        "subtitle": "Comparte este enlace en Instagram, WhatsApp o tu web. Las clientas reservan sin crear cuenta.",
+        "copy": "Copiar enlace",
+        "copied": "Enlace copiado",
+        "open": "Abrir la página",
+        "qrHint": "Escanea para abrir la página de reservas"
       }
     },
     "tips": {
@@ -2454,5 +2462,57 @@
     "clients": "Clientes",
     "rating": "Valoración",
     "growth": "Crecimiento"
+  },
+  "publicBooking": {
+    "notFound": "Esta página de reservas no existe.",
+    "disabled": "La reserva en línea no está disponible para este salón por ahora. Llama para reservar.",
+    "steps": {
+      "services": "Servicios",
+      "extras": "Extras",
+      "stylist": "Estilista",
+      "schedule": "Fecha y hora",
+      "details": "Tus datos",
+      "done": "Listo"
+    },
+    "selectServices": "Elige tu(s) servicio(s)",
+    "noServices": "Aún no hay servicios disponibles en línea.",
+    "otherServices": "Otros servicios",
+    "addExtras": "Añadir extras",
+    "extrasHint": "Opcional. Cada extra se suma al precio y a la duración.",
+    "selectStylist": "Elige tu estilista",
+    "anyStylist": "Cualquier estilista",
+    "anyStylistHint": "La primera disponible",
+    "selectDateTime": "Elige fecha y hora",
+    "date": "Fecha",
+    "morning": "Mañana",
+    "afternoon": "Tarde",
+    "closedDay": "El salón está cerrado ese día. Elige otra fecha.",
+    "noSlot": "No quedan horarios ese día para esta duración. Elige otra fecha.",
+    "yourDetails": "Tus datos",
+    "firstName": "Nombre",
+    "lastName": "Apellido",
+    "phone": "Teléfono",
+    "email": "Correo",
+    "notes": "Mensaje para el salón (opcional)",
+    "summary": "Tu cita",
+    "total": "Total",
+    "currentTotal": "Total",
+    "confirm": "Confirmar reserva",
+    "confirmAndPay": "Confirmar y pagar depósito {{amount}}",
+    "depositDue": "Se requiere un depósito de {{amount}} para confirmar.",
+    "depositHint": "El saldo de {{balance}} se paga en el salón.",
+    "errors": {
+      "generic": "Algo salió mal. Inténtalo de nuevo."
+    },
+    "done": {
+      "title": "¡Reserva recibida!",
+      "pending": "El salón confirmará tu cita en breve. Mantén tu teléfono cerca.",
+      "depositReceived": "Gracias, recibimos el pago de tu depósito.",
+      "depositCancelled": "Pago del depósito cancelado",
+      "depositCancelledHint": "Tu reserva está guardada pero no se confirmará hasta pagar el depósito. Contacta al salón para pagarlo.",
+      "depositDemo": "Modo demo: el depósito de {{amount}} es simulado.",
+      "depositLater": "Se requiere un depósito de {{amount}}; el salón te contactará para cobrarlo.",
+      "bookAnother": "Reservar otra cita"
+    }
   }
 }

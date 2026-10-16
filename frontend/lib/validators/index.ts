@@ -66,6 +66,12 @@ export {
 } from './booking.schemas';
 
 export {
+    PublicBookingRequestSchema,
+    PublicAvailabilityQuerySchema,
+    type PublicBookingRequest,
+} from './publicBooking.schemas';
+
+export {
     IncomeCreateSchema,
     IncomeUpdateSchema,
     IncomeStatusSchema,

@@ -2315,6 +2315,14 @@
         "managersFinancesDesc": "Choisissez si les managers voient les pages financières (revenus, dépenses, rapports) ou seulement le planning.",
         "managersFinancesOn": "Les managers voient les revenus, les dépenses et les rapports.",
         "managersFinancesOff": "Les managers ne voient que les rendez-vous, l'équipe, les clientes et les prestations."
+      },
+      "publicLink": {
+        "title": "Votre lien public de réservation",
+        "subtitle": "Partagez ce lien sur Instagram, WhatsApp ou votre site. Les clientes réservent sans créer de compte.",
+        "copy": "Copier le lien",
+        "copied": "Lien copié",
+        "open": "Ouvrir la page",
+        "qrHint": "Scannez pour ouvrir la page de réservation"
       }
     },
     "tips": {
@@ -2454,5 +2462,57 @@
     "adminDesc": "Accès complet à toutes les fonctionnalités",
     "managerDesc": "Gérer les travailleurs et consulter les rapports",
     "workerDesc": "Voir son propre planning et ses clients"
+  },
+  "publicBooking": {
+    "notFound": "Cette page de réservation n'existe pas.",
+    "disabled": "La réservation en ligne n'est pas disponible pour ce salon pour le moment. Merci d'appeler pour réserver.",
+    "steps": {
+      "services": "Prestations",
+      "extras": "Extras",
+      "stylist": "Styliste",
+      "schedule": "Date et heure",
+      "details": "Vos coordonnées",
+      "done": "Terminé"
+    },
+    "selectServices": "Choisissez votre ou vos prestations",
+    "noServices": "Aucune prestation disponible en ligne pour le moment.",
+    "otherServices": "Autres prestations",
+    "addExtras": "Ajouter des extras",
+    "extrasHint": "Optionnel. Chaque extra s'ajoute au prix et à la durée.",
+    "selectStylist": "Choisissez votre styliste",
+    "anyStylist": "N'importe quelle styliste",
+    "anyStylistHint": "Première disponible",
+    "selectDateTime": "Choisissez une date et une heure",
+    "date": "Date",
+    "morning": "Matin",
+    "afternoon": "Après-midi",
+    "closedDay": "Le salon est fermé ce jour-là. Choisissez une autre date.",
+    "noSlot": "Plus de créneau ce jour-là pour cette durée. Choisissez une autre date.",
+    "yourDetails": "Vos coordonnées",
+    "firstName": "Prénom",
+    "lastName": "Nom",
+    "phone": "Téléphone",
+    "email": "E-mail",
+    "notes": "Message pour le salon (optionnel)",
+    "summary": "Votre rendez-vous",
+    "total": "Total",
+    "currentTotal": "Total",
+    "confirm": "Confirmer la réservation",
+    "confirmAndPay": "Confirmer et payer l'acompte {{amount}}",
+    "depositDue": "Acompte de {{amount}} demandé pour confirmer.",
+    "depositHint": "Le solde de {{balance}} est réglé au salon.",
+    "errors": {
+      "generic": "Une erreur est survenue. Merci de réessayer."
+    },
+    "done": {
+      "title": "Réservation reçue !",
+      "pending": "Le salon confirmera votre rendez-vous rapidement. Gardez votre téléphone à portée.",
+      "depositReceived": "Merci, votre paiement d'acompte a bien été reçu.",
+      "depositCancelled": "Paiement de l'acompte annulé",
+      "depositCancelledHint": "Votre réservation est enregistrée mais ne sera confirmée qu'après paiement de l'acompte. Contactez le salon pour le régler.",
+      "depositDemo": "Mode démo : l'acompte de {{amount}} est simulé.",
+      "depositLater": "Un acompte de {{amount}} est demandé ; le salon vous contactera pour l'encaisser.",
+      "bookAnother": "Prendre un autre rendez-vous"
+    }
   }
 }
