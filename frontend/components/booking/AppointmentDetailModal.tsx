@@ -170,6 +170,17 @@ export default function AppointmentDetailModal({
                                         </div>
                                     );
                                 })}
+                                {appointment.addons && appointment.addons.length > 0 && (
+                                    <>
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pt-1">{t("appointments.extras")}</p>
+                                        {appointment.addons.map((addon) => (
+                                            <div key={addon.addonId} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                                                <span className="font-medium text-gray-700">+ {addon.name}</span>
+                                                <span className="font-bold text-[var(--color-primary)]">+{formatCurrency(addon.priceSnapshot)}</span>
+                                            </div>
+                                        ))}
+                                    </>
+                                )}
                             </div>
 
                             {manageTeam.canView && (

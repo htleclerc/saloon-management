@@ -915,7 +915,8 @@
     "statusCancelled": "Cancelled",
     "statusPendingApproval": "Pending Approval",
     "statusRescheduled": "Rescheduled",
-    "statusClosed": "Closed"
+    "statusClosed": "Closed",
+    "extras": "Extras"
   },
   "booking": {
     "title": "Book Appointment",
@@ -988,17 +989,38 @@
       "comments": "Comments",
       "addComment": "Add a note...",
       "confirm": "Confirm Booking",
-      "update": "Update Booking"
+      "update": "Update Booking",
+      "extras": "Extras",
+      "noExtras": "No extra",
+      "basePrice": "Services",
+      "extrasPrice": "Extras",
+      "liveTotal": "Current total"
+    },
+    "extrasSelection": {
+      "title": "Add extras",
+      "subtitle": "Optional. Each extra adds to the price and the duration.",
+      "none": "No extra available for the selected services",
+      "add": "Add",
+      "added": "Added",
+      "extra": "+ {{duration}} · + {{price}}"
     }
   },
   "calendar": {
-    "title": "Calendar",
-    "day": "Day",
-    "week": "Week",
-    "month": "Month",
-    "today": "Today",
-    "agenda": "Agenda",
-    "noAppointments": "No appointments for this period"
+    "title": "Interactive Calendar",
+    "subtitle": "Manage slots, capacity, and overbooking",
+    "accessDenied": "Access Denied",
+    "noPermission": "You don't have permission to manage the calendar.",
+    "dayClosed": "Day Closed",
+    "closeDay": "Close Day",
+    "newAppointment": "New Appointment",
+    "defaultCapacity": "Default Capacity",
+    "overbooking": "Overbooking",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "totalBookings": "Total Bookings",
+    "openSlot": "Open Slot",
+    "closeSlot": "Close Slot",
+    "bookings": "Bookings ({{count}})"
   },
   "clients": {
     "title": "Client Management",
@@ -1143,7 +1165,22 @@
     "viewAudit": "View Full Audit Log",
     "performance": "Performance",
     "yourResults": "Your results for this service",
-    "archive": "Archive Service"
+    "archive": "Archive Service",
+    "addons": {
+      "title": "Extras offered",
+      "subtitle": "Select the add-ons clients can add to this service",
+      "none": "No add-on in the catalog yet.",
+      "manage": "Manage add-ons",
+      "selectedCount": "{{count}} extra(s) selected",
+      "noneOffered": "No extra offered on this service"
+    },
+    "durationMinutes": "Duration (minutes)",
+    "durationPlaceholder": "e.g. 330 for 5h30",
+    "archiveService": "Archive service",
+    "archiveSuccess": "Service archived",
+    "editingId": "Editing service",
+    "advancedDesc": "Full details, media and extras",
+    "simpleDesc": "Name, price and duration only"
   },
   "expenses": {
     "title": "Expenses",
@@ -1775,6 +1812,24 @@
       "initialStock": "Initial Stock",
       "saveProduct": "Save Product",
       "productUpdated": "Product updated successfully"
+    },
+    "addons": {
+      "title": "Service Add-ons",
+      "subtitle": "Extras clients can add to a service: each one adds a price and a duration",
+      "newAddon": "New add-on",
+      "editAddon": "Edit add-on",
+      "noAddons": "No add-on yet. Create your first extra (length, wash, color...)",
+      "name": "Name",
+      "namePlaceholder": "Lower back length",
+      "description": "Description (optional)",
+      "descriptionPlaceholder": "Shown to clients when they pick this extra",
+      "extraPrice": "Extra price ({{currency}})",
+      "extraDuration": "Extra time (minutes)",
+      "displayOrder": "Display order",
+      "save": "Save add-on",
+      "deleteConfirm": "Delete this add-on? It will be removed from every service that offers it.",
+      "linkHint": "Attach add-ons to a service from the service edit page.",
+      "summary": "+{{price}} · +{{duration}}"
     }
   },
   "roles": {
@@ -2122,23 +2177,6 @@
   "featureGating": {
     "notYetAvailable": "This feature is not yet available on the platform. Contact your administrator for more information.",
     "upgradeRequired": "This feature is not included in your current plan. Upgrade to access it."
-  },
-  "calendar": {
-    "title": "Interactive Calendar",
-    "subtitle": "Manage slots, capacity, and overbooking",
-    "accessDenied": "Access Denied",
-    "noPermission": "You don't have permission to manage the calendar.",
-    "dayClosed": "Day Closed",
-    "closeDay": "Close Day",
-    "newAppointment": "New Appointment",
-    "defaultCapacity": "Default Capacity",
-    "overbooking": "Overbooking",
-    "enabled": "Enabled",
-    "disabled": "Disabled",
-    "totalBookings": "Total Bookings",
-    "openSlot": "Open Slot",
-    "closeSlot": "Close Slot",
-    "bookings": "Bookings ({{count}})"
   },
   "appointmentDetail": {
     "title": "Appointment Details",

@@ -5,8 +5,9 @@
  */
 
 import { BaseService } from './BaseService';
-import type { Booking, BookingWithRelations, BookingCreateData, BookingFilters, SalonWorker, Service, PaginatedResponse } from '@/types';
+import type { Booking, BookingWithRelations, BookingCreateData, BookingFilters, BookingTotals, SalonWorker, Service, ServiceAddon, PaginatedResponse } from '@/types';
 import { BookingCreateSchema } from '@/lib/validators';
+import { calculateBookingTotals, buildAddonSnapshots } from '@/lib/domain/rules/pricingRules';
 
 export class BookingService extends BaseService {
     /**
@@ -102,6 +103,15 @@ export class BookingService extends BaseService {
             booking.serviceIds.push(serviceId);
         }
 
+        // Add-ons: freeze name, price and duration at booking time
+        if (data.addonIds && data.addonIds.length > 0) {
+            const addons = await this.resolveAddons(data.addonIds);
+            const snapshots = buildAddonSnapshots(booking.id, addons);
+            await this.provider.setBookingAddons(booking.id, snapshots);
+            booking.addonIds = snapshots.map(s => s.addonId);
+            booking.addons = snapshots;
+        }
+
         // Log action
         await this.logInteraction('booking', booking.id, 'created', `Booking for ${booking.date} at ${booking.time}`);
 
@@ -109,17 +119,62 @@ export class BookingService extends BaseService {
     }
 
     /**
-     * Update booking
+     * Update booking. When `addonIds` is provided the add-on snapshots are rebuilt.
      */
     async update(id: number, data: Partial<Booking>): Promise<Booking> {
+        const { addonIds, addons: _ignoredSnapshots, ...rest } = data;
+        void _ignoredSnapshots;
+
         const booking = await this.provider.updateBooking(id, {
-            ...data,
+            ...rest,
             updatedBy: this.getCurrentUser()
         });
+
+        if (addonIds !== undefined) {
+            const resolved = await this.resolveAddons(addonIds);
+            const snapshots = buildAddonSnapshots(id, resolved);
+            await this.provider.setBookingAddons(id, snapshots);
+            booking.addonIds = snapshots.map(s => s.addonId);
+            booking.addons = snapshots;
+        }
 
         await this.logInteraction('booking', id, 'updated');
 
         return booking;
+    }
+
+    /**
+     * Compute price and duration totals for services and add-ons (by id)
+     */
+    async computeTotals(serviceIds: number[], addonIds: number[] = []): Promise<BookingTotals> {
+        const services: Service[] = [];
+        for (const serviceId of Array.from(new Set(serviceIds))) {
+            const service = await this.provider.getService(serviceId);
+            if (service) services.push(service);
+        }
+        const addons = await this.resolveAddons(addonIds);
+        return calculateBookingTotals(services, addons);
+    }
+
+    /**
+     * Add-on snapshots stored on a booking
+     */
+    async getAddons(bookingId: number) {
+        return this.provider.getBookingAddons(bookingId);
+    }
+
+    /**
+     * Load catalog add-ons by id, rejecting unknown or inactive ones
+     */
+    private async resolveAddons(addonIds: number[]): Promise<ServiceAddon[]> {
+        const addons: ServiceAddon[] = [];
+        for (const addonId of Array.from(new Set(addonIds))) {
+            const addon = await this.provider.getServiceAddon(addonId);
+            if (!addon) throw new Error(`Add-on ${addonId} not found`);
+            if (!addon.isActive) throw new Error(`Add-on "${addon.name}" is no longer available`);
+            addons.push(addon);
+        }
+        return addons;
     }
 
     /**

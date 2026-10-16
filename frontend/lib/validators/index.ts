@@ -48,9 +48,12 @@ export {
 export {
     ServiceCreateSchema,
     ServiceUpdateSchema,
+    ServiceAddonCreateSchema,
+    ServiceAddonUpdateSchema,
     ProductCreateSchema,
     ProductUpdateSchema,
     type ServiceCreateInput,
+    type ServiceAddonCreateInput,
     type ProductCreateInput,
 } from './service.schemas';
 

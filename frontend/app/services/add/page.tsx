@@ -1,34 +1,70 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import MainLayout from "@/components/layout/MainLayout";
-import Button from "@/components/ui/Button";
 import { ArrowLeft } from "lucide-react";
-import ServiceForm from "@/components/services/ServiceForm";
+import ServiceForm, { ServiceFormData } from "@/components/services/ServiceForm";
 import { useReadOnlyGuard } from "@/components/guards/ReadOnlyGuard";
 import { useTranslation } from "@/i18n";
 import { useToast } from "@/context/ToastProvider";
-import { useServices } from "@/hooks/useServices";
+import { useAuth } from "@/context/AuthProvider";
+import { serviceService } from "@/lib/services";
+import type { ServiceAddon, ServiceCategory } from "@/types";
 
 function AddServiceContent() {
     const router = useRouter();
     const { t } = useTranslation();
     const { showToast } = useToast();
-    const { createService } = useServices();
+    const { activeSalonId } = useAuth();
     const searchParams = useSearchParams();
     const mode = (searchParams.get("mode") as "simple" | "advanced") || "advanced";
     const { handleReadOnlyClick } = useReadOnlyGuard();
 
-    const handleSubmit = async (data: any) => {
+    const [addons, setAddons] = useState<ServiceAddon[]>([]);
+    const [categories, setCategories] = useState<ServiceCategory[]>([]);
+    const [saving, setSaving] = useState(false);
+
+    const salonId = Number(activeSalonId) || 0;
+
+    useEffect(() => {
+        if (!salonId) return;
+        Promise.all([
+            serviceService.getAddons(salonId, true),
+            serviceService.getCategories(salonId).catch(() => [] as ServiceCategory[]),
+        ]).then(([salonAddons, salonCategories]) => {
+            setAddons(salonAddons);
+            setCategories(salonCategories);
+        }).catch(err => console.error("Failed to load add-ons/categories", err));
+    }, [salonId]);
+
+    const handleSubmit = async (data: ServiceFormData) => {
         if (handleReadOnlyClick()) return;
+        if (!salonId) {
+            showToast(t("common.error"), t("errors.generic"), "error");
+            return;
+        }
+        setSaving(true);
         try {
-            await createService(data);
+            const created = await serviceService.create({
+                salonId,
+                name: data.name,
+                description: data.description || undefined,
+                price: data.price,
+                duration: data.duration,
+                categoryId: data.categoryId,
+                isActive: data.isActive,
+            });
+            if (data.addonIds.length > 0) {
+                await serviceService.setAddonsForService(created.id, data.addonIds);
+            }
             showToast(t("common.success"), t("dialogs.success"), "success");
             router.push("/services");
         } catch (err) {
             console.error("Failed to create service:", err);
-            showToast(t("common.error"), t("errors.generic"), "error");
+            showToast(t("common.error"), err instanceof Error ? err.message : t("errors.generic"), "error");
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -53,6 +89,9 @@ function AddServiceContent() {
 
                 <ServiceForm
                     mode={mode}
+                    categories={categories}
+                    addons={addons}
+                    saving={saving}
                     onSubmit={handleSubmit}
                     onCancel={() => router.push("/services")}
                 />

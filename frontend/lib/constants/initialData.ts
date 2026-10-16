@@ -1,4 +1,4 @@
-import { Salon, SalonWorker, Client, Service, ServiceCategory, ExpenseCategory, Expense, Income, Booking, SalonSettings, Review, PromoCode, Product } from '@/types';
+import { Salon, SalonWorker, Client, Service, ServiceAddon, ServiceCategory, ExpenseCategory, Expense, Income, Booking, SalonSettings, Review, PromoCode, Product } from '@/types';
 
 /**
  * SALONS
@@ -311,6 +311,25 @@ export const INITIAL_SERVICE_CATEGORIES: ServiceCategory[] = [
         createdBy: 'SYSTEM',
         updatedBy: 'SYSTEM'
     }
+];
+
+/**
+ * SERVICE ADD-ONS (options with extra price and extra duration)
+ */
+export const INITIAL_SERVICE_ADDONS: ServiceAddon[] = [
+    { id: 1, salonId: 1, name: 'Lower back length', description: 'Braids reaching the lower back', extraPrice: 30, extraDuration: 60, displayOrder: 1, isActive: true, createdAt: new Date(), updatedAt: new Date(), createdBy: 'SYSTEM', updatedBy: 'SYSTEM' },
+    { id: 2, salonId: 1, name: 'Waist length', description: 'Braids reaching the waist', extraPrice: 60, extraDuration: 150, displayOrder: 2, isActive: true, createdAt: new Date(), updatedAt: new Date(), createdBy: 'SYSTEM', updatedBy: 'SYSTEM' },
+    { id: 3, salonId: 1, name: 'Wash + blow dry', description: 'Hair washed and blow dried before the service', extraPrice: 25, extraDuration: 30, displayOrder: 3, isActive: true, createdAt: new Date(), updatedAt: new Date(), createdBy: 'SYSTEM', updatedBy: 'SYSTEM' },
+    { id: 4, salonId: 1, name: 'Ombre color', description: 'Two-tone ombre braiding hair', extraPrice: 30, extraDuration: 120, displayOrder: 4, isActive: true, createdAt: new Date(), updatedAt: new Date(), createdBy: 'SYSTEM', updatedBy: 'SYSTEM' },
+];
+
+/** Which add-ons are offered on which demo service */
+export const INITIAL_SERVICE_ADDON_LINKS: { serviceId: number; addonId: number }[] = [
+    { serviceId: 1, addonId: 1 },
+    { serviceId: 1, addonId: 2 },
+    { serviceId: 1, addonId: 3 },
+    { serviceId: 1, addonId: 4 },
+    { serviceId: 2, addonId: 3 },
 ];
 
 export const INITIAL_EXPENSE_CATEGORIES: ExpenseCategory[] = [

@@ -915,7 +915,8 @@
     "statusCancelled": "Annulé",
     "statusPendingApproval": "En attente d'approbation",
     "statusRescheduled": "Reporté",
-    "statusClosed": "Clôturé"
+    "statusClosed": "Clôturé",
+    "extras": "Extras"
   },
   "booking": {
     "title": "Réserver un rendez-vous",
@@ -988,17 +989,38 @@
       "comments": "Commentaires",
       "addComment": "Ajouter une note...",
       "confirm": "Confirmer la réservation",
-      "update": "Mettre à jour la réservation"
+      "update": "Mettre à jour la réservation",
+      "extras": "Extras",
+      "noExtras": "Aucun extra",
+      "basePrice": "Prestations",
+      "extrasPrice": "Extras",
+      "liveTotal": "Total actuel"
+    },
+    "extrasSelection": {
+      "title": "Ajouter des extras",
+      "subtitle": "Optionnel. Chaque extra s'ajoute au prix et à la durée.",
+      "none": "Aucun extra disponible pour les prestations sélectionnées",
+      "add": "Ajouter",
+      "added": "Ajouté",
+      "extra": "+ {{duration}} · + {{price}}"
     }
   },
   "calendar": {
-    "title": "Calendrier",
-    "day": "Jour",
-    "week": "Semaine",
-    "month": "Mois",
-    "today": "Aujourd'hui",
-    "agenda": "Agenda",
-    "noAppointments": "Aucun rendez-vous pour cette période"
+    "title": "Calendrier Interactif",
+    "subtitle": "Gérer les créneaux, la capacité et le surbooking",
+    "accessDenied": "Accès Refusé",
+    "noPermission": "Vous n'avez pas la permission de gérer le calendrier.",
+    "dayClosed": "Journée Fermée",
+    "closeDay": "Fermer la Journée",
+    "newAppointment": "Nouveau RDV",
+    "defaultCapacity": "Capacité par Défaut",
+    "overbooking": "Surbooking",
+    "enabled": "Activé",
+    "disabled": "Désactivé",
+    "totalBookings": "Total Réservations",
+    "openSlot": "Ouvrir le Créneau",
+    "closeSlot": "Fermer le Créneau",
+    "bookings": "Réservations ({{count}})"
   },
   "clients": {
     "title": "Gestion des Clients",
@@ -1143,7 +1165,22 @@
     "viewAudit": "Voir le journal d'audit complet",
     "performance": "Performance",
     "yourResults": "Vos résultats pour ce service",
-    "archive": "Archiver le service"
+    "archive": "Archiver le service",
+    "addons": {
+      "title": "Extras proposés",
+      "subtitle": "Sélectionnez les extras que les clientes peuvent ajouter à cette prestation",
+      "none": "Aucun extra dans le catalogue pour le moment.",
+      "manage": "Gérer les extras",
+      "selectedCount": "{{count}} extra(s) sélectionné(s)",
+      "noneOffered": "Aucun extra proposé sur cette prestation"
+    },
+    "durationMinutes": "Durée (minutes)",
+    "durationPlaceholder": "ex. 330 pour 5h30",
+    "archiveService": "Archiver la prestation",
+    "archiveSuccess": "Prestation archivée",
+    "editingId": "Modification de la prestation",
+    "advancedDesc": "Détails complets, médias et extras",
+    "simpleDesc": "Nom, prix et durée uniquement"
   },
   "expenses": {
     "title": "Dépenses",
@@ -1893,23 +1930,6 @@
     "notYetAvailable": "Cette fonctionnalité n'est pas encore disponible sur la plateforme. Contactez votre administrateur pour plus d'informations.",
     "upgradeRequired": "Cette fonctionnalité n'est pas incluse dans votre plan actuel. Passez à un plan supérieur pour y accéder."
   },
-  "calendar": {
-    "title": "Calendrier Interactif",
-    "subtitle": "Gérer les créneaux, la capacité et le surbooking",
-    "accessDenied": "Accès Refusé",
-    "noPermission": "Vous n'avez pas la permission de gérer le calendrier.",
-    "dayClosed": "Journée Fermée",
-    "closeDay": "Fermer la Journée",
-    "newAppointment": "Nouveau RDV",
-    "defaultCapacity": "Capacité par Défaut",
-    "overbooking": "Surbooking",
-    "enabled": "Activé",
-    "disabled": "Désactivé",
-    "totalBookings": "Total Réservations",
-    "openSlot": "Ouvrir le Créneau",
-    "closeSlot": "Fermer le Créneau",
-    "bookings": "Réservations ({{count}})"
-  },
   "appointmentDetail": {
     "title": "Détails du Rendez-vous",
     "notFound": "Rendez-vous introuvable",
@@ -2350,6 +2370,24 @@
       "initialStock": "Stock initial",
       "saveProduct": "Enregistrer le produit",
       "productUpdated": "Produit mis à jour avec succès"
+    },
+    "addons": {
+      "title": "Extras de prestation",
+      "subtitle": "Options que les clientes peuvent ajouter à une prestation : chacune ajoute un prix et une durée",
+      "newAddon": "Nouvel extra",
+      "editAddon": "Modifier l'extra",
+      "noAddons": "Aucun extra pour le moment. Créez votre premier extra (longueur, shampoing, couleur...)",
+      "name": "Nom",
+      "namePlaceholder": "Longueur bas du dos",
+      "description": "Description (optionnel)",
+      "descriptionPlaceholder": "Affichée aux clientes quand elles choisissent cet extra",
+      "extraPrice": "Supplément de prix ({{currency}})",
+      "extraDuration": "Temps supplémentaire (minutes)",
+      "displayOrder": "Ordre d'affichage",
+      "save": "Enregistrer l'extra",
+      "deleteConfirm": "Supprimer cet extra ? Il sera retiré de toutes les prestations qui le proposent.",
+      "linkHint": "Rattachez les extras à une prestation depuis la page de modification de la prestation.",
+      "summary": "+{{price}} · +{{duration}}"
     }
   },
   "roles": {

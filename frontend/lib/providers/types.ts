@@ -15,9 +15,9 @@ import {
     // Analytics
     DashboardAnalytics,
     // Services
-    ServiceCategory, Service, Product,
+    ServiceCategory, Service, ServiceAddon, Product,
     // Bookings
-    Booking, BookingWithRelations, BookingCreateData, BookingFilters,
+    Booking, BookingWithRelations, BookingCreateData, BookingFilters, BookingAddon,
     // Incomes
     Income, IncomeWithRelations, IncomeCreateData, IncomeWorkerShare, IncomeFilters,
     // Expenses
@@ -42,8 +42,8 @@ export type {
     SalonWorker, WorkerStats,
     Client, ClientStats, ClientAnalytics,
     DashboardAnalytics,
-    ServiceCategory, Service, Product,
-    Booking, BookingWithRelations, BookingCreateData, BookingFilters,
+    ServiceCategory, Service, ServiceAddon, Product,
+    Booking, BookingWithRelations, BookingCreateData, BookingFilters, BookingAddon,
     Income, IncomeWithRelations, IncomeCreateData, IncomeWorkerShare, IncomeFilters,
     ExpenseCategory, Expense, ExpenseFilters,
     Review, ReviewFilters,
@@ -189,6 +189,21 @@ export interface IDataProvider {
     addServiceToBooking(bookingId: number, serviceId: number): Promise<void>;
     removeServiceFromBooking(bookingId: number, serviceId: number): Promise<void>;
     getBookingServices(bookingId: number): Promise<Service[]>;
+
+    // Service Add-ons (catalog per salon)
+    getServiceAddons(salonId: number): Promise<ServiceAddon[]>;
+    getServiceAddon(id: number): Promise<ServiceAddon | null>;
+    createServiceAddon(data: Omit<ServiceAddon, 'id' | 'createdAt' | 'updatedAt'>): Promise<ServiceAddon>;
+    updateServiceAddon(id: number, data: Partial<ServiceAddon>): Promise<ServiceAddon>;
+    deleteServiceAddon(id: number): Promise<void>;
+
+    // Service-Addon links (which add-ons are offered on a service)
+    getAddonsForService(serviceId: number): Promise<ServiceAddon[]>;
+    setAddonsForService(serviceId: number, addonIds: number[]): Promise<void>;
+
+    // Booking-Addon junction (snapshots)
+    getBookingAddons(bookingId: number): Promise<BookingAddon[]>;
+    setBookingAddons(bookingId: number, addons: BookingAddon[]): Promise<void>;
 
     // ============================================
     // INCOMES

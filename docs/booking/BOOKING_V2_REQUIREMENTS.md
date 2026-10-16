@@ -6,6 +6,20 @@
 
 ---
 
+## 0. Avancement
+
+| Lot | Contenu | Statut |
+|-----|---------|--------|
+| 1 | Add-ons (catalogue par salon, rattachement aux prestations, étape extras du booking, totaux prix + durée, snapshots sur la réservation, reprise dans le revenu) | ✅ Livré |
+| 2 | Parcours cliente multi-salons, acompte, cases d'admission | ⏳ |
+| 3 | Manager : seconde styliste, répartition, planning, droits finances | ⏳ |
+| 4 | Confort (liste d'attente, indisponibilités, catalogue photos, import Acuity) | ⏸️ |
+
+Décisions prises avec le propriétaire du projet (2026-10-16) : add-ons définis par salon et rattachés aux prestations ; acompte configurable en montant fixe ou en pourcentage ; le pourcentage de partage styliste / salon existe déjà (`sharingKey`, `income_worker_shares`) et n'est pas redéveloppé.
+État de l'art des solutions américaines : [US_BOOKING_MARKET_BENCHMARK.md](US_BOOKING_MARKET_BENCHMARK.md).
+
+---
+
 ## 1. Transcription nettoyée (paroles liées à l'application)
 
 L'ordre est reconstitué d'après le contenu (le vocal A annonce l'envoi du lien, D en parle au passé).

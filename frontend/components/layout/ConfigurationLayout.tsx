@@ -13,6 +13,7 @@ import {
     Tags,
     Coins,
     Gift,
+    Layers,
     ChevronRight,
     ChevronDown,
     ChevronUp,
@@ -23,6 +24,7 @@ import {
 export const configurationMenuItems = [
     { id: "workshop", name: "Workshop", description: "Business settings", icon: Building2, path: "/configuration/workshop", color: "from-blue-500 to-blue-700", roles: ['manager', 'super_admin'] },
     { id: "inventory", name: "Inventory", description: "Products & Stock", icon: FlaskConical, path: "/configuration/inventory", color: "from-teal-500 to-teal-700", roles: ['manager', 'super_admin'] },
+    { id: "addons", name: "Add-ons", description: "Service extras", icon: Layers, path: "/configuration/addons", color: "from-fuchsia-500 to-purple-700", roles: ['manager', 'super_admin'] },
     { id: "promos", name: "Promos", description: "Discount codes", icon: Tags, path: "/configuration/promos", color: "from-primary to-[var(--color-primary)]", roles: ['manager', 'super_admin'] },
     { id: "referrals", name: "Referrals", description: "Referral program", icon: Gift, path: "/configuration/referrals", color: "from-purple-500 to-pink-500", roles: ['super_admin'], featureId: 'referral_system' },
     { id: "tips", name: "Tips Management", description: "Distribution rules", icon: Coins, path: "/configuration/tips", color: "from-yellow-500 to-orange-500", roles: ['super_admin'] },

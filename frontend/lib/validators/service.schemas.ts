@@ -28,6 +28,27 @@ export const ServiceUpdateSchema = z.object({
     isActive: z.boolean().optional(),
 });
 
+/** Service add-on create */
+export const ServiceAddonCreateSchema = z.object({
+    salonId: salonIdSchema,
+    name: nameSchema,
+    description: z.string().optional(),
+    extraPrice: nonNegativeNumberSchema,
+    extraDuration: z.number().int().min(0, 'Extra duration must be zero or positive'),
+    displayOrder: z.number().int().min(0).default(0),
+    isActive: z.boolean().default(true),
+});
+
+/** Service add-on update */
+export const ServiceAddonUpdateSchema = z.object({
+    name: nameSchema.optional(),
+    description: z.string().optional(),
+    extraPrice: nonNegativeNumberSchema.optional(),
+    extraDuration: z.number().int().min(0, 'Extra duration must be zero or positive').optional(),
+    displayOrder: z.number().int().min(0).optional(),
+    isActive: z.boolean().optional(),
+});
+
 /** Product create */
 export const ProductCreateSchema = z.object({
     salonId: salonIdSchema,
@@ -47,4 +68,5 @@ export const ProductCreateSchema = z.object({
 export const ProductUpdateSchema = ProductCreateSchema.partial();
 
 export type ServiceCreateInput = z.infer<typeof ServiceCreateSchema>;
+export type ServiceAddonCreateInput = z.infer<typeof ServiceAddonCreateSchema>;
 export type ProductCreateInput = z.infer<typeof ProductCreateSchema>;
